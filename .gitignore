@@ -1,0 +1,26 @@
+# Rust build
+/target/
+**/*.rs.bk
+
+# IDEs and editors
+/.idea/
+/.vscode/
+/*.code-workspace
+
+# Node.js (for Electron or other JS dependencies)
+/node_modules/
+/npm-debug.log
+/yarn-error.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Other
+/target/
+Cargo.lock
+
+
+# Added by cargo
+
+/target
