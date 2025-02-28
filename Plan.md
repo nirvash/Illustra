@@ -4,8 +4,8 @@
 
 - [x] 開発言語の選定
   - [ ] Python
-  - [ ] C++
-  - [x] Rust
+  - [x] C++
+  - [ ] Rust
 
 ## フレームワーク選定
 
@@ -13,7 +13,7 @@
   - [ ] Druid
   - [ ] Iced
   - [ ] Tauri
-  - [x] imgui-rs
+  - [ ] imgui-rs
 
 ## 開発プロジェクトの設定
 
