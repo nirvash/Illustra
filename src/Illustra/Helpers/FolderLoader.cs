@@ -141,7 +141,7 @@ namespace Illustra.Helpers
 
                 // ルート（ドライブ）を探す
                 string rootPart = pathParts[0];
-                TreeViewItem rootNode = null;
+                TreeViewItem? rootNode = null;
 
                 foreach (var item in treeView.Items)
                 {

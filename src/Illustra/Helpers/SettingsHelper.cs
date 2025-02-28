@@ -31,7 +31,7 @@ namespace Illustra.Helpers
             "settings.json");
 
         // 現在のアプリケーション設定を保持
-        private static AppSettings _currentSettings;
+        private static AppSettings? _currentSettings;
 
         // アプリケーション設定を取得
         public static AppSettings GetSettings()
@@ -71,7 +71,7 @@ namespace Illustra.Helpers
                 _currentSettings = settings;
 
                 // ディレクトリが存在しない場合は作成
-                string directory = Path.GetDirectoryName(SettingsFilePath);
+                string directory = Path.GetDirectoryName(SettingsFilePath) ?? string.Empty;
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
