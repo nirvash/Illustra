@@ -11,5 +11,6 @@
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
+    <PackageReference Include="VirtualizingWrapPanel" Version="2.1.1" />
   </ItemGroup>
 </Project>

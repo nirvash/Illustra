@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -19,6 +18,9 @@ namespace Illustra.Helpers
 
         // サムネイルサイズ
         public int ThumbnailSize { get; set; } = 120;
+
+        // 最後に選択したファイル
+        public string LastSelectedFilePath { get; set; } = string.Empty;
 
         // 他の設定を必要に応じて追加
     }
@@ -71,7 +73,7 @@ namespace Illustra.Helpers
                 _currentSettings = settings;
 
                 // ディレクトリが存在しない場合は作成
-                string directory = Path.GetDirectoryName(SettingsFilePath) ?? string.Empty;
+                string? directory = Path.GetDirectoryName(SettingsFilePath);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);

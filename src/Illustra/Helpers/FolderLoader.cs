@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 using Illustra.Models;
 
@@ -8,6 +6,14 @@ namespace Illustra.Helpers
 {
     public static class FileSystemHelper
     {
+        // ドットで始まるフォルダを除外するためのヘルパーメソッド
+        private static bool ShouldShowDirectory(DirectoryInfo directory)
+        {
+            // Hidden属性を持つか、ドットで始まる名前のフォルダを除外
+            return (directory.Attributes & FileAttributes.Hidden) == 0 &&
+                   !directory.Name.StartsWith(".", StringComparison.OrdinalIgnoreCase);
+        }
+
         public static async Task<List<NodeModel>> LoadDrivesAsync()
         {
             var drives = await Task.Run(() => DriveInfo.GetDrives());
@@ -41,7 +47,8 @@ namespace Illustra.Helpers
             {
                 foreach (var directory in directoryInfo.GetDirectories())
                 {
-                    if ((directory.Attributes & FileAttributes.Hidden) == 0)
+                    // ドットで始まるフォルダも除外するように変更
+                    if (ShouldShowDirectory(directory))
                     {
                         directoryNodeModel.Directories.Add(CreateDirectoryNodeModel(directory));
                     }
@@ -57,66 +64,107 @@ namespace Illustra.Helpers
         public static TreeViewItem CreateDriveNode(NodeModel driveNodeModel)
         {
             var driveNode = new TreeViewItem { Header = driveNodeModel.Name, Tag = driveNodeModel.FullPath };
-            driveNode.Expanded += async (sender, e) =>
-            {
-                if (driveNode.Items.Count == 1 && driveNode.Items[0] is string && (string)driveNode.Items[0] == "Loading...")
-                {
-                    driveNode.Items.Clear();
-                    DirectoryInfo[] directories = Array.Empty<DirectoryInfo>();
-                    try
-                    {
-                        directories = await Task.Run(() => new DirectoryInfo(driveNodeModel.FullPath).GetDirectories());
-                    }
-                    catch (IOException)
-                    {
-                        // Handle IO exceptions (e.g., device not ready)
-                        // Log or handle the exception as needed
-                        driveNode.Items.Add(new TreeViewItem { Header = "Error: IO Exception" });
-                        return;
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        // Handle access denied errors
-                        driveNode.Items.Add(new TreeViewItem { Header = "Access Denied" });
-                        return;
-                    }
 
-                    foreach (var directory in directories)
+            // ドライブ直下のサブフォルダの有無をチェック
+            try
+            {
+                var rootDir = new DirectoryInfo(driveNodeModel.FullPath);
+                // ドットで始まるフォルダも除外するように変更
+                var hasSubDirectories = rootDir.GetDirectories().Any(dir => ShouldShowDirectory(dir));
+                if (hasSubDirectories)
+                {
+                    driveNode.Items.Add("Loading..."); // サブフォルダがある場合のみLoadingを追加
+                    driveNode.Expanded += async (sender, e) =>
                     {
-                        if ((directory.Attributes & FileAttributes.Hidden) == 0)
+                        if (driveNode.Items.Count == 1 && driveNode.Items[0] is string && (string)driveNode.Items[0] == "Loading...")
                         {
-                            driveNode.Items.Add(CreateDirectoryNode(new NodeModel { Name = directory.FullName, FullPath = directory.FullName }));
+                            driveNode.Items.Clear();
+                            try
+                            {
+                                var directories = await Task.Run(() => rootDir.GetDirectories());
+
+                                foreach (var directory in directories)
+                                {
+                                    // ドットで始まるフォルダも除外するように変更
+                                    if (ShouldShowDirectory(directory))
+                                    {
+                                        driveNode.Items.Add(CreateDirectoryNode(
+                                            new NodeModel { Name = directory.FullName, FullPath = directory.FullName }));
+                                    }
+                                }
+                            }
+                            catch (IOException)
+                            {
+                                driveNode.Items.Add(new TreeViewItem { Header = "Error: IO Exception" });
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                driveNode.Items.Add(new TreeViewItem { Header = "Access Denied" });
+                            }
                         }
-                    }
+                    };
                 }
-            };
-            driveNode.Items.Add("Loading...");
+            }
+            catch (Exception)
+            {
+                // アクセスできない場合などは展開不可として扱う
+            }
+
             return driveNode;
         }
 
         private static TreeViewItem CreateDirectoryNode(NodeModel directoryNodeModel)
         {
-            var directoryNode = new TreeViewItem { Header = Path.GetFileName(directoryNodeModel.Name), Tag = directoryNodeModel.FullPath };
-            var directories = new DirectoryInfo(directoryNodeModel.FullPath).GetDirectories();
-
-            if (directories.Length > 0)
+            var directoryNode = new TreeViewItem
             {
-                directoryNode.Expanded += async (sender, e) =>
+                Header = Path.GetFileName(directoryNodeModel.Name),
+                Tag = directoryNodeModel.FullPath,
+                FontWeight = System.Windows.FontWeights.Bold // フォルダは太字で表示
+            };
+
+            // サブフォルダの有無をチェック
+            try
+            {
+                var currentDir = new DirectoryInfo(directoryNodeModel.FullPath);
+                // ドットで始まるフォルダも除外するように変更
+                var hasSubDirectories = currentDir.GetDirectories().Any(dir => ShouldShowDirectory(dir));
+                if (hasSubDirectories)
                 {
-                    if (directoryNode.Items.Count == 1 && directoryNode.Items[0] is string && (string)directoryNode.Items[0] == "Loading...")
+                    directoryNode.Items.Add("Loading..."); // サブフォルダがある場合のみLoadingを追加
+                    directoryNode.Expanded += async (sender, e) =>
                     {
-                        directoryNode.Items.Clear();
-                        var subDirectories = await Task.Run(() => new DirectoryInfo(directoryNodeModel.FullPath).GetDirectories());
-                        foreach (var directory in subDirectories)
+                        if (directoryNode.Items.Count == 1 && directoryNode.Items[0] is string && (string)directoryNode.Items[0] == "Loading...")
                         {
-                            if ((directory.Attributes & FileAttributes.Hidden) == 0)
+                            directoryNode.Items.Clear();
+                            try
                             {
-                                directoryNode.Items.Add(CreateDirectoryNode(new NodeModel { Name = directory.FullName, FullPath = directory.FullName }));
+                                var subDirectories = await Task.Run(() => currentDir.GetDirectories());
+
+                                foreach (var directory in subDirectories)
+                                {
+                                    // ドットで始まるフォルダも除外するように変更
+                                    if (ShouldShowDirectory(directory))
+                                    {
+                                        directoryNode.Items.Add(CreateDirectoryNode(
+                                            new NodeModel { Name = directory.FullName, FullPath = directory.FullName }));
+                                    }
+                                }
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                directoryNode.Items.Add(new TreeViewItem { Header = "Access Denied" });
+                            }
+                            catch (IOException ex)
+                            {
+                                directoryNode.Items.Add(new TreeViewItem { Header = $"Error: {ex.Message}" });
                             }
                         }
-                    }
-                };
-                directoryNode.Items.Add("Loading...");
+                    };
+                }
+            }
+            catch (Exception)
+            {
+                // アクセスできない場合などは展開不可として扱う
             }
 
             return directoryNode;

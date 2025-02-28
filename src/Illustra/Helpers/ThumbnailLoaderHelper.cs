@@ -1,352 +1,420 @@
+namespace Illustra.Helpers;
+
+using System;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Illustra.Models;
 
-namespace Illustra.Helpers
+/// <summary>
+/// サムネイルの読み込みと管理を行うヘルパークラス
+/// </summary>
+public class ThumbnailLoaderHelper
 {
+    // 共通のダミー画像とエラー画像
+    private static BitmapSource? _commonDummyImage;
+    private static BitmapSource? _commonErrorImage;
+    private static readonly object _staticLock = new object();
+
+    private List<FileNodeModel> _imageFiles = new List<FileNodeModel>();
+    private const int ThumbnailBatchSize = 100; // バッチ処理のサイズを増加
+    private ConcurrentDictionary<string, BitmapSource> _thumbnailCache = new ConcurrentDictionary<string, BitmapSource>();
+    private CancellationTokenSource? _cancellationTokenSource;
+    private string _currentFolderPath = string.Empty;
+    private readonly ItemsControl _thumbnailListBox;
+    private int _thumbnailSize = 120;
+    private ObservableCollection<FileNodeModel> _viewModelItems;
+
     /// <summary>
-    /// サムネイルの読み込みと管理を行うヘルパークラス
+    /// サムネイルローダーを初期化します
     /// </summary>
-    public class ThumbnailLoaderHelper
+    /// <param name="thumbnailListBox">サムネイルを表示するItemsControl</param>
+    /// <param name="onThumbnailClick">サムネイルクリック時のアクション</param>
+    /// <param name="viewModelItems">ViewModelのItemsコレクション</param>
+    public ThumbnailLoaderHelper(ItemsControl thumbnailListBox, Action<string> onThumbnailClick, ObservableCollection<FileNodeModel> viewModelItems)
     {
-        private List<string> _imageFiles = new List<string>();
-        private int _loadedThumbnails = 0;
-        private const int ThumbnailBatchSize = 20;
-        private ConcurrentDictionary<string, BitmapSource> _thumbnailCache = new ConcurrentDictionary<string, BitmapSource>();
-        private CancellationTokenSource? _cancellationTokenSource;
-        private string _currentFolderPath = string.Empty;
-        private readonly ItemsControl _thumbnailListBox;
-        private int _thumbnailSize = 120;
-        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(4, 4); // 同時に読み込む最大数を4に制限
-        private bool _isLoadingBatch = false;
-        private readonly object _loadingLock = new object();
+        _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
+        //            _onThumbnailClick = onThumbnailClick ?? throw new ArgumentNullException(nameof(onThumbnailClick));
+        _viewModelItems = viewModelItems ?? throw new ArgumentNullException(nameof(viewModelItems));
+    }
 
-        /// <summary>
-        /// サムネイルローダーを初期化します
-        /// </summary>
-        /// <param name="thumbnailListBox">サムネイルを表示するItemsControl</param>
-        public ThumbnailLoaderHelper(ItemsControl thumbnailListBox)
+    /// <summary>
+    /// 現在のフォルダパスを取得します
+    /// </summary>
+    public string CurrentFolderPath => _currentFolderPath;
+
+    /// <summary>
+    /// サムネイルのサイズを設定します
+    /// </summary>
+    public int ThumbnailSize
+    {
+        get => _thumbnailSize;
+        set
         {
-            _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
-        }
-
-        /// <summary>
-        /// 現在のフォルダパスを取得します
-        /// </summary>
-        public string CurrentFolderPath => _currentFolderPath;
-
-        /// <summary>
-        /// サムネイルのサイズを設定します
-        /// </summary>
-        public int ThumbnailSize
-        {
-            get => _thumbnailSize;
-            set
+            if (_thumbnailSize != value)
             {
-                if (_thumbnailSize != value)
+                _thumbnailSize = value;
+                // サムネイルサイズが変わったので共通ダミー画像を初期化
+                lock (_staticLock)
                 {
-                    _thumbnailSize = value;
-                    // 現在のフォルダがあれば再ロード
-                    if (!string.IsNullOrEmpty(_currentFolderPath))
-                    {
-                        LoadThumbnails(_currentFolderPath);
-                    }
+                    _commonDummyImage = null;
+                    _commonErrorImage = null;
+                }
+                // 現在のフォルダがあれば再ロード
+                if (!string.IsNullOrEmpty(_currentFolderPath))
+                {
+                    LoadFileNodes(_currentFolderPath);
                 }
             }
         }
+    }
 
-        /// <summary>
-        /// 指定されたフォルダのサムネイルを読み込みます
-        /// </summary>
-        /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
-        public async void LoadThumbnails(string folderPath)
+    /// <summary>
+    /// サムネイルのロード完了イベント
+    /// </summary>
+    public event EventHandler? fileNodesLoaded;
+
+    /// <summary>
+    /// 指定されたフォルダのサムネイルを読み込みます
+    /// </summary>
+    /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
+    public async void LoadFileNodes(string folderPath)
+    {
+        System.Diagnostics.Debug.WriteLine($"LoadFileNodes started for: {folderPath}");
+
+        // 前回のロード処理をキャンセル
+        CancelAllLoading();
+
+        // ViewModelのコレクションをクリア
+        _viewModelItems.Clear();
+
+        _currentFolderPath = folderPath;
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+
+        var stopwatch = Stopwatch.StartNew(); // パフォーマンスログ用のストップウォッチを開始
+
+        try
         {
-            _currentFolderPath = folderPath;
+            // まずファイル一覧だけを高速に取得
+            var imageFilePaths = await Task.Run(() =>
+                Directory.GetFiles(folderPath, "*.*")
+                .Where(file => IsImageFile(file))
+                .ToList(),
+                token);
 
-            // 前回のロード処理をキャンセル
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
-            var token = _cancellationTokenSource.Token;
+            System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] 画像ファイルの取得完了 ({imageFilePaths.Count} 件)");
 
-            try
+            if (token.IsCancellationRequested)
+                return;
+
+            // 共通のダミー画像を取得または生成
+            var dummyImage = GetDummyImage();
+
+            // 高速バッチ処理でViewModelにアイテムを追加
+            await AddFileNodesToViewModelAsync(imageFilePaths, dummyImage, token);
+            System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] ViewModel追加完了");
+
+            if (token.IsCancellationRequested)
+                return;
+
+            // サムネイルのロード完了イベントを発火
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _imageFiles = await Task.Run(() =>
-                    Directory.GetFiles(folderPath, "*.*")
-                        .Where(file => IsImageFile(file))
-                        .ToList(),
-                    token);
+                System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] fileNodesLoadedイベント発火開始");
+                fileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] fileNodesLoadedイベント発火完了");
+            }, System.Windows.Threading.DispatcherPriority.Normal);
 
-                _loadedThumbnails = 0;
-                lock (_loadingLock)
+            // UIの更新を待つ
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                if (token.IsCancellationRequested)
+                    return;
+
+                var scrollViewer = FindVisualChild<ScrollViewer>(_thumbnailListBox);
+                if (scrollViewer != null)
                 {
-                    _isLoadingBatch = false;
+                    int firstIndex = 0;
+                    int lastIndex = Math.Min(ThumbnailBatchSize, _imageFiles.Count - 1);  // 初期表示として最初の一部をロード
+                    await LoadMoreThumbnailsAsync(firstIndex, lastIndex);
+                    System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] 初期サムネイルのロード完了");
                 }
-                Application.Current.Dispatcher.Invoke(() => _thumbnailListBox.Items.Clear());
-
-                // 最初のバッチを読み込む
-                await LoadNextBatchAsync(token);
-            }
-            catch (OperationCanceledException)
-            {
-                // キャンセルされた場合は何もしない
-            }
-            catch (Exception ex)
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // キャンセルされた場合は何もしない
+            System.Diagnostics.Debug.WriteLine("サムネイル読み込み処理がキャンセルされました");
+        }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested) // キャンセルでない例外の場合だけメッセージを表示
             {
                 MessageBox.Show($"サムネイルの読み込み中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        /// <summary>
-        /// 次のバッチのサムネイルを読み込みます
-        /// </summary>
-        private async Task LoadNextBatchAsync(CancellationToken cancellationToken = default)
+        finally
         {
-            bool shouldLoad;
-            lock (_loadingLock)
+            stopwatch.Stop();
+            System.Diagnostics.Debug.WriteLine($"フォルダ '{folderPath}' のサムネイル読み込みにかかった時間: {stopwatch.ElapsedMilliseconds} ms");
+        }
+    }
+
+    /// <summary>
+    /// ファイルノードをすばやく作成してViewModelに追加
+    /// </summary>
+    private async Task AddFileNodesToViewModelAsync(List<string> filePaths, BitmapSource dummyImage, CancellationToken token)
+    {
+        var stopwatch = Stopwatch.StartNew(); // パフォーマンスログ用のストップウォッチを開始
+
+        // 大量のファイルパスからFileNodeModelのリストを効率的に作成
+        _imageFiles = new List<FileNodeModel>(filePaths.Count);
+
+        // UI更新を一度だけ行うため、全てのノードをまずメモリ上で生成
+        foreach (var path in filePaths)
+        {
+            if (token.IsCancellationRequested)
+                return;
+
+            var node = new FileNodeModel
             {
-                shouldLoad = !_isLoadingBatch && _loadedThumbnails < _imageFiles.Count;
-                if (shouldLoad)
-                {
-                    _isLoadingBatch = true;
-                }
-            }
-
-            if (!shouldLoad) return;
-
-            try
-            {
-                await LoadMoreThumbnailsAsync(cancellationToken);
-
-                // 次のバッチがあればロード予約を行う
-                bool hasMoreImages;
-                lock (_loadingLock)
-                {
-                    hasMoreImages = _loadedThumbnails < _imageFiles.Count;
-                    _isLoadingBatch = false;
-                }
-
-                if (hasMoreImages && !cancellationToken.IsCancellationRequested)
-                {
-                    // 少し遅延を入れて次のバッチをロード
-                    await Task.Delay(300, cancellationToken);
-                    await LoadNextBatchAsync(cancellationToken);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                lock (_loadingLock)
-                {
-                    _isLoadingBatch = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                // エラーログ記録など
-                System.Diagnostics.Debug.WriteLine($"バッチロードエラー: {ex.Message}");
-                lock (_loadingLock)
-                {
-                    _isLoadingBatch = false;
-                }
-
-                // エラーが発生しても次バッチのロードを試みる
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(1000, cancellationToken); // エラー時は長めの遅延
-                    await LoadNextBatchAsync(cancellationToken);
-                }
-            }
+                Name = Path.GetFileName(path),
+                FullPath = path,
+                ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded) // 初期状態は未読み込み
+            };
+            _imageFiles.Add(node);
         }
 
-        /// <summary>
-        /// さらに多くのサムネイルを読み込みます（スクロール時など）
-        /// </summary>
-        /// <param name="cancellationToken">キャンセルトークン</param>
-        public async Task LoadMoreThumbnailsAsync(CancellationToken cancellationToken = default)
+        System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] ファイルノードの生成完了");
+
+        // UIスレッドで一括追加
+        await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            try
+            var uiStopwatch = Stopwatch.StartNew(); // UIスレッドの処理時間を計測
+
+            // BulkObservableCollectionならAddRangeメソッドを使用できる
+            if (_viewModelItems is BulkObservableCollection<FileNodeModel> bulkCollection)
             {
-                List<string> thumbnailsToLoad;
-                lock (_loadingLock)
+                // 一括で追加
+                bulkCollection.AddRange(_imageFiles);
+            }
+            else
+            {
+                // 通常のObservableCollectionの場合は従来のバッチ処理を実行
+                int batchSize = 500;
+                for (int i = 0; i < _imageFiles.Count; i += batchSize)
                 {
-                    thumbnailsToLoad = _imageFiles
-                        .Skip(_loadedThumbnails)
-                        .Take(ThumbnailBatchSize)
-                        .ToList();
-                }
+                    int currentBatchSize = Math.Min(batchSize, _imageFiles.Count - i);
+                    var batch = _imageFiles.GetRange(i, currentBatchSize);
 
-                if (!thumbnailsToLoad.Any())
-                    return;
-
-                var loadingTasks = new List<Task>();
-
-                foreach (var imageFile in thumbnailsToLoad)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var thumbnailContainer = new Border
+                    foreach (var fileNode in batch)
                     {
-                        Width = _thumbnailSize,
-                        Height = _thumbnailSize,
-                        Margin = new Thickness(3),
-                        BorderThickness = new Thickness(1),
-                        BorderBrush = Brushes.LightGray
-                    };
-
-                    var thumbnail = new Image
-                    {
-                        Width = _thumbnailSize - 2,
-                        Height = _thumbnailSize - 2,
-                        Stretch = Stretch.Uniform,
-                        Source = GenerateDummyImage(_thumbnailSize - 2, _thumbnailSize - 2)
-                    };
-
-                    thumbnailContainer.Child = thumbnail;
-                    Application.Current.Dispatcher.Invoke(() => _thumbnailListBox.Items.Add(thumbnailContainer));
-
-                    // 各画像のロード処理をリストに追加
-                    var loadingTask = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            // セマフォを使って同時に処理する数を制限
-                            await _loadingSemaphore.WaitAsync(cancellationToken);
-                            try
-                            {
-                                // キャッシュをチェックして、なければ新たに生成
-                                var thumbnailImage = await GetOrCreateThumbnailAsync(imageFile, cancellationToken);
-
-                                if (!cancellationToken.IsCancellationRequested)
-                                {
-                                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                                    {
-                                        thumbnail.Source = thumbnailImage;
-
-                                        // ツールチップに画像のファイル名を表示
-                                        thumbnailContainer.ToolTip = Path.GetFileName(imageFile);
-                                    });
-                                }
-                            }
-                            finally
-                            {
-                                _loadingSemaphore.Release();
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // キャンセルされた場合は何もしない
-                        }
-                        catch (Exception ex)
-                        {
-                            // エラーが発生した場合はシンプルなエラーアイコンを表示
-                            try
-                            {
-                                await Application.Current.Dispatcher.InvokeAsync(() =>
-                                {
-                                    thumbnail.Source = GenerateErrorImage(_thumbnailSize - 2, _thumbnailSize - 2);
-                                    thumbnailContainer.ToolTip = $"エラー: {ex.Message}";
-                                });
-                            }
-                            catch { /* 最後のエラー表示の例外は無視 */ }
-                        }
-                    }, cancellationToken);
-
-                    loadingTasks.Add(loadingTask);
-                }
-
-                // 読み込み済み画像数を更新
-                lock (_loadingLock)
-                {
-                    _loadedThumbnails += thumbnailsToLoad.Count;
-                }
-
-                // 待機する必要はないが、例外が発生した場合のために処理
-                await Task.WhenAll(loadingTasks.Select(t => t.ContinueWith(task =>
-                {
-                    if (task.IsFaulted && task.Exception != null && !(task.Exception.InnerException is OperationCanceledException))
-                    {
-                        // エラーをログに記録するなど必要な処理
-                        System.Diagnostics.Debug.WriteLine($"サムネイル読み込みエラー: {task.Exception.InnerException?.Message}");
+                        _viewModelItems.Add(fileNode);
                     }
-                }, TaskContinuationOptions.NotOnCanceled)));
+                }
             }
-            catch (OperationCanceledException)
+
+            System.Diagnostics.Debug.WriteLine($"[{uiStopwatch.ElapsedMilliseconds} ms] UIスレッドでのViewModel追加完了");
+        }, System.Windows.Threading.DispatcherPriority.Background);
+
+        System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] AddFileNodesToViewModelAsyncメソッド完了");
+    }
+
+    /// <summary>
+    /// サムネイルを更新するメソッドを修正
+    /// </summary>
+    public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
+    {
+        // 範囲チェック
+        startIndex = Math.Max(0, startIndex);
+        endIndex = Math.Min(_imageFiles.Count - 1, endIndex);
+
+        if (startIndex > endIndex || startIndex < 0 || endIndex >= _imageFiles.Count) return;
+
+        for (int i = startIndex; i <= endIndex; i++)
+        {
+            var fileNode = _imageFiles[i];
+
+            // サムネイルがダミー画像の場合またはまだロードされていない場合のみ処理
+            if (fileNode != null &&
+                (fileNode.ThumbnailInfo == null ||
+                 (fileNode.ThumbnailInfo.Thumbnail == GetDummyImage() && fileNode.ThumbnailInfo.State != ThumbnailState.Error)))
             {
-                // キャンセルされた場合は何もしない
+                // ロード中状態にする
+                await _thumbnailListBox.Dispatcher.InvokeAsync(() =>
+                {
+                    fileNode.ThumbnailInfo = new ThumbnailInfo(GetDummyImage(), ThumbnailState.Loading);
+                });
+
+                // UI スレッドに戻って更新を行う
+                await _thumbnailListBox.Dispatcher.InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        var thumbnailInfo = await GetOrCreateThumbnailAsync(fileNode.FullPath, GetCurrentCancellationToken());
+                        fileNode.ThumbnailInfo = thumbnailInfo;
+                    }
+                    catch (Exception)
+                    {
+                        // 例外発生時はエラー状態に
+                        fileNode.ThumbnailInfo = new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Normal);
             }
         }
+    }
 
-        /// <summary>
-        /// 与えられたキャンセルトークンを使って、現在のサムネイル読み込み処理をキャンセルします
-        /// </summary>
-        public CancellationToken GetCurrentCancellationToken()
+    /// <summary>
+    /// 与えられたキャンセルトークンを使って、現在のサムネイル読み込み処理をキャンセルします
+    /// </summary>
+    public CancellationToken GetCurrentCancellationToken()
+    {
+        return _cancellationTokenSource?.Token ?? CancellationToken.None;
+    }
+
+    /// <summary>
+    /// 現在実行中のすべてのサムネイル読み込み処理をキャンセルします
+    /// </summary>
+    public void CancelAllLoading()
+    {
+        if (_cancellationTokenSource != null)
         {
-            return _cancellationTokenSource?.Token ?? CancellationToken.None;
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = null;
+        }
+    }
+
+    private async Task<ThumbnailInfo> GetOrCreateThumbnailAsync(string? imagePath, CancellationToken cancellationToken)
+    {
+        // サムネイルサイズが変更された場合は、キャッシュキーにサイズ情報を含める
+        string cacheKey = $"{imagePath}_{_thumbnailSize}";
+        if (imagePath == null)
+        {
+            return new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
         }
 
-        private async Task<BitmapSource> GetOrCreateThumbnailAsync(string imagePath, CancellationToken cancellationToken)
+        if (_thumbnailCache.TryGetValue(cacheKey, out var cachedThumbnail))
         {
-            // サムネイルサイズが変更された場合は、キャッシュキーにサイズ情報を含める
-            string cacheKey = $"{imagePath}_{_thumbnailSize}";
+            return new ThumbnailInfo(cachedThumbnail, cachedThumbnail == GetErrorImage() ? ThumbnailState.Error : ThumbnailState.Loaded);
+        }
 
-            if (_thumbnailCache.TryGetValue(cacheKey, out var cachedThumbnail))
-            {
-                return cachedThumbnail;
-            }
-
+        try
+        {
             var thumbnail = await ThumbnailHelper.CreateThumbnailAsync(imagePath, _thumbnailSize - 2, _thumbnailSize - 2);
             _thumbnailCache[cacheKey] = thumbnail;
-            return thumbnail;
+            return new ThumbnailInfo(thumbnail, ThumbnailState.Loaded);
         }
-
-        private bool IsImageFile(string filePath)
+        catch (Exception)
         {
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
-            return extension == ".jpg" || extension == ".jpeg" || extension == ".png" ||
-                   extension == ".gif" || extension == ".bmp" || extension == ".webp";
+            // エラーが発生した場合はエラー画像をキャッシュに追加
+            var errorImage = GetErrorImage();
+            _thumbnailCache[cacheKey] = errorImage;
+            return new ThumbnailInfo(errorImage, ThumbnailState.Error);
         }
+    }
 
-        private BitmapSource GenerateDummyImage(int width, int height)
+    private bool IsImageFile(string filePath)
+    {
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return extension == ".jpg" || extension == ".jpeg" || extension == ".png" ||
+               extension == ".gif" || extension == ".bmp" || extension == ".webp";
+    }
+
+    /// <summary>
+    /// 共通のダミー画像を取得します。存在しない場合は生成します。
+    /// </summary>
+    private BitmapSource GetDummyImage()
+    {
+        lock (_staticLock)
         {
-            var drawingVisual = new DrawingVisual();
-            using (var drawingContext = drawingVisual.RenderOpen())
+            if (_commonDummyImage == null)
             {
-                drawingContext.DrawRectangle(Brushes.WhiteSmoke, null, new Rect(0, 0, width, height));
-
-                // シンプルな「読み込み中」の表示
-                var pen = new Pen(Brushes.Silver, 1);
-                drawingContext.DrawRectangle(null, pen, new Rect(5, 5, width - 10, height - 10));
-
-                // 中央にクロスマーク
-                drawingContext.DrawLine(new Pen(Brushes.Silver, 1), new Point(width / 2 - 10, height / 2), new Point(width / 2 + 10, height / 2));
-                drawingContext.DrawLine(new Pen(Brushes.Silver, 1), new Point(width / 2, height / 2 - 10), new Point(width / 2, height / 2 + 10));
+                _commonDummyImage = GenerateDummyImage(_thumbnailSize - 2, _thumbnailSize - 2);
             }
-
-            var renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-            renderTargetBitmap.Render(drawingVisual);
-            renderTargetBitmap.Freeze();
-            return renderTargetBitmap;
+            return _commonDummyImage;
         }
+    }
 
-        private BitmapSource GenerateErrorImage(int width, int height)
+    /// <summary>
+    /// 共通のエラー画像を取得します。存在しない場合は生成します。
+    /// </summary>
+    private BitmapSource GetErrorImage()
+    {
+        lock (_staticLock)
         {
-            var drawingVisual = new DrawingVisual();
-            using (var drawingContext = drawingVisual.RenderOpen())
+            if (_commonErrorImage == null)
             {
-                drawingContext.DrawRectangle(Brushes.MistyRose, null, new Rect(0, 0, width, height));
-
-                // エラーアイコン (シンプルな X)
-                var pen = new Pen(Brushes.Firebrick, 2);
-                drawingContext.DrawLine(pen, new Point(width * 0.3, height * 0.3), new Point(width * 0.7, height * 0.7));
-                drawingContext.DrawLine(pen, new Point(width * 0.7, height * 0.3), new Point(width * 0.3, height * 0.7));
+                _commonErrorImage = GenerateErrorImage(_thumbnailSize - 2, _thumbnailSize - 2);
             }
-
-            var renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-            renderTargetBitmap.Render(drawingVisual);
-            renderTargetBitmap.Freeze();
-            return renderTargetBitmap;
+            return _commonErrorImage;
         }
+    }
+
+    private BitmapSource GenerateDummyImage(int width, int height)
+    {
+        var drawingVisual = new DrawingVisual();
+        using (var drawingContext = drawingVisual.RenderOpen())
+        {
+            drawingContext.DrawRectangle(Brushes.WhiteSmoke, null, new Rect(0, 0, width, height));
+
+            // シンプルな「読み込み中」の表示
+            var pen = new Pen(Brushes.Silver, 1);
+            drawingContext.DrawRectangle(null, pen, new Rect(5, 5, width - 10, height - 10));
+
+            // 中央にクロスマーク
+            drawingContext.DrawLine(new Pen(Brushes.Silver, 1), new Point(width / 2 - 10, height / 2), new Point(width / 2 + 10, height / 2));
+            drawingContext.DrawLine(new Pen(Brushes.Silver, 1), new Point(width / 2, height / 2 - 10), new Point(width / 2, height / 2 + 10));
+        }
+
+        var renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        renderTargetBitmap.Render(drawingVisual);
+        renderTargetBitmap.Freeze(); // 重要：UIスレッド間で共有するためにFreezeする
+        return renderTargetBitmap;
+    }
+
+    private BitmapSource GenerateErrorImage(int width, int height)
+    {
+        var drawingVisual = new DrawingVisual();
+        using (var drawingContext = drawingVisual.RenderOpen())
+        {
+            drawingContext.DrawRectangle(Brushes.MistyRose, null, new Rect(0, 0, width, height));
+
+            // エラーアイコン (シンプルな X)
+            var pen = new Pen(Brushes.Firebrick, 2);
+            drawingContext.DrawLine(pen, new Point(width * 0.3, height * 0.3), new Point(width * 0.7, height * 0.7));
+            drawingContext.DrawLine(pen, new Point(width * 0.7, height * 0.3), new Point(width * 0.3, height * 0.7));
+        }
+
+        var renderTargetBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        renderTargetBitmap.Render(drawingVisual);
+        renderTargetBitmap.Freeze(); // 重要：UIスレッド間で共有するためにFreezeする
+        return renderTargetBitmap;
+    }
+
+    // VisualTreeから特定の型の要素を検索するヘルパーメソッド
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+
+            if (child is T result)
+                return result;
+
+            var descendant = FindVisualChild<T>(child);
+            if (descendant != null)
+                return descendant;
+        }
+
+        return null;
     }
 }

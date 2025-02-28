@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Illustra.Models
 {
     public class NodeModel
@@ -10,8 +8,5 @@ namespace Illustra.Models
         public List<FileNodeModel> Files { get; set; } = new List<FileNodeModel>();
     }
 
-    public class FileNodeModel
-    {
-        public string Name { get; set; } = string.Empty;
-    }
+
 }
