@@ -1,26 +1,38 @@
-# Rust build
-/target/
-**/*.rs.bk
-
 # IDEs and editors
 /.idea/
 /.vscode/
 /*.code-workspace
 
-# Node.js (for Electron or other JS dependencies)
-/node_modules/
-/npm-debug.log
-/yarn-error.log
-
 # OS-specific
 .DS_Store
 Thumbs.db
 
-# Other
-/target/
-Cargo.lock
+# .NET / C# 関連
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.dbmdl
+*.jfm
+*.pfx
+*.publishsettings
 
+# ビルド結果
+/[Dd]ebug/
+/[Rr]elease/
+/[Bb]uild/
+/[Bb]in/
+/[Oo]bj/
+/[Ll]og/
+/[Ll]ogs/
 
-# Added by cargo
-
-/target
+# NuGet パッケージ
+*.nupkg
+# NuGet シンボルパッケージ
+*.snupkg
+# NuGet パッケージディレクトリ
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/

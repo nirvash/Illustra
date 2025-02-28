@@ -1,1 +1,20 @@
+# デフォルトの改行コードの扱い
 * text=auto
+
+# C# ファイルの扱い
+*.cs     diff=csharp text
+*.xaml   text
+*.csproj text
+*.sln    text
+
+# バイナリファイル
+*.jpg   binary
+*.png   binary
+*.gif   binary
+*.webp  binary
+
+# スクリプトファイルの改行コード
+*.sh    text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
