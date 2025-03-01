@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Publish
+        run: dotnet publish src/Illustra/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Create ZIP archive
+        run: |
+          cd publish
+          7z a -tzip "../Illustra-${{ github.ref_name }}.zip" *
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            Illustra-${{ github.ref_name }}.zip
+          body: |
+            ## 🚀 Illustra ${{ github.ref_name }}
+
+            ### 📦 インストール方法
+            1. Illustra-${{ github.ref_name }}.zip をダウンロード
+            2. お好みの場所に展開
+            3. Illustra.exe を実行
+
+            ### 💻 動作環境
+            - Windows 10/11
+            - .NET 9.0 以降（実行ファイルに同梱）
+
+            ### 📝 変更点
+            - リリースノートをここに記載
+
+            ### 🔍 既知の問題
+            - 既知の問題があればここに記載
