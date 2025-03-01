@@ -96,8 +96,17 @@ namespace Illustra.Views
                             path == _appSettings.LastFolderPath)
                         {
                             selectedItem.IsSelected = true;
-                            selectedItem.Focus();
                             selectedItem.BringIntoView();
+                            
+                            // フォルダ選択後、サムネイルリストにフォーカスを移動
+                            // サムネイルのロード完了を待つ
+                            await Task.Delay(300);
+                            
+                            if (_viewModel.Items.Count > 0)
+                            {
+                                ThumbnailItemsControl.Focus();
+                                System.Diagnostics.Debug.WriteLine("Focus set to ThumbnailItemsControl on startup");
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -201,6 +210,9 @@ namespace Illustra.Views
                 {
                     _isFirstLoaded = true;
                     SelectThumbnail(_appSettings.LastSelectedFilePath);
+                    // サムネイルにフォーカスを設定
+                    await Task.Delay(50);
+                    ThumbnailItemsControl.Focus();
                 }
                 else if (_shouldSelectFirstItem)
                 {
@@ -211,6 +223,11 @@ namespace Illustra.Views
                     _currentSelectedFilePath = firstItem.FullPath;
                     _viewModel.SelectedItem = firstItem;
                     LoadFilePropertiesAsync(firstItem.FullPath);
+                    
+                    // サムネイルにフォーカスを設定
+                    await Task.Delay(50);
+                    ThumbnailItemsControl.Focus();
+                    System.Diagnostics.Debug.WriteLine("Focus set to ThumbnailItemsControl after selecting first item");
                 }
             }
             catch (Exception ex)
@@ -623,10 +640,18 @@ namespace Illustra.Views
             // ThumbnailItemsControlが有効な場合、キー操作を処理
             if (_viewModel.Items.Count > 0 &&
                 (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down ||
-                 e.Key == Key.Home || e.Key == Key.End))
+                 e.Key == Key.Home || e.Key == Key.End || e.Key == Key.Enter))
             {
                 // ウィンドウレベルでキー処理をする前に、ListViewにフォーカスを与える
                 ThumbnailItemsControl.Focus();
+
+                // Enterキーが押されて選択アイテムがある場合は直接ビューアを表示
+                if (e.Key == Key.Enter && _viewModel.SelectedItem != null)
+                {
+                    ShowImageViewer(_viewModel.SelectedItem.FullPath);
+                    e.Handled = true;
+                    return;
+                }
 
                 // 直接ThumbnailItemsControl_KeyDownメソッドを呼び出して処理
                 ThumbnailItemsControl_KeyDown(ThumbnailItemsControl, e);
