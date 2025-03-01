@@ -8,6 +8,7 @@
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
+        Icon="{StaticResource AppIcon}"
         Title="Illustra - 画像ビューア"
         Height="600"
         Width="900">

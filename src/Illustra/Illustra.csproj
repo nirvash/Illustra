@@ -6,11 +6,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>assets\iLlustra.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
     <PackageReference Include="VirtualizingWrapPanel" Version="2.1.1" />
+    <Resource Include="assets\illustra.ico" />
   </ItemGroup>
 </Project>

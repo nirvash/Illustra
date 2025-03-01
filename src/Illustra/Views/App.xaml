@@ -4,6 +4,9 @@
              xmlns:local="clr-namespace:Illustra"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-
+        <!-- アプリアイコンの設定 -->
+        <ResourceDictionary>
+            <BitmapImage x:Key="AppIcon" UriSource="pack://application:,,,/assets/illustra.ico" />
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
