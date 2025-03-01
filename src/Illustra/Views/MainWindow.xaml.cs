@@ -596,6 +596,7 @@ namespace Illustra.Views
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
             {
                 ShowImageViewer(fileNode.FullPath);
+                e.Handled = true;
             }
         }
 
@@ -606,6 +607,7 @@ namespace Illustra.Views
                 var viewer = new ImageViewerWindow(filePath);
                 viewer.Owner = this;
                 viewer.Show();
+                viewer.Focus(); // ビューアウィンドウにフォーカスを設定
             }
             catch (Exception ex)
             {
