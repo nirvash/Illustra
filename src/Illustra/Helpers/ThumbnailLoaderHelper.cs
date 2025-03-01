@@ -85,8 +85,6 @@ public class ThumbnailLoaderHelper
     /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
     public async void LoadFileNodes(string folderPath)
     {
-        System.Diagnostics.Debug.WriteLine($"LoadFileNodes started for: {folderPath}");
-
         // 前回のロード処理をキャンセル
         CancelAllLoading();
 
@@ -108,8 +106,6 @@ public class ThumbnailLoaderHelper
                 .ToList(),
                 token);
 
-            System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] 画像ファイルの取得完了 ({imageFilePaths.Count} 件)");
-
             if (token.IsCancellationRequested)
                 return;
 
@@ -118,7 +114,6 @@ public class ThumbnailLoaderHelper
 
             // 高速バッチ処理でViewModelにアイテムを追加
             await AddFileNodesToViewModelAsync(imageFilePaths, dummyImage, token);
-            System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] ViewModel追加完了");
 
             if (token.IsCancellationRequested)
                 return;
@@ -126,9 +121,7 @@ public class ThumbnailLoaderHelper
             // サムネイルのロード完了イベントを発火
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] fileNodesLoadedイベント発火開始");
                 fileNodesLoaded?.Invoke(this, EventArgs.Empty);
-                System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] fileNodesLoadedイベント発火完了");
             }, System.Windows.Threading.DispatcherPriority.Normal);
 
             // UIの更新を待つ
@@ -143,7 +136,6 @@ public class ThumbnailLoaderHelper
                     int firstIndex = 0;
                     int lastIndex = Math.Min(ThumbnailBatchSize, _imageFiles.Count - 1);  // 初期表示として最初の一部をロード
                     await LoadMoreThumbnailsAsync(firstIndex, lastIndex);
-                    System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] 初期サムネイルのロード完了");
                 }
             });
         }
@@ -162,7 +154,6 @@ public class ThumbnailLoaderHelper
         finally
         {
             stopwatch.Stop();
-            System.Diagnostics.Debug.WriteLine($"フォルダ '{folderPath}' のサムネイル読み込みにかかった時間: {stopwatch.ElapsedMilliseconds} ms");
         }
     }
 
@@ -191,8 +182,6 @@ public class ThumbnailLoaderHelper
             _imageFiles.Add(node);
         }
 
-        System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] ファイルノードの生成完了");
-
         // UIスレッドで一括追加
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
@@ -219,11 +208,7 @@ public class ThumbnailLoaderHelper
                     }
                 }
             }
-
-            System.Diagnostics.Debug.WriteLine($"[{uiStopwatch.ElapsedMilliseconds} ms] UIスレッドでのViewModel追加完了");
         }, System.Windows.Threading.DispatcherPriority.Background);
-
-        System.Diagnostics.Debug.WriteLine($"[{stopwatch.ElapsedMilliseconds} ms] AddFileNodesToViewModelAsyncメソッド完了");
     }
 
     /// <summary>

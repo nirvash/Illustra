@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -23,6 +24,9 @@ namespace Illustra.Views
         private bool _shouldSelectFirstItem = false;
         private DateTime _lastLoadTime = DateTime.MinValue;
         private readonly object _loadLock = new object();
+
+        // 画像閲覧用
+        private ImageViewerWindow? _currentViewerWindow;
 
         public MainWindow()
         {
@@ -105,7 +109,6 @@ namespace Illustra.Views
                             if (_viewModel.Items.Count > 0)
                             {
                                 ThumbnailItemsControl.Focus();
-                                System.Diagnostics.Debug.WriteLine("Focus set to ThumbnailItemsControl on startup");
                             }
                         }
                     }
@@ -269,7 +272,6 @@ namespace Illustra.Views
                 var scrollViewer = e.OriginalSource as ScrollViewer;
                 if (scrollViewer != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Scroll changed, loading visible thumbnails");
                     await LoadVisibleThumbnailsAsync(scrollViewer);
                 }
             }
@@ -331,7 +333,6 @@ namespace Illustra.Views
             // ItemsControl が初期化されるのを待つ
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
 
-            Debug.WriteLine("ItemsControl not found in ScrollViewer.Content, 2 searching parent");
             DependencyObject parent = VisualTreeHelper.GetParent(scrollViewer);
             while (parent != null && !(parent is ItemsControl))
             {
@@ -457,6 +458,8 @@ namespace Illustra.Views
             {
                 var viewer = new ImageViewerWindow(filePath);
                 viewer.Owner = this;
+                viewer.ParentWindow = this; // 親ウィンドウへの参照を設定
+                _currentViewerWindow = viewer; // 現在開いているビューアを追跡
                 viewer.Show();
                 viewer.Focus(); // ビューアウィンドウにフォーカスを設定
             }
@@ -464,6 +467,69 @@ namespace Illustra.Views
             {
                 MessageBox.Show($"画像の表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// 指定されたファイルパスの前の画像ファイルパスを取得します
+        /// </summary>
+        /// <param name="currentFilePath">現在の画像ファイルパス</param>
+        /// <returns>前の画像のファイルパス、存在しない場合はnull</returns>
+        public string? GetPreviousImage(string currentFilePath)
+        {
+            if (_viewModel.Items.Count <= 1)
+                return null;
+
+            // 現在の画像のインデックスを検索
+            var currentIndex = _viewModel.Items.ToList().FindIndex(i => i.FullPath == currentFilePath);
+            if (currentIndex < 0)
+                return null;
+
+            // 前のインデックスを計算（リストの最初の場合は最後に循環）
+            var prevIndex = (currentIndex > 0) ? currentIndex - 1 : _viewModel.Items.Count - 1;
+            return _viewModel.Items[prevIndex].FullPath;
+        }
+
+        /// <summary>
+        /// 指定されたファイルパスの次の画像ファイルパスを取得します
+        /// </summary>
+        /// <param name="currentFilePath">現在の画像ファイルパス</param>
+        /// <returns>次の画像のファイルパス、存在しない場合はnull</returns>
+        public string? GetNextImage(string currentFilePath)
+        {
+            if (_viewModel.Items.Count <= 1)
+                return null;
+
+            // 現在の画像のインデックスを検索
+            var currentIndex = _viewModel.Items.ToList().FindIndex(i => i.FullPath == currentFilePath);
+            if (currentIndex < 0)
+                return null;
+
+            // 次のインデックスを計算（リストの最後の場合は最初に循環）
+            var nextIndex = (currentIndex < _viewModel.Items.Count - 1) ? currentIndex + 1 : 0;
+            return _viewModel.Items[nextIndex].FullPath;
+        }
+
+        /// <summary>
+        /// サムネイル一覧の選択を指定されたファイルパスに同期します
+        /// </summary>
+        /// <param name="filePath">選択するファイルパス</param>
+        public void SyncThumbnailSelection(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            // サムネイルの選択と表示を更新
+            SelectThumbnail(filePath);
+
+            // UIスレッドで実行することを確保
+            Dispatcher.InvokeAsync(() =>
+            {
+                // 選択したアイテムをビューに表示
+                if (_viewModel.SelectedItem != null)
+                {
+                    ThumbnailItemsControl.ScrollIntoView(_viewModel.SelectedItem);
+                }
+            }, DispatcherPriority.Render);
         }
     }
 }

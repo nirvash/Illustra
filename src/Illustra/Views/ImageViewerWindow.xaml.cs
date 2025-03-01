@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Illustra.Helpers;
+using Illustra.Models;
 
 namespace Illustra.Views
 {
@@ -16,6 +17,10 @@ namespace Illustra.Views
         private readonly DispatcherTimer _titleBarTimer;
         private const double TITLE_BAR_SHOW_AREA = 100; // マウスがここまで近づいたらタイトルバーを表示
 
+        // 画像切り替え用
+        private string _currentFilePath;
+        public MainWindow ParentWindow { get; set; }
+
         public string FileName { get; private set; }
         public BitmapSource? ImageSource { get; private set; }
 
@@ -23,6 +28,7 @@ namespace Illustra.Views
         {
             InitializeComponent();
             FileName = System.IO.Path.GetFileName(filePath);
+            _currentFilePath = filePath;
 
             try
             {
@@ -74,7 +80,6 @@ namespace Illustra.Views
 
             // フルスクリーン設定を保存して、Loaded後に適用
             _isFullScreen = settings.IsFullScreen;
-            System.Diagnostics.Debug.WriteLine($"Constructor: IsFullScreen setting is {_isFullScreen}");
 
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
@@ -82,13 +87,9 @@ namespace Illustra.Views
 
         private async void OnWindowLoaded()
         {
-            System.Diagnostics.Debug.WriteLine("ImageViewerWindow.Loaded event fired");
-
             // フルスクリーン状態を設定
             if (_isFullScreen)
             {
-                System.Diagnostics.Debug.WriteLine("Restoring fullscreen state, setting to fullscreen mode");
-
                 _previousWindowState = WindowState;
                 _previousWindowStyle = WindowStyle;
 
@@ -99,15 +100,10 @@ namespace Illustra.Views
                 // 確実に設定が有効になるように少し待つ
                 await Task.Delay(50);
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("Window is in normal mode, not fullscreen");
-            }
 
             // フォーカスを確実に設定
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
-                System.Diagnostics.Debug.WriteLine("Setting focus to viewer window");
                 Activate(); // ウィンドウをアクティブにする
                 Focus();    // ウィンドウにフォーカスを設定
                 MainImage.Focus(); // 画像にフォーカス
@@ -125,6 +121,66 @@ namespace Illustra.Views
             {
                 ToggleFullScreen();
             }
+            else if (e.Key == Key.Left)
+            {
+                NavigateToPreviousImage();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Right)
+            {
+                NavigateToNextImage();
+                e.Handled = true;
+            }
+        }
+
+        // 前の画像に移動
+        private void NavigateToPreviousImage()
+        {
+            if (ParentWindow == null) return;
+
+            // 親ウィンドウに前の画像への移動をリクエスト
+            string? previousFilePath = ParentWindow.GetPreviousImage(_currentFilePath);
+            if (!string.IsNullOrEmpty(previousFilePath))
+            {
+                LoadNewImage(previousFilePath);
+            }
+        }
+
+        // 次の画像に移動
+        private void NavigateToNextImage()
+        {
+            if (ParentWindow == null) return;
+
+            // 親ウィンドウに次の画像への移動をリクエスト
+            string? nextFilePath = ParentWindow.GetNextImage(_currentFilePath);
+            if (!string.IsNullOrEmpty(nextFilePath))
+            {
+                LoadNewImage(nextFilePath);
+            }
+        }
+
+        // 新しい画像を読み込む
+        private void LoadNewImage(string filePath)
+        {
+            try
+            {
+                // 画像を読み込み
+                _currentFilePath = filePath;
+                FileName = System.IO.Path.GetFileName(filePath);
+                ImageSource = new BitmapImage(new Uri(filePath));
+
+                // データバインディングを更新
+                Title = FileName;
+                MainImage.Source = ImageSource;
+
+                // 親ウィンドウのサムネイル選択を更新
+                ParentWindow?.SyncThumbnailSelection(filePath);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
+                MessageBox.Show($"画像の読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -141,7 +197,6 @@ namespace Illustra.Views
             // フルスクリーン中は状態を保存してから閉じる
             if (_isFullScreen)
             {
-                System.Diagnostics.Debug.WriteLine("Window closing from fullscreen mode - saving state before closing");
                 // 設定を明示的に保存（共通メソッド使用）
                 SaveCurrentSettings();
             }
@@ -181,7 +236,6 @@ namespace Illustra.Views
                 _isFullScreen = true;
 
                 // 状態変更をすぐに保存
-                System.Diagnostics.Debug.WriteLine("ToggleFullScreen: Setting fullscreen to TRUE");
                 SaveCurrentSettings();
             }
             else
@@ -196,7 +250,6 @@ namespace Illustra.Views
                 _titleBarTimer.Stop();
 
                 // 状態変更をすぐに保存
-                System.Diagnostics.Debug.WriteLine("ToggleFullScreen: Setting fullscreen to FALSE");
                 SaveCurrentSettings();
             }
         }
@@ -229,7 +282,6 @@ namespace Illustra.Views
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            System.Diagnostics.Debug.WriteLine($"OnClosed: IsFullScreen: {_isFullScreen}");
             // OnClosingで既に保存したので、ここでは何もしない
         }
     }

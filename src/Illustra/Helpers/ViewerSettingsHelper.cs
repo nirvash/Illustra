@@ -44,9 +44,6 @@ namespace Illustra.Helpers
                     Directory.CreateDirectory(directory);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"Saving viewer settings to: {SettingsFilePath}");
-                System.Diagnostics.Debug.WriteLine($"Saving settings - Width: {settings.Width}, Height: {settings.Height}, IsFullScreen: {settings.IsFullScreen}");
-
                 // 設定をファイルに保存
                 var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
