@@ -2,11 +2,13 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.ComponentModel;
 using Illustra.Helpers;
+using Illustra.Models;
 
 namespace Illustra.Views
 {
-    public partial class ImageViewerWindow : Window
+    public partial class ImageViewerWindow : Window, INotifyPropertyChanged
     {
         // フルスクリーン切り替え前のウィンドウ状態を保存
         private WindowState _previousWindowState;
@@ -20,8 +22,28 @@ namespace Illustra.Views
         private string _currentFilePath;
         public required MainWindow ParentWindow { get; set; }
 
+        private ImagePropertiesModel _properties = new();
+        public ImagePropertiesModel Properties
+        {
+            get => _properties;
+            private set
+            {
+                if (_properties != value)
+                {
+                    _properties = value;
+                    OnPropertyChanged(nameof(Properties));
+                }
+            }
+        }
+
         public string FileName { get; private set; }
         public BitmapSource? ImageSource { get; private set; }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         public ImageViewerWindow(string filePath)
         {
@@ -29,15 +51,7 @@ namespace Illustra.Views
             FileName = System.IO.Path.GetFileName(filePath);
             _currentFilePath = filePath;
 
-            try
-            {
-                ImageSource = new BitmapImage(new Uri(filePath));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
-                // ダミー画像を表示するなどのエラー処理をここに入れることもできます
-            }
+            LoadImageAndProperties(filePath);
 
             DataContext = this;
 
@@ -74,14 +88,30 @@ namespace Illustra.Views
             }
 
             // サイズも画面サイズを超えないように設定
-            Width = Math.Min(settings.Width, screenWidth); // Math.Min をつかうこと
-            Height = Math.Min(settings.Height, screenHeight); // Math.Min をつかうこと
+            Width = Math.Min(settings.Width, screenWidth);
+            Height = Math.Min(settings.Height, screenHeight);
 
             // フルスクリーン設定を保存して、Loaded後に適用
             _isFullScreen = settings.IsFullScreen;
 
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
+        }
+
+        private async void LoadImageAndProperties(string filePath)
+        {
+            try
+            {
+                ImageSource = new BitmapImage(new Uri(filePath));
+                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                Properties = newProperties;
+                PropertyPanelControl.ImageProperties = Properties;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
+                MessageBox.Show($"画像の読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async void OnWindowLoaded()
@@ -130,6 +160,16 @@ namespace Illustra.Views
                 NavigateToNextImage();
                 e.Handled = true;
             }
+            else if (e.Key == Key.P)
+            {
+                TogglePropertyPanel();
+            }
+        }
+
+        private void TogglePropertyPanel()
+        {
+            PropertyPanel.Visibility = PropertyPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+            SaveCurrentSettings();
         }
 
         // 前の画像に移動
@@ -158,6 +198,85 @@ namespace Illustra.Views
             }
         }
 
+        private const int CacheSize = 10; // キャッシュサイズを固定
+        private readonly Dictionary<string, BitmapSource> _imageCache = new();
+        private readonly Queue<string> _cacheOrder = new(); // キャッシュの順序を管理
+
+        private void CacheImages(string filePath)
+        {
+            var _viewModel = ParentWindow.GetViewModel();
+            var fileNodes = _viewModel.Items;
+            var currentIndex = fileNodes.ToList().FindIndex(f => f.FullPath == filePath);
+
+            // 前後の画像をプリロード
+            for (int i = -CacheSize; i <= CacheSize; i++)
+            {
+                var index = currentIndex + i;
+                if (index >= 0 && index < fileNodes.Count)
+                {
+                    var targetPath = fileNodes[index].FullPath;
+                    if (!_imageCache.ContainsKey(targetPath))
+                    {
+                        try
+                        {
+                            var image = new BitmapImage();
+                            image.BeginInit();
+                            image.CacheOption = BitmapCacheOption.OnLoad; // メモリ効率を改善
+                            image.UriSource = new Uri(targetPath);
+                            image.EndInit();
+                            image.Freeze(); // UIスレッドの効率を改善
+
+                            _imageCache[targetPath] = image;
+                            _cacheOrder.Enqueue(targetPath);
+
+                            // キャッシュサイズを超えた場合、古いものから削除
+                            while (_cacheOrder.Count > CacheSize * 2 + 1)
+                            {
+                                var oldestPath = _cacheOrder.Dequeue();
+                                _imageCache.Remove(oldestPath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"画像のキャッシュ中にエラーが発生: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ClearCache()
+        {
+            _imageCache.Clear();
+            _cacheOrder.Clear();
+        }
+
+        private void LoadImageFromCache(string filePath)
+        {
+            try
+            {
+                if (_imageCache.TryGetValue(filePath, out var cachedImage))
+                {
+                    ImageSource = cachedImage;
+                }
+                else
+                {
+                    var image = new BitmapImage();
+                    image.BeginInit();
+                    image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.UriSource = new Uri(filePath);
+                    image.EndInit();
+                    image.Freeze();
+                    ImageSource = image;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"画像の読み込み中にエラーが発生: {ex.Message}");
+                throw;
+            }
+        }
+
         // 新しい画像を読み込む
         private void LoadNewImage(string filePath)
         {
@@ -166,7 +285,8 @@ namespace Illustra.Views
                 // 画像を読み込み
                 _currentFilePath = filePath;
                 FileName = System.IO.Path.GetFileName(filePath);
-                ImageSource = new BitmapImage(new Uri(filePath));
+                LoadImageFromCache(filePath);
+                CacheImages(filePath);
 
                 // データバインディングを更新
                 Title = FileName;
@@ -262,7 +382,8 @@ namespace Illustra.Views
                 Top = _isFullScreen ? double.NaN : Top,
                 Width = _isFullScreen ? 800 : Width,
                 Height = _isFullScreen ? 600 : Height,
-                IsFullScreen = _isFullScreen
+                IsFullScreen = _isFullScreen,
+                VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
             };
             ViewerSettingsHelper.SaveSettings(settings);
         }

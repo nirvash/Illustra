@@ -1,10 +1,13 @@
 using System.IO;
-using System.Windows.Media.Imaging;
+using System.ComponentModel;
 using SkiaSharp;
+using System.Text;
+using MetadataExtractor;
+using MetadataExtractor.Formats.Exif;
 
 namespace Illustra.Models
 {
-    public class ImagePropertiesModel
+    public class ImagePropertiesModel : INotifyPropertyChanged
     {
         // ファイル情報
         public string FileName { get; set; } = string.Empty;
@@ -26,7 +29,30 @@ namespace Illustra.Models
         public string ExposureTime { get; set; } = string.Empty;
         public string FNumber { get; set; } = string.Empty;
         public string ISOSpeed { get; set; } = string.Empty;
+        public string FNumberAndISO
+        {
+            get
+            {
+                var parts = new List<string>();
+                if (!string.IsNullOrEmpty(FNumber)) parts.Add(FNumber);
+                if (!string.IsNullOrEmpty(ISOSpeed)) parts.Add(ISOSpeed);
+                return string.Join(" / ", parts);
+            }
+        }
         public DateTime? DateTaken { get; set; }
+        private string _userComment = string.Empty;
+        public string UserComment
+        {
+            get => _userComment;
+            set
+            {
+                if (_userComment != value)
+                {
+                    _userComment = value;
+                    OnPropertyChanged(nameof(UserComment));
+                }
+            }
+        }
 
         /// <summary>
         /// 指定したファイルパスから画像プロパティを非同期的に読み込みます
@@ -110,61 +136,77 @@ namespace Illustra.Models
         {
             try
             {
-                // BitmapSourceを使用してExifデータを取得
-                BitmapFrame frame = BitmapFrame.Create(new Uri(filePath), BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
-                BitmapMetadata? metadata = frame.Metadata as BitmapMetadata;
+                var directories = ImageMetadataReader.ReadMetadata(filePath);
+                var exif = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
+                var exifIfd0 = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
 
-                if (metadata != null)
+                if (exif != null)
                 {
-                    // カメラモデル
-                    if (metadata.ContainsQuery("System.Photo.CameraManufacturer") && metadata.ContainsQuery("System.Photo.CameraModel"))
+                    // ユーザーコメント
+                    try
                     {
-                        var manufacturer = metadata.GetQuery("System.Photo.CameraManufacturer") as string;
-                        var model = metadata.GetQuery("System.Photo.CameraModel") as string;
-
-                        if (!string.IsNullOrEmpty(manufacturer) && !string.IsNullOrEmpty(model))
-                            properties.CameraModel = $"{manufacturer} {model}";
-                        else if (!string.IsNullOrEmpty(model))
-                            properties.CameraModel = model;
+                        var comment = exif.GetDescription(ExifDirectoryBase.TagUserComment);
+                        properties.UserComment = comment ?? string.Empty;
                     }
+                    catch (MetadataException) { }
 
                     // 撮影日時
-                    if (metadata.ContainsQuery("System.Photo.DateTaken"))
+                    try
                     {
-                        if (metadata.GetQuery("System.Photo.DateTaken") is DateTime dateTaken)
-                        {
-                            properties.DateTaken = dateTaken;
-                        }
+                        var dateTime = exif.GetDateTime(ExifDirectoryBase.TagDateTimeOriginal);
+                        properties.DateTaken = dateTime;
                     }
-
-                    // 露出時間
-                    if (metadata.ContainsQuery("System.Photo.ExposureTime"))
-                    {
-                        var exposureTime = metadata.GetQuery("System.Photo.ExposureTime");
-                        if (exposureTime != null)
-                        {
-                            properties.ExposureTime = $"{exposureTime}";
-                        }
-                    }
-
-                    // F値
-                    if (metadata.ContainsQuery("System.Photo.FNumber"))
-                    {
-                        var fNumber = metadata.GetQuery("System.Photo.FNumber");
-                        if (fNumber != null)
-                        {
-                            properties.FNumber = $"F{fNumber}";
-                        }
-                    }
+                    catch (MetadataException) { }
 
                     // ISO感度
-                    if (metadata.ContainsQuery("System.Photo.ISOSpeed"))
+                    try
                     {
-                        var iso = metadata.GetQuery("System.Photo.ISOSpeed");
-                        if (iso != null)
+                        var iso = exif.GetInt32(ExifDirectoryBase.TagIsoEquivalent);
+                        properties.ISOSpeed = $"ISO {iso}";
+                    }
+                    catch (MetadataException) { }
+
+                    // 露出時間
+                    try
+                    {
+                        var exposure = exif.GetRational(ExifDirectoryBase.TagExposureTime);
+                        // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
+                        if (exposure.ToDouble() >= 1.0)
                         {
-                            properties.ISOSpeed = $"ISO {iso}";
+                            properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
                         }
+                        else
+                        {
+                            properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
+                        }
+                    }
+                    catch (MetadataException) { }
+
+                    // F値
+                    try
+                    {
+                        var fNumber = exif.GetRational(ExifDirectoryBase.TagFNumber);
+                        properties.FNumber = $"F{fNumber.ToDouble():0.#}";
+                    }
+                    catch (MetadataException) { }
+                }
+
+                if (exifIfd0 != null)
+                {
+                    // カメラ情報
+                    string make = string.Empty;
+                    string model = string.Empty;
+
+                    try { make = exifIfd0.GetString(ExifDirectoryBase.TagMake) ?? string.Empty; } catch (MetadataException) { }
+                    try { model = exifIfd0.GetString(ExifDirectoryBase.TagModel) ?? string.Empty; } catch (MetadataException) { }
+
+                    if (!string.IsNullOrEmpty(make) && !string.IsNullOrEmpty(model))
+                    {
+                        properties.CameraModel = $"{make} {model}";
+                    }
+                    else if (!string.IsNullOrEmpty(model))
+                    {
+                        properties.CameraModel = model;
                     }
                 }
             }
@@ -190,6 +232,12 @@ namespace Illustra.Models
             }
 
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

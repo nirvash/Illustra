@@ -14,6 +14,15 @@ namespace Illustra.Models
 
     public class FileNodeModel : INotifyPropertyChanged
     {
+        public FileNodeModel(string filePath, ThumbnailInfo? thumbnailInfo = null)
+        {
+            FullPath = filePath;
+            var fileInfo = new System.IO.FileInfo(filePath);
+            CreationTime = fileInfo.CreationTime;
+            Name = System.IO.Path.GetFileName(filePath);
+            ThumbnailInfo = thumbnailInfo ?? new ThumbnailInfo(null, ThumbnailState.NotLoaded);
+        }
+
         private string _name = string.Empty;
         public string Name
         {
@@ -43,6 +52,8 @@ namespace Illustra.Models
                 }
             }
         }
+
+        public DateTime CreationTime { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

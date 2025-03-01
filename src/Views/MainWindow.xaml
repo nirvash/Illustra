@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vw="clr-namespace:WpfToolkit.Controls;assembly=VirtualizingWrapPanel"
-        xmlns:local="clr-namespace:Illustra"
+        xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
@@ -34,6 +34,13 @@
                     <MenuItem Header="中(_M)" Click="MediumThumbnailMenuItem_Click" IsChecked="True" />
                     <MenuItem Header="大(_L)" Click="LargeThumbnailMenuItem_Click" />
                 </MenuItem>
+                <MenuItem Header="並び順(_O)">
+                    <MenuItem x:Name="SortByDateMenuItem" Header="作成日時順(_D)" IsCheckable="True" IsChecked="True" Click="SortByDateMenuItem_Click"/>
+                    <MenuItem x:Name="SortByNameMenuItem" Header="ファイル名順(_N)" IsCheckable="True" Click="SortByNameMenuItem_Click"/>
+                    <Separator/>
+                    <MenuItem x:Name="SortAscendingMenuItem" Header="昇順(_A)" IsCheckable="True" IsChecked="True" Click="SortOrderMenuItem_Click"/>
+                    <MenuItem x:Name="SortDescendingMenuItem" Header="降順(_D)" IsCheckable="True" Click="SortOrderMenuItem_Click"/>
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="更新(_R)" Click="RefreshMenuItem_Click" />
             </MenuItem>
@@ -44,10 +51,15 @@
 
         <!-- メインコンテンツ -->
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
             <!-- 左側：フォルダツリービュー -->
             <TreeView x:Name="FolderTreeView"
@@ -221,76 +233,16 @@
                             Margin="0,0,0,5"/>
 
                     <!-- プロパティ表示 -->
-                    <ScrollViewer Grid.Row="1"
-                                VerticalScrollBarVisibility="Auto">
-                        <Grid x:Name="PropertiesGrid">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- ファイル情報 -->
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="ファイル名:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PropFileName" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="パス:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropFilePath" Text="" TextWrapping="Wrap" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="サイズ:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PropFileSize" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="作成日時:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PropCreatedDate" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="更新日時:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="PropModifiedDate" Text="" Margin="0,2,0,2"/>
-
-                            <!-- 画像情報 -->
-                            <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Text="画像情報" FontWeight="Bold" Margin="0,10,0,5"/>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="解像度:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" x:Name="PropResolution" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="フォーマット:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="7" Grid.Column="1" x:Name="PropFormat" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="8" Grid.Column="0" Text="色深度:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="8" Grid.Column="1" x:Name="PropColorDepth" Text="" Margin="0,2,0,2"/>
-
-                            <!-- Exif情報 -->
-                            <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Text="Exif情報" FontWeight="Bold" Margin="0,10,0,5"/>
-
-                            <TextBlock Grid.Row="10" Grid.Column="0" Text="カメラ:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="10" Grid.Column="1" x:Name="PropCamera" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="11" Grid.Column="0" Text="撮影日時:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="11" Grid.Column="1" x:Name="PropDateTaken" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="12" Grid.Column="0" Text="露出時間:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="12" Grid.Column="1" x:Name="PropExposureTime" Text="" Margin="0,2,0,2"/>
-
-                            <TextBlock Grid.Row="13" Grid.Column="0" Text="F値/ISO:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-                            <TextBlock Grid.Row="13" Grid.Column="1" x:Name="PropFNumberISO" Text="" Margin="0,2,0,2"/>
-                        </Grid>
-                    </ScrollViewer>
+                    <local:PropertyPanelControl x:Name="PropertyPanel" Grid.Row="1"/>
                 </Grid>
             </Grid>
+
+            <!-- ステータスバー -->
+            <TextBlock x:Name="StatusBar"
+                     Grid.Row="1"
+                     Margin="5,2"
+                     Text="準備完了"
+                     Background="#F0F0F0"/>
         </Grid>
     </Grid>
 </Window>

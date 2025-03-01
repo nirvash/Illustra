@@ -1,12 +1,22 @@
 ﻿<Application x:Class="Illustra.Views.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Illustra"
+             xmlns:local="clr-namespace:Illustra.Views"
+             xmlns:helpers="clr-namespace:Illustra"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- アプリアイコンの設定 -->
         <ResourceDictionary>
+            <!-- アプリアイコンの設定 -->
             <BitmapImage x:Key="AppIcon" UriSource="pack://application:,,,/assets/illustra.ico" />
+
+            <!-- コンバーター -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+            <!-- 文字列が空でない場合に表示するコンバーター -->
+            <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+
+            <!-- null以外の場合に表示するコンバーター -->
+            <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

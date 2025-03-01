@@ -7,10 +7,12 @@ using System.Windows.Threading;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace Illustra.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private ThumbnailLoaderHelper _thumbnailLoader;
         private bool _isInitialized = false;
@@ -21,6 +23,8 @@ namespace Illustra.Views
         private bool _shouldSelectFirstItem = false;
         private DateTime _lastLoadTime = DateTime.MinValue;
         private readonly object _loadLock = new object();
+        private bool _sortByDate = true;
+        private bool _sortAscending = true;
 
         // 画像閲覧用
         private ImageViewerWindow? _currentViewerWindow;
@@ -44,7 +48,7 @@ namespace Illustra.Views
             DataContext = _viewModel;
 
             // サムネイルローダーの初期化
-            _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, _viewModel.Items);
+            _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel);
             _thumbnailLoader.fileNodesLoaded += OnFileNodesLoaded;
 
             // サムネイルサイズを設定から復元
@@ -68,6 +72,19 @@ namespace Illustra.Views
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
+        }
+
+        /// <summary>
+        /// プロパティ表示をクリアするメソッド
+        /// </summary>
+        private void ClearPropertiesDisplay()
+        {
+            PropertyPanel.ImageProperties = null;
+        }
+
+        public MainViewModel GetViewModel()
+        {
+            return _viewModel;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -220,14 +237,20 @@ namespace Illustra.Views
                     var firstItem = _viewModel.Items[0];
 
                     // 先頭アイテムを選択
-                    _currentSelectedFilePath = firstItem.FullPath;
-                    _viewModel.SelectedItem = firstItem;
-                    LoadFilePropertiesAsync(firstItem.FullPath);
+                    SelectThumbnail(firstItem.FullPath);
 
                     // サムネイルにフォーカスを設定
                     await Task.Delay(50);
                     ThumbnailItemsControl.Focus();
                 }
+
+                // 表示範囲のサムネイルをロード
+                var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer != null)
+                {
+                    await LoadVisibleThumbnailsAsync(scrollViewer);
+                }
+
             }
             catch (Exception ex)
             {
@@ -245,6 +268,9 @@ namespace Illustra.Views
                 System.Diagnostics.Debug.WriteLine("Invalid file path or file does not exist");
                 return;
             }
+
+            var visibleItems = ThumbnailItemsControl.ItemContainerGenerator.Items.Count;
+            Console.WriteLine($"Visible Items: {visibleItems}");
 
             var matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
             if (matchingItem != null)
@@ -280,7 +306,6 @@ namespace Illustra.Views
             {
                 // 実際のScrollViewerにイベントハンドラを直接登録
                 scrollViewer.ScrollChanged += OnScrollChanged;
-                await LoadVisibleThumbnailsAsync(scrollViewer);
             }
 
             // キーボードナビゲーションのイベントハンドラを追加
@@ -428,14 +453,10 @@ namespace Illustra.Views
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
             {
                 // ViewModelのSelectedItemを更新
-                _viewModel.SelectedItem = fileNode;
-                _currentSelectedFilePath = fileNode.FullPath;
+                SelectThumbnail(fileNode.FullPath);
 
                 // 親のListViewにフォーカスを与える
                 ThumbnailItemsControl.Focus();
-
-                // プロパティを表示
-                LoadFilePropertiesAsync(fileNode.FullPath);
             }
         }
 
@@ -599,6 +620,115 @@ namespace Illustra.Views
                 scrollViewer.ScrollToVerticalOffset(
                     scrollViewer.VerticalOffset - (e.Delta * _appSettings.MouseWheelMultiplier / 3));
             }
+        }
+
+        private void ToggleSortOrder()
+        {
+            _sortAscending = !_sortAscending;
+            LoadFolder(FolderTreeView.SelectedItem as string);
+        }
+
+        private void ToggleSortBy()
+        {
+            _sortByDate = !_sortByDate;
+            LoadFolder(FolderTreeView.SelectedItem as string);
+        }
+
+
+        private void LoadFolder(string? folderPath)
+        {
+            if (string.IsNullOrEmpty(folderPath)) return;
+
+            _thumbnailLoader.LoadFileNodes(folderPath);
+
+            // ソート状態をステータスバーに表示
+            UpdateSortStatusText();
+        }
+
+        private void UpdateSortStatusText()
+        {
+            var sortType = _sortByDate ? "作成日時" : "ファイル名";
+            var sortOrder = _sortAscending ? "昇順" : "降順";
+            StatusBar.Text = $"ソート: {sortType} ({sortOrder})";
+        }
+
+        private void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            _sortByDate = true;
+            SortByDateMenuItem.IsChecked = true;
+            SortByNameMenuItem.IsChecked = false;
+            _viewModel.SortItems(_sortByDate, _sortAscending);
+        }
+
+        private void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            _sortByDate = false;
+            SortByDateMenuItem.IsChecked = false;
+            SortByNameMenuItem.IsChecked = true;
+            _viewModel.SortItems(_sortByDate, _sortAscending);
+        }
+
+        private void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender == SortAscendingMenuItem)
+            {
+                _sortAscending = true;
+                SortAscendingMenuItem.IsChecked = true;
+                SortDescendingMenuItem.IsChecked = false;
+            }
+            else
+            {
+                _sortAscending = false;
+                SortAscendingMenuItem.IsChecked = false;
+                SortDescendingMenuItem.IsChecked = true;
+            }
+            _viewModel.SortItems(_sortByDate, _sortAscending);
+        }
+
+        private void ReloadCurrentFolder()
+        {
+            if (!string.IsNullOrEmpty(_thumbnailLoader.CurrentFolderPath))
+            {
+                var selectedPath = _currentSelectedFilePath;
+                LoadFolder(_thumbnailLoader.CurrentFolderPath);
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    // ソート後も同じ画像を選択状態に維持
+                    SelectThumbnail(selectedPath);
+                }
+            }
+        }
+
+        public bool SortByDate
+        {
+            get => _sortByDate;
+            set
+            {
+                if (_sortByDate != value)
+                {
+                    _sortByDate = value;
+                    OnPropertyChanged(nameof(SortByDate));
+                }
+            }
+        }
+
+        public bool SortAscending
+        {
+            get => _sortAscending;
+            set
+            {
+                if (_sortAscending != value)
+                {
+                    _sortAscending = value;
+                    OnPropertyChanged(nameof(SortAscending));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

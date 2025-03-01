@@ -15,13 +15,33 @@
         MouseMove="Window_MouseMove"
         PreviewMouseWheel="Window_PreviewMouseWheel">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
         <Image x:Name="MainImage"
+               Grid.Column="0"
                Source="{Binding ImageSource}"
                Stretch="Uniform"
                RenderOptions.BitmapScalingMode="HighQuality"/>
 
+        <!-- プロパティパネル -->
+        <Border x:Name="PropertyPanel"
+                Grid.Column="1"
+                Width="250"
+                Background="#F0F0F0"
+                BorderBrush="#CCCCCC"
+                BorderThickness="1,0,0,0">
+            <StackPanel Margin="10">
+                <TextBlock Text="画像情報" FontWeight="Bold" Margin="0,0,0,10"/>
+                <local:PropertyPanelControl x:Name="PropertyPanelControl" ImageProperties="{Binding Properties}"/>
+            </StackPanel>
+        </Border>
+
         <!-- フルスクリーン時のタイトルバー -->
         <Border x:Name="TitleBar"
+                Grid.ColumnSpan="2"
                 Height="32"
                 VerticalAlignment="Top"
                 Background="#80000000"

@@ -9,6 +9,17 @@ namespace Illustra.Models
     /// <typeparam name="T">コレクションの要素の型</typeparam>
     public class BulkObservableCollection<T> : ObservableCollection<T>
     {
+        public BulkObservableCollection()
+        {
+        }
+
+        public BulkObservableCollection(IOrderedEnumerable<FileNodeModel> fileNodeModels)
+        {
+            FileNodeModels = fileNodeModels;
+        }
+
+        public IOrderedEnumerable<FileNodeModel> FileNodeModels { get; }
+
         /// <summary>
         /// 複数のアイテムを一括で追加します。通知は最後に一度だけ発行されます。
         /// </summary>

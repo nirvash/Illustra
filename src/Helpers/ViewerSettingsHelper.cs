@@ -58,5 +58,6 @@ namespace Illustra.Helpers
         public double Width { get; set; } = 800;
         public double Height { get; set; } = 600;
         public bool IsFullScreen { get; set; } = false;
+        public bool VisiblePropertyPanel { get; set; } = true;
     }
 }
