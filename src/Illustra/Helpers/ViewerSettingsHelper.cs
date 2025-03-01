@@ -1,5 +1,4 @@
 using System.IO;
-using System.Windows;
 using Newtonsoft.Json;
 
 namespace Illustra.Helpers
@@ -17,13 +16,10 @@ namespace Illustra.Helpers
             {
                 if (File.Exists(SettingsFilePath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"Loading viewer settings from: {SettingsFilePath}");
                     var json = File.ReadAllText(SettingsFilePath);
                     var settings = JsonConvert.DeserializeObject<ViewerSettings>(json) ?? new ViewerSettings();
-                    System.Diagnostics.Debug.WriteLine($"Loaded settings - Width: {settings.Width}, Height: {settings.Height}, IsFullScreen: {settings.IsFullScreen}");
                     return settings;
                 }
-                System.Diagnostics.Debug.WriteLine($"Settings file not found at: {SettingsFilePath}, using defaults");
                 return new ViewerSettings();
             }
             catch (Exception ex)

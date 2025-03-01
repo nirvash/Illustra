@@ -7,10 +7,10 @@ namespace Illustra.Helpers
     public class AppSettings
     {
         // ウィンドウサイズと位置
-        public double WindowWidth { get; set; } = 800;
-        public double WindowHeight { get; set; } = 450;
-        public double WindowLeft { get; set; } = 100;
-        public double WindowTop { get; set; } = 100;
+        public double WindowWidth { get; set; } = 900;
+        public double WindowHeight { get; set; } = 600;
+        public double WindowLeft { get; set; } = double.NaN;
+        public double WindowTop { get; set; } = double.NaN;
         public WindowState WindowState { get; set; } = WindowState.Normal;
 
         // 最後に開いていたフォルダ
@@ -21,6 +21,12 @@ namespace Illustra.Helpers
 
         // 最後に選択したファイル
         public string LastSelectedFilePath { get; set; } = string.Empty;
+
+        // スクロール設定
+        public double MouseWheelMultiplier { get; set; } = 1.0;
+
+        // ビューア設定
+        public bool SaveViewerState { get; set; } = true;
 
         // 他の設定を必要に応じて追加
     }

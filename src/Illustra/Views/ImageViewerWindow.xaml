@@ -12,7 +12,8 @@
         WindowStartupLocation="CenterScreen"
         KeyDown="Window_KeyDown"
         MouseDoubleClick="Window_MouseDoubleClick"
-        MouseMove="Window_MouseMove">
+        MouseMove="Window_MouseMove"
+        PreviewMouseWheel="Window_PreviewMouseWheel">
     <Grid>
         <Image x:Name="MainImage"
                Source="{Binding ImageSource}"

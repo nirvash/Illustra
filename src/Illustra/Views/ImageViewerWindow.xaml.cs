@@ -3,7 +3,6 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Illustra.Helpers;
-using Illustra.Models;
 
 namespace Illustra.Views
 {
@@ -271,8 +270,6 @@ namespace Illustra.Views
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             // 閉じる過程での最初の段階でフルスクリーン状態を保存
-            System.Diagnostics.Debug.WriteLine($"OnClosing: IsFullScreen: {_isFullScreen}");
-
             // 共通メソッドを使用して設定を保存
             SaveCurrentSettings();
 
@@ -283,6 +280,21 @@ namespace Illustra.Views
         {
             base.OnClosed(e);
             // OnClosingで既に保存したので、ここでは何もしない
+        }
+
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Delta > 0)
+            {
+                // ホイール上回転で前の画像
+                NavigateToPreviousImage();
+            }
+            else
+            {
+                // ホイール下回転で次の画像
+                NavigateToNextImage();
+            }
+            e.Handled = true;
         }
     }
 }

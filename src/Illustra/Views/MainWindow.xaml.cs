@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,7 +7,6 @@ using System.Windows.Threading;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
-using WpfToolkit.Controls;
 
 namespace Illustra.Views
 {
@@ -230,7 +227,6 @@ namespace Illustra.Views
                     // サムネイルにフォーカスを設定
                     await Task.Delay(50);
                     ThumbnailItemsControl.Focus();
-                    System.Diagnostics.Debug.WriteLine("Focus set to ThumbnailItemsControl after selecting first item");
                 }
             }
             catch (Exception ex)
@@ -530,6 +526,76 @@ namespace Illustra.Views
                     ThumbnailItemsControl.ScrollIntoView(_viewModel.SelectedItem);
                 }
             }, DispatcherPriority.Render);
+        }
+
+        // メニュー関連のメソッド
+        private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void SmallThumbnailMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ThumbnailSizeSlider.Value = 80;
+        }
+
+        private void MediumThumbnailMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ThumbnailSizeSlider.Value = 120;
+        }
+
+        private void LargeThumbnailMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ThumbnailSizeSlider.Value = 240;
+        }
+
+        private void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // 現在のフォルダを再読み込み
+            if (!string.IsNullOrEmpty(_thumbnailLoader.CurrentFolderPath))
+            {
+                _thumbnailLoader.LoadFileNodes(_thumbnailLoader.CurrentFolderPath);
+            }
+        }
+
+        private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // 設定ウィンドウを表示
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.Owner = this;
+
+            if (settingsWindow.ShowDialog() == true)
+            {
+                // 設定が変更された場合は反映
+                ApplySettings();
+            }
+        }
+
+        /// <summary>
+        /// 設定をUIに適用する
+        /// </summary>
+        private void ApplySettings()
+        {
+            // 設定を再読み込み
+            _appSettings = SettingsHelper.GetSettings();
+
+            // サムネイルサイズを設定
+            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
+        }
+
+        /// <summary>
+        /// マウスホイールでサムネイルをスクロールする処理
+        /// </summary>
+        private void ThumbnailItemsControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null)
+            {
+                // 基本のスクロール動作を維持しつつ、倍率を適用
+                e.Handled = true;
+                scrollViewer.ScrollToVerticalOffset(
+                    scrollViewer.VerticalOffset - (e.Delta * _appSettings.MouseWheelMultiplier / 3));
+            }
         }
     }
 }
