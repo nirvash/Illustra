@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace Illustra.Models
 {
@@ -38,6 +39,7 @@ namespace Illustra.Models
             // まとめて `CollectionChanged` イベントを発火（リスト全体を更新）
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
+
 
         /// <summary>
         /// コレクションを一括でクリアして新しいアイテムを追加します。

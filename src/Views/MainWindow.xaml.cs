@@ -622,42 +622,12 @@ namespace Illustra.Views
             }
         }
 
-        private void ToggleSortOrder()
-        {
-            _sortAscending = !_sortAscending;
-            LoadFolder(FolderTreeView.SelectedItem as string);
-        }
-
-        private void ToggleSortBy()
-        {
-            _sortByDate = !_sortByDate;
-            LoadFolder(FolderTreeView.SelectedItem as string);
-        }
-
-
-        private void LoadFolder(string? folderPath)
-        {
-            if (string.IsNullOrEmpty(folderPath)) return;
-
-            _thumbnailLoader.LoadFileNodes(folderPath);
-
-            // ソート状態をステータスバーに表示
-            UpdateSortStatusText();
-        }
-
-        private void UpdateSortStatusText()
-        {
-            var sortType = _sortByDate ? "作成日時" : "ファイル名";
-            var sortOrder = _sortAscending ? "昇順" : "降順";
-            StatusBar.Text = $"ソート: {sortType} ({sortOrder})";
-        }
-
         private void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _sortByDate = true;
             SortByDateMenuItem.IsChecked = true;
             SortByNameMenuItem.IsChecked = false;
-            _viewModel.SortItems(_sortByDate, _sortAscending);
+            SortThumbnail();
         }
 
         private void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
@@ -665,7 +635,7 @@ namespace Illustra.Views
             _sortByDate = false;
             SortByDateMenuItem.IsChecked = false;
             SortByNameMenuItem.IsChecked = true;
-            _viewModel.SortItems(_sortByDate, _sortAscending);
+            SortThumbnail();
         }
 
         private void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
@@ -682,21 +652,14 @@ namespace Illustra.Views
                 SortAscendingMenuItem.IsChecked = false;
                 SortDescendingMenuItem.IsChecked = true;
             }
-            _viewModel.SortItems(_sortByDate, _sortAscending);
+            SortThumbnail();
         }
 
-        private void ReloadCurrentFolder()
+        private void SortThumbnail()
         {
-            if (!string.IsNullOrEmpty(_thumbnailLoader.CurrentFolderPath))
-            {
-                var selectedPath = _currentSelectedFilePath;
-                LoadFolder(_thumbnailLoader.CurrentFolderPath);
-                if (!string.IsNullOrEmpty(selectedPath))
-                {
-                    // ソート後も同じ画像を選択状態に維持
-                    SelectThumbnail(selectedPath);
-                }
-            }
+            _viewModel.SortItems(_sortByDate, _sortAscending);
+            // 再選択してスクロール
+            SelectThumbnail(_currentSelectedFilePath);
         }
 
         public bool SortByDate

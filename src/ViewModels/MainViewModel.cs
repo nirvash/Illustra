@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Illustra.Models;
 using System.Linq;
+using System.Collections.Immutable;
 
 namespace Illustra.ViewModels
 {
@@ -31,28 +32,31 @@ namespace Illustra.ViewModels
 
         public void SortItems(bool sortByDate, bool ascending)
         {
+            var items = Items.ToList();
             if (sortByDate)
             {
+
                 if (ascending)
                 {
-                    Items = new BulkObservableCollection<FileNodeModel>(Items.OrderBy(i => i.CreationTime));
+                    items = items.OrderBy(i => i.CreationTime).ToList();
                 }
                 else
                 {
-                    Items = new BulkObservableCollection<FileNodeModel>(Items.OrderByDescending(i => i.CreationTime));
+                    items = items.OrderByDescending(i => i.CreationTime).ToList();
                 }
             }
             else
             {
                 if (ascending)
                 {
-                    Items = new BulkObservableCollection<FileNodeModel>(Items.OrderBy(i => i.Name));
+                    items = items.OrderBy(i => i.Name).ToList();
                 }
                 else
                 {
-                    Items = new BulkObservableCollection<FileNodeModel>(Items.OrderByDescending(i => i.Name));
+                    items = items.OrderByDescending(i => i.Name).ToList();
                 }
             }
+            Items.ReplaceAll(items);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged = null;
