@@ -134,8 +134,8 @@
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0" />
-                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Margin" Value="3" />
+                            <Setter Property="BorderThickness" Value="1" />
                             <Setter Property="Background" Value="Transparent" />
                             <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
                             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -145,17 +145,25 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListViewItem">
-                                        <Border x:Name="Border"
-                                                Background="{TemplateBinding Background}"
-                                                BorderBrush="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-                                                BorderThickness="1"
-                                                SnapsToDevicePixels="True">
-                                            <ContentPresenter />
-                                        </Border>
+                                        <Grid>
+                                            <!-- 通常の境界線（常に1ピクセル） -->
+                                            <Border x:Name="NormalBorder"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                                                    BorderThickness="1"
+                                                    SnapsToDevicePixels="True">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <!-- 選択時のハイライト境界線（オーバーレイ） -->
+                                            <Border x:Name="SelectionBorder"
+                                                    BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                                                    BorderThickness="2"
+                                                    Opacity="0">
+                                            </Border>
+                                        </Grid>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
-                                                <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                                                <Setter TargetName="SelectionBorder" Property="Opacity" Value="1" />
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="Background" Value="#0F000000"/>
@@ -170,8 +178,7 @@
                         <DataTemplate>
                             <Border Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
                                     Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
-                                    Margin="3" BorderThickness="1"
-                                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                                    BorderThickness="0"
                                     MouseLeftButtonDown="Thumbnail_MouseLeftButtonDown">
                                 <Grid>
                                     <Image Source="{Binding ThumbnailInfo.Thumbnail}"
