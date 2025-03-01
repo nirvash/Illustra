@@ -17,7 +17,7 @@ namespace Illustra.Views
         private const double TITLE_BAR_SHOW_AREA = 100; // マウスがここまで近づいたらタイトルバーを表示
 
         public string FileName { get; private set; }
-        public BitmapSource ImageSource { get; private set; }
+        public BitmapSource? ImageSource { get; private set; }
 
         public ImageViewerWindow(string filePath)
         {
@@ -79,7 +79,7 @@ namespace Illustra.Views
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
         }
-        
+
         private async void OnWindowLoaded()
         {
             System.Diagnostics.Debug.WriteLine("ImageViewerWindow.Loaded event fired");
@@ -88,14 +88,14 @@ namespace Illustra.Views
             if (_isFullScreen)
             {
                 System.Diagnostics.Debug.WriteLine("Restoring fullscreen state, setting to fullscreen mode");
-                
+
                 _previousWindowState = WindowState;
                 _previousWindowStyle = WindowStyle;
-                
+
                 // フルスクリーン状態にする
                 WindowStyle = WindowStyle.None;
                 WindowState = WindowState.Maximized;
-                
+
                 // 確実に設定が有効になるように少し待つ
                 await Task.Delay(50);
             }
@@ -105,7 +105,7 @@ namespace Illustra.Views
             }
 
             // フォーカスを確実に設定
-            Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+            await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
                 System.Diagnostics.Debug.WriteLine("Setting focus to viewer window");
                 Activate(); // ウィンドウをアクティブにする
@@ -132,7 +132,7 @@ namespace Illustra.Views
             // クローズ処理を共通メソッドに委託
             CloseViewer();
         }
-        
+
         /// <summary>
         /// ビューアを閉じる共通処理
         /// </summary>
@@ -145,7 +145,7 @@ namespace Illustra.Views
                 // 設定を明示的に保存（共通メソッド使用）
                 SaveCurrentSettings();
             }
-            
+
             Close();
         }
 
@@ -219,10 +219,10 @@ namespace Illustra.Views
         {
             // 閉じる過程での最初の段階でフルスクリーン状態を保存
             System.Diagnostics.Debug.WriteLine($"OnClosing: IsFullScreen: {_isFullScreen}");
-            
+
             // 共通メソッドを使用して設定を保存
             SaveCurrentSettings();
-            
+
             base.OnClosing(e);
         }
 

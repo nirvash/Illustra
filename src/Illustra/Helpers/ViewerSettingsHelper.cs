@@ -11,9 +11,6 @@ namespace Illustra.Helpers
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Illustra", "viewerSettings.json");
 
-        // 設定が変更されたかどうかを追跡
-        private static bool _isDirty = false;
-
         public static ViewerSettings LoadSettings()
         {
             try
@@ -53,14 +50,10 @@ namespace Illustra.Helpers
                 // 設定をファイルに保存
                 var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
-                
-                // 保存成功をマーク
-                _isDirty = false;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error saving viewer settings: {ex.Message}");
-                _isDirty = true;  // 保存失敗
             }
         }
     }
