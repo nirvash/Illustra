@@ -153,7 +153,6 @@ public class ThumbnailLoaderHelper
         endIndex = Math.Min(fileNodes.Count - 1, endIndex);
 
         if (startIndex > endIndex || startIndex < 0 || endIndex >= fileNodes.Count) return;
-        Debug.WriteLine($"LoadMoreThumbnailsAsync: {startIndex} - {endIndex}");
 
         // 効率的に処理するためのバッチサイズ
         int batchSize = 4;

@@ -28,6 +28,10 @@ namespace Illustra.Helpers
         // ビューア設定
         public bool SaveViewerState { get; set; } = true;
 
+        // ソート順設定
+        public bool SortByDate { get; set; } = true;
+        public bool SortAscending { get; set; } = true;
+
         // 他の設定を必要に応じて追加
     }
 
