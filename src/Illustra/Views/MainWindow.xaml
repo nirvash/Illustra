@@ -112,6 +112,7 @@
                         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                         <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
                         <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+                        <EventSetter Event="MouseDoubleClick" Handler="Thumbnail_MouseDoubleClick"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListViewItem">

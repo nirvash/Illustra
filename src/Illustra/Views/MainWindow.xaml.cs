@@ -321,6 +321,15 @@ namespace Illustra.Views
 
             switch (e.Key)
             {
+                case Key.Enter:
+                    if (_viewModel.SelectedItem != null)
+                    {
+                        ShowImageViewer(_viewModel.SelectedItem.FullPath);
+                        e.Handled = true;
+                        return;
+                    }
+                    break;
+
                 case Key.Home:
                     // 先頭アイテムに移動
                     targetItem = _viewModel.Items[0];
@@ -579,6 +588,28 @@ namespace Illustra.Views
 
                 // プロパティを表示
                 LoadFilePropertiesAsync(fileNode.FullPath);
+            }
+        }
+
+        private void Thumbnail_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
+            {
+                ShowImageViewer(fileNode.FullPath);
+            }
+        }
+
+        private void ShowImageViewer(string filePath)
+        {
+            try
+            {
+                var viewer = new ImageViewerWindow(filePath);
+                viewer.Owner = this;
+                viewer.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"画像の表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
