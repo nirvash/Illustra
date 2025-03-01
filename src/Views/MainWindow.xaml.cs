@@ -452,7 +452,10 @@ namespace Illustra.Views
         {
             try
             {
-                var viewer = new ImageViewerWindow(filePath);
+                var viewer = new ImageViewerWindow(filePath)
+                {
+                    ParentWindow = this
+                };
                 viewer.Owner = this;
                 viewer.ParentWindow = this; // 親ウィンドウへの参照を設定
                 _currentViewerWindow = viewer; // 現在開いているビューアを追跡

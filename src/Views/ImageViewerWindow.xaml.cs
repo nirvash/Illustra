@@ -18,7 +18,7 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
-        public MainWindow ParentWindow { get; set; }
+        public required MainWindow ParentWindow { get; set; }
 
         public string FileName { get; private set; }
         public BitmapSource? ImageSource { get; private set; }
@@ -74,8 +74,8 @@ namespace Illustra.Views
             }
 
             // サイズも画面サイズを超えないように設定
-            Width = Math.Min(settings.Width, screenWidth);
-            Height = Math.Min(settings.Height, screenHeight);
+            Width = Math.Min(settings.Width, screenWidth); // Math.Min をつかうこと
+            Height = Math.Min(settings.Height, screenHeight); // Math.Min をつかうこと
 
             // フルスクリーン設定を保存して、Loaded後に適用
             _isFullScreen = settings.IsFullScreen;
