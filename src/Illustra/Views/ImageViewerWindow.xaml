@@ -11,11 +11,26 @@
         Icon="{StaticResource AppIcon}"
         WindowStartupLocation="CenterScreen"
         KeyDown="Window_KeyDown"
-        MouseDoubleClick="Window_MouseDoubleClick">
+        MouseDoubleClick="Window_MouseDoubleClick"
+        MouseMove="Window_MouseMove">
     <Grid>
         <Image x:Name="MainImage"
                Source="{Binding ImageSource}"
                Stretch="Uniform"
                RenderOptions.BitmapScalingMode="HighQuality"/>
+
+        <!-- フルスクリーン時のタイトルバー -->
+        <Border x:Name="TitleBar"
+                Height="32"
+                VerticalAlignment="Top"
+                Background="#80000000"
+                Visibility="Collapsed">
+            <Grid>
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                           Foreground="White"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
