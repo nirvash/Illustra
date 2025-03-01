@@ -301,7 +301,7 @@ namespace Illustra.Views
 
         private async void ThumbnailItemsControl_Loaded(object sender, RoutedEventArgs e)
         {
-            var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            var scrollViewer = await Task.Run(() => FindVisualChild<ScrollViewer>(ThumbnailItemsControl));
             if (scrollViewer != null)
             {
                 // 実際のScrollViewerにイベントハンドラを直接登録
@@ -351,76 +351,61 @@ namespace Illustra.Views
                 _lastLoadTime = now;
             }
 
-            // ItemsControl が初期化されるのを待つ
-            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-
-            DependencyObject parent = VisualTreeHelper.GetParent(scrollViewer);
-            while (parent != null && !(parent is ItemsControl))
+            try
             {
-                parent = VisualTreeHelper.GetParent(parent);
-            }
-            var itemsControl = parent as ItemsControl;
-            if (itemsControl == null || itemsControl.Items.Count == 0) return;
+                // ItemsControl が初期化されるのを待つ
+                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
 
-            // 可視範囲の取得を試みる
-            int firstVisibleIndex = 0;
-            int lastVisibleIndex = 0;
+                if (ThumbnailItemsControl == null || _viewModel.Items.Count == 0)
+                    return;
 
-            // まず表示されているアイテムのインデックスを取得しようとする
-            bool indexesFound = false;
-
-            for (int i = 0; i < itemsControl.Items.Count; i++)
-            {
-                var container = itemsControl.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
-                if (container != null)
-                {
-                    // コンテナが見つかった場合、スクロール位置から表示範囲を推定
-                    double verticalOffset = scrollViewer.VerticalOffset;
-                    double viewportHeight = scrollViewer.ViewportHeight;
-                    double totalHeight = scrollViewer.ExtentHeight;
-                    int totalItems = itemsControl.Items.Count;
-
-                    // スクロール位置の比率から中央のインデックスを推定
-                    double scrollRatio = verticalOffset / (totalHeight - viewportHeight);
-                    int centerIndex = (int)(scrollRatio * totalItems);
-
-                    // 可視範囲の推定サイズ（表示されているアイテムの数）
-                    double containerHeight = container.ActualHeight + container.Margin.Top + container.Margin.Bottom;
-                    int visibleItemCount = containerHeight > 0 ? (int)(viewportHeight / containerHeight) : 20;
-
-                    // 中央から前後に範囲を設定
-                    firstVisibleIndex = Math.Max(0, centerIndex - visibleItemCount / 2);
-                    lastVisibleIndex = Math.Min(totalItems - 1, centerIndex + visibleItemCount / 2);
-
-                    indexesFound = true;
-                    break;
-                }
-            }
-
-            // コンテナが見つからない場合はデフォルト値で推定
-            if (!indexesFound)
-            {
+                // VirtualizingWrapPanelの表示領域の計算
                 double verticalOffset = scrollViewer.VerticalOffset;
                 double viewportHeight = scrollViewer.ViewportHeight;
-                double totalHeight = scrollViewer.ExtentHeight;
-                int totalItems = itemsControl.Items.Count;
+                double itemHeight = _thumbnailLoader.ThumbnailSize + 6; // ListViewItemの両側マージン3px×2
 
-                // スクロール位置の比率から表示範囲を推定
-                double scrollRatio = totalHeight > 0 ? verticalOffset / totalHeight : 0;
-                int itemsPerScreen = Math.Min(50, totalItems / 10); // 画面あたりのアイテム数を推定
+                // 1行あたりの表示アイテム数を計算
+                double availableWidth = scrollViewer.ViewportWidth;
+                double itemWidth = _thumbnailLoader.ThumbnailSize + 6; // ListViewItemの両側マージン3px×2
+                int itemsPerRow = Math.Max(1, (int)(availableWidth / itemWidth));
 
-                firstVisibleIndex = (int)(scrollRatio * (totalItems - itemsPerScreen));
-                lastVisibleIndex = Math.Min(totalItems - 1, firstVisibleIndex + itemsPerScreen);
+                // アイテム総数に基づく総行数の算出
+                int totalRows = (int)Math.Ceiling(_viewModel.Items.Count / (double)itemsPerRow);
+
+                // 開始と終了の行数を正確に計算（端数を丸めずに小数点以下も考慮）
+                double firstVisibleRowExact = verticalOffset / itemHeight;
+                double lastVisibleRowExact = (verticalOffset + viewportHeight) / itemHeight;
+
+                // 整数値に変換
+                int firstVisibleRow = (int)Math.Floor(firstVisibleRowExact);
+                int lastVisibleRow = (int)Math.Ceiling(lastVisibleRowExact);
+
+                // 範囲チェック
+                firstVisibleRow = Math.Max(0, firstVisibleRow);
+                lastVisibleRow = Math.Min(totalRows - 1, lastVisibleRow);
+
+                // 表示範囲の前後にバッファ行を追加（バッファ行を増やし、より広い範囲を事前読み込み）
+                int bufferRows = 3; // 多すぎるとパフォーマンスが低下する可能性がある
+                int firstRowToLoad = Math.Max(0, firstVisibleRow - bufferRows);
+                int lastRowToLoad = Math.Min(totalRows - 1, lastVisibleRow + bufferRows);
+
+                // デバッグ出力（開発時のみ）
+                System.Diagnostics.Debug.WriteLine($"Scroll: {verticalOffset:F2}, Viewport: {viewportHeight:F2}, " +
+                                                  $"Visible Rows: {firstVisibleRow}-{lastVisibleRow}, " +
+                                                  $"Load Rows: {firstRowToLoad}-{lastRowToLoad}");
+
+                // 開始と終了インデックスの計算（行インデックス * 行あたりのアイテム数）
+                int firstIndexToLoad = firstRowToLoad * itemsPerRow;
+                int lastIndexToLoad = Math.Min(_viewModel.Items.Count - 1,
+                                             (lastRowToLoad + 1) * itemsPerRow - 1);
+
+                // 可視範囲のサムネイルをロード
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
             }
-
-            // 前後に固定数のバッファを追加
-            int bufferSize = 100; // 前後に100アイテムずつ追加読み込み
-
-            int extendedFirstIndex = Math.Max(0, firstVisibleIndex - bufferSize);
-            int extendedLastIndex = Math.Min(itemsControl.Items.Count - 1, lastVisibleIndex + bufferSize);
-
-            // 拡張した範囲でサムネイルをロード
-            await _thumbnailLoader.LoadMoreThumbnailsAsync(extendedFirstIndex, extendedLastIndex);
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
+            }
         }
 
         // ヘルパーメソッド: 子要素を検索
@@ -428,6 +413,14 @@ namespace Illustra.Views
         {
             if (parent == null) return null;
 
+            // Check if we're on the UI thread
+            if (!parent.Dispatcher.CheckAccess())
+            {
+                // If not, invoke the method on the UI thread and wait for the result
+                return parent.Dispatcher.Invoke(() => FindVisualChild<T>(parent));
+            }
+
+            // Now safely on UI thread
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);

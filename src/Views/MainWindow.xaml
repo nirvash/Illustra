@@ -123,13 +123,11 @@
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                         ScrollViewer.CanContentScroll="True"
                         ScrollViewer.PanningMode="Both"
-                        ScrollViewer.IsDeferredScrollingEnabled="True"
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
                         VirtualizingPanel.CacheLengthUnit="Page"
                         VirtualizingPanel.CacheLength="1,1"
                         VirtualizingPanel.IsContainerVirtualizable="True"
-                        VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                         VirtualizingPanel.ScrollUnit="Pixel"
                         BorderThickness="0"
                         KeyDown="ThumbnailItemsControl_KeyDown"
@@ -140,7 +138,12 @@
                         FocusVisualStyle="{x:Null}">
                     <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <vw:VirtualizingWrapPanel IsItemsHost="True" />
+                            <vw:VirtualizingWrapPanel
+                                Orientation="Horizontal"
+                                SpacingMode="Uniform"
+                                IsVirtualizing="True"
+                                VirtualizationMode="Recycling"
+                                CacheLength="1,1"/>
                         </ItemsPanelTemplate>
                     </ListView.ItemsPanel>
                     <ListView.ItemContainerStyle>
@@ -151,8 +154,8 @@
                             <Setter Property="Background" Value="Transparent" />
                             <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
                             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
-                            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+                            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+                            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
                             <EventSetter Event="MouseDoubleClick" Handler="Thumbnail_MouseDoubleClick"/>
                             <Setter Property="Template">
                                 <Setter.Value>

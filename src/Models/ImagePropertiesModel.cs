@@ -143,52 +143,31 @@ namespace Illustra.Models
                 if (exif != null)
                 {
                     // ユーザーコメント
-                    try
-                    {
-                        var comment = exif.GetDescription(ExifDirectoryBase.TagUserComment);
-                        properties.UserComment = comment ?? string.Empty;
-                    }
-                    catch (MetadataException) { }
+                    properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
 
                     // 撮影日時
-                    try
-                    {
-                        var dateTime = exif.GetDateTime(ExifDirectoryBase.TagDateTimeOriginal);
-                        properties.DateTaken = dateTime;
-                    }
-                    catch (MetadataException) { }
+                    exif.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out DateTime dateTime);
+                    properties.DateTaken = dateTime;
 
                     // ISO感度
-                    try
-                    {
-                        var iso = exif.GetInt32(ExifDirectoryBase.TagIsoEquivalent);
-                        properties.ISOSpeed = $"ISO {iso}";
-                    }
-                    catch (MetadataException) { }
+                    exif.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out int iso);
+                    properties.ISOSpeed = $"ISO {iso}";
 
                     // 露出時間
-                    try
+                    exif.TryGetRational(ExifDirectoryBase.TagExposureTime, out Rational exposure);
+                    // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
+                    if (exposure.ToDouble() >= 1.0)
                     {
-                        var exposure = exif.GetRational(ExifDirectoryBase.TagExposureTime);
-                        // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
-                        if (exposure.ToDouble() >= 1.0)
-                        {
-                            properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
-                        }
-                        else
-                        {
-                            properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
-                        }
+                        properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
                     }
-                    catch (MetadataException) { }
+                    else
+                    {
+                        properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
+                    }
 
                     // F値
-                    try
-                    {
-                        var fNumber = exif.GetRational(ExifDirectoryBase.TagFNumber);
-                        properties.FNumber = $"F{fNumber.ToDouble():0.#}";
-                    }
-                    catch (MetadataException) { }
+                    exif.TryGetRational(ExifDirectoryBase.TagFNumber, out Rational fNumber);
+                    properties.FNumber = $"F{fNumber.ToDouble():0.#}";
                 }
 
                 if (exifIfd0 != null)

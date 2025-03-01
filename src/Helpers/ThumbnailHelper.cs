@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows.Media.Imaging;
 using SkiaSharp;
+using System.Threading;
 
 namespace Illustra.Helpers
 {
@@ -12,88 +13,110 @@ namespace Illustra.Helpers
         /// <param name="imagePath">画像ファイルのパス</param>
         /// <param name="width">サムネイルの幅</param>
         /// <param name="height">サムネイルの高さ</param>
+        /// <param name="cancellationToken">キャンセルトークン</param>
         /// <returns>BitmapSourceとしてのサムネイル画像</returns>
-        public static async Task<BitmapSource> CreateThumbnailAsync(string imagePath, int width, int height)
+        public static BitmapSource CreateThumbnail(string imagePath, int width, int height, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // ファイルからビットマップデータを読み込む
+                using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                using var inputStream = new SKManagedStream(fileStream);
+                using var originalBitmap = SKBitmap.Decode(inputStream);
+
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (originalBitmap == null)
                 {
-                    // ファイルからビットマップデータを読み込む
-                    using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
-                    using var inputStream = new SKManagedStream(fileStream);
-                    using var originalBitmap = SKBitmap.Decode(inputStream);
-
-                    if (originalBitmap == null)
-                    {
-                        return GenerateErrorThumbnail(width, height, "画像の読み込みに失敗しました");
-                    }
-
-                    // 縦横比を維持したリサイズ計算
-                    float aspectRatio = (float)originalBitmap.Width / originalBitmap.Height;
-                    int newWidth, newHeight;
-
-                    if (aspectRatio > 1) // 横長画像
-                    {
-                        newWidth = width;
-                        newHeight = (int)(width / aspectRatio);
-                    }
-                    else // 縦長または正方形
-                    {
-                        newHeight = height;
-                        newWidth = (int)(height * aspectRatio);
-                    }
-
-                    // 新しいサイズが指定サイズを超えないよう調整
-                    if (newWidth > width)
-                    {
-                        newWidth = width;
-                        newHeight = (int)(width / aspectRatio);
-                    }
-                    if (newHeight > height)
-                    {
-                        newHeight = height;
-                        newWidth = (int)(height * aspectRatio);
-                    }
-
-                    // 高品質なリサイズを実行
-                    var resizeInfo = new SKImageInfo(newWidth, newHeight, SKColorType.Bgra8888);
-                    using var scaledBitmap = originalBitmap.Resize(resizeInfo, SKFilterQuality.High);
-                    using var surface = SKSurface.Create(resizeInfo);
-
-                    if (surface == null || scaledBitmap == null)
-                    {
-                        return GenerateErrorThumbnail(width, height, "サムネイル作成に失敗しました");
-                    }
-
-                    // 背景を白で塗りつぶして描画
-                    var canvas = surface.Canvas;
-                    canvas.Clear(SKColors.White);
-                    canvas.DrawBitmap(scaledBitmap, 0, 0);
-
-                    // SKImageに変換
-                    using var skImage = surface.Snapshot();
-                    using var data = skImage.Encode(SKEncodedImageFormat.Png, 90);
-
-                    // BitmapSourceに変換
-                    using var memoryStream = new MemoryStream();
-                    data.SaveTo(memoryStream);
-                    memoryStream.Position = 0;
-
-                    var bitmapImage = new BitmapImage();
-                    bitmapImage.BeginInit();
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.StreamSource = memoryStream;
-                    bitmapImage.EndInit();
-                    bitmapImage.Freeze(); // スレッド間で安全に使用できるようにする
-
-                    return bitmapImage;
+                    return GenerateErrorThumbnail(width, height, "画像の読み込みに失敗しました");
                 }
-                catch (Exception ex)
+
+                // 縦横比を維持したリサイズ計算
+                float aspectRatio = (float)originalBitmap.Width / originalBitmap.Height;
+                int newWidth, newHeight;
+
+                if (aspectRatio > 1) // 横長画像
                 {
-                    return GenerateErrorThumbnail(width, height, ex.Message);
+                    newWidth = width;
+                    newHeight = (int)(width / aspectRatio);
                 }
-            });
+                else // 縦長または正方形
+                {
+                    newHeight = height;
+                    newWidth = (int)(height * aspectRatio);
+                }
+
+                // 新しいサイズが指定サイズを超えないよう調整
+                if (newWidth > width)
+                {
+                    newWidth = width;
+                    newHeight = (int)(width / aspectRatio);
+                }
+                if (newHeight > height)
+                {
+                    newHeight = height;
+                    newWidth = (int)(height * aspectRatio);
+                }
+
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 高品質なリサイズを実行
+                var resizeInfo = new SKImageInfo(newWidth, newHeight, SKColorType.Bgra8888);
+                using var scaledBitmap = originalBitmap.Resize(resizeInfo, SKFilterQuality.High);
+                using var surface = SKSurface.Create(resizeInfo);
+
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (surface == null || scaledBitmap == null)
+                {
+                    return GenerateErrorThumbnail(width, height, "サムネイル作成に失敗しました");
+                }
+
+                // 背景を白で塗りつぶして描画
+                var canvas = surface.Canvas;
+                canvas.Clear(SKColors.White);
+                canvas.DrawBitmap(scaledBitmap, 0, 0);
+
+                // SKImageに変換
+                using var skImage = surface.Snapshot();
+
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using var data = skImage.Encode(SKEncodedImageFormat.Png, 90);
+
+                // BitmapSourceに変換
+                using var memoryStream = new MemoryStream();
+                data.SaveTo(memoryStream);
+                memoryStream.Position = 0;
+
+                // キャンセルされたかチェック
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.StreamSource = memoryStream;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze(); // スレッド間で安全に使用できるようにする
+
+                return bitmapImage;
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルされた場合は例外を再スローする
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return GenerateErrorThumbnail(width, height, ex.Message);
+            }
         }
 
         /// <summary>

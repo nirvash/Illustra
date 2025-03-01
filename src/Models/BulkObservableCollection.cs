@@ -19,7 +19,7 @@ namespace Illustra.Models
             FileNodeModels = fileNodeModels;
         }
 
-        public IOrderedEnumerable<FileNodeModel> FileNodeModels { get; }
+        public IOrderedEnumerable<FileNodeModel>? FileNodeModels { get; }
 
         /// <summary>
         /// 複数のアイテムを一括で追加します。通知は最後に一度だけ発行されます。

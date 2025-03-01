@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,7 +24,7 @@ namespace Illustra.Views
                 // ウィンドウレベルでキー処理をする前に、ListViewにフォーカスを与える
                 ThumbnailItemsControl.Focus();
 
-                // Enterキーが押されて選択アイテムがある場合は直接ビューアを表示
+                // Enterキーが押されて選択アイテムがある場合はビューアを表示
                 if (e.Key == Key.Enter && _viewModel.SelectedItem != null)
                 {
                     ShowImageViewer(_viewModel.SelectedItem.FullPath);
@@ -61,6 +62,7 @@ namespace Illustra.Views
             int itemsPerRow = Math.Max(1, (int)(panel.ActualWidth / (ThumbnailSizeSlider.Value + 6))); // 6はマージン
             int totalItems = ThumbnailItemsControl.Items.Count;
             int totalRows = (totalItems + itemsPerRow - 1) / itemsPerRow;
+            Debug.WriteLine($"selected: {selectedIndex}, total: {totalItems}, rows: {totalRows}");
 
             FileNodeModel? targetItem = null;
 
@@ -185,6 +187,9 @@ namespace Illustra.Views
             {
                 e.Handled = true; // イベントを確実に処理済みとしてマーク
 
+                var index = _viewModel.Items.IndexOf(targetItem);
+                Debug.WriteLine($"target: {index}, path: {targetItem.FullPath}");
+
                 // ViewModelを通じて選択を更新
                 _viewModel.SelectedItem = targetItem;
                 _currentSelectedFilePath = targetItem.FullPath;
@@ -192,19 +197,6 @@ namespace Illustra.Views
 
                 // スクロール処理とフォーカス処理
                 ThumbnailItemsControl.ScrollIntoView(targetItem);
-                // 選択を確実に表示範囲に収め、フォーカスを設定
-                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-                {
-                    ThumbnailItemsControl.UpdateLayout();
-                    ThumbnailItemsControl.ScrollIntoView(targetItem);
-
-                    // ListViewItemにフォーカスを設定
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(targetItem) as ListViewItem;
-                    if (container != null)
-                    {
-                        container.Focus();
-                    }
-                }));
             }
         }
     }
