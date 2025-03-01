@@ -210,7 +210,7 @@ public class ThumbnailLoaderHelper
                 (fileNode.ThumbnailInfo == null ||
                  fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
             {
-                var thumbnailInfo = GetOrCreateThumbnail(fileNode.FullPath, cancellationToken);
+                var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken));
                 fileNode.ThumbnailInfo = thumbnailInfo;
             }
         }

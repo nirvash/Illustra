@@ -65,10 +65,10 @@ namespace Illustra.Models
 
     public class ThumbnailInfo
     {
-        public BitmapSource Thumbnail { get; set; }
+        public BitmapSource? Thumbnail { get; set; }
         public ThumbnailState State { get; set; }
 
-        public ThumbnailInfo(BitmapSource thumbnail, ThumbnailState state)
+        public ThumbnailInfo(BitmapSource? thumbnail, ThumbnailState state)
         {
             Thumbnail = thumbnail;
             State = state;

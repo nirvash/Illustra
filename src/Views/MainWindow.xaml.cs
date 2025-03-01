@@ -9,6 +9,7 @@ using Illustra.Models;
 using Illustra.ViewModels;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace Illustra.Views
 {
@@ -258,6 +259,8 @@ namespace Illustra.Views
             }
         }
 
+
+
         /// <summary>
         /// 指定されたファイルを選択します
         /// </summary>
@@ -269,8 +272,7 @@ namespace Illustra.Views
                 return;
             }
 
-            var visibleItems = ThumbnailItemsControl.ItemContainerGenerator.Items.Count;
-            Console.WriteLine($"Visible Items: {visibleItems}");
+            DisplayGeneratedItemsInfo(ThumbnailItemsControl);
 
             var matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
             if (matchingItem != null)
@@ -339,18 +341,6 @@ namespace Illustra.Views
 
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
         {
-            // スロットリング - 短時間に何度も呼び出さない
-            lock (_loadLock)
-            {
-                var now = DateTime.Now;
-                var timeSinceLastLoad = now - _lastLoadTime;
-                if (timeSinceLastLoad.TotalMilliseconds < 200) // 200ms未満の間隔では読み込まない
-                {
-                    return;
-                }
-                _lastLoadTime = now;
-            }
-
             try
             {
                 // ItemsControl が初期化されるのを待つ
@@ -359,45 +349,28 @@ namespace Illustra.Views
                 if (ThumbnailItemsControl == null || _viewModel.Items.Count == 0)
                     return;
 
-                // VirtualizingWrapPanelの表示領域の計算
-                double verticalOffset = scrollViewer.VerticalOffset;
-                double viewportHeight = scrollViewer.ViewportHeight;
-                double itemHeight = _thumbnailLoader.ThumbnailSize + 6; // ListViewItemの両側マージン3px×2
+                int firstIndexToLoad = 0;
+                int lastIndexToLoad = 0;
+                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+                {
+                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                    if (container != null && container.IsVisible)
+                    {
+                        if (firstIndexToLoad == 0)
+                        {
+                            firstIndexToLoad = i;
+                        }
+                        if (i > lastIndexToLoad)
+                        {
+                            lastIndexToLoad = i;
+                        }
+                    }
+                }
 
-                // 1行あたりの表示アイテム数を計算
-                double availableWidth = scrollViewer.ViewportWidth;
-                double itemWidth = _thumbnailLoader.ThumbnailSize + 6; // ListViewItemの両側マージン3px×2
-                int itemsPerRow = Math.Max(1, (int)(availableWidth / itemWidth));
-
-                // アイテム総数に基づく総行数の算出
-                int totalRows = (int)Math.Ceiling(_viewModel.Items.Count / (double)itemsPerRow);
-
-                // 開始と終了の行数を正確に計算（端数を丸めずに小数点以下も考慮）
-                double firstVisibleRowExact = verticalOffset / itemHeight;
-                double lastVisibleRowExact = (verticalOffset + viewportHeight) / itemHeight;
-
-                // 整数値に変換
-                int firstVisibleRow = (int)Math.Floor(firstVisibleRowExact);
-                int lastVisibleRow = (int)Math.Ceiling(lastVisibleRowExact);
-
-                // 範囲チェック
-                firstVisibleRow = Math.Max(0, firstVisibleRow);
-                lastVisibleRow = Math.Min(totalRows - 1, lastVisibleRow);
-
-                // 表示範囲の前後にバッファ行を追加（バッファ行を増やし、より広い範囲を事前読み込み）
-                int bufferRows = 3; // 多すぎるとパフォーマンスが低下する可能性がある
-                int firstRowToLoad = Math.Max(0, firstVisibleRow - bufferRows);
-                int lastRowToLoad = Math.Min(totalRows - 1, lastVisibleRow + bufferRows);
-
-                // デバッグ出力（開発時のみ）
-                System.Diagnostics.Debug.WriteLine($"Scroll: {verticalOffset:F2}, Viewport: {viewportHeight:F2}, " +
-                                                  $"Visible Rows: {firstVisibleRow}-{lastVisibleRow}, " +
-                                                  $"Load Rows: {firstRowToLoad}-{lastRowToLoad}");
-
-                // 開始と終了インデックスの計算（行インデックス * 行あたりのアイテム数）
-                int firstIndexToLoad = firstRowToLoad * itemsPerRow;
-                int lastIndexToLoad = Math.Min(_viewModel.Items.Count - 1,
-                                             (lastRowToLoad + 1) * itemsPerRow - 1);
+                // 前後10個ずつのサムネイルをロード
+                int bufferSize = 10;
+                firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
+                lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
 
                 // 可視範囲のサムネイルをロード
                 await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
@@ -685,6 +658,38 @@ namespace Illustra.Views
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public void DisplayGeneratedItemsInfo(ListView listView)
+        {
+            int totalItems = listView.Items.Count;
+            int generatedItems = GetGeneratedItemsCount(listView);
+
+            Debug.WriteLine($"全アイテム数: {totalItems}");
+            Debug.WriteLine($"生成されたアイテム数: {generatedItems}");
+            Debug.WriteLine($"仮想化率: {(1 - (double)generatedItems / totalItems) * 100:F2}%");
+        }
+
+        /// <summary>
+        /// Gets the number of items that have been generated (realized) by the virtualization system
+        /// </summary>
+        private int GetGeneratedItemsCount(ListView listView)
+        {
+            int count = 0;
+
+            if (listView == null)
+                return 0;
+
+            for (int i = 0; i < listView.Items.Count; i++)
+            {
+                var container = listView.ItemContainerGenerator.ContainerFromIndex(i);
+                if (container != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }
