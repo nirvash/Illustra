@@ -26,7 +26,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Publish
-        run: dotnet publish src/Illustra/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
+        run: dotnet publish src/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
       - name: Create ZIP archive
         run: |
