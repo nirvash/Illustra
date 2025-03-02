@@ -1,9 +1,9 @@
-﻿<Application x:Class="Illustra.Views.App"
+﻿<prism:PrismApplication x:Class="Illustra.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Illustra.Views"
              xmlns:helpers="clr-namespace:Illustra"
-             StartupUri="MainWindow.xaml">
+             xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
         <ResourceDictionary>
             <!-- アプリアイコンの設定 -->
@@ -19,4 +19,4 @@
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
-</Application>
+</prism:PrismApplication>

@@ -72,47 +72,9 @@
                     <RowDefinition Height="*" MinHeight="50"/> <!-- フォルダツリービュー -->
                 </Grid.RowDefinitions>
 
-                <!-- お気に入りツリービュー - ScrollViewerを削除し、TreeViewに直接ScrollBarVisibilityを設定 -->
-                <TreeView Grid.Row="0"
-                          x:Name="FavoriteFoldersTreeView"
-                          SelectedItemChanged="FavoriteFoldersTreeView_SelectedItemChanged"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          AllowDrop="True"
-                          PreviewMouseLeftButtonDown="FavoriteFolders_PreviewMouseLeftButtonDown"
-                          PreviewMouseMove="FavoriteFolders_PreviewMouseMove"
-                          DragOver="FavoriteFolders_DragOver"
-                          Drop="FavoriteFolders_Drop">
-                    <TreeView.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" />
-                        </DataTemplate>
-                    </TreeView.ItemTemplate>
-                    <TreeView.Resources>
-                        <Style TargetType="TreeViewItem">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#FFD47B00"/>
-                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                                </Trigger>
-                                <MultiTrigger>
-                                    <MultiTrigger.Conditions>
-                                        <Condition Property="IsSelected" Value="True"/>
-                                        <Condition Property="IsKeyboardFocused" Value="True"/>
-                                    </MultiTrigger.Conditions>
-                                    <Setter Property="Background" Value="#FF007ACC"/>
-                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                                </MultiTrigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#0F000000"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TreeView.Resources>
-                </TreeView>
+                <!-- お気に入りフォルダコントロール -->
+                <local:FavoriteFoldersControl Grid.Row="0"
+                    x:Name="FavoriteFolders" />
 
                 <!-- フォルダツリーのグリッドスプリッター（水平分割） -->
                 <GridSplitter Grid.Row="1"
