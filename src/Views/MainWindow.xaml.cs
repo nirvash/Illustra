@@ -39,6 +39,11 @@ namespace Illustra.Views
         private double _mainSplitterPosition;
         private double _favoritesFoldersSplitterPosition;
 
+        // ドラッグ&ドロップ関連の変数
+        private Point _startPoint;
+        private bool _isDragging;
+        private string? _draggedItem;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -99,6 +104,12 @@ namespace Illustra.Views
             // お気に入りフォルダの初期化
             _favoriteFolders = _appSettings.FavoriteFolders;
             FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
+
+            // ドラッグ&ドロップイベントの設定
+            FavoriteFoldersTreeView.PreviewMouseLeftButtonDown += FavoriteFolders_PreviewMouseLeftButtonDown;
+            FavoriteFoldersTreeView.PreviewMouseMove += FavoriteFolders_PreviewMouseMove;
+            FavoriteFoldersTreeView.DragOver += FavoriteFolders_DragOver;
+            FavoriteFoldersTreeView.Drop += FavoriteFolders_Drop;
         }
 
         private async Task ProcessThumbnailLoadQueue()
@@ -835,6 +846,119 @@ namespace Illustra.Views
             {
                 Debug.WriteLine($"スプリッター位置の復元に失敗: {ex.Message}");
             }
+        }
+
+        private void FavoriteFolders_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // ドラッグ開始位置を記録
+            _startPoint = e.GetPosition(null);
+        }
+
+        private void FavoriteFolders_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            // マウスボタンが押されていない場合は何もしない
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+
+            // ドラッグ中のフラグが立っている場合は何もしない
+            if (_isDragging) return;
+
+            // 移動距離がドラッグ開始としきい値を超えているかチェック
+            Point position = e.GetPosition(null);
+            if (Math.Abs(position.X - _startPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(position.Y - _startPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+                return;
+
+            // ドラッグするアイテムを取得
+            var treeView = sender as TreeView;
+            string? selectedItem = treeView?.SelectedItem as string;
+            if (selectedItem == null) return;
+
+            // ドラッグ処理の開始
+            _isDragging = true;
+            _draggedItem = selectedItem;
+
+            // DataObjectを作成し、ドラッグ操作を開始
+            DataObject dragData = new DataObject("FavoriteFolder", selectedItem);
+            DragDrop.DoDragDrop(treeView!, dragData, DragDropEffects.Move);
+
+            // ドラッグ操作完了後、フラグをリセット
+            _isDragging = false;
+            _draggedItem = null;
+        }
+
+        private void FavoriteFolders_DragOver(object sender, DragEventArgs e)
+        {
+            // ドラッグしているデータが適切なフォーマットかチェック
+            if (!e.Data.GetDataPresent("FavoriteFolder") || sender != e.Source)
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.Move;
+            }
+            e.Handled = true;
+        }
+
+        private void FavoriteFolders_Drop(object sender, DragEventArgs e)
+        {
+            // ドロップ処理
+            if (e.Data.GetDataPresent("FavoriteFolder"))
+            {
+                string? sourceItem = e.Data.GetData("FavoriteFolder") as string;
+                if (sourceItem == null) return;
+
+                // ドロップ位置のアイテムを取得（ヒットテスト）
+                var treeView = sender as TreeView;
+                if (treeView == null) return;
+
+                Point dropPosition = e.GetPosition(treeView);
+                var result = VisualTreeHelper.HitTest(treeView, dropPosition);
+                if (result == null) return;
+
+                // HitTestResultから、ドロップ先のTreeViewItemを取得
+                DependencyObject obj = result.VisualHit;
+                while (obj != null && !(obj is TreeViewItem) && !(obj is TreeView))
+                {
+                    obj = VisualTreeHelper.GetParent(obj);
+                }
+
+                // ドロップ先のアイテムを特定
+                if (obj is TreeViewItem item)
+                {
+                    string? targetItem = item.Header as string;
+                    if (targetItem == null) return;
+
+                    // 同じアイテムの場合は何もしない
+                    if (sourceItem == targetItem) return;
+
+                    // アイテムの順序を変更
+                    ReorderFavoriteFolders(sourceItem, targetItem);
+                }
+                else
+                {
+                    // TreeViewの空白部分にドロップされた場合、最後に移動
+                    if (_favoriteFolders.Contains(sourceItem))
+                    {
+                        _favoriteFolders.Remove(sourceItem);
+                        _favoriteFolders.Add(sourceItem);
+                    }
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void ReorderFavoriteFolders(string sourceItem, string targetItem)
+        {
+            if (!_favoriteFolders.Contains(sourceItem) || !_favoriteFolders.Contains(targetItem))
+                return;
+
+            // ソースアイテムを一旦リストから削除
+            _favoriteFolders.Remove(sourceItem);
+
+            // ターゲットの位置に挿入
+            int targetIndex = _favoriteFolders.IndexOf(targetItem);
+            _favoriteFolders.Insert(targetIndex, sourceItem);
         }
     }
 }

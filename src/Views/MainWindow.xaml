@@ -79,7 +79,12 @@
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          AllowDrop="True"
+                          PreviewMouseLeftButtonDown="FavoriteFolders_PreviewMouseLeftButtonDown"
+                          PreviewMouseMove="FavoriteFolders_PreviewMouseMove"
+                          DragOver="FavoriteFolders_DragOver"
+                          Drop="FavoriteFolders_Drop">
                     <TreeView.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding}" />
