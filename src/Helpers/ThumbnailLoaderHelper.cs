@@ -71,11 +71,6 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// 現在のフォルダパスを取得します
-    /// </summary>
-    public string CurrentFolderPath { get; private set; } = string.Empty;
-
-    /// <summary>
     /// サムネイルのサイズを設定します
     /// </summary>
     public int ThumbnailSize
@@ -112,8 +107,6 @@ public class ThumbnailLoaderHelper
     /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
     public void LoadFileNodes(string folderPath)
     {
-        CurrentFolderPath = folderPath;
-
         // 既存のサムネイル読み込み処理をキャンセル
         CancelAllLoading();
         _cancellationTokenSource = new CancellationTokenSource();

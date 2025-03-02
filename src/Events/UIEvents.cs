@@ -1,9 +1,10 @@
 namespace Illustra.Events
 {
     /// <summary>
-    /// フォルダが選択されたときにトリガーされるイベントを表します。
-    /// </summary>
-    /// <param name="string">選択されたフォルダのパスを表す文字列。</param>
-    /// </summary>
+    /// フォルダが選択されたときにトリガーされるイベント
     public class FolderSelectedEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// フォルダ内の先頭ファイルの選択を要求するイベント
+    public class SelectFolderFirstItemRequestEvent : PubSubEvent { }
 }

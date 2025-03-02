@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
+using Prism.Events;
 
 namespace Illustra.Views
 {
@@ -16,11 +17,14 @@ namespace Illustra.Views
         private string? _draggedItem;
         private ObservableCollection<string> _favoriteFolders;
         private AppSettings _appSettings;
-        private IEventAggregator _eventAggregator;
+        private IEventAggregator? _eventAggregator;
+        private bool ignoreSelectedChangedOnce;
 
         #region IActiveAware Implementation
+#pragma warning disable 0067 // 使用されていませんという警告を無視
         public bool IsActive { get; set; }
-        public event EventHandler IsActiveChanged;
+        public event EventHandler? IsActiveChanged;
+#pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
         public FavoriteFoldersControl()
@@ -42,26 +46,38 @@ namespace Illustra.Views
             FavoriteFoldersTreeView.Drop += FavoriteFolders_Drop;
         }
 
-        private void OnFolderSelected(string path)
-        {
-            if (path == FavoriteFoldersTreeView.SelectedItem) return;
-            if (_favoriteFolders.Contains(path))
-            {
-                var item = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(path) as TreeViewItem;
-                if (item != null)
-                {
-                    item.IsSelected = true;
-                    item.Focus();
-                }
-            }
-        }
-
         private void FavoriteFoldersControl_Loaded(object sender, RoutedEventArgs e)
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
         }
+
+        private void OnFolderSelected(string path)
+        {
+            if (path == (string)FavoriteFoldersTreeView.SelectedItem) return;
+            if (_favoriteFolders.Contains(path))
+            {
+                var item = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(path) as TreeViewItem;
+                if (item != null)
+                {
+                    ignoreSelectedChangedOnce = true;
+                    item.IsSelected = true;
+                    item.Focus();
+                }
+            }
+            else if (FavoriteFoldersTreeView.SelectedItem != null)
+            {
+                // 選択を解除
+                ignoreSelectedChangedOnce = true;
+                var selectedItem = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(FavoriteFoldersTreeView.SelectedItem) as TreeViewItem;
+                if (selectedItem != null)
+                {
+                    selectedItem.IsSelected = false;
+                }
+            }
+        }
+
 
         public void SaveAllData()
         {
@@ -72,12 +88,20 @@ namespace Illustra.Views
 
         private void FavoriteFoldersTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
+            if (ignoreSelectedChangedOnce)
+            {
+                ignoreSelectedChangedOnce = false;
+                return;
+            }
+
+            ignoreSelectedChangedOnce = false;
             if (e.NewValue is string path && !string.IsNullOrEmpty(path))
             {
                 if (Directory.Exists(path))
                 {
                     // フォルダ選択イベントを発行
                     _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
+                    _eventAggregator.GetEvent<SelectFolderFirstItemRequestEvent>().Publish();
                 }
             }
         }
@@ -208,6 +232,8 @@ namespace Illustra.Views
                 FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
             }
         }
+
+        public ObservableCollection<string> FavoriteFolders => _favoriteFolders;
     }
 
 }

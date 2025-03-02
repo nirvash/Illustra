@@ -83,43 +83,9 @@
                               HorizontalAlignment="Stretch"
                               Background="#FFCCCCCC" />
 
-                <!-- 左側：フォルダツリービュー - ScrollViewerを削除し、TreeViewに直接ScrollBarVisibilityを設定 -->
-                <TreeView Grid.Row="2"
-                          x:Name="FolderTreeView"
-                          SelectedItemChanged="FolderTreeView_SelectedItemChanged"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                    <TreeView.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="お気に入りに追加" Click="AddToFavorites_Click" />
-                            <MenuItem Header="お気に入りから削除" Click="RemoveFromFavorites_Click" />
-                        </ContextMenu>
-                    </TreeView.ContextMenu>
-                    <TreeView.Resources>
-                        <Style TargetType="TreeViewItem">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#FFD47B00"/>
-                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                                </Trigger>
-                                <MultiTrigger>
-                                    <MultiTrigger.Conditions>
-                                        <Condition Property="IsSelected" Value="True"/>
-                                        <Condition Property="IsKeyboardFocused" Value="True"/>
-                                    </MultiTrigger.Conditions>
-                                    <Setter Property="Background" Value="#FF007ACC"/>
-                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                                </MultiTrigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#0F000000"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TreeView.Resources>
-                </TreeView>
+                <!-- フォルダツリーコントロール -->
+                <local:FolderTreeControl Grid.Row="2"
+                    x:Name="FolderTree" />
             </Grid>
 
             <!-- 左右のペイン間のグリッドスプリッター（垂直分割） -->

@@ -37,17 +37,12 @@ namespace Illustra.Views
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
 
-        private ObservableCollection<string> _favoriteFolders = new ObservableCollection<string>();
-
         private double _mainSplitterPosition;
         private double _favoritesFoldersSplitterPosition;
 
-        // ドラッグ&ドロップ関連の変数
-        private Point _startPoint;
-        private bool _isDragging;
-        private string? _draggedItem;
-
         private FavoriteFoldersControl? _favoriteFoldersControl;
+        private FolderTreeControl? _folderTreeControl;
+        private string _currentFolderPath;
 
         public MainWindow(IEventAggregator eventAggregator)
         {
@@ -87,9 +82,6 @@ namespace Illustra.Views
 
             _isInitialized = true;
 
-            // フォルダツリーの読み込み
-            LoadDrivesAsync();
-
             // ウィンドウが閉じられるときに設定を保存
             Closing += MainWindow_Closing;
 
@@ -109,6 +101,11 @@ namespace Illustra.Views
 
             // FolderSelectedEventを購読
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
+            _eventAggregator.GetEvent<SelectFolderFirstItemRequestEvent>().Subscribe(SelectFirstItem);
+
+            // コントロールのインスタンスを取得
+            _favoriteFoldersControl = FavoriteFolders;
+            _folderTreeControl = FolderTree;
         }
 
         private async Task ProcessThumbnailLoadQueue()
@@ -143,25 +140,10 @@ namespace Illustra.Views
                 {
                     try
                     {
+                        var path = _appSettings.LastFolderPath;
                         // ツリービューが完全に構築されるのを待つ
                         await Task.Delay(500);
-
-                        // ツリービューで前回のフォルダを展開して選択
-                        bool selected = await FileSystemHelper.SelectPathInTreeViewAsync(
-                            FolderTreeView, _appSettings.LastFolderPath);
-
-                        // 選択に成功しなかった場合は処理完了
-                        if (!selected) return;
-
-                        // フォルダの選択状態を設定
-                        await Task.Delay(100);
-                        if (FolderTreeView.SelectedItem is TreeViewItem selectedItem &&
-                            selectedItem.Tag is string path &&
-                            path == _appSettings.LastFolderPath)
-                        {
-                            // フォルダ選択イベントを発行
-                            _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
-                        }
+                        _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
                     }
                     catch (Exception ex)
                     {
@@ -188,7 +170,7 @@ namespace Illustra.Views
             _appSettings.ThumbnailSize = (int)ThumbnailSizeSlider.Value;
 
             // 現在のフォルダパスを保存
-            _appSettings.LastFolderPath = _thumbnailLoader.CurrentFolderPath;
+            _appSettings.LastFolderPath = _currentFolderPath;
 
             // 現在の選択ファイルパスを保存
             _appSettings.LastSelectedFilePath = _currentSelectedFilePath;
@@ -215,34 +197,7 @@ namespace Illustra.Views
             SettingsHelper.SaveSettings(_appSettings);
         }
 
-        private async void LoadDrivesAsync()
-        {
-            var drives = await FileSystemHelper.LoadDrivesAsync();
-            foreach (var drive in drives)
-            {
-                await Dispatcher.InvokeAsync(() => FolderTreeView.Items.Add(FileSystemHelper.CreateDriveNode(drive)));
-            }
-        }
 
-        private void FolderTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            if (e.NewValue is TreeViewItem { Tag: string path } selectedItem && path != null)
-            {
-                if (Directory.Exists(path))
-                {
-                    // フォルダ選択イベントを発行
-                    _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
-
-                    // フォルダが選択された場合
-                    ClearPropertiesDisplay(); // プロパティ表示をクリア
-                    // 新しいフォルダのサムネイルを読み込み
-                    _thumbnailLoader.LoadFileNodes(path);
-
-                    // fileNodesLoadedイベントでフォルダ選択時の先頭アイテム選択を行うためのフラグをセット
-                    _shouldSelectFirstItem = true;
-                }
-            }
-        }
 
         // スライダーの値が変更されたときの処理
         private void ThumbnailSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -606,9 +561,9 @@ namespace Illustra.Views
         private void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
         {
             // 現在のフォルダを再読み込み
-            if (!string.IsNullOrEmpty(_thumbnailLoader.CurrentFolderPath))
+            if (!string.IsNullOrEmpty(_currentFolderPath))
             {
-                _thumbnailLoader.LoadFileNodes(_thumbnailLoader.CurrentFolderPath);
+                _thumbnailLoader.LoadFileNodes(_currentFolderPath);
             }
         }
 
@@ -766,7 +721,7 @@ namespace Illustra.Views
 
         private void AddToFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            if (_folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
             {
                 FavoriteFolders.AddFavoriteFolder(path);
             }
@@ -774,7 +729,7 @@ namespace Illustra.Views
 
         private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            if (_folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
             {
                 FavoriteFolders.RemoveFavoriteFolder(path);
             }
@@ -808,19 +763,33 @@ namespace Illustra.Views
             }
         }
 
-        private async void OnFolderSelected(string path)
+        private void OnFolderSelected(string path)
         {
-            if (path == _currentSelectedFilePath) return;
+            if (path == _currentFolderPath) return;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
             {
+                _currentFolderPath = path;
+                _thumbnailLoader.LoadFileNodes(path);
                 ClearPropertiesDisplay();
-
-                // fileNodesLoadedイベントでフォルダ選択時の先頭アイテム選択を行うためのフラグをセット
-                _shouldSelectFirstItem = true;
-
-                // フォルダツリーで選択されたフォルダを開く
-                await FileSystemHelper.SelectPathInTreeViewAsync(FolderTreeView, path);
             }
+        }
+
+        private async void SelectFirstItem()
+        {
+            if (_viewModel.Items.Count == 0)
+            {
+                _shouldSelectFirstItem = true;
+                return;
+            }
+
+            var firstItem = _viewModel.Items[0];
+
+            // 先頭アイテムを選択
+            SelectThumbnail(firstItem.FullPath);
+
+            // サムネイルにフォーカスを設定
+            await Task.Delay(50);
+            ThumbnailItemsControl.Focus();
         }
     }
 }
