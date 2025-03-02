@@ -71,23 +71,13 @@ namespace Illustra.Views
             PropertyPanel.ImageProperties = null;
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // スプリッター位置の復元
             RestoreSplitterPositions();
 
             // その他の設定を適用
             ApplySettings();
-
-            // 前回のファイル選択を復元
-            var filePath = _appSettings.LastSelectedFilePath;
-            if (Directory.Exists(filePath))
-            {
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish(filePath);
-                }
-            }
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)

@@ -56,19 +56,6 @@ namespace Illustra.Views
             }
         }
 
-        // TreeViewItemの展開イベントハンドラ
-        private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
-        {
-            if (sender is TreeViewItem treeViewItem &&
-                treeViewItem.DataContext is FileSystemItemModel item)
-            {
-                if (_viewModel.ExpandItemCommand.CanExecute(item))
-                {
-                    _viewModel.ExpandItemCommand.Execute(item);
-                }
-            }
-        }
-
         // パスを選択するためのパブリックメソッド
         public void Expand(string path)
         {
@@ -129,19 +116,19 @@ namespace Illustra.Views
             foreach (var part in pathParts)
             {
                 currentPath = Path.Combine(currentPath, part);
-                
+
                 // 現在のTreeViewItemの子アイテムを探す
                 var nextItem = currentContainer.ItemContainerGenerator.Items
                     .OfType<FileSystemItemModel>()
                     .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
-                
+
                 if (nextItem == null)
                     break;
 
                 // 子アイテムのTreeViewItemを取得
                 currentContainer.IsExpanded = true;
                 currentContainer.UpdateLayout();
-                
+
                 var nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
                 if (nextContainer == null)
                     break;

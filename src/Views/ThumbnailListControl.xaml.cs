@@ -246,6 +246,12 @@ namespace Illustra.Views
                     await LoadVisibleThumbnailsAsync(scrollViewer);
                 }
 
+                // 前回選択していたファイルを選択
+                string file = _appSettings.LastSelectedFilePath;
+                if (File.Exists(file))
+                {
+                    SelectThumbnail(file);
+                }
             }
             catch (Exception ex)
             {
