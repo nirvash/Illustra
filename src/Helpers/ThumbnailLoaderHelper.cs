@@ -48,6 +48,29 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
+    /// 指定されたフォルダにアクセスできるかどうかを確認します
+    /// </summary>
+    /// <param name="folderPath">フォルダのパス</param>
+    /// <returns>アクセス可能な場合はtrue、それ以外の場合はfalse</returns>
+    private bool HasFolderAccess(string folderPath)
+    {
+        try
+        {
+            // フォルダ内のファイルを列挙してアクセス確認
+            var files = Directory.EnumerateFiles(folderPath).Any();
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 現在のフォルダパスを取得します
     /// </summary>
     public string CurrentFolderPath { get; private set; } = string.Empty;
@@ -95,49 +118,83 @@ public class ThumbnailLoaderHelper
         CancelAllLoading();
         _cancellationTokenSource = new CancellationTokenSource();
 
-        // 画像ファイルのみを収集
-        var imageFilePaths = Directory.EnumerateFiles(folderPath)
-            .Where(IsImageFile)
-            .ToList();
-
-        // FileNodeModelのリストを初期化
-        var fileNodes = new List<FileNodeModel>(imageFilePaths.Count);
-
-        // ダミー画像を1回だけ取得
-        var dummyImage = GetDummyImage();
-
-        // FileNodeModelをプリロード（画像ファイルだけを対象に）
-        foreach (var filePath in imageFilePaths)
+        // フォルダアクセスのチェック
+        if (!HasFolderAccess(folderPath))
         {
-            var fileInfo = new FileInfo(filePath);
-            var fileNode = new FileNodeModel(filePath, new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded))
+            // アクセス権限がない場合、空のリストを設定
+            _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
+            fileNodesLoaded?.Invoke(this, EventArgs.Empty);
+            // ユーザーに通知（オプション）
+            MessageBox.Show($"フォルダ '{folderPath}' へのアクセスが拒否されました。", "アクセスエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            // 画像ファイルのみを収集
+            var imageFilePaths = Directory.EnumerateFiles(folderPath)
+                .Where(IsImageFile)
+                .ToList();
+
+            // FileNodeModelのリストを初期化
+            var fileNodes = new List<FileNodeModel>(imageFilePaths.Count);
+
+            // ダミー画像を1回だけ取得
+            var dummyImage = GetDummyImage();
+
+            // FileNodeModelをプリロード（画像ファイルだけを対象に）
+            foreach (var filePath in imageFilePaths)
             {
-                CreationTime = fileInfo.CreationTime
-            };
-            fileNodes.Add(fileNode);
-        }
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    var fileNode = new FileNodeModel(filePath, new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded))
+                    {
+                        CreationTime = fileInfo.CreationTime
+                    };
+                    fileNodes.Add(fileNode);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // 個別ファイルへのアクセスエラーは無視
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    // その他の例外もログ出力のみにして続行
+                    Debug.WriteLine($"ファイル '{filePath}' の処理中にエラーが発生しました: {ex.Message}");
+                    continue;
+                }
+            }
 
-        // ソート順の設定に従ってソート
-        if (_mainWindow.SortByDate)
+            // ソート順の設定に従ってソート
+            if (_mainWindow.SortByDate)
+            {
+                fileNodes = _mainWindow.SortAscending ?
+                    fileNodes.OrderBy(fn => fn.CreationTime).ToList() :
+                    fileNodes.OrderByDescending(fn => fn.CreationTime).ToList();
+            }
+            else
+            {
+                fileNodes = _mainWindow.SortAscending ?
+                    fileNodes.OrderBy(fn => fn.Name).ToList() :
+                    fileNodes.OrderByDescending(fn => fn.Name).ToList();
+            }
+
+            // ViewModelのItemsをクリアして新しいアイテムを設定
+            _viewModel.Items.ReplaceAll(fileNodes);
+
+            // ファイルノードのロード完了イベントを発火
+            fileNodesLoaded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
         {
-            fileNodes = _mainWindow.SortAscending ?
-                fileNodes.OrderBy(fn => fn.CreationTime).ToList() :
-                fileNodes.OrderByDescending(fn => fn.CreationTime).ToList();
+            // フォルダ全体の処理中にエラーが発生した場合
+            Debug.WriteLine($"フォルダ '{folderPath}' の処理中にエラーが発生しました: {ex.Message}");
+            // 必要に応じてユーザーに通知（オプション）
+            MessageBox.Show($"フォルダ '{folderPath}' の処理中にエラーが発生しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        else
-        {
-            fileNodes = _mainWindow.SortAscending ?
-                fileNodes.OrderBy(fn => fn.Name).ToList() :
-                fileNodes.OrderByDescending(fn => fn.Name).ToList();
-        }
-
-        // ViewModelのItemsをクリアして新しいアイテムを設定
-        _viewModel.Items.ReplaceAll(fileNodes);
-
-        // ファイルノードのロード完了イベントを発火
-        fileNodesLoaded?.Invoke(this, EventArgs.Empty);
     }
-
 
     /// <summary>
     /// サムネイルを更新するメソッドを修正

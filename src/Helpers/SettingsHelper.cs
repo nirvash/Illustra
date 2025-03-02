@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Collections.ObjectModel;
 
 namespace Illustra.Helpers
 {
@@ -31,6 +32,14 @@ namespace Illustra.Helpers
         // ソート順設定
         public bool SortByDate { get; set; } = true;
         public bool SortAscending { get; set; } = true;
+
+        // スプリッター位置設定
+        public double FavoriteFoldersHeight { get; set; } = 0;
+        public double MainSplitterPosition { get; set; } = 0;
+        public double PropertySplitterPosition { get; set; } = 0;
+
+        // お気に入りフォルダ
+        public ObservableCollection<string> FavoriteFolders { get; set; } = new ObservableCollection<string>();
 
         // 他の設定を必要に応じて追加
     }

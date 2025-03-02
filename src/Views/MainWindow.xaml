@@ -50,47 +50,121 @@
         </Menu>
 
         <!-- メインコンテンツ -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" x:Name="MainContentGrid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <!-- メインコンテンツの左右グリッド -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" MinWidth="150"/> <!-- フォルダツリービュー -->
+                <ColumnDefinition Width="Auto"/> <!-- グリッドスプリッター -->
+                <ColumnDefinition Width="*"/> <!-- サムネイルビュー -->
+            </Grid.ColumnDefinitions>
 
             <!-- 左側：フォルダツリービュー -->
-            <TreeView x:Name="FolderTreeView"
-                    Grid.Column="0"
-                    SelectedItemChanged="FolderTreeView_SelectedItemChanged">
-                <TreeView.Resources>
-                    <Style TargetType="TreeViewItem">
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#FFD47B00"/>
-                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                            </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsSelected" Value="True"/>
-                                    <Condition Property="IsKeyboardFocused" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter Property="Background" Value="#FF007ACC"/>
-                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                            </MultiTrigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#0F000000"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </TreeView.Resources>
-            </TreeView>
+            <Grid Grid.Column="0" Grid.Row="0" x:Name="LeftPanelGrid">
+                <!-- フォルダツリーの上下グリッド -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="200" MinHeight="50"/> <!-- お気に入りツリービュー -->
+                    <RowDefinition Height="Auto"/> <!-- グリッドスプリッター -->
+                    <RowDefinition Height="*" MinHeight="50"/> <!-- フォルダツリービュー -->
+                </Grid.RowDefinitions>
+
+                <!-- お気に入りツリービュー - ScrollViewerを削除し、TreeViewに直接ScrollBarVisibilityを設定 -->
+                <TreeView Grid.Row="0"
+                          x:Name="FavoriteFoldersTreeView"
+                          SelectedItemChanged="FavoriteFoldersTreeView_SelectedItemChanged"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <TreeView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </TreeView.ItemTemplate>
+                    <TreeView.Resources>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#FFD47B00"/>
+                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="True"/>
+                                        <Condition Property="IsKeyboardFocused" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="Background" Value="#FF007ACC"/>
+                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                                </MultiTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#0F000000"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TreeView.Resources>
+                </TreeView>
+
+                <!-- フォルダツリーのグリッドスプリッター（水平分割） -->
+                <GridSplitter Grid.Row="1"
+                              x:Name="FavoritesSplitter"
+                              Height="3"
+                              HorizontalAlignment="Stretch"
+                              Background="#FFCCCCCC" />
+
+                <!-- 左側：フォルダツリービュー - ScrollViewerを削除し、TreeViewに直接ScrollBarVisibilityを設定 -->
+                <TreeView Grid.Row="2"
+                          x:Name="FolderTreeView"
+                          SelectedItemChanged="FolderTreeView_SelectedItemChanged"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <TreeView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="お気に入りに追加" Click="AddToFavorites_Click" />
+                            <MenuItem Header="お気に入りから削除" Click="RemoveFromFavorites_Click" />
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
+                    <TreeView.Resources>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#FFD47B00"/>
+                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="True"/>
+                                        <Condition Property="IsKeyboardFocused" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="Background" Value="#FF007ACC"/>
+                                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                                </MultiTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#0F000000"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TreeView.Resources>
+                </TreeView>
+            </Grid>
+
+            <!-- 左右のペイン間のグリッドスプリッター（垂直分割） -->
+            <GridSplitter Grid.Column="1" Grid.Row="0"
+                        x:Name="MainSplitter"
+                        Width="3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        Background="#FFCCCCCC" />
 
             <!-- 右側：メインコンテンツエリア -->
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="2" x:Name="RightPanelGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -114,28 +188,28 @@
 
                 <!-- サムネイル表示エリア -->
                 <ListView x:Name="ThumbnailItemsControl"
-                        Grid.Row="1"
-                        ItemsSource="{Binding Items}"
-                        SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                        SelectionMode="Single"
-                        IsSynchronizedWithCurrentItem="True"
-                        Loaded="ThumbnailItemsControl_Loaded"
-                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        ScrollViewer.CanContentScroll="True"
-                        ScrollViewer.PanningMode="Both"
-                        VirtualizingPanel.IsVirtualizing="True"
-                        VirtualizingPanel.VirtualizationMode="Recycling"
-                        VirtualizingPanel.CacheLengthUnit="Page"
-                        VirtualizingPanel.CacheLength="1,1"
-                        VirtualizingPanel.IsContainerVirtualizable="True"
-                        VirtualizingPanel.ScrollUnit="Pixel"
-                        BorderThickness="0"
-                        KeyDown="ThumbnailItemsControl_KeyDown"
-                        PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
-                        KeyboardNavigation.DirectionalNavigation="Contained"
-                        KeyboardNavigation.TabNavigation="Cycle"
-                        Focusable="True"
-                        FocusVisualStyle="{x:Null}">
+                          Grid.Row="1"
+                          ItemsSource="{Binding Items}"
+                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                          SelectionMode="Single"
+                          IsSynchronizedWithCurrentItem="True"
+                          Loaded="ThumbnailItemsControl_Loaded"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.CanContentScroll="True"
+                          ScrollViewer.PanningMode="Both"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.CacheLengthUnit="Page"
+                          VirtualizingPanel.CacheLength="1,1"
+                          VirtualizingPanel.IsContainerVirtualizable="True"
+                          VirtualizingPanel.ScrollUnit="Pixel"
+                          BorderThickness="0"
+                          KeyDown="ThumbnailItemsControl_KeyDown"
+                          PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
+                          KeyboardNavigation.DirectionalNavigation="Contained"
+                          KeyboardNavigation.TabNavigation="Cycle"
+                          Focusable="True"
+                          FocusVisualStyle="{x:Null}">
                     <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <vw:VirtualizingWrapPanel
@@ -197,30 +271,31 @@
                                     MouseLeftButtonDown="Thumbnail_MouseLeftButtonDown">
                                 <Grid>
                                     <Image Source="{Binding ThumbnailInfo.Thumbnail}"
-                                        Stretch="Uniform"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Margin="2"/>
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="2"/>
                                     <TextBlock Text="{Binding Name}"
-                                            VerticalAlignment="Bottom"
-                                            HorizontalAlignment="Center"
-                                            Margin="2"
-                                            Background="#80FFFFFF"
-                                            Padding="2"
-                                            Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
-                                            TextAlignment="Center"
-                                            TextTrimming="CharacterEllipsis"/>
+                                               VerticalAlignment="Bottom"
+                                               HorizontalAlignment="Center"
+                                               Margin="2"
+                                               Background="#80FFFFFF"
+                                               Padding="2"
+                                               Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
+                                               TextAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
 
-                <!-- グリッドスプリッター -->
+                <!-- プロパティパネルとのグリッドスプリッター -->
                 <GridSplitter Grid.Row="2"
-                            Height="5"
-                            HorizontalAlignment="Stretch"
-                            Background="#FFCCCCCC" />
+                              x:Name="PropertySplitter"
+                              Height="4"
+                              HorizontalAlignment="Stretch"
+                              Background="#FFCCCCCC" />
 
                 <!-- プロパティペイン -->
                 <Grid Grid.Row="3" Margin="5">
@@ -231,9 +306,9 @@
 
                     <!-- ヘッダー -->
                     <TextBlock Grid.Row="0"
-                            Text="プロパティ"
-                            FontWeight="Bold"
-                            Margin="0,0,0,5"/>
+                               Text="プロパティ"
+                               FontWeight="Bold"
+                               Margin="0,0,0,5"/>
 
                     <!-- プロパティ表示 -->
                     <local:PropertyPanelControl x:Name="PropertyPanel" Grid.Row="1"/>
@@ -242,10 +317,10 @@
 
             <!-- ステータスバー -->
             <TextBlock x:Name="StatusBar"
-                     Grid.Row="1"
-                     Margin="5,2"
-                     Text="準備完了"
-                     Background="#F0F0F0"/>
+                       Grid.Row="1"
+                       Margin="5,2"
+                       Text="準備完了"
+                       Background="#F0F0F0"/>
         </Grid>
     </Grid>
 </Window>

@@ -10,6 +10,7 @@ using Illustra.ViewModels;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Collections.ObjectModel;
 
 namespace Illustra.Views
 {
@@ -33,6 +34,11 @@ namespace Illustra.Views
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
 
+        private ObservableCollection<string> _favoriteFolders = new ObservableCollection<string>();
+
+        private double _mainSplitterPosition;
+        private double _favoritesFoldersSplitterPosition;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -49,6 +55,11 @@ namespace Illustra.Views
             Left = _appSettings.WindowLeft;
             Top = _appSettings.WindowTop;
             WindowState = _appSettings.WindowState;
+
+            // スプリッター位置を復元
+            _mainSplitterPosition = _appSettings.MainSplitterPosition;
+            _favoritesFoldersSplitterPosition = _appSettings.FavoriteFoldersHeight;
+            RestoreSplitterPositions();
 
             // ViewModelの初期化
             _viewModel = new MainViewModel();
@@ -84,6 +95,10 @@ namespace Illustra.Views
             _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
             _thumbnailLoadTimer.Start();
+
+            // お気に入りフォルダの初期化
+            _favoriteFolders = _appSettings.FavoriteFolders;
+            FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
         }
 
         private async Task ProcessThumbnailLoadQueue()
@@ -180,6 +195,21 @@ namespace Illustra.Views
             // ソート順の設定を保存
             _appSettings.SortByDate = _sortByDate;
             _appSettings.SortAscending = _sortAscending;
+
+            try
+            {
+                // スプリッター位置を保存
+                _appSettings.MainSplitterPosition = MainContentGrid.ColumnDefinitions[0].ActualWidth;
+                _appSettings.FavoriteFoldersHeight = LeftPanelGrid.RowDefinitions[0].ActualHeight;
+                _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[3].ActualHeight;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"スプリッター位置の保存に失敗: {ex.Message}");
+            }
+
+            // お気に入りフォルダを保存
+            _appSettings.FavoriteFolders = _favoriteFolders;
 
             // 設定を保存
             SettingsHelper.SaveSettings(_appSettings);
@@ -408,6 +438,8 @@ namespace Illustra.Views
                     System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
                 }
             });
+
+            await ProcessThumbnailLoadQueue();
         }
 
         // ヘルパーメソッド: 子要素を検索
@@ -727,6 +759,82 @@ namespace Illustra.Views
             }
 
             return count;
+        }
+
+        private void AddToFavorites_Click(object sender, RoutedEventArgs e)
+        {
+            if (FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            {
+                if (!_favoriteFolders.Contains(path))
+                {
+                    _favoriteFolders.Add(path);
+                }
+            }
+        }
+
+        private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
+        {
+            if (FavoriteFoldersTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            {
+                if (_favoriteFolders.Contains(path))
+                {
+                    _favoriteFolders.Remove(path);
+                }
+            }
+        }
+
+        private void FavoriteFoldersTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is string path && !string.IsNullOrEmpty(path))
+            {
+                if (Directory.Exists(path))
+                {
+                    // フォルダが選択された場合
+                    ClearPropertiesDisplay(); // プロパティ表示をクリア
+                    // 新しいフォルダのサムネイルを読み込み
+                    _thumbnailLoader.LoadFileNodes(path);
+
+                    // fileNodesLoadedイベントでフォルダ選択時の先頭アイテム選択を行うためのフラグをセット
+                    _shouldSelectFirstItem = true;
+
+                    // フォルダツリーで選択されたフォルダを開く
+                    SelectPathInFolderTreeView(path);
+                }
+            }
+        }
+
+        private async void SelectPathInFolderTreeView(string path)
+        {
+            // フォルダツリーで指定されたパスを選択
+            await FileSystemHelper.SelectPathInTreeViewAsync(FolderTreeView, path);
+        }
+
+        private void RestoreSplitterPositions()
+        {
+            try
+            {
+                // 左側パネルと右側パネルの分割（メインスプリッター）
+                if (_mainSplitterPosition > 0)
+                {
+                    MainContentGrid.ColumnDefinitions[0].Width = new GridLength(_mainSplitterPosition, GridUnitType.Pixel);
+                }
+
+                // お気に入りツリーとフォルダツリーの分割
+                if (_favoritesFoldersSplitterPosition > 0)
+                {
+                    LeftPanelGrid.RowDefinitions[0].Height = new GridLength(_favoritesFoldersSplitterPosition, GridUnitType.Pixel);
+                }
+
+                // プロパティパネルの高さ
+                if (_appSettings.PropertySplitterPosition > 0)
+                {
+                    RightPanelGrid.RowDefinitions[3].Height = new GridLength(_appSettings.PropertySplitterPosition, GridUnitType.Pixel);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"スプリッター位置の復元に失敗: {ex.Message}");
+            }
         }
     }
 }
