@@ -34,10 +34,6 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-
-            // お気に入り関連イベントの設定
-            _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(OnAddToFavorites);
-            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(OnRemoveFromFavorites);
         }
 
         private void OnFolderSelected(FolderSelectedEventArgs args)
@@ -56,34 +52,6 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
         }
 
-        // お気に入りへの追加
-        private void OnAddToFavorites(string path)
-        {
-            var favoriteFoldersControl = FindFavoriteFoldersControl();
-            if (favoriteFoldersControl != null && !favoriteFoldersControl.FavoriteFolders.Contains(path))
-            {
-                favoriteFoldersControl.AddFavoriteFolder(path);
-            }
-        }
-
-        // お気に入りからの削除
-        private void OnRemoveFromFavorites(string path)
-        {
-            var favoriteFoldersControl = FindFavoriteFoldersControl();
-            if (favoriteFoldersControl != null && favoriteFoldersControl.FavoriteFolders.Contains(path))
-            {
-                favoriteFoldersControl.RemoveFavoriteFolder(path);
-            }
-        }
-
-        // FavoriteFoldersControlを検索するヘルパーメソッド
-        private FavoriteFoldersControl? FindFavoriteFoldersControl()
-        {
-            var mainWindow = Window.GetWindow(this);
-            if (mainWindow == null) return null;
-
-            return mainWindow.FindName("FavoriteFolders") as FavoriteFoldersControl;
-        }
 
         public void SaveAllData()
         {

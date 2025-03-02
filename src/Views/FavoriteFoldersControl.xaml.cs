@@ -54,6 +54,10 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+
+            // お気に入り関連イベントの設定
+            _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(AddFavoriteFolder);
+            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(RemoveFavoriteFolder);
         }
 
         private void OnFolderSelected(FolderSelectedEventArgs args)

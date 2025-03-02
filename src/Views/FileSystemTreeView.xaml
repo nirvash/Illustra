@@ -8,84 +8,79 @@
              xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300" d:DesignWidth="300"
+             x:Name="FileSystemTreeViewControl">
 
     <UserControl.Resources>
-        <!-- BooleanToVisibilityConverterを直接ここで定義 -->
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-
-        <!-- ファイルシステムアイテムのテンプレート -->
-        <HierarchicalDataTemplate DataType="{x:Type models:FileSystemItemModel}"
-                                  ItemsSource="{Binding Children}">
-            <StackPanel Orientation="Horizontal">
-                <!-- ローディング表示 -->
-                <TextBlock Text="🔄" Margin="0,0,3,0" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                <!-- フォルダアイコン -->
-                <TextBlock Text="📁" Margin="0,0,3,0" Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                <!-- アイテム名 -->
-                <TextBlock Text="{Binding Name}" />
-            </StackPanel>
-        </HierarchicalDataTemplate>
-
-        <!-- カスタムTreeViewItemスタイル -->
-        <Style TargetType="TreeViewItem">
-            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Focusable" Value="{Binding IsFolder}"/>
-            <Setter Property="IsEnabled" Value="{Binding IsFolder}"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#FFD47B00"/>
-                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                </Trigger>
-                <MultiTrigger>
-                    <MultiTrigger.Conditions>
-                        <Condition Property="IsSelected" Value="True"/>
-                        <Condition Property="IsKeyboardFocused" Value="True"/>
-                    </MultiTrigger.Conditions>
-                    <Setter Property="Background" Value="#FF007ACC"/>
-                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                </MultiTrigger>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#0F000000"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
         <TreeView ItemsSource="{Binding RootItems}"
                   SelectedItemChanged="TreeView_SelectedItemChanged"
+                  ContextMenuOpening="TreeView_ContextMenuOpening"
                   VirtualizingStackPanel.IsVirtualizing="True"
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate DataType="{x:Type models:FileSystemItemModel}"
+                                      ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔄" Margin="0,0,3,0"
+                                  Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="📁" Margin="0,0,3,0"
+                                  Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding Name}" />
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
             <TreeView.ItemContainerStyle>
-                <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Focusable" Value="{Binding IsFolder}"/>
+                    <Setter Property="IsEnabled" Value="{Binding IsFolder}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="お気に入りに追加" Command="{Binding AddToFavoritesCommand}"
+                                        CommandParameter="{Binding Item}"/>
+                                <MenuItem Header="お気に入りから削除" Command="{Binding RemoveFromFavoritesCommand}"
+                                        CommandParameter="{Binding Item}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsFolder}" Value="False">
+                            <Setter Property="ContextMenu" Value="{x:Null}"/>
+                        </DataTrigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#FFD47B00"/>
+                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsKeyboardFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" Value="#FF007ACC"/>
+                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#0F000000"/>
+                        </Trigger>
+                    </Style.Triggers>
                 </Style>
             </TreeView.ItemContainerStyle>
-            <TreeView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="お気に入りに追加" Command="{Binding AddToFavoritesCommand}" />
-                    <MenuItem Header="お気に入りから削除" Command="{Binding RemoveFromFavoritesCommand}" />
-                </ContextMenu>
-            </TreeView.ContextMenu>
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="Expanded">
-                    <i:InvokeCommandAction Command="{Binding ExpandItemCommand}"
-                                          CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}}, Path=DataContext}"/>
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
         </TreeView>
 
         <!-- 読み込み中の表示 -->
-        <Border Background="#80000000" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Border Background="#80000000"
+                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="読み込み中..." Foreground="White" HorizontalAlignment="Center"/>
                 <ProgressBar Width="100" Height="10" IsIndeterminate="True" Margin="0,5,0,0"/>

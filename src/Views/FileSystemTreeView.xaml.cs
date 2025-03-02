@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Illustra.Events;
 using Illustra.Helpers;
@@ -158,6 +159,42 @@ namespace Illustra.Views
                     return result;
             }
             return null;
+        }
+
+        private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            var treeView = sender as TreeView;
+            if (treeView == null) return;
+
+            // イベントの発生元を見つける
+            if (e.OriginalSource is DependencyObject source)
+            {
+                var treeViewItem = FindVisualParent<TreeViewItem>(source);
+                if (treeViewItem?.ContextMenu != null)
+                {
+                    // TreeView の DataContext (ViewModel) を取得
+                    var viewModel = treeView.DataContext;
+                    // TreeViewItem の DataContext (FileSystemItemModel) を取得
+                    var item = treeViewItem.DataContext;
+
+                    // コンテキストメニューの DataContext を設定
+                    treeViewItem.ContextMenu.DataContext = viewModel;
+
+                    // コマンドパラメータを設定
+                    foreach (var menuItem in treeViewItem.ContextMenu.Items.OfType<MenuItem>())
+                    {
+                        menuItem.CommandParameter = item;
+                    }
+                }
+            }
+        }
+
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            var parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+            if (parentObject is T parent) return parent;
+            return FindVisualParent<T>(parentObject);
         }
     }
 }

@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Models;
@@ -34,8 +36,27 @@ namespace Illustra.ViewModels
             };
 
             // コマンドの初期化
-            AddToFavoritesCommand = new DelegateCommand(AddToFavorites, CanAddToFavorites);
-            RemoveFromFavoritesCommand = new DelegateCommand(RemoveFromFavorites, CanRemoveFromFavorites);
+            AddToFavoritesCommand = new DelegateCommand<FileSystemItemModel>(
+                item =>
+                {
+                    if (item != null && item.IsFolder)
+                    {
+                        _eventAggregator.GetEvent<AddToFavoritesEvent>().Publish(item.FullPath);
+                    }
+                },
+                item => item != null && item.IsFolder
+            );
+
+            RemoveFromFavoritesCommand = new DelegateCommand<FileSystemItemModel>(
+                item =>
+                {
+                    if (item != null && item.IsFolder)
+                    {
+                        _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Publish(item.FullPath);
+                    }
+                },
+                item => item != null && item.IsFolder
+            );
 
             // ツリーアイテム展開用コマンド
             ExpandItemCommand = new DelegateCommand<FileSystemItemModel>(item =>
@@ -73,8 +94,8 @@ namespace Illustra.ViewModels
                     OnPropertyChanged();
 
                     // コマンドの有効状態を更新
-                    ((DelegateCommand)AddToFavoritesCommand).RaiseCanExecuteChanged();
-                    ((DelegateCommand)RemoveFromFavoritesCommand).RaiseCanExecuteChanged();
+                    ((DelegateCommand<FileSystemItemModel>)AddToFavoritesCommand).RaiseCanExecuteChanged();
+                    ((DelegateCommand<FileSystemItemModel>)RemoveFromFavoritesCommand).RaiseCanExecuteChanged();
 
                     if (_selectedItem != null && _selectedItem.IsFolder)
                     {
