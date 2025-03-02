@@ -14,10 +14,11 @@
         MouseDoubleClick="Window_MouseDoubleClick"
         MouseMove="Window_MouseMove"
         PreviewMouseWheel="Window_PreviewMouseWheel">
-    <Grid>
+    <Grid x:Name="MainGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/> <!-- スプリッター用 -->
+            <ColumnDefinition Width="250"/> <!-- プロパティパネル用 -->
         </Grid.ColumnDefinitions>
 
         <Image x:Name="MainImage"
@@ -26,10 +27,20 @@
                Stretch="Uniform"
                RenderOptions.BitmapScalingMode="HighQuality"/>
 
+        <!-- プロパティパネルのスプリッター -->
+        <GridSplitter x:Name="PropertySplitter"
+                    Grid.Column="1"
+                    Width="3"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    Background="#CCCCCC"
+                    Visibility="{Binding ElementName=PropertyPanel, Path=Visibility}" />
+
         <!-- プロパティパネル -->
         <Border x:Name="PropertyPanel"
-                Grid.Column="1"
-                Width="250"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 Background="#F0F0F0"
                 BorderBrush="#CCCCCC"
                 BorderThickness="1,0,0,0">
@@ -41,7 +52,7 @@
 
         <!-- フルスクリーン時のタイトルバー -->
         <Border x:Name="TitleBar"
-                Grid.ColumnSpan="2"
+                Grid.ColumnSpan="3"
                 Height="32"
                 VerticalAlignment="Top"
                 Background="#80000000"

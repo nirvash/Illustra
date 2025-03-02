@@ -94,6 +94,27 @@ namespace Illustra.Views
             // フルスクリーン設定を保存して、Loaded後に適用
             _isFullScreen = settings.IsFullScreen;
 
+            // プロパティパネルの表示状態を設定
+            PropertyPanel.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
+            PropertySplitter.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
+
+            // プロパティパネル列の幅を設定
+            if (settings.PropertyColumnWidth > 0)
+            {
+                // 保存されていた幅を読み込む
+                _lastPropertyPanelWidth = settings.PropertyColumnWidth;
+                
+                // パネルが表示されていない場合は、幅を0に設定
+                if (!settings.VisiblePropertyPanel)
+                {
+                    MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+                }
+                else
+                {
+                    MainGrid.ColumnDefinitions[2].Width = new GridLength(settings.PropertyColumnWidth);
+                }
+            }
+
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
         }
@@ -168,9 +189,27 @@ namespace Illustra.Views
 
         private void TogglePropertyPanel()
         {
-            PropertyPanel.Visibility = PropertyPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+            if (PropertyPanel.Visibility == Visibility.Visible)
+            {
+                // プロパティパネルを非表示にする：幅を保存してから0に設定
+                _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+                PropertyPanel.Visibility = Visibility.Collapsed;
+                PropertySplitter.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // プロパティパネルを表示する：保存していた幅を復元
+                double width = _lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250;
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(width);
+                PropertyPanel.Visibility = Visibility.Visible;
+                PropertySplitter.Visibility = Visibility.Visible;
+            }
             SaveCurrentSettings();
         }
+
+        // 前回のプロパティパネル幅を保存するフィールド
+        private double _lastPropertyPanelWidth = 250;
 
         // 前の画像に移動
         private void NavigateToPreviousImage()
@@ -384,6 +423,10 @@ namespace Illustra.Views
                 Height = _isFullScreen ? 600 : Height,
                 IsFullScreen = _isFullScreen,
                 VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
+                // パネルが非表示の場合は保存されている幅を使用、表示されている場合は現在の幅を保存
+                PropertyColumnWidth = PropertyPanel.Visibility == Visibility.Visible 
+                    ? MainGrid.ColumnDefinitions[2].ActualWidth 
+                    : _lastPropertyPanelWidth
             };
             ViewerSettingsHelper.SaveSettings(settings);
         }
