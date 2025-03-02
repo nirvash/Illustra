@@ -8,7 +8,7 @@ namespace Illustra.Events
     /// <summary>
     /// フォルダ内の先頭ファイルの選択を要求するイベント
     /// </summary>
-    public class SelectFolderFirstItemRequestEvent : PubSubEvent { }
+    public class SelectFileRequestEvent : PubSubEvent<string> { }
 
     /// <summary>
     /// ファイルが選択されたときにトリガーされるイベント

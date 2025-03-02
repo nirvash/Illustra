@@ -10,6 +10,7 @@ using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
+using Microsoft.VisualBasic;
 
 namespace Illustra.Views
 {
@@ -20,12 +21,13 @@ namespace Illustra.Views
         // 画像閲覧用
         private ImageViewerWindow? _currentViewerWindow;
         private string _currentSelectedFilePath;
+        private string _currentFolderPath;
+
         private AppSettings _appSettings;
         private bool _isFirstLoaded = false;
         private ThumbnailLoaderHelper _thumbnailLoader;
 
         private bool _isInitialized = false;
-        private bool _shouldSelectFirstItem = false;
 
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
@@ -76,18 +78,23 @@ namespace Illustra.Views
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
-            _eventAggregator.GetEvent<SelectFolderFirstItemRequestEvent>().Subscribe(SelectFirstItem);
+            _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(SelectFile);
         }
 
-        private void OnFolderSelected(string obj)
+        private void OnFolderSelected(string folderPath)
         {
-            // フォルダが選択されたときの処理
+            if (folderPath == _currentFolderPath)
+                return;
+
+            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
+            LoadFileNodes(folderPath);
         }
 
         public void SaveAllData()
         {
             // 現在のサムネイルサイズを保存
             _appSettings.ThumbnailSize = (int)ThumbnailSizeSlider.Value;
+            _appSettings.LastSelectedFilePath = _currentSelectedFilePath;
         }
 
         /// <summary>
@@ -156,27 +163,13 @@ namespace Illustra.Views
             {
                 if (args.AddedItems.Count > 0 && args.AddedItems[0] is FileNodeModel selectedItem)
                 {
+                    // _viewModel とは TwoWay バインディングされているため、ここでの更新は不要
                     _currentSelectedFilePath = selectedItem.FullPath;
-                    _viewModel.SelectedItem = selectedItem;
 
                     // FileSelectedEvent を発行
                     _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedItem.FullPath);
 
                     LoadFilePropertiesAsync(selectedItem.FullPath);
-                }
-            };
-
-            // ViewModelのSelectedItemプロパティを監視
-            _viewModel.PropertyChanged += (s, args) =>
-            {
-                if (args.PropertyName == nameof(_viewModel.SelectedItem) && _viewModel.SelectedItem != null)
-                {
-                    // ViewModelの選択が変更されたら、ListViewの選択も同期
-                    if (ThumbnailItemsControl.SelectedItem != _viewModel.SelectedItem)
-                    {
-                        ThumbnailItemsControl.SelectedItem = _viewModel.SelectedItem;
-                    }
-                    LoadFilePropertiesAsync(_viewModel.SelectedItem.FullPath);
                 }
             };
         }
@@ -244,28 +237,6 @@ namespace Illustra.Views
                     return;
                 }
 
-                if (!_isFirstLoaded && !string.IsNullOrEmpty(_appSettings.LastSelectedFilePath) &&
-                    File.Exists(_appSettings.LastSelectedFilePath))
-                {
-                    _isFirstLoaded = true;
-                    SelectThumbnail(_appSettings.LastSelectedFilePath);
-                    // サムネイルにフォーカスを設定
-                    await Task.Delay(50);
-                    ThumbnailItemsControl.Focus();
-                }
-                else if (_shouldSelectFirstItem)
-                {
-                    _shouldSelectFirstItem = false;
-                    var firstItem = _viewModel.Items[0];
-
-                    // 先頭アイテムを選択
-                    SelectThumbnail(firstItem.FullPath);
-
-                    // サムネイルにフォーカスを設定
-                    await Task.Delay(50);
-                    ThumbnailItemsControl.Focus();
-                }
-
                 // 表示範囲のサムネイルをロード
                 var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
@@ -288,23 +259,32 @@ namespace Illustra.Views
             SelectThumbnail(_currentSelectedFilePath);
         }
 
-        private async void SelectFirstItem()
+        private async void SelectFile(string filePath)
         {
             if (_viewModel.Items.Count == 0)
             {
-                _shouldSelectFirstItem = true;
                 return;
             }
 
-            var firstItem = _viewModel.Items[0];
+            // アイテムが選択済みの場合は何もしない
+            if (_viewModel.SelectedItem != null)
+            {
+                return;
+            }
 
-            // 先頭アイテムを選択
-            SelectThumbnail(firstItem.FullPath);
+            if (filePath == "")
+            {
+                var item = _viewModel.Items[0];
+                if (item == null) return;
+                filePath = item.FullPath;
+            }
+            SelectThumbnail(filePath);
 
             // サムネイルにフォーカスを設定
             await Task.Delay(50);
             ThumbnailItemsControl.Focus();
         }
+
         /// <summary>
         /// 指定されたファイルを選択します
         /// </summary>
@@ -316,7 +296,7 @@ namespace Illustra.Views
                 return;
             }
 
-            // DisplayGeneratedItemsInfo(ThumbnailItemsControl);
+            DisplayGeneratedItemsInfo(ThumbnailItemsControl);
 
             var matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
             if (matchingItem != null)
@@ -662,6 +642,7 @@ namespace Illustra.Views
 
         internal void LoadFileNodes(string path)
         {
+            _currentFolderPath = path;
             _thumbnailLoader.LoadFileNodes(path);
         }
 
@@ -706,5 +687,39 @@ namespace Illustra.Views
             // サムネイルサイズを設定
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
         }
+
+
+        public void DisplayGeneratedItemsInfo(ListView listView)
+        {
+            int totalItems = listView.Items.Count;
+            int generatedItems = GetGeneratedItemsCount(listView);
+
+            Debug.WriteLine($"全アイテム数: {totalItems}");
+            Debug.WriteLine($"生成されたアイテム数: {generatedItems}");
+            Debug.WriteLine($"仮想化率: {(1 - (double)generatedItems / totalItems) * 100:F2}%");
+        }
+
+        /// <summary>
+        /// Gets the number of items that have been generated (realized) by the virtualization system
+        /// </summary>
+        private int GetGeneratedItemsCount(ListView listView)
+        {
+            int count = 0;
+
+            if (listView == null)
+                return 0;
+
+            for (int i = 0; i < listView.Items.Count; i++)
+            {
+                var container = listView.ItemContainerGenerator.ContainerFromIndex(i);
+                if (container != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
     }
 }

@@ -41,7 +41,7 @@
                   Loaded="ThumbnailItemsControl_Loaded"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.CanContentScroll="False"
+                  ScrollViewer.CanContentScroll="True"
                   ScrollViewer.PanningMode="VerticalOnly"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
@@ -56,23 +56,6 @@
                   KeyboardNavigation.TabNavigation="Cycle"
                   Focusable="True"
                   FocusVisualStyle="{x:Null}">
-
-            <!-- スクロールビュー設定を明示的に制御 -->
-            <ListView.Template>
-                <ControlTemplate TargetType="{x:Type ListView}">
-                    <Border BorderThickness="{TemplateBinding BorderThickness}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            Background="{TemplateBinding Background}">
-                        <ScrollViewer Padding="{TemplateBinding Padding}"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      VerticalScrollBarVisibility="Auto"
-                                      CanContentScroll="False">
-                            <ItemsPresenter />
-                        </ScrollViewer>
-                    </Border>
-                </ControlTemplate>
-            </ListView.Template>
-
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
                     <vw:VirtualizingWrapPanel

@@ -40,12 +40,17 @@ namespace Illustra.Views
             if (isFolderSelecting) return;
             if (e.NewValue is TreeViewItem { Tag: string path } selectedItem && path != null)
             {
+                // 既に選択されているパスと同じ場合は何もしない
+                if (path == _currentSelectedFilePath)
+                    return;
+
                 if (Directory.Exists(path))
                 {
+                    _currentSelectedFilePath = path;
                     // フォルダ選択イベントを発行
                     ignoreSelectedChangedOnce = true;
                     _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
-                    _eventAggregator.GetEvent<SelectFolderFirstItemRequestEvent>().Publish();
+                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
                     isFolderSelecting = false;
                 }
             }

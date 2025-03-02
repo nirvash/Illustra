@@ -15,7 +15,6 @@ namespace Illustra.Views
         private readonly IEventAggregator _eventAggregator;
         private bool _isInitialized = false;
         private AppSettings _appSettings;
-        private string _currentSelectedFilePath = string.Empty;
 
         private DateTime _lastLoadTime = DateTime.MinValue;
         private readonly object _loadLock = new object();
@@ -50,11 +49,11 @@ namespace Illustra.Views
             _favoritesFoldersSplitterPosition = _appSettings.FavoriteFoldersHeight;
             RestoreSplitterPositions();
 
-            // ウィンドウが閉じられるときに設定を保存
-            Closing += MainWindow_Closing;
-
             // ウィンドウがロードされた後に前回のフォルダを選択
             Loaded += MainWindow_Loaded;
+
+            // ウィンドウが閉じられるときに設定を保存
+            Closing += MainWindow_Closing;
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
@@ -79,18 +78,19 @@ namespace Illustra.Views
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            var folderPath = _appSettings.LastFolderPath;
+            var filePath = _appSettings.LastSelectedFilePath;
             // 前回開いていたフォルダがある場合、少し時間をおいてから処理開始
-            if (!string.IsNullOrEmpty(_appSettings.LastFolderPath) && System.IO.Directory.Exists(_appSettings.LastFolderPath))
+            if (!string.IsNullOrEmpty(folderPath))
             {
                 // UIが完全にロードされてから処理を行う
                 Dispatcher.BeginInvoke(new Action(async () =>
                 {
                     try
                     {
-                        var path = _appSettings.LastFolderPath;
-                        // ツリービューが完全に構築されるのを待つ
-                        await Task.Delay(500);
-                        _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
+                        await Task.Delay(200);
+                        _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(folderPath);
+                        _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish(filePath);
                     }
                     catch (Exception ex)
                     {
@@ -113,13 +113,8 @@ namespace Illustra.Views
 
             _appSettings.WindowState = WindowState;
 
-
-
             // 現在のフォルダパスを保存
             _appSettings.LastFolderPath = _currentFolderPath;
-
-            // 現在の選択ファイルパスを保存
-            _appSettings.LastSelectedFilePath = _currentSelectedFilePath;
 
             // ソート順の設定を保存
             _appSettings.SortByDate = _sortByDate;
@@ -267,41 +262,9 @@ namespace Illustra.Views
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public void DisplayGeneratedItemsInfo(ListView listView)
-        {
-            int totalItems = listView.Items.Count;
-            int generatedItems = GetGeneratedItemsCount(listView);
-
-            Debug.WriteLine($"全アイテム数: {totalItems}");
-            Debug.WriteLine($"生成されたアイテム数: {generatedItems}");
-            Debug.WriteLine($"仮想化率: {(1 - (double)generatedItems / totalItems) * 100:F2}%");
-        }
-
-        /// <summary>
-        /// Gets the number of items that have been generated (realized) by the virtualization system
-        /// </summary>
-        private int GetGeneratedItemsCount(ListView listView)
-        {
-            int count = 0;
-
-            if (listView == null)
-                return 0;
-
-            for (int i = 0; i < listView.Items.Count; i++)
-            {
-                var container = listView.ItemContainerGenerator.ContainerFromIndex(i);
-                if (container != null)
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
         private void AddToFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (_folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            if (_folderTreeControl != null && _folderTreeControl.FolderTreeView?.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
             {
                 FavoriteFolders.AddFavoriteFolder(path);
             }
@@ -309,7 +272,7 @@ namespace Illustra.Views
 
         private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (_folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            if (_folderTreeControl != null && _folderTreeControl.FolderTreeView != null && _folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
             {
                 FavoriteFolders.RemoveFavoriteFolder(path);
             }
@@ -349,7 +312,6 @@ namespace Illustra.Views
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
             {
                 _currentFolderPath = path;
-                ThumbnailList.LoadFileNodes(path);
                 ClearPropertiesDisplay();
             }
         }

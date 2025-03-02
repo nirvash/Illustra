@@ -100,7 +100,7 @@ namespace Illustra.Views
                 {
                     // フォルダ選択イベントを発行
                     _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
-                    _eventAggregator.GetEvent<SelectFolderFirstItemRequestEvent>().Publish();
+                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
                 }
             }
         }

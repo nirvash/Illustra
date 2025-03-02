@@ -179,6 +179,7 @@ public class ThumbnailLoaderHelper
 
             // ViewModelのItemsをクリアして新しいアイテムを設定
             _viewModel.Items.ReplaceAll(fileNodes);
+            _viewModel.SelectedItem = null; // 以前の選択をクリア
 
             // ファイルノードのロード完了イベントを発火
             fileNodesLoaded?.Invoke(this, EventArgs.Empty);
