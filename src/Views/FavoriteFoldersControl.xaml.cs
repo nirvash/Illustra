@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
+using Prism.Events;
+using Prism.Ioc;
 
 namespace Illustra.Views
 {
@@ -18,6 +20,7 @@ namespace Illustra.Views
         private AppSettings _appSettings;
         private IEventAggregator? _eventAggregator;
         private bool ignoreSelectedChangedOnce;
+        private const string CONTROL_ID = "FavoriteFolders";
 
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
@@ -49,15 +52,16 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
         }
 
-        private void OnFolderSelected(string path)
+        private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (path == (string)FavoriteFoldersTreeView.SelectedItem) return;
-            if (_favoriteFolders.Contains(path))
+            if (args.Path == (string)FavoriteFoldersTreeView.SelectedItem) return;
+            if (_favoriteFolders.Contains(args.Path))
             {
-                var item = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(path) as TreeViewItem;
+                var item = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(args.Path) as TreeViewItem;
                 if (item != null)
                 {
                     ignoreSelectedChangedOnce = true;
@@ -76,7 +80,6 @@ namespace Illustra.Views
                 }
             }
         }
-
 
         public void SaveAllData()
         {
@@ -99,7 +102,8 @@ namespace Illustra.Views
                 if (Directory.Exists(path))
                 {
                     // フォルダ選択イベントを発行
-                    _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
+                    _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                        new FolderSelectedEventArgs(path, CONTROL_ID));
                     _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
                 }
             }

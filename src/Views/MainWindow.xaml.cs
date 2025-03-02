@@ -15,8 +15,6 @@ namespace Illustra.Views
         private readonly IEventAggregator _eventAggregator;
         private bool _isInitialized = false;
         private AppSettings _appSettings;
-
-        private DateTime _lastLoadTime = DateTime.MinValue;
         private readonly object _loadLock = new object();
         private bool _sortByDate = true;
         private bool _sortAscending = true;
@@ -25,6 +23,7 @@ namespace Illustra.Views
         private FavoriteFoldersControl? _favoriteFoldersControl;
         private FolderTreeControl? _folderTreeControl;
         private string? _currentFolderPath = null;
+        private const string CONTROL_ID = "MainWindow";
 
         public MainWindow(IEventAggregator eventAggregator)
         {
@@ -34,10 +33,20 @@ namespace Illustra.Views
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
 
-            // 設定を適用
-            ApplySettings();
+            // イベントを購読（コンストラクタで設定）
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
-            // ウィンドウサイズと位置を設定から復元
+            // コントロールのインスタンスを取得（ここに移動）
+            _favoriteFoldersControl = FavoriteFolders;
+            _folderTreeControl = FolderTree;
+
+            // ウィンドウがロードされた後に前回のフォルダを選択
+            Loaded += MainWindow_Loaded;
+            // ウィンドウが閉じられるときに設定を保存
+            Closing += MainWindow_Closing;
+
+            // 設定を適用（ウィンドウ設定のみ）
             Width = _appSettings.WindowWidth;
             Height = _appSettings.WindowHeight;
             Left = _appSettings.WindowLeft;
@@ -47,23 +56,9 @@ namespace Illustra.Views
             // スプリッター位置を復元
             _mainSplitterPosition = _appSettings.MainSplitterPosition;
             _favoritesFoldersSplitterPosition = _appSettings.FavoriteFoldersHeight;
-            RestoreSplitterPositions();
-
-            // ウィンドウがロードされた後に前回のフォルダを選択
-            Loaded += MainWindow_Loaded;
-
-            // ウィンドウが閉じられるときに設定を保存
-            Closing += MainWindow_Closing;
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
-
-            // イベントを購読
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
-
-            // コントロールのインスタンスを取得
-            _favoriteFoldersControl = FavoriteFolders;
-            _folderTreeControl = FolderTree;
 
             _isInitialized = true;
         }
@@ -78,25 +73,20 @@ namespace Illustra.Views
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            var folderPath = _appSettings.LastFolderPath;
+            // スプリッター位置の復元
+            RestoreSplitterPositions();
+
+            // その他の設定を適用
+            ApplySettings();
+
+            // 前回のファイル選択を復元
             var filePath = _appSettings.LastSelectedFilePath;
-            // 前回開いていたフォルダがある場合、少し時間をおいてから処理開始
-            if (!string.IsNullOrEmpty(folderPath))
+            if (Directory.Exists(filePath))
             {
-                // UIが完全にロードされてから処理を行う
-                Dispatcher.BeginInvoke(new Action(async () =>
+                if (!string.IsNullOrEmpty(filePath))
                 {
-                    try
-                    {
-                        await Task.Delay(200);
-                        _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(folderPath);
-                        _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"前回のフォルダを開く際にエラーが発生: {ex}");
-                    }
-                }));
+                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish(filePath);
+                }
             }
         }
 
@@ -264,17 +254,19 @@ namespace Illustra.Views
 
         private void AddToFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (_folderTreeControl != null && _folderTreeControl.FolderTreeView?.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            // 新しいお気に入りに追加イベントを発行する方法に変更
+            if (!string.IsNullOrEmpty(_currentFolderPath) && Directory.Exists(_currentFolderPath))
             {
-                FavoriteFolders.AddFavoriteFolder(path);
+                _eventAggregator.GetEvent<AddToFavoritesEvent>().Publish(_currentFolderPath);
             }
         }
 
         private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (_folderTreeControl != null && _folderTreeControl.FolderTreeView != null && _folderTreeControl.FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+            // 新しいお気に入りから削除イベントを発行する方法に変更
+            if (!string.IsNullOrEmpty(_currentFolderPath) && Directory.Exists(_currentFolderPath))
             {
-                FavoriteFolders.RemoveFavoriteFolder(path);
+                _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Publish(_currentFolderPath);
             }
         }
 
@@ -306,13 +298,17 @@ namespace Illustra.Views
             }
         }
 
-        private void OnFolderSelected(string path)
+        private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (path == _currentFolderPath) return;
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+            if (args.Path == _currentFolderPath) return;
+            if (!string.IsNullOrEmpty(args.Path) && Directory.Exists(args.Path))
             {
-                _currentFolderPath = path;
+                _currentFolderPath = args.Path;
                 ClearPropertiesDisplay();
+
+                // 自身からフォルダ選択イベントを発行する場合
+                _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                    new FolderSelectedEventArgs(args.Path, CONTROL_ID));
             }
         }
 

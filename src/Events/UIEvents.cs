@@ -1,9 +1,23 @@
+using Prism.Events;
+
 namespace Illustra.Events
 {
+    public class FolderSelectedEventArgs
+    {
+        public string Path { get; set; }
+        public string SourceId { get; set; }
+
+        public FolderSelectedEventArgs(string path, string sourceId)
+        {
+            Path = path;
+            SourceId = sourceId;
+        }
+    }
+
     /// <summary>
     /// フォルダが選択されたときにトリガーされるイベント
     /// </summary>
-    public class FolderSelectedEvent : PubSubEvent<string> { }
+    public class FolderSelectedEvent : PubSubEvent<FolderSelectedEventArgs> { }
 
     /// <summary>
     /// フォルダ内の先頭ファイルの選択を要求するイベント
@@ -14,4 +28,14 @@ namespace Illustra.Events
     /// ファイルが選択されたときにトリガーされるイベント
     /// </summary>
     public class FileSelectedEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// お気に入りに追加するイベント
+    /// </summary>
+    public class AddToFavoritesEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// お気に入りから削除するイベント
+    /// </summary>
+    public class RemoveFromFavoritesEvent : PubSubEvent<string> { }
 }

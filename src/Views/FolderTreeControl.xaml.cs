@@ -1,8 +1,11 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Illustra.Helpers;
-using System.IO;
 using Illustra.Events;
+using Prism.Events;
+using Prism.Ioc;
 
 namespace Illustra.Views
 {
@@ -10,14 +13,12 @@ namespace Illustra.Views
     {
         private IEventAggregator? _eventAggregator;
         private string _currentSelectedFilePath = string.Empty;
-        private bool isFolderSelecting;
         private bool ignoreSelectedChangedOnce;
+        private const string CONTROL_ID = "FolderTree";
 
         #region IActiveAware Implementation
-#pragma warning disable 0067 // 使用されていませんという警告を無視
         public bool IsActive { get; set; }
         public event EventHandler? IsActiveChanged;
-#pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
         // xaml でインスタンス化するためのデフォルトコンストラクタ
@@ -31,186 +32,59 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
-            LoadDrivesAsync();
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+
+            // お気に入り関連イベントの設定
+            _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(OnAddToFavorites);
+            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(OnRemoveFromFavorites);
         }
 
-        private void FolderTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (isFolderSelecting) return;
-            if (e.NewValue is TreeViewItem { Tag: string path } selectedItem && path != null)
-            {
-                // 既に選択されているパスと同じ場合は何もしない
-                if (path == _currentSelectedFilePath)
-                    return;
-
-                if (Directory.Exists(path))
-                {
-                    _currentSelectedFilePath = path;
-                    // フォルダ選択イベントを発行
-                    ignoreSelectedChangedOnce = true;
-                    _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(path);
-                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
-                    isFolderSelecting = false;
-                }
-            }
-        }
-
-        public void SaveAllData()
-        {
-            // TBD
-        }
-
-        private void AddToFavorites_Click(object sender, RoutedEventArgs e)
-        {
-            if (FolderTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
-            {
-                var favoriteFoldersControl = (FavoriteFoldersControl)FindName("FavoriteFoldersControl");
-                if (favoriteFoldersControl != null && !favoriteFoldersControl.FavoriteFolders.Contains(path))
-                {
-                    favoriteFoldersControl.AddFavoriteFolder(path);
-                }
-            }
-        }
-
-        private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
-        {
-            var favoriteFoldersControl = (FavoriteFoldersControl)FindName("FavoriteFoldersControl");
-            if (favoriteFoldersControl != null && favoriteFoldersControl.FavoriteFoldersTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
-            {
-                if (favoriteFoldersControl.FavoriteFolders.Contains(path))
-                {
-                    favoriteFoldersControl.RemoveFavoriteFolder(path);
-                }
-            }
-        }
-
-        private async void OnFolderSelected(string path)
-        {
-            if (path == _currentSelectedFilePath) return;
+            if (args.Path == _currentSelectedFilePath) return;
             if (ignoreSelectedChangedOnce)
             {
                 ignoreSelectedChangedOnce = false;
                 return;
             }
+
             ignoreSelectedChangedOnce = false;
+            _currentSelectedFilePath = args.Path;
+        }
 
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+        // お気に入りへの追加
+        private void OnAddToFavorites(string path)
+        {
+            var favoriteFoldersControl = FindFavoriteFoldersControl();
+            if (favoriteFoldersControl != null && !favoriteFoldersControl.FavoriteFolders.Contains(path))
             {
-                // フォルダツリーで選択されたフォルダを開く
-                await SelectPathInTreeViewAsync(FolderTreeView, path);
+                favoriteFoldersControl.AddFavoriteFolder(path);
             }
         }
 
-
-        /// <summary>
-        /// 指定されたパスに対応するTreeViewItemを見つけて選択状態にします
-        /// </summary>
-        /// <param name="treeView">ターゲットとなるTreeView</param>
-        /// <param name="fullPath">選択したいフォルダの完全パス</param>
-        /// <returns>パスが見つかって選択できた場合はtrue、それ以外はfalse</returns>
-        public async Task<bool> SelectPathInTreeViewAsync(TreeView treeView, string fullPath)
+        // お気に入りからの削除
+        private void OnRemoveFromFavorites(string path)
         {
-            if (string.IsNullOrEmpty(fullPath) || treeView == null || treeView.Items.Count == 0)
-                return false;
-
-            try
+            var favoriteFoldersControl = FindFavoriteFoldersControl();
+            if (favoriteFoldersControl != null && favoriteFoldersControl.FavoriteFolders.Contains(path))
             {
-                // パスの各部分を取得
-                var pathParts = FileSystemHelper.GetPathParts(fullPath);
-                if (pathParts.Count == 0) return false;
-
-                // ルート（ドライブ）を探す
-                string rootPart = pathParts[0];
-                TreeViewItem? rootNode = null;
-
-                foreach (var item in treeView.Items)
-                {
-                    if (item is TreeViewItem tvi && tvi.Tag is string tag &&
-                        tag.StartsWith(rootPart, StringComparison.OrdinalIgnoreCase))
-                    {
-                        rootNode = tvi;
-                        break;
-                    }
-                }
-
-                if (rootNode == null) return false;
-
-                // ルートノードを展開
-                rootNode.IsExpanded = true;
-
-                // UIスレッドの更新を待機
-                await Task.Delay(150);
-
-                // 残りのパスを再帰的に探索
-                TreeViewItem currentNode = rootNode;
-
-                // 最初のパーツはドライブなので、それ以降を処理
-                for (int i = 1; i < pathParts.Count; i++)
-                {
-                    string part = pathParts[i];
-                    bool found = false;
-
-                    // 子ノードをロードするために展開を確実に
-                    if (!currentNode.IsExpanded)
-                    {
-                        currentNode.IsExpanded = true;
-                        // 子ノードが非同期的にロードされる場合があるので少し待つ
-                        await Task.Delay(150);
-                    }
-
-                    foreach (var item in currentNode.Items)
-                    {
-                        if (item is TreeViewItem childNode && childNode.Tag is string childPath)
-                        {
-                            string folderName = Path.GetFileName(childPath);
-                            if (string.Equals(folderName, part, StringComparison.OrdinalIgnoreCase))
-                            {
-                                currentNode = childNode;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!found) return false;
-
-                    // 最後のノード以外は展開する
-                    if (i < pathParts.Count - 1)
-                    {
-                        currentNode.IsExpanded = true;
-                        await Task.Delay(150); // UIの更新を待つ
-                    }
-                }
-
-                // 最終ノードを選択状態にする - より効果的な選択を確保
-                currentNode.IsSelected = true;
-                currentNode.Focus(); // フォーカスを与える
-                _currentSelectedFilePath = fullPath;
-
-
-                // スクロールして見えるようにする
-                currentNode.BringIntoView();
-
-                // UIスレッドの処理を確実にするため少し待つ
-                await Task.Delay(50);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"パスの選択中にエラーが発生: {ex.Message}");
-                return false;
+                favoriteFoldersControl.RemoveFavoriteFolder(path);
             }
         }
 
-        private async void LoadDrivesAsync()
+        // FavoriteFoldersControlを検索するヘルパーメソッド
+        private FavoriteFoldersControl? FindFavoriteFoldersControl()
         {
-            var drives = await FileSystemHelper.LoadDrivesAsync();
-            foreach (var drive in drives)
-            {
-                await Dispatcher.InvokeAsync(() => FolderTreeView.Items.Add(FileSystemHelper.CreateDriveNode(drive)));
-            }
+            var mainWindow = Window.GetWindow(this);
+            if (mainWindow == null) return null;
+
+            return mainWindow.FindName("FavoriteFolders") as FavoriteFoldersControl;
+        }
+
+        public void SaveAllData()
+        {
+            // 必要に応じて実装
         }
     }
 }

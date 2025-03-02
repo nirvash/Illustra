@@ -31,6 +31,7 @@ namespace Illustra.Views
 
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
+        private const string CONTROL_ID = "ThumbnailList";
 
 
         #region IActiveAware Implementation
@@ -77,17 +78,18 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(SelectFile);
         }
 
-        private void OnFolderSelected(string folderPath)
+        private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (folderPath == _currentFolderPath)
+            if (args.Path == _currentFolderPath)
                 return;
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            LoadFileNodes(folderPath);
+            LoadFileNodes(args.Path);
         }
 
         public void SaveAllData()
@@ -644,6 +646,10 @@ namespace Illustra.Views
         {
             _currentFolderPath = path;
             _thumbnailLoader.LoadFileNodes(path);
+
+            // ファイル選択をクリア（新しいフォルダをロードするため）
+            _currentSelectedFilePath = "";
+            _viewModel.SelectedItem = null;
         }
 
 

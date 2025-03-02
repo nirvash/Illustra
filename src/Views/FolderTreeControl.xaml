@@ -3,43 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:Illustra.Views"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300">
     <Grid>
-        <TreeView x:Name="FolderTreeView"
-                  SelectedItemChanged="FolderTreeView_SelectedItemChanged"
-                  HorizontalAlignment="Stretch"
-                  VerticalAlignment="Stretch"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
-            <TreeView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="お気に入りに追加" Click="AddToFavorites_Click" />
-                    <MenuItem Header="お気に入りから削除" Click="RemoveFromFavorites_Click" />
-                </ContextMenu>
-            </TreeView.ContextMenu>
-            <TreeView.Resources>
-                <Style TargetType="TreeViewItem">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#FFD47B00"/>
-                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                        </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsSelected" Value="True"/>
-                                <Condition Property="IsKeyboardFocused" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <Setter Property="Background" Value="#FF007ACC"/>
-                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                        </MultiTrigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#0F000000"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </TreeView.Resources>
-        </TreeView>
+        <!-- 新しいFileSystemTreeViewコントロールを使用 -->
+        <local:FileSystemTreeView x:Name="FileSystemTreeViewControl" />
     </Grid>
 </UserControl>
