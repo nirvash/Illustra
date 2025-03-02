@@ -105,7 +105,7 @@ namespace Illustra.Views
                 // スプリッター位置を保存
                 _appSettings.MainSplitterPosition = MainContentGrid.ColumnDefinitions[0].ActualWidth;
                 _appSettings.FavoriteFoldersHeight = LeftPanelGrid.RowDefinitions[0].ActualHeight;
-                _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[3].ActualHeight;
+                _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[2].ActualHeight;
             }
             catch (Exception ex)
             {
@@ -279,7 +279,7 @@ namespace Illustra.Views
                 // プロパティパネルの高さ
                 if (_appSettings.PropertySplitterPosition > 0)
                 {
-                    RightPanelGrid.RowDefinitions[3].Height = new GridLength(_appSettings.PropertySplitterPosition, GridUnitType.Pixel);
+                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(_appSettings.PropertySplitterPosition, GridUnitType.Pixel);
                 }
             }
             catch (Exception ex)

@@ -247,10 +247,14 @@ namespace Illustra.Views
                 }
 
                 // 前回選択していたファイルを選択
-                string file = _appSettings.LastSelectedFilePath;
-                if (File.Exists(file))
+                if (!_isFirstLoaded)
                 {
-                    SelectThumbnail(file);
+                    _isFirstLoaded = true;
+                    string file = _appSettings.LastSelectedFilePath;
+                    if (File.Exists(file))
+                    {
+                        SelectThumbnail(file);
+                    }
                 }
             }
             catch (Exception ex)
