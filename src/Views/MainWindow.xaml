@@ -3,18 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vw="clr-namespace:WpfToolkit.Controls;assembly=VirtualizingWrapPanel"
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
-        xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
         Icon="{StaticResource AppIcon}"
         Title="Illustra - 画像ビューア"
         Height="600"
         Width="900">
-    <Window.DataContext>
-        <viewmodels:MainViewModel />
-    </Window.DataContext>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -24,16 +20,9 @@
         <!-- メニューバー -->
         <Menu Grid.Row="0">
             <MenuItem Header="ファイル(_F)">
-                <MenuItem Header="開く(_O)" />
-                <Separator />
                 <MenuItem Header="終了(_X)" Click="ExitMenuItem_Click" />
             </MenuItem>
             <MenuItem Header="表示(_V)">
-                <MenuItem Header="サムネイルサイズ(_S)">
-                    <MenuItem Header="小(_S)" Click="SmallThumbnailMenuItem_Click" />
-                    <MenuItem Header="中(_M)" Click="MediumThumbnailMenuItem_Click" IsChecked="True" />
-                    <MenuItem Header="大(_L)" Click="LargeThumbnailMenuItem_Click" />
-                </MenuItem>
                 <MenuItem Header="並び順(_O)">
                     <MenuItem x:Name="SortByDateMenuItem" Header="作成日時順(_D)" IsCheckable="True" IsChecked="True" Click="SortByDateMenuItem_Click"/>
                     <MenuItem x:Name="SortByNameMenuItem" Header="ファイル名順(_N)" IsCheckable="True" Click="SortByNameMenuItem_Click"/>
@@ -42,7 +31,6 @@
                     <MenuItem x:Name="SortDescendingMenuItem" Header="降順(_D)" IsCheckable="True" Click="SortOrderMenuItem_Click"/>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="更新(_R)" Click="RefreshMenuItem_Click" />
             </MenuItem>
             <MenuItem Header="ツール(_T)">
                 <MenuItem Header="設定(_S)" Click="SettingsMenuItem_Click" />
@@ -99,139 +87,24 @@
             <!-- 右側：メインコンテンツエリア -->
             <Grid Grid.Column="2" x:Name="RightPanelGrid">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="200"/>
                 </Grid.RowDefinitions>
 
-                <!-- サムネイルサイズ調整用のスライダー -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
-                    <TextBlock Text="サムネイルサイズ:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <Slider x:Name="ThumbnailSizeSlider"
-                            Width="150"
-                            Minimum="60"
-                            Maximum="480"
-                            Value="120"
-                            TickFrequency="20"
-                            IsSnapToTickEnabled="True"
-                            ValueChanged="ThumbnailSizeSlider_ValueChanged"/>
-                    <TextBlock x:Name="ThumbnailSizeText" Text="120" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                </StackPanel>
-
                 <!-- サムネイル表示エリア -->
-                <ListView x:Name="ThumbnailItemsControl"
-                          Grid.Row="1"
-                          ItemsSource="{Binding Items}"
-                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                          SelectionMode="Single"
-                          IsSynchronizedWithCurrentItem="True"
-                          Loaded="ThumbnailItemsControl_Loaded"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          ScrollViewer.CanContentScroll="True"
-                          ScrollViewer.PanningMode="Both"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          VirtualizingPanel.CacheLengthUnit="Page"
-                          VirtualizingPanel.CacheLength="1,1"
-                          VirtualizingPanel.IsContainerVirtualizable="True"
-                          VirtualizingPanel.ScrollUnit="Pixel"
-                          BorderThickness="0"
-                          KeyDown="ThumbnailItemsControl_KeyDown"
-                          PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
-                          KeyboardNavigation.DirectionalNavigation="Contained"
-                          KeyboardNavigation.TabNavigation="Cycle"
-                          Focusable="True"
-                          FocusVisualStyle="{x:Null}">
-                    <ListView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <vw:VirtualizingWrapPanel
-                                Orientation="Horizontal"
-                                SpacingMode="Uniform"
-                                IsVirtualizing="True"
-                                VirtualizationMode="Recycling"
-                                CacheLength="1,1"/>
-                        </ItemsPanelTemplate>
-                    </ListView.ItemsPanel>
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="3" />
-                            <Setter Property="BorderThickness" Value="1" />
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
-                            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
-                            <EventSetter Event="MouseDoubleClick" Handler="Thumbnail_MouseDoubleClick"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListViewItem">
-                                        <Grid>
-                                            <!-- 通常の境界線（常に1ピクセル） -->
-                                            <Border x:Name="NormalBorder"
-                                                    Background="{TemplateBinding Background}"
-                                                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-                                                    BorderThickness="1"
-                                                    SnapsToDevicePixels="True">
-                                                <ContentPresenter />
-                                            </Border>
-                                            <!-- 選択時のハイライト境界線（オーバーレイ） -->
-                                            <Border x:Name="SelectionBorder"
-                                                    BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
-                                                    BorderThickness="2"
-                                                    Opacity="0">
-                                            </Border>
-                                        </Grid>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="SelectionBorder" Property="Opacity" Value="1" />
-                                            </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#0F000000"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Border Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
-                                    Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
-                                    BorderThickness="0"
-                                    MouseLeftButtonDown="Thumbnail_MouseLeftButtonDown">
-                                <Grid>
-                                    <Image Source="{Binding ThumbnailInfo.Thumbnail}"
-                                           Stretch="Uniform"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Margin="2"/>
-                                    <TextBlock Text="{Binding Name}"
-                                               VerticalAlignment="Bottom"
-                                               HorizontalAlignment="Center"
-                                               Margin="2"
-                                               Background="#80FFFFFF"
-                                               Padding="2"
-                                               Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
-                                               TextAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                <local:ThumbnailListControl Grid.Row="0"
+                    x:Name="ThumbnailList" />
 
                 <!-- プロパティパネルとのグリッドスプリッター -->
-                <GridSplitter Grid.Row="2"
+                <GridSplitter Grid.Row="1"
                               x:Name="PropertySplitter"
                               Height="4"
                               HorizontalAlignment="Stretch"
                               Background="#FFCCCCCC" />
 
                 <!-- プロパティペイン -->
-                <Grid Grid.Row="3" Margin="5">
+                <Grid Grid.Row="2" Margin="5">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>

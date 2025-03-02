@@ -29,7 +29,8 @@ public class ThumbnailLoaderHelper
     private readonly ItemsControl _thumbnailListBox;
     private int _thumbnailSize = 120;
     private ObservableCollection<FileNodeModel> _viewModelItems;
-    private readonly MainWindow _mainWindow;
+    private AppSettings _appSettings;
+    private readonly ThumbnailListControl _control;
     private readonly MainViewModel _viewModel;
 
     /// <summary>
@@ -37,14 +38,17 @@ public class ThumbnailLoaderHelper
     /// </summary>
     /// <param name="thumbnailListBox">サムネイルを表示するItemsControl</param>
     /// <param name="onThumbnailClick">サムネイルクリック時のアクション</param>
-    /// <param name="mainWindow">MainWindowの参照</param>
+    /// <param name="control">MainWindowの参照</param>
     /// <param name="viewModel">MainViewModelの参照</param>
-    public ThumbnailLoaderHelper(ItemsControl thumbnailListBox, Action<string> onThumbnailClick, MainWindow mainWindow, MainViewModel viewModel)
+    public ThumbnailLoaderHelper(ItemsControl thumbnailListBox, Action<string> onThumbnailClick, ThumbnailListControl control, MainViewModel viewModel)
     {
         _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
-        _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
+        _control = control ?? throw new ArgumentNullException(nameof(control));
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _viewModelItems = viewModel.Items ?? throw new ArgumentNullException(nameof(viewModel.Items));
+
+        // 設定を読み込む
+        _appSettings = SettingsHelper.GetSettings();
     }
 
     /// <summary>
@@ -161,15 +165,15 @@ public class ThumbnailLoaderHelper
             }
 
             // ソート順の設定に従ってソート
-            if (_mainWindow.SortByDate)
+            if (_appSettings.SortByDate)
             {
-                fileNodes = _mainWindow.SortAscending ?
+                fileNodes = _appSettings.SortAscending ?
                     fileNodes.OrderBy(fn => fn.CreationTime).ToList() :
                     fileNodes.OrderByDescending(fn => fn.CreationTime).ToList();
             }
             else
             {
-                fileNodes = _mainWindow.SortAscending ?
+                fileNodes = _appSettings.SortAscending ?
                     fileNodes.OrderBy(fn => fn.Name).ToList() :
                     fileNodes.OrderByDescending(fn => fn.Name).ToList();
             }

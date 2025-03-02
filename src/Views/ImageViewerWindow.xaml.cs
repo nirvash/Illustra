@@ -20,7 +20,7 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
-        public required MainWindow ParentWindow { get; set; }
+        public required ThumbnailListControl Parent { get; set; }
 
         private ImagePropertiesModel _properties = new();
         public ImagePropertiesModel Properties
@@ -103,7 +103,7 @@ namespace Illustra.Views
             {
                 // 保存されていた幅を読み込む
                 _lastPropertyPanelWidth = settings.PropertyColumnWidth;
-                
+
                 // パネルが表示されていない場合は、幅を0に設定
                 if (!settings.VisiblePropertyPanel)
                 {
@@ -214,10 +214,10 @@ namespace Illustra.Views
         // 前の画像に移動
         private void NavigateToPreviousImage()
         {
-            if (ParentWindow == null) return;
+            if (Parent == null) return;
 
             // 親ウィンドウに前の画像への移動をリクエスト
-            string? previousFilePath = ParentWindow.GetPreviousImage(_currentFilePath);
+            string? previousFilePath = Parent.GetPreviousImage(_currentFilePath);
             if (!string.IsNullOrEmpty(previousFilePath))
             {
                 LoadNewImage(previousFilePath);
@@ -227,10 +227,10 @@ namespace Illustra.Views
         // 次の画像に移動
         private void NavigateToNextImage()
         {
-            if (ParentWindow == null) return;
+            if (Parent == null) return;
 
             // 親ウィンドウに次の画像への移動をリクエスト
-            string? nextFilePath = ParentWindow.GetNextImage(_currentFilePath);
+            string? nextFilePath = Parent.GetNextImage(_currentFilePath);
             if (!string.IsNullOrEmpty(nextFilePath))
             {
                 LoadNewImage(nextFilePath);
@@ -243,7 +243,7 @@ namespace Illustra.Views
 
         private void CacheImages(string filePath)
         {
-            var _viewModel = ParentWindow.GetViewModel();
+            var _viewModel = Parent.GetViewModel();
             var fileNodes = _viewModel.Items;
             var currentIndex = fileNodes.ToList().FindIndex(f => f.FullPath == filePath);
 
@@ -332,7 +332,7 @@ namespace Illustra.Views
                 MainImage.Source = ImageSource;
 
                 // 親ウィンドウのサムネイル選択を更新
-                ParentWindow?.SyncThumbnailSelection(filePath);
+                Parent.SyncThumbnailSelection(filePath);
             }
             catch (Exception ex)
             {
@@ -424,8 +424,8 @@ namespace Illustra.Views
                 IsFullScreen = _isFullScreen,
                 VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
                 // パネルが非表示の場合は保存されている幅を使用、表示されている場合は現在の幅を保存
-                PropertyColumnWidth = PropertyPanel.Visibility == Visibility.Visible 
-                    ? MainGrid.ColumnDefinitions[2].ActualWidth 
+                PropertyColumnWidth = PropertyPanel.Visibility == Visibility.Visible
+                    ? MainGrid.ColumnDefinitions[2].ActualWidth
                     : _lastPropertyPanelWidth
             };
             ViewerSettingsHelper.SaveSettings(settings);

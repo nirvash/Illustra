@@ -10,7 +10,7 @@ using Prism.Events;
 
 namespace Illustra.Views
 {
-    public partial class FolderTreeControl : UserControl
+    public partial class FolderTreeControl : UserControl, IActiveAware
     {
         private IEventAggregator? _eventAggregator;
         private string _currentSelectedFilePath = string.Empty;
@@ -53,6 +53,11 @@ namespace Illustra.Views
                     isFolderSelecting = false;
                 }
             }
+        }
+
+        public void SaveAllData()
+        {
+            // TBD
         }
 
         private void AddToFavorites_Click(object sender, RoutedEventArgs e)
