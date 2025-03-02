@@ -51,6 +51,15 @@ namespace Illustra.Views
 
             ignoreSelectedChangedOnce = false;
             _currentSelectedFilePath = args.Path;
+
+            if (!string.IsNullOrEmpty(args.Path) && Directory.Exists(args.Path))
+            {
+                // UIスレッドでの処理を確保
+                Dispatcher.InvokeAsync(() =>
+                {
+                    FileSystemTreeViewControl.Expand(args.Path);
+                });
+            }
         }
 
         // お気に入りへの追加

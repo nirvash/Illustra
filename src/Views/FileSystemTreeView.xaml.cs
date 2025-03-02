@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
@@ -20,6 +21,7 @@ namespace Illustra.Views
         private FileSystemTreeViewModel _viewModel;
         private IEventAggregator _eventAggregator;
         private AppSettings _appSettings;
+
 
         public FileSystemTreeView()
         {
@@ -48,6 +50,9 @@ namespace Illustra.Views
             if (e.NewValue is FileSystemItemModel item)
             {
                 _viewModel.SelectedItem = item;
+
+                // 選択されたアイテムまでスクロール
+                ScrollToSelectedItem();
             }
         }
 
@@ -57,7 +62,6 @@ namespace Illustra.Views
             if (sender is TreeViewItem treeViewItem &&
                 treeViewItem.DataContext is FileSystemItemModel item)
             {
-                // ExpandItemCommandはUIスレッドで直接実行する
                 if (_viewModel.ExpandItemCommand.CanExecute(item))
                 {
                     _viewModel.ExpandItemCommand.Execute(item);
@@ -73,7 +77,100 @@ namespace Illustra.Views
                 Debug.WriteLine("ViewModel is not initialized.");
                 return;
             }
-            _viewModel.Expand(path);
+
+
+            try
+            {
+                _viewModel.Expand(path);
+                // 選択されたアイテムまでスクロール
+                ScrollToSelectedItem();
+            }
+            finally
+            {
+
+            }
+        }
+
+        private void ScrollToSelectedItem()
+        {
+            if (_viewModel.SelectedItem == null)
+                return;
+
+            var treeView = FindVisualChild<TreeView>(this);
+            if (treeView == null)
+                return;
+
+            // 選択されたアイテムの親階層を取得
+            var path = _viewModel.SelectedItem.FullPath;
+            var rootPath = Path.GetPathRoot(path);
+            if (string.IsNullOrEmpty(rootPath))
+                return;
+
+            // ルートドライブを探す
+            var rootItem = _viewModel.RootItems.FirstOrDefault(
+                item => item.FullPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase));
+            if (rootItem == null)
+                return;
+
+            // ルートから順番にTreeViewItemを取得して展開
+            var currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
+            if (currentContainer == null)
+                return;
+
+            // ルートアイテムをBringIntoViewして、TreeViewItemが生成されるのを待つ
+            currentContainer.BringIntoView();
+            currentContainer.UpdateLayout();
+
+            // ルートから目的のアイテムまでのパスを分解
+            var pathParts = path.Substring(rootPath.Length)
+                .Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+
+            var currentPath = rootPath;
+            foreach (var part in pathParts)
+            {
+                currentPath = Path.Combine(currentPath, part);
+                
+                // 現在のTreeViewItemの子アイテムを探す
+                var nextItem = currentContainer.ItemContainerGenerator.Items
+                    .OfType<FileSystemItemModel>()
+                    .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
+                
+                if (nextItem == null)
+                    break;
+
+                // 子アイテムのTreeViewItemを取得
+                currentContainer.IsExpanded = true;
+                currentContainer.UpdateLayout();
+                
+                var nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
+                if (nextContainer == null)
+                    break;
+
+                // 次の階層に進む
+                currentContainer = nextContainer;
+                currentContainer.BringIntoView();
+                currentContainer.UpdateLayout();
+            }
+
+            // 最終的な目的のアイテムまでスクロール
+            currentContainer.BringIntoView();
+            currentContainer.IsSelected = true;
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                if (child is T t)
+                    return t;
+
+                var result = FindVisualChild<T>(child);
+                if (result != null)
+                    return result;
+            }
+            return null;
         }
     }
 }
