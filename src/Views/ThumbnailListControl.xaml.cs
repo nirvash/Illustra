@@ -2,16 +2,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
-using Prism.Events;
 using Illustra.Models;
 using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
-using System.Windows.Controls.Primitives;
 using WpfToolkit.Controls;
 
 namespace Illustra.Views
@@ -161,6 +158,10 @@ namespace Illustra.Views
                 {
                     _currentSelectedFilePath = selectedItem.FullPath;
                     _viewModel.SelectedItem = selectedItem;
+
+                    // FileSelectedEvent を発行
+                    _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedItem.FullPath);
+
                     LoadFilePropertiesAsync(selectedItem.FullPath);
                 }
             };
@@ -183,6 +184,7 @@ namespace Illustra.Views
         private void LoadFilePropertiesAsync(string fullPath)
         {
             // TBD ファイルのプロパティをロードして表示する処理
+            // ファイル選択イベントの発行によってこの処理は不要になる可能性がある
         }
 
         /// <summary>
@@ -322,6 +324,10 @@ namespace Illustra.Views
                 _currentSelectedFilePath = filePath;
                 _viewModel.SelectedItem = matchingItem;
                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
+
+                // FileSelectedEvent を発行
+                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
+
                 LoadFilePropertiesAsync(filePath);
             }
             else

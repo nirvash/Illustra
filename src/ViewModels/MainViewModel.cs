@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Illustra.Models;
-using System.Linq;
-using System.Collections.Immutable;
 
 namespace Illustra.ViewModels
 {

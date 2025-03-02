@@ -1,6 +1,4 @@
-﻿using Prism.Unity;
-using Prism.Events;
-using System.Windows;
+﻿using System.Windows;
 using Illustra.Views;
 
 namespace Illustra

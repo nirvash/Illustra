@@ -126,7 +126,15 @@ namespace Illustra.Views
                 ImageSource = new BitmapImage(new Uri(filePath));
                 var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
                 Properties = newProperties;
-                PropertyPanelControl.ImageProperties = Properties;
+
+                // PropertyPanelControlにプロパティを設定
+                if (PropertyPanelControl != null)
+                {
+                    PropertyPanelControl.ImageProperties = newProperties;
+
+                    // DataContextを明示的に更新して確実に表示を更新
+                    PropertyPanelControl.DataContext = newProperties;
+                }
             }
             catch (Exception ex)
             {

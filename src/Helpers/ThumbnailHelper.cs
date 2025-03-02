@@ -1,7 +1,6 @@
 using System.IO;
 using System.Windows.Media.Imaging;
 using SkiaSharp;
-using System.Threading;
 
 namespace Illustra.Helpers
 {

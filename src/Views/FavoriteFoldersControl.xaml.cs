@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
-using Prism.Events;
 
 namespace Illustra.Views
 {

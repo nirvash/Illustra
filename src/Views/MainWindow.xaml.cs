@@ -1,18 +1,12 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 using Illustra.Helpers;
-using Illustra.Models;
-using Illustra.ViewModels;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using System.Collections.ObjectModel;
 using Illustra.Events;
-using Prism.Events;
 
 namespace Illustra.Views
 {

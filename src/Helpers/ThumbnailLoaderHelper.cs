@@ -4,7 +4,6 @@ using Illustra.ViewModels;
 namespace Illustra.Helpers;
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;

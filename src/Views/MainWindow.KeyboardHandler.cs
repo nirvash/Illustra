@@ -1,10 +1,4 @@
-using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Threading;
-using Illustra.Models;
-using WpfToolkit.Controls;
 
 namespace Illustra.Views
 {

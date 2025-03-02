@@ -1,11 +1,15 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.IO;
 using Illustra.Models;
+using Illustra.Events;
 
 namespace Illustra.Views
 {
     public partial class PropertyPanelControl : UserControl
     {
+        private IEventAggregator _eventAggregator;
+
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(
                 nameof(ImageProperties),
@@ -23,21 +27,46 @@ namespace Illustra.Views
         {
             InitializeComponent();
             DataContext = ImageProperties;
+
+            Loaded += PropertyPanelControl_Loaded;
         }
 
-        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
         {
-            base.OnPropertyChanged(e);
-            if (e.Property == ImagePropertiesProperty)
+            // Event Aggregatorを取得して、FileSelectedEventを購読する
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected);
+        }
+
+        private void OnFileSelected(string filePath)
+        {
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                DataContext = ImageProperties;
+                // ファイルのプロパティを読み込んでImagePropertiesを更新
+                LoadFilePropertiesAsync(filePath);
             }
         }
 
-        public override void OnApplyTemplate()
+        private async void LoadFilePropertiesAsync(string filePath)
         {
-            base.OnApplyTemplate();
-            DataContext = ImageProperties;
+            try
+            {
+                // 画像プロパティをロード（Exif情報などを含む詳細な情報）
+                var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+
+                // UIスレッドで更新
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ImageProperties = properties;
+                    DataContext = ImageProperties;
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ファイルプロパティの取得中にエラーが発生しました: {ex.Message}");
+                MessageBox.Show($"ファイルプロパティの取得中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
+
     }
 }
