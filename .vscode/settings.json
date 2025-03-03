@@ -1,0 +1,27 @@
+{
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true
+  },
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "dotnet-test-explorer.testProjectPath": "**/*.Tests.csproj",
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "csharp.format.enable": true,
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  },
+  "cSpell.words": [
+    "Bgra",
+    "Exif",
+    "fnumber",
+    "Illustra",
+    "Pbgra",
+    "Skia",
+    "viewmodels",
+    "Virtualizable"
+  ]
+}
