@@ -68,13 +68,16 @@ namespace Illustra.Views
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // スプリッター位置の復元はUIスレッドで行う
+            RestoreSplitterPositions();
+
+            // UIスレッドで設定を適用
+            ApplySettings();
+
+            // 非同期処理が必要な他の初期化はここで行う
             await Task.Run(() =>
             {
-                // スプリッター位置の復元
-                RestoreSplitterPositions();
-
-                // その他の設定を適用
-                ApplySettings();
+                // UIに関係ない非同期処理をここに書く
             });
         }
 
