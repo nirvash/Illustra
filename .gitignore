@@ -1,7 +1,13 @@
 # IDEs and editors
 /.idea/
-/.vscode/
 /*.code-workspace
+
+# .vscode ディレクトリを除外
+.vscode/
+# tasks.json だけは含める
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json
 
 # OS-specific
 .DS_Store
