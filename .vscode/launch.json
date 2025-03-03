@@ -10,7 +10,11 @@
       "args": [],
       "cwd": "${workspaceFolder}/src/",
       "console": "internalConsole",
-      "stopAtEntry": false
+      "stopAtEntry": false,
+      "justMyCode": false, // ここを追加
+      "logging": {
+        "moduleLoad": false // モジュールの読み込みログを無効化
+      }
     },
     {
       "name": "Attach to Process",
