@@ -1,14 +1,18 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Illustra.Models;
+using Illustra.Helpers;
 
 namespace Illustra.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        public BulkObservableCollection<FileNodeModel> Items { get; set; }
+        private readonly DatabaseManager _db = new();
+        private string? _currentFolderPath;
+        public BulkObservableCollection<FileNodeModel> Items { get; } = new();
 
-        private FileNodeModel? _selectedItem = null;
+        private FileNodeModel? _selectedItem;
         public FileNodeModel? SelectedItem
         {
             get => _selectedItem;
@@ -17,47 +21,44 @@ namespace Illustra.ViewModels
                 if (_selectedItem != value)
                 {
                     _selectedItem = value;
-                    OnPropertyChanged();
-                    // 選択アイテムが変更されたときの追加処理を行うことも可能
+                    OnPropertyChanged(nameof(SelectedItem));
                 }
             }
         }
 
-        public MainViewModel()
+        public void ClearItems()
         {
-            Items = new BulkObservableCollection<FileNodeModel>();
+            Items.Clear();
+            SelectedItem = null;
         }
 
-        public void SortItems(bool sortByDate, bool ascending)
+        public void AddItem(FileNodeModel item)
         {
-            var items = Items.ToList();
-            if (sortByDate)
-            {
-
-                if (ascending)
-                {
-                    items = items.OrderBy(i => i.CreationTime).ToList();
-                }
-                else
-                {
-                    items = items.OrderByDescending(i => i.CreationTime).ToList();
-                }
-            }
-            else
-            {
-                if (ascending)
-                {
-                    items = items.OrderBy(i => i.Name).ToList();
-                }
-                else
-                {
-                    items = items.OrderByDescending(i => i.Name).ToList();
-                }
-            }
-            Items.ReplaceAll(items);
+            Items.Add(item);
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged = null;
+        public async Task SortItemsAsync(bool sortByDate, bool sortAscending)
+        {
+            if (string.IsNullOrEmpty(_currentFolderPath)) return;
+
+            var sortedItems = await _db.GetSortedFileNodesAsync(_currentFolderPath, sortByDate, sortAscending);
+            Items.ReplaceAll(sortedItems);
+        }
+
+        public async Task FilterByRatingAsync(int rating)
+        {
+            if (string.IsNullOrEmpty(_currentFolderPath)) return;
+
+            var filteredItems = await _db.GetFileNodesByRatingAsync(_currentFolderPath, rating);
+            Items.ReplaceAll(filteredItems);
+        }
+
+        public void SetCurrentFolder(string path)
+        {
+            _currentFolderPath = path;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {

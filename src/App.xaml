@@ -1,7 +1,7 @@
 ﻿<prism:PrismApplication x:Class="Illustra.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Illustra.Views"
+             xmlns:local="clr-namespace:Illustra"
              xmlns:helpers="clr-namespace:Illustra"
              xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
@@ -17,6 +17,39 @@
 
             <!-- null以外の場合に表示するコンバーター -->
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+
+            <!-- レーティング用コンバーター (新規追加) -->
+            <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
+
+            <!-- レーティング用スター表示ボタンのスタイル -->
+            <Style x:Key="RatingStarButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Content" Value="☆"/>
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="#FFD700"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid>
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.8"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>

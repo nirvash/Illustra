@@ -1,3 +1,5 @@
+using Prism.Events;
+
 namespace Illustra.Events
 {
     public class FolderSelectedEventArgs
@@ -36,4 +38,18 @@ namespace Illustra.Events
     /// お気に入りから削除するイベント
     /// </summary>
     public class RemoveFromFavoritesEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// レーティング変更イベントの引数
+    /// </summary>
+    public class RatingChangedEventArgs
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public int Rating { get; set; }
+    }
+
+    /// <summary>
+    /// レーティングが変更されたときにトリガーされるイベント
+    /// </summary>
+    public class RatingChangedEvent : PubSubEvent<RatingChangedEventArgs> { }
 }

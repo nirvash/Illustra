@@ -6,89 +6,112 @@
              xmlns:local="clr-namespace:Illustra.Views"
              mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid x:Name="PropertiesGrid">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <Grid x:Name="PropertiesGrid" Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
+            <!-- ファイル名 -->
+            <TextBlock Grid.Row="0"
+                       Text="{Binding FileName}"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Margin="0,0,0,10"/>
+
+            <!-- レーティング -->
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        Margin="0,0,0,10">
+                <TextBlock Text="レーティング: "
+                           VerticalAlignment="Center"/>
+                <Button x:Name="RatingStar1"
+                        Style="{StaticResource RatingStarButton}"
+                        Tag="1"
+                        Click="RatingStar_Click"/>
+                <Button x:Name="RatingStar2"
+                        Style="{StaticResource RatingStarButton}"
+                        Tag="2"
+                        Click="RatingStar_Click"/>
+                <Button x:Name="RatingStar3"
+                        Style="{StaticResource RatingStarButton}"
+                        Tag="3"
+                        Click="RatingStar_Click"/>
+                <Button x:Name="RatingStar4"
+                        Style="{StaticResource RatingStarButton}"
+                        Tag="4"
+                        Click="RatingStar_Click"/>
+                <Button x:Name="RatingStar5"
+                        Style="{StaticResource RatingStarButton}"
+                        Tag="5"
+                        Click="RatingStar_Click"/>
+            </StackPanel>
+
             <!-- ファイル情報 -->
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="ファイル名:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PropFileName" Text="{Binding FileName}" Margin="0,2,0,2"/>
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="パス:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropFilePath" Text="{Binding FilePath}" TextWrapping="Wrap" Margin="0,2,0,2"/>
+                <!-- フォルダパス -->
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="フォルダ: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="0" Grid.Column="1"
+                           Text="{Binding FolderPath}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,5"/>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="サイズ:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PropFileSize" Text="{Binding FileSizeFormatted}" Margin="0,2,0,2"/>
+                <!-- ファイルサイズ -->
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="サイズ: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="1" Grid.Column="1"
+                           Text="{Binding FileSizeFormatted}"
+                           Margin="0,0,0,5"/>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="作成日時:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PropCreatedDate" Text="{Binding CreatedDate, StringFormat={}{0:yyyy/MM/dd HH:mm:ss}}" Margin="0,2,0,2"/>
+                <!-- 作成日時 -->
+                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="作成日時: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="2" Grid.Column="1"
+                           Text="{Binding CreatedDate, StringFormat=yyyy/MM/dd HH:mm:ss}"
+                           Margin="0,0,0,5"/>
 
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="更新日時:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="PropModifiedDate" Text="{Binding ModifiedDate, StringFormat={}{0:yyyy/MM/dd HH:mm:ss}}" Margin="0,2,0,2"/>
+                <!-- 更新日時 -->
+                <TextBlock Grid.Row="3" Grid.Column="0"
+                           Text="更新日時: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="3" Grid.Column="1"
+                           Text="{Binding ModifiedDate, StringFormat=yyyy/MM/dd HH:mm:ss}"
+                           Margin="0,0,0,5"/>
 
-            <!-- 画像情報 -->
-            <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Text="画像情報" FontWeight="Bold" Margin="0,10,0,5"/>
+                <!-- 解像度 -->
+                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="解像度: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="4" Grid.Column="1"
+                           Text="{Binding Resolution}"
+                           Margin="0,0,0,5"/>
 
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="解像度:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="6" Grid.Column="1" x:Name="PropResolution" Text="{Binding Resolution}" Margin="0,2,0,2"/>
-
-            <TextBlock Grid.Row="7" Grid.Column="0" Text="フォーマット:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="7" Grid.Column="1" x:Name="PropFormat" Text="{Binding ImageFormat}" Margin="0,2,0,2"/>
-
-            <TextBlock Grid.Row="8" Grid.Column="0" Text="色深度:" FontWeight="SemiBold" Margin="0,2,5,2"/>
-            <TextBlock Grid.Row="8" Grid.Column="1" x:Name="PropColorDepth" Text="{Binding ColorDepth}" Margin="0,2,0,2"/>
-
-            <!-- Exif情報 -->
-            <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Text="Exif情報" FontWeight="Bold" Margin="0,10,0,5"/>
-
-            <TextBlock Grid.Row="10" Grid.Column="0" Text="コメント:" FontWeight="SemiBold" Margin="0,2,5,2"
-                      Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="10" Grid.Column="1" x:Name="PropUserComment" Text="{Binding UserComment}"
-                      TextWrapping="Wrap" Margin="0,2,0,2"
-                      Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
-
-            <TextBlock Grid.Row="11" Grid.Column="0" Text="カメラ:" FontWeight="SemiBold" Margin="0,2,5,2"
-                      Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="11" Grid.Column="1" x:Name="PropCamera" Text="{Binding CameraModel}"
-                      Margin="0,2,0,2"
-                      Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
-
-            <TextBlock Grid.Row="12" Grid.Column="0" Text="撮影日時:" FontWeight="SemiBold" Margin="0,2,5,2"
-                      Visibility="{Binding DateTaken, Converter={StaticResource NullToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="12" Grid.Column="1" x:Name="PropDateTaken" Text="{Binding DateTaken, StringFormat={}{0:yyyy/MM/dd HH:mm:ss}}"
-                      Margin="0,2,0,2"
-                      Visibility="{Binding DateTaken, Converter={StaticResource NullToVisibilityConverter}}"/>
-
-            <TextBlock Grid.Row="13" Grid.Column="0" Text="露出時間:" FontWeight="SemiBold" Margin="0,2,5,2"
-                      Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="13" Grid.Column="1" x:Name="PropExposureTime" Text="{Binding ExposureTime}"
-                      Margin="0,2,0,2"
-                      Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}"/>
-
-            <TextBlock Grid.Row="14" Grid.Column="0" Text="F値/ISO:" FontWeight="SemiBold" Margin="0,2,5,2"
-                      Visibility="{Binding FNumberAndISO, Converter={StaticResource StringToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="14" Grid.Column="1" x:Name="PropFNumberISO" Text="{Binding FNumberAndISO}"
-                      Margin="0,2,0,2"
-                      Visibility="{Binding FNumberAndISO, Converter={StaticResource StringToVisibilityConverter}}"/>
+                <!-- 画像形式 -->
+                <TextBlock Grid.Row="5" Grid.Column="0"
+                           Text="画像形式: "
+                           Margin="0,0,10,5"/>
+                <TextBlock Grid.Row="5" Grid.Column="1"
+                           Text="{Binding ImageFormat}"
+                           Margin="0,0,0,5"/>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </UserControl>

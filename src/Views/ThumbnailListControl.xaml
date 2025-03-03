@@ -30,6 +30,18 @@
                     IsSnapToTickEnabled="True"
                     ValueChanged="ThumbnailSizeSlider_ValueChanged"/>
             <TextBlock x:Name="ThumbnailSizeText" Text="120" VerticalAlignment="Center" Margin="5,0,0,0"/>
+
+            <!-- レーティングフィルター (新規追加) -->
+            <TextBlock Text="レーティング:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,5,0">
+                <Button Style="{StaticResource RatingStarButton}" Tag="1" Click="RatingFilter_Click" x:Name="Filter1" ToolTip="★1でフィルター"/>
+                <Button Style="{StaticResource RatingStarButton}" Tag="2" Click="RatingFilter_Click" x:Name="Filter2" ToolTip="★2でフィルター"/>
+                <Button Style="{StaticResource RatingStarButton}" Tag="3" Click="RatingFilter_Click" x:Name="Filter3" ToolTip="★3でフィルター"/>
+                <Button Style="{StaticResource RatingStarButton}" Tag="4" Click="RatingFilter_Click" x:Name="Filter4" ToolTip="★4でフィルター"/>
+                <Button Style="{StaticResource RatingStarButton}" Tag="5" Click="RatingFilter_Click" x:Name="Filter5" ToolTip="★5でフィルター"/>
+            </StackPanel>
+            <Button Content="フィルター解除" Click="ClearFilter_Click" Margin="0,0,5,0"
+                    x:Name="ClearFilterButton" IsEnabled="False"/>
         </StackPanel>
 
         <ListView x:Name="ThumbnailItemsControl"
@@ -55,7 +67,7 @@
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
                     <vw:VirtualizingWrapPanel
-                        Orientation="Horizontal"
+                        Orientation="Vertical"
                         SpacingMode="Uniform"
                         IsVirtualizing="True"
                         VirtualizationMode="Recycling"
@@ -126,6 +138,14 @@
                                         Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
                                         TextAlignment="Center"
                                         TextTrimming="CharacterEllipsis"/>
+                            <!-- レーティング表示 (新規追加) -->
+                            <TextBlock Text="{Binding Rating, StringFormat=★{0}}"
+                                        Foreground="Gold" FontSize="14"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,2,2,0"
+                                        Background="#80000000"
+                                        Padding="2,0"
+                                        Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}}"/>
                         </Grid>
                     </Border>
                 </DataTemplate>

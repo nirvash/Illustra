@@ -58,7 +58,7 @@ namespace Illustra.Views
 
             // サムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel);
-            _thumbnailLoader.fileNodesLoaded += OnFileNodesLoaded;
+            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
 
             // サムネイルサイズを設定から復元
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
@@ -228,46 +228,79 @@ namespace Illustra.Views
         {
             try
             {
-                // UIスレッドでの処理を確実にするため
-                await Task.Delay(0);
-
-                // アイテムがない場合は何もしない
                 if (_viewModel.Items.Count == 0)
                 {
-                    System.Diagnostics.Debug.WriteLine("No items to select");
                     return;
                 }
 
-                // 表示範囲のサムネイルをロード
+                // 最初のアイテムを選択
+                var firstItem = _viewModel.Items.FirstOrDefault();
+                if (firstItem != null)
+                {
+                    SelectThumbnail(firstItem.FullPath);
+                }
+
+                // スクロールビューアの取得
                 var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
                 {
-                    await LoadVisibleThumbnailsAsync(scrollViewer);
+                    // スクロール位置をリセット
+                    scrollViewer.ScrollToTop();
                 }
 
-                // 前回選択していたファイルを選択
                 if (!_isFirstLoaded)
                 {
-                    _isFirstLoaded = true;
-                    string file = _appSettings.LastSelectedFilePath;
-                    if (File.Exists(file))
+                    // 初回ロード時の処理
+                    if (File.Exists(_appSettings.LastSelectedFilePath))
                     {
-                        SelectThumbnail(file);
+                        SelectThumbnail(_appSettings.LastSelectedFilePath);
                     }
+                    _isFirstLoaded = true;
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in OnFileNodesLoaded: {ex.Message}");
+                Debug.WriteLine($"サムネイルのロード中にエラーが発生しました: {ex.Message}");
             }
         }
 
 
-        public void SortThumbnail(bool sortByDate, bool sortAscending)
+        public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending)
         {
-            _viewModel.SortItems(sortByDate, sortAscending);
+            _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
+            await _viewModel.SortItemsAsync(sortByDate, sortAscending);
+
             // 再選択してスクロール
-            SelectThumbnail(_currentSelectedFilePath ?? "");
+            if (!string.IsNullOrEmpty(_currentSelectedFilePath))
+            {
+                SelectThumbnail(_currentSelectedFilePath);
+            }
+        }
+
+        private int _currentRatingFilter = -1; // -1は未フィルタ状態
+
+        /// <summary>
+        /// レーティングによるフィルタリングを適用します
+        /// </summary>
+        /// <param name="rating">フィルタリングするレーティング値（0-5）。同じ値を指定すると解除。</param>
+        public async Task ApplyRatingFilterAsync(int rating)
+        {
+            if (rating < 0 || rating > 5)
+                return;
+
+            _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
+
+            // 同じレーティングが指定された場合はフィルタを解除
+            if (_currentRatingFilter == rating)
+            {
+                _currentRatingFilter = -1;
+                await _viewModel.SortItemsAsync(false, true); // デフォルトソート
+            }
+            else
+            {
+                _currentRatingFilter = rating;
+                await _viewModel.FilterByRatingAsync(rating);
+            }
         }
 
         private async void SelectFile(string filePath)
@@ -447,7 +480,7 @@ namespace Illustra.Views
 
             switch (e.Key)
             {
-                case Key.Enter:
+                case Key.Return:  // Enterキーの代わりにReturnを使用
                     if (_viewModel.SelectedItem != null)
                     {
                         ShowImageViewer(_viewModel.SelectedItem.FullPath);
@@ -696,7 +729,7 @@ namespace Illustra.Views
                 ThumbnailItemsControl.Focus();
 
                 // Enterキーが押されて選択アイテムがある場合はビューアを表示
-                if (e.Key == Key.Enter && _viewModel.SelectedItem != null)
+                if (e.Key == Key.Return && _viewModel.SelectedItem != null)
                 {
                     ShowImageViewer(_viewModel.SelectedItem.FullPath);
                     e.Handled = true;
@@ -756,5 +789,71 @@ namespace Illustra.Views
             return count;
         }
 
+        private async void RatingFilter_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Button button) ||
+                !int.TryParse(button.Tag?.ToString(), out int rating))
+                return;
+
+            try
+            {
+                // ボタンの選択状態を更新
+                UpdateFilterButtonStates(rating);
+
+                // フィルタリングを適用
+                await _viewModel.FilterByRatingAsync(rating);
+
+                // フィルター解除ボタンを有効化
+                ClearFilterButton.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"レーティングフィルター適用中にエラーが発生: {ex.Message}");
+            }
+        }
+
+        private void UpdateFilterButtonStates(int selectedRating)
+        {
+            // すべてのフィルターボタンをリセット
+            foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
+            {
+                button.Foreground = Brushes.Gray;
+            }
+
+            // 選択されたボタンをハイライト
+            if (selectedRating >= 1 && selectedRating <= 5)
+            {
+                var button = GetType().GetField($"Filter{selectedRating}",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance)?.GetValue(this) as Button;
+
+                if (button != null)
+                {
+                    button.Foreground = Brushes.Gold;
+                }
+            }
+        }
+
+        private async void ClearFilter_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // フィルターをクリア（全件表示）
+                if (!string.IsNullOrEmpty(_currentFolderPath))
+                {
+                    LoadFileNodes(_currentFolderPath);
+                }
+
+                // すべてのフィルターボタンをリセット
+                UpdateFilterButtonStates(0);
+
+                // フィルター解除ボタンを無効化
+                ClearFilterButton.IsEnabled = false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"フィルタークリア中にエラーが発生: {ex.Message}");
+            }
+        }
     }
 }

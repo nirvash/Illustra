@@ -2,6 +2,8 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace Illustra.Helpers
 {
@@ -41,7 +43,8 @@ namespace Illustra.Helpers
         // お気に入りフォルダ
         public ObservableCollection<string> FavoriteFolders { get; set; } = new ObservableCollection<string>();
 
-        // 他の設定を必要に応じて追加
+        // アプリケーションの言語設定
+        public string Language { get; set; } = CultureInfo.CurrentUICulture.Name;
     }
 
     public static class SettingsHelper
@@ -53,6 +56,43 @@ namespace Illustra.Helpers
 
         // 現在のアプリケーション設定を保持
         private static AppSettings? _currentSettings;
+
+        // デフォルトの翻訳を保持
+        private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
+        {
+            ["ja"] = new Dictionary<string, string>
+            {
+                ["ContinueIterationPrompt"] = "続行: 反復処理を続行しますか?"
+            },
+            ["en"] = new Dictionary<string, string>
+            {
+                ["ContinueIterationPrompt"] = "Continue: Continue iteration?"
+            }
+        };
+
+        // 翻訳されたテキストを取得する
+        public static string GetTranslation(string key, string defaultValue = "")
+        {
+            var settings = GetSettings();
+            var cultureName = settings.Language;
+
+            // 指定された言語の翻訳が存在する場合
+            if (Translations.TryGetValue(cultureName, out var translations) &&
+                translations.TryGetValue(key, out var value))
+            {
+                return value;
+            }
+
+            // 英語をフォールバック言語として使用
+            if (cultureName != "en" &&
+                Translations.TryGetValue("en", out var enTranslations) &&
+                enTranslations.TryGetValue(key, out var enValue))
+            {
+                return enValue;
+            }
+
+            return defaultValue;
+        }
 
         // アプリケーション設定を取得
         public static AppSettings GetSettings()
@@ -107,6 +147,19 @@ namespace Illustra.Helpers
                 // エラー発生時はログ出力など
                 System.Diagnostics.Debug.WriteLine($"設定の保存中にエラーが発生しました: {ex.Message}");
             }
+        }
+
+        // 言語を変更
+        public static void SetLanguage(string language)
+        {
+            var settings = GetSettings();
+            settings.Language = language;
+            SaveSettings(settings);
+
+            // UI Culture を変更
+            var culture = new CultureInfo(language);
+            CultureInfo.CurrentUICulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
         }
     }
 }

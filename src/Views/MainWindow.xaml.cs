@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls; // Add this for MenuItem
 using Illustra.Helpers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -22,10 +23,19 @@ namespace Illustra.Views
         private string? _currentFolderPath = null;
         private const string CONTROL_ID = "MainWindow";
 
+        // ソートメニューアイテム
+        private MenuItem? _sortByDateAscendingMenuItem;
+        private MenuItem? _sortByDateDescendingMenuItem;
+        private MenuItem? _sortByNameAscendingMenuItem;
+        private MenuItem? _sortByNameDescendingMenuItem;
+
         public MainWindow(IEventAggregator eventAggregator)
         {
             InitializeComponent();
             _eventAggregator = eventAggregator;
+
+            // メニューアイテムの初期化
+            InitializeSortMenuItems();
 
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
@@ -56,6 +66,25 @@ namespace Illustra.Views
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
+        }
+
+        private void InitializeSortMenuItems()
+        {
+            // メニューアイテムの作成と設定
+            _sortByDateAscendingMenuItem = FindName("SortByDateAscendingMenuItem") as MenuItem;
+            _sortByDateDescendingMenuItem = FindName("SortByDateDescendingMenuItem") as MenuItem;
+            _sortByNameAscendingMenuItem = FindName("SortByNameAscendingMenuItem") as MenuItem;
+            _sortByNameDescendingMenuItem = FindName("SortByNameDescendingMenuItem") as MenuItem;
+
+            // イベントハンドラの設定
+            if (_sortByDateAscendingMenuItem != null)
+                _sortByDateAscendingMenuItem.Click += OnDateSortChanged;
+            if (_sortByDateDescendingMenuItem != null)
+                _sortByDateDescendingMenuItem.Click += OnDateSortChanged;
+            if (_sortByNameAscendingMenuItem != null)
+                _sortByNameAscendingMenuItem.Click += OnNameSortChanged;
+            if (_sortByNameDescendingMenuItem != null)
+                _sortByNameDescendingMenuItem.Click += OnNameSortChanged;
         }
 
         /// <summary>
@@ -121,21 +150,11 @@ namespace Illustra.Views
             SettingsHelper.SaveSettings(_appSettings);
         }
 
-
-
-
-
-
-
-
-
-
         // メニュー関連のメソッド
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
-
 
         private void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -178,23 +197,23 @@ namespace Illustra.Views
             SortDescendingMenuItem.IsChecked = !_sortAscending;
         }
 
-        private void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
+        private async void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _sortByDate = true;
             SortByDateMenuItem.IsChecked = true;
             SortByNameMenuItem.IsChecked = false;
-            ThumbnailList.SortThumbnail(_sortByDate, _sortAscending);
+            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
         }
 
-        private void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
+        private async void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _sortByDate = false;
             SortByDateMenuItem.IsChecked = false;
             SortByNameMenuItem.IsChecked = true;
-            ThumbnailList.SortThumbnail(_sortByDate, _sortAscending);
+            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
         }
 
-        private void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
+        private async void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender == SortAscendingMenuItem)
             {
@@ -208,7 +227,7 @@ namespace Illustra.Views
                 SortAscendingMenuItem.IsChecked = false;
                 SortDescendingMenuItem.IsChecked = true;
             }
-            ThumbnailList.SortThumbnail(_sortByDate, _sortAscending);
+            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
         }
 
         public bool SortByDate
@@ -303,5 +322,76 @@ namespace Illustra.Views
             }
         }
 
+        private async void OnDateSortChanged(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as MenuItem;
+            if (menuItem == null) return;
+
+            menuItem.IsChecked = true;
+
+            // 相互に排他的なメニュー項目のチェックを解除
+            if (menuItem == _sortByDateAscendingMenuItem)
+            {
+                if (_sortByDateDescendingMenuItem != null)
+                    _sortByDateDescendingMenuItem.IsChecked = false;
+                if (_sortByNameAscendingMenuItem != null)
+                    _sortByNameAscendingMenuItem.IsChecked = false;
+                if (_sortByNameDescendingMenuItem != null)
+                    _sortByNameDescendingMenuItem.IsChecked = false;
+
+                await ThumbnailList.SortThumbnailAsync(true, true);
+                _appSettings.SortByDate = true;
+                _appSettings.SortAscending = true;
+            }
+            else if (menuItem == _sortByDateDescendingMenuItem)
+            {
+                if (_sortByDateAscendingMenuItem != null)
+                    _sortByDateAscendingMenuItem.IsChecked = false;
+                if (_sortByNameAscendingMenuItem != null)
+                    _sortByNameAscendingMenuItem.IsChecked = false;
+                if (_sortByNameDescendingMenuItem != null)
+                    _sortByNameDescendingMenuItem.IsChecked = false;
+
+                await ThumbnailList.SortThumbnailAsync(true, false);
+                _appSettings.SortByDate = true;
+                _appSettings.SortAscending = false;
+            }
+        }
+
+        private async void OnNameSortChanged(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as MenuItem;
+            if (menuItem == null) return;
+
+            menuItem.IsChecked = true;
+
+            // 相互に排他的なメニュー項目のチェックを解除
+            if (menuItem == _sortByNameAscendingMenuItem)
+            {
+                if (_sortByDateAscendingMenuItem != null)
+                    _sortByDateAscendingMenuItem.IsChecked = false;
+                if (_sortByDateDescendingMenuItem != null)
+                    _sortByDateDescendingMenuItem.IsChecked = false;
+                if (_sortByNameDescendingMenuItem != null)
+                    _sortByNameDescendingMenuItem.IsChecked = false;
+
+                await ThumbnailList.SortThumbnailAsync(false, true);
+                _appSettings.SortByDate = false;
+                _appSettings.SortAscending = true;
+            }
+            else if (menuItem == _sortByNameDescendingMenuItem)
+            {
+                if (_sortByDateAscendingMenuItem != null)
+                    _sortByDateAscendingMenuItem.IsChecked = false;
+                if (_sortByDateDescendingMenuItem != null)
+                    _sortByDateDescendingMenuItem.IsChecked = false;
+                if (_sortByNameAscendingMenuItem != null)
+                    _sortByNameAscendingMenuItem.IsChecked = false;
+
+                await ThumbnailList.SortThumbnailAsync(false, false);
+                _appSettings.SortByDate = false;
+                _appSettings.SortAscending = false;
+            }
+        }
     }
 }

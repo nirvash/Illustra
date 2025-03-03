@@ -1,222 +1,258 @@
-using System.IO;
+using System;
 using System.ComponentModel;
-using SkiaSharp;
-using System.Text;
-using MetadataExtractor;
-using MetadataExtractor.Formats.Exif;
+using System.Runtime.CompilerServices;
+using System.IO;
+using System.Windows.Media.Imaging;
+using System.Threading.Tasks;
 
 namespace Illustra.Models
 {
     public class ImagePropertiesModel : INotifyPropertyChanged
     {
-        // ファイル情報
-        public string FileName { get; set; } = string.Empty;
-        public string FilePath { get; set; } = string.Empty;
-        public long FileSizeBytes { get; set; }
-        public string FileSizeFormatted => FormatFileSize(FileSizeBytes);
-        public DateTime CreatedDate { get; set; }
-        public DateTime ModifiedDate { get; set; }
+        private string _filePath = string.Empty;
+        private string _fileName = string.Empty;
+        private long _fileSize;
+        private string _dimensions = string.Empty;
+        private string _createdDate = string.Empty;
+        private string _modifiedDate = string.Empty;
+        private int _rating;
+        private BitmapSource? _preview;
+        private DateTime _creationTime;
+        private DateTime _lastModified;
+        private string _fileType = string.Empty;
 
-        // 画像情報
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public string Resolution { get; set; } = string.Empty;
-        public string ImageFormat { get; set; } = string.Empty;
-        public string ColorDepth { get; set; } = string.Empty;
-
-        // Exif情報
-        public string CameraModel { get; set; } = string.Empty;
-        public string ExposureTime { get; set; } = string.Empty;
-        public string FNumber { get; set; } = string.Empty;
-        public string ISOSpeed { get; set; } = string.Empty;
-        public string FNumberAndISO
+        public string FilePath
         {
-            get
-            {
-                var parts = new List<string>();
-                if (!string.IsNullOrEmpty(FNumber)) parts.Add(FNumber);
-                if (!string.IsNullOrEmpty(ISOSpeed)) parts.Add(ISOSpeed);
-                return string.Join(" / ", parts);
-            }
-        }
-        public DateTime? DateTaken { get; set; }
-        private string _userComment = string.Empty;
-        public string UserComment
-        {
-            get => _userComment;
+            get => _filePath;
             set
             {
-                if (_userComment != value)
+                if (_filePath != value)
                 {
-                    _userComment = value;
-                    OnPropertyChanged(nameof(UserComment));
+                    _filePath = value;
+                    OnPropertyChanged();
                 }
             }
         }
 
-        /// <summary>
-        /// 指定したファイルパスから画像プロパティを非同期的に読み込みます
-        /// </summary>
-        public static async Task<ImagePropertiesModel> LoadFromFileAsync(string filePath)
+        public string FileName
         {
-            var properties = new ImagePropertiesModel();
-
-            try
+            get => _fileName;
+            set
             {
-                if (!File.Exists(filePath))
-                    return properties;
-
-                properties.FilePath = filePath;
-                properties.FileName = Path.GetFileName(filePath);
-
-                var fileInfo = new FileInfo(filePath);
-                properties.FileSizeBytes = fileInfo.Length;
-                properties.CreatedDate = fileInfo.CreationTime;
-                properties.ModifiedDate = fileInfo.LastWriteTime;
-
-                await Task.Run(() =>
+                if (_fileName != value)
                 {
-                    try
-                    {
-                        using (var stream = File.OpenRead(filePath))
-                        using (var skStream = new SKManagedStream(stream))
-                        using (var codec = SKCodec.Create(skStream))
-                        {
-                            if (codec != null)
-                            {
-                                var info = codec.Info;
-                                properties.Width = info.Width;
-                                properties.Height = info.Height;
-                                properties.ImageFormat = codec.EncodedFormat.ToString();
-                                properties.Resolution = $"{info.Width} x {info.Height} ピクセル";
-                                properties.ColorDepth = GetColorDepth(codec);
-                            }
-                        }
-
-                        // Exif情報の読み取り
-                        ReadExifData(filePath, properties);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"画像プロパティ読み取りエラー: {ex.Message}");
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"プロパティ読み込みエラー: {ex.Message}");
-            }
-
-            return properties;
-        }
-
-        private static string GetColorDepth(SKCodec codec)
-        {
-            try
-            {
-                switch (codec.EncodedFormat)
-                {
-                    case SKEncodedImageFormat.Jpeg:
-                    case SKEncodedImageFormat.Png:
-                    case SKEncodedImageFormat.Webp:
-                        return "24bit"; // 通常はRGB 8ビット/チャンネル
-                    case SKEncodedImageFormat.Gif:
-                        return "8bit"; // GIFは通常8ビット
-                    default:
-                        return "不明";
+                    _fileName = value;
+                    OnPropertyChanged();
                 }
-            }
-            catch
-            {
-                return "不明";
             }
         }
 
-        private static void ReadExifData(string filePath, ImagePropertiesModel properties)
+        public long FileSize
         {
-            try
+            get => _fileSize;
+            set
             {
-                var directories = ImageMetadataReader.ReadMetadata(filePath);
-                var exif = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
-                var exifIfd0 = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
-
-                if (exif != null)
+                if (_fileSize != value)
                 {
-                    // ユーザーコメント
-                    properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
-
-                    // 撮影日時
-                    exif.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out DateTime dateTime);
-                    properties.DateTaken = dateTime;
-
-                    // ISO感度
-                    exif.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out int iso);
-                    properties.ISOSpeed = $"ISO {iso}";
-
-                    // 露出時間
-                    exif.TryGetRational(ExifDirectoryBase.TagExposureTime, out Rational exposure);
-                    // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
-                    if (exposure.ToDouble() >= 1.0)
-                    {
-                        properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
-                    }
-                    else
-                    {
-                        properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
-                    }
-
-                    // F値
-                    exif.TryGetRational(ExifDirectoryBase.TagFNumber, out Rational fNumber);
-                    properties.FNumber = $"F{fNumber.ToDouble():0.#}";
+                    _fileSize = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FileSizeFormatted));
                 }
-
-                if (exifIfd0 != null)
-                {
-                    // カメラ情報
-                    string make = string.Empty;
-                    string model = string.Empty;
-
-                    try { make = exifIfd0.GetString(ExifDirectoryBase.TagMake) ?? string.Empty; } catch (MetadataException) { }
-                    try { model = exifIfd0.GetString(ExifDirectoryBase.TagModel) ?? string.Empty; } catch (MetadataException) { }
-
-                    if (!string.IsNullOrEmpty(make) && !string.IsNullOrEmpty(model))
-                    {
-                        properties.CameraModel = $"{make} {model}";
-                    }
-                    else if (!string.IsNullOrEmpty(model))
-                    {
-                        properties.CameraModel = model;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Exif読み取りエラー: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// ファイルサイズを読みやすい形式でフォーマットします
-        /// </summary>
-        private static string FormatFileSize(long bytes)
+        public string FileSizeFormatted
         {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            double len = bytes;
-            int order = 0;
+            get => FormatFileSize(_fileSize);
+        }
 
-            while (len >= 1024 && order < sizes.Length - 1)
+        public string Dimensions
+        {
+            get => _dimensions;
+            set
             {
-                order++;
-                len = len / 1024;
+                if (_dimensions != value)
+                {
+                    _dimensions = value;
+                    OnPropertyChanged();
+                }
             }
+        }
 
-            return $"{len:0.##} {sizes[order]}";
+        public string CreatedDate
+        {
+            get => _createdDate;
+            set
+            {
+                if (_createdDate != value)
+                {
+                    _createdDate = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ModifiedDate
+        {
+            get => _modifiedDate;
+            set
+            {
+                if (_modifiedDate != value)
+                {
+                    _modifiedDate = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int Rating
+        {
+            get => _rating;
+            set
+            {
+                if (_rating != value)
+                {
+                    _rating = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public BitmapSource? Preview
+        {
+            get => _preview;
+            set
+            {
+                if (_preview != value)
+                {
+                    _preview = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime CreationTime
+        {
+            get => _creationTime;
+            set
+            {
+                if (_creationTime != value)
+                {
+                    _creationTime = value;
+                    CreatedDate = value.ToString("yyyy/MM/dd HH:mm:ss");
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime LastModified
+        {
+            get => _lastModified;
+            set
+            {
+                if (_lastModified != value)
+                {
+                    _lastModified = value;
+                    ModifiedDate = value.ToString("yyyy/MM/dd HH:mm:ss");
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string FileType
+        {
+            get => _fileType;
+            set
+            {
+                if (_fileType != value)
+                {
+                    _fileType = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public void Clear()
+        {
+            FilePath = string.Empty;
+            FileName = string.Empty;
+            FileSize = 0;
+            Dimensions = string.Empty;
+            CreatedDate = string.Empty;
+            ModifiedDate = string.Empty;
+            Rating = 0;
+            Preview = null;
+            FileType = string.Empty;
+        }
+
+        public static async Task<ImagePropertiesModel> LoadFromFileAsync(string filePath)
+        {
+            var model = new ImagePropertiesModel();
+            
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Exists)
+                {
+                    model.FilePath = filePath;
+                    model.FileName = fileInfo.Name;
+                    model.FileSize = fileInfo.Length;
+                    model.CreationTime = fileInfo.CreationTime;
+                    model.LastModified = fileInfo.LastWriteTime;
+                    model.FileType = fileInfo.Extension;
+                    
+                    // Load image dimensions if it's an image file
+                    await Task.Run(() => {
+                        try {
+                            var imageInfo = new BitmapImage();
+                            imageInfo.BeginInit();
+                            imageInfo.UriSource = new Uri(filePath);
+                            imageInfo.CacheOption = BitmapCacheOption.OnLoad;
+                            imageInfo.EndInit();
+                            
+                            model.Dimensions = $"{imageInfo.PixelWidth} x {imageInfo.PixelHeight}";
+                            
+                            // Create a small preview
+                            var preview = new TransformedBitmap(imageInfo, new System.Windows.Media.ScaleTransform(
+                                100.0 / imageInfo.PixelWidth,
+                                100.0 / imageInfo.PixelHeight));
+                            model.Preview = preview;
+                        }
+                        catch {
+                            // Not an image or couldn't load
+                            model.Dimensions = "N/A";
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading file properties: {ex.Message}");
+            }
+            
+            return model;
+        }
+
+        private static string FormatFileSize(long bytes)
+        {
+            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+            int counter = 0;
+            double number = bytes;
+            
+            while (number > 1024 && counter < suffixes.Length - 1)
+            {
+                number /= 1024;
+                counter++;
+            }
+            
+            return $"{number:0.##} {suffixes[counter]}";
         }
     }
 }

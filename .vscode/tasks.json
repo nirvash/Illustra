@@ -25,7 +25,7 @@
       "type": "process",
       "args": [
         "publish",
-        "${workspaceFolder}/src/Illustra/Illustra.csproj",
+        "${workspaceFolder}/src/Illustra.csproj",
         "-c",
         "Release",
         "/property:GenerateFullPaths=true",
@@ -42,7 +42,7 @@
       "args": [
         "run",
         "--project",
-        "${workspaceFolder}/src/Illustra/Illustra.csproj",
+        "${workspaceFolder}/src/Illustra.csproj",
         "--verbosity",
         "detailed"
       ],
