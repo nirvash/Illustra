@@ -597,7 +597,27 @@ namespace Illustra.Views
 
             // サムネイルローダーにサイズを設定（nullチェック）
             if (_thumbnailLoader != null)
+            {
                 _thumbnailLoader.ThumbnailSize = newSize;
+
+                // サムネイル画面の再描画をリクエスト
+                ThumbnailItemsControl.InvalidateMeasure();
+                ThumbnailItemsControl.InvalidateVisual();
+
+                // ScrollViewerも更新
+                var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer != null)
+                {
+                    scrollViewer.InvalidateMeasure();
+                    scrollViewer.InvalidateVisual();
+
+                    // 現在表示されているサムネイルを再ロード
+                    Dispatcher.InvokeAsync(async () =>
+                    {
+                        await LoadVisibleThumbnailsAsync(scrollViewer);
+                    }, DispatcherPriority.Background);
+                }
+            }
         }
 
         // ヘルパーメソッド: 子要素を検索

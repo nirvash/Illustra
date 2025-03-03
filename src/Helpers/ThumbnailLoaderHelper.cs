@@ -90,11 +90,10 @@ public class ThumbnailLoaderHelper
                     _commonDummyImage = null;
                     _commonErrorImage = null;
                 }
-                // 現在のフォルダがあれば再ロード
-                if (!string.IsNullOrEmpty(_currentFolderPath))
-                {
-                    LoadFileNodes(_currentFolderPath);
-                }
+
+                // サイズのみを変更する場合は、サムネイルを再生成するだけでよい
+                // 完全な再読み込みは不要
+                RefreshThumbnailSizes();
             }
         }
     }
@@ -191,6 +190,62 @@ public class ThumbnailLoaderHelper
             // 必要に応じてユーザーに通知（オプション）
             MessageBox.Show($"フォルダ '{folderPath}' の処理中にエラーが発生しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>
+    /// サムネイルのサイズを更新し、すべてのサムネイルを再生成します
+    /// </summary>
+    public async void RefreshThumbnailSizes()
+    {
+        // 既存のサムネイル読み込み処理をキャンセル
+        CancelAllLoading();
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            var fileNodes = _viewModel.Items.ToList();
+
+            // 現在の表示位置を記憶
+            var selectedItem = _viewModel.SelectedItem;
+
+            // ダミー画像を作成
+            var dummyImage = GetDummyImage();
+
+            // すべてのサムネイルをダミー画像にリセット
+            foreach (var node in fileNodes)
+            {
+                node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
+            }
+
+            // 可視範囲のサムネイルのみをすぐに生成
+            var scrollViewer = FindVisualChild<ScrollViewer>(_thumbnailListBox);
+            if (scrollViewer != null)
+            {
+                // 可視範囲を求める（簡易的に）
+                int firstIndex = 0;
+                int lastIndex = Math.Min(20, fileNodes.Count - 1); // とりあえず最初の20個
+
+                await LoadMoreThumbnailsAsync(firstIndex, lastIndex);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"サムネイルサイズ更新中にエラーが発生しました: {ex.Message}");
+        }
+    }
+
+    private BitmapSource ResizeThumbnail(BitmapSource original, int width, int height)
+    {
+        var drawingVisual = new DrawingVisual();
+        using (var drawingContext = drawingVisual.RenderOpen())
+        {
+            drawingContext.DrawImage(original, new Rect(0, 0, width, height));
+        }
+
+        var resizedBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        resizedBitmap.Render(drawingVisual);
+        resizedBitmap.Freeze(); // 重要：UIスレッド間で共有するためにFreezeする
+        return resizedBitmap;
     }
 
     /// <summary>
