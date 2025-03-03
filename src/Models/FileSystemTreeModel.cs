@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
@@ -17,7 +14,7 @@ namespace Illustra.Models
         private ObservableCollection<FileSystemItemModel> _rootItems;
         private bool _isLoading;
 
-        public FileSystemTreeModel()
+        public FileSystemTreeModel(string? initialPath = null)
         {
             _rootItems = new ObservableCollection<FileSystemItemModel>();
         }
@@ -52,7 +49,7 @@ namespace Illustra.Models
         /// ツリー構造を初期化する
         /// </summary>
         /// <param name="initialPath">初期パス。nullの場合はドライブ一覧を表示</param>
-        public void Initialize(string initialPath = null)
+        public void Initialize(string? initialPath = null)
         {
             IsLoading = true;
             RootItems.Clear();
@@ -89,7 +86,7 @@ namespace Illustra.Models
         /// 指定したパスを展開する
         /// </summary>
         /// <param name="targetPath">展開対象のパス</param>
-        public void ExpandPath(string targetPath)
+        public void ExpandPath(string? targetPath)
         {
             if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
             {
@@ -101,7 +98,7 @@ namespace Illustra.Models
 
             try
             {
-                string rootPath = Path.GetPathRoot(targetPath);
+                string? rootPath = Path.GetPathRoot(targetPath);
 
                 // ドライブ一覧が未取得の場合は取得
                 if (RootItems.Count == 0)
@@ -123,7 +120,7 @@ namespace Illustra.Models
                     rootDrive.IsExpanded = true;
 
                     // ドライブのパスよりも長い場合は階層的に展開
-                    if (targetPath.Length > rootPath.Length)
+                    if (rootPath != null && targetPath.Length > rootPath.Length)
                     {
                         ExpandItemToPath(rootDrive, targetPath);
                     }
@@ -150,7 +147,7 @@ namespace Illustra.Models
         /// </summary>
         /// <param name="item">開始アイテム</param>
         /// <param name="targetPath">目的のパス</param>
-        private void ExpandItemToPath(FileSystemItemModel item, string targetPath)
+        private void ExpandItemToPath(FileSystemItemModel item, string? targetPath)
         {
             if (item == null || !item.IsFolder) return;
 
@@ -169,7 +166,7 @@ namespace Illustra.Models
             }
 
             // 次の階層のフォルダを探す
-            string remainingPath = targetPath.Substring(item.FullPath.Length).TrimStart(Path.DirectorySeparatorChar);
+            string? remainingPath = targetPath?.Substring(item.FullPath.Length).TrimStart(Path.DirectorySeparatorChar);
             if (string.IsNullOrEmpty(remainingPath))
             {
                 // このフォルダが目的地の場合
@@ -196,7 +193,7 @@ namespace Illustra.Models
         /// サブフォルダを読み込む
         /// </summary>
         /// <param name="parentItem">親フォルダ</param>
-        public void LoadSubFolders(FileSystemItemModel parentItem)
+        public void LoadSubFolders(FileSystemItemModel? parentItem)
         {
             if (parentItem == null || !parentItem.IsFolder || !parentItem.CanExpand) return;
 
@@ -360,9 +357,9 @@ namespace Illustra.Models
             return result;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -383,7 +380,7 @@ namespace Illustra.Models
         private bool _isLoading;
         private FileSystemTreeModel _parentModel;
 
-        public FileSystemItemModel(string fullPath, bool isFolder, bool isDummy, FileSystemTreeModel parentModel = null)
+        public FileSystemItemModel(string fullPath, bool isFolder, bool isDummy, FileSystemTreeModel? parentModel = null)
         {
             _fullPath = fullPath;
             _name = Path.GetFileName(fullPath);
@@ -518,9 +515,9 @@ namespace Illustra.Models
 
         public bool IsDummy { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

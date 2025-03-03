@@ -1,5 +1,3 @@
-using Prism.Events;
-
 namespace Illustra.Events
 {
     public class FolderSelectedEventArgs

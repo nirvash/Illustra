@@ -1,24 +1,21 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Illustra.Events;
-using Prism.Events;
-using Prism.Ioc;
 
 namespace Illustra.Views
 {
     public partial class FolderTreeControl : UserControl, IActiveAware
     {
         private IEventAggregator? _eventAggregator;
-        private string _currentSelectedFilePath = string.Empty;
+        private string? _currentSelectedFilePath = string.Empty;
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FolderTree";
 
         #region IActiveAware Implementation
+#pragma warning disable 0067 // 使用されていませんという警告を無視
         public bool IsActive { get; set; }
         public event EventHandler? IsActiveChanged;
+#pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
         // xaml でインスタンス化するためのデフォルトコンストラクタ
@@ -49,7 +46,7 @@ namespace Illustra.Views
             _currentSelectedFilePath = args.Path;
 
             // Expand 処理は FileSystemTreeViewControl が行うのでここでは行わない
-            _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
+            _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");
         }
 
 

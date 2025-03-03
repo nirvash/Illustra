@@ -1,15 +1,10 @@
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Models;
-using Prism.Commands;
-using Prism.Events;
 
 namespace Illustra.ViewModels
 {
@@ -17,11 +12,11 @@ namespace Illustra.ViewModels
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
-        private FileSystemItemModel _selectedItem;
+        private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
 
-        public FileSystemTreeViewModel(IEventAggregator eventAggregator, string initialPath = null)
+        public FileSystemTreeViewModel(IEventAggregator eventAggregator, string? initialPath = null)
         {
             _eventAggregator = eventAggregator;
             _model = new FileSystemTreeModel();
@@ -75,7 +70,7 @@ namespace Illustra.ViewModels
             Initialize(initialPath);
         }
 
-        private void Initialize(string initialPath)
+        private void Initialize(string? initialPath)
         {
             _model.Initialize(initialPath);
         }
@@ -174,9 +169,9 @@ namespace Illustra.ViewModels
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

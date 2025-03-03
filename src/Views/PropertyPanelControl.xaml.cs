@@ -8,7 +8,7 @@ namespace Illustra.Views
 {
     public partial class PropertyPanelControl : UserControl
     {
-        private IEventAggregator _eventAggregator;
+        private IEventAggregator? _eventAggregator;
 
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(

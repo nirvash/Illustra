@@ -10,18 +10,17 @@ using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
-using Microsoft.VisualBasic;
 
 namespace Illustra.Views
 {
     public partial class ThumbnailListControl : UserControl, IActiveAware
     {
-        private IEventAggregator _eventAggregator;
+        private IEventAggregator _eventAggregator = null!;
         private MainViewModel _viewModel;
         // 画像閲覧用
         private ImageViewerWindow? _currentViewerWindow;
-        private string _currentSelectedFilePath;
-        private string _currentFolderPath;
+        private string? _currentSelectedFilePath;
+        private string? _currentFolderPath;
 
         private AppSettings _appSettings;
         private bool _isFirstLoaded = false;
@@ -96,7 +95,7 @@ namespace Illustra.Views
         {
             // 現在のサムネイルサイズを保存
             _appSettings.ThumbnailSize = (int)ThumbnailSizeSlider.Value;
-            _appSettings.LastSelectedFilePath = _currentSelectedFilePath;
+            _appSettings.LastSelectedFilePath = _currentSelectedFilePath ?? "";
         }
 
         /// <summary>
@@ -268,7 +267,7 @@ namespace Illustra.Views
         {
             _viewModel.SortItems(sortByDate, sortAscending);
             // 再選択してスクロール
-            SelectThumbnail(_currentSelectedFilePath);
+            SelectThumbnail(_currentSelectedFilePath ?? "");
         }
 
         private async void SelectFile(string filePath)

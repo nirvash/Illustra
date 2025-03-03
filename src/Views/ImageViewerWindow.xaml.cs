@@ -20,7 +20,7 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
-        public required ThumbnailListControl Parent { get; set; }
+        public new ThumbnailListControl? Parent { get; set; }
 
         private ImagePropertiesModel _properties = new();
         public ImagePropertiesModel Properties
@@ -251,7 +251,8 @@ namespace Illustra.Views
 
         private void CacheImages(string filePath)
         {
-            var _viewModel = Parent.GetViewModel();
+            var _viewModel = Parent?.GetViewModel();
+            if (_viewModel == null) return;
             var fileNodes = _viewModel.Items;
             var currentIndex = fileNodes.ToList().FindIndex(f => f.FullPath == filePath);
 
@@ -340,7 +341,7 @@ namespace Illustra.Views
                 MainImage.Source = ImageSource;
 
                 // 親ウィンドウのサムネイル選択を更新
-                Parent.SyncThumbnailSelection(filePath);
+                Parent?.SyncThumbnailSelection(filePath);
             }
             catch (Exception ex)
             {

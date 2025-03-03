@@ -2,14 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
-using Prism.Events;
-using Prism.Ioc;
 
 namespace Illustra.Views
 {
@@ -19,9 +15,9 @@ namespace Illustra.Views
     /// </summary>
     public partial class FileSystemTreeView : UserControl
     {
-        private FileSystemTreeViewModel _viewModel;
-        private IEventAggregator _eventAggregator;
-        private AppSettings _appSettings;
+        private FileSystemTreeViewModel? _viewModel;
+        private IEventAggregator? _eventAggregator;
+        private AppSettings? _appSettings;
 
 
         public FileSystemTreeView()
@@ -50,7 +46,10 @@ namespace Illustra.Views
         {
             if (e.NewValue is FileSystemItemModel item)
             {
-                _viewModel.SelectedItem = item;
+                if (_viewModel != null)
+                {
+                    _viewModel.SelectedItem = item;
+                }
 
                 // 選択されたアイテムまでスクロール
                 ScrollToSelectedItem();
@@ -81,7 +80,7 @@ namespace Illustra.Views
 
         private void ScrollToSelectedItem()
         {
-            if (_viewModel.SelectedItem == null)
+            if (_viewModel?.SelectedItem == null)
                 return;
 
             var treeView = FindVisualChild<TreeView>(this);
@@ -158,7 +157,7 @@ namespace Illustra.Views
                 if (result != null)
                     return result;
             }
-            return null;
+            return null!;
         }
 
         private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -192,7 +191,7 @@ namespace Illustra.Views
         private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             var parentObject = VisualTreeHelper.GetParent(child);
-            if (parentObject == null) return null;
+            if (parentObject == null) return null!;
             if (parentObject is T parent) return parent;
             return FindVisualParent<T>(parentObject);
         }

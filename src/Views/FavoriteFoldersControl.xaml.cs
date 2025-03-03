@@ -6,8 +6,6 @@ using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
-using Prism.Events;
-using Prism.Ioc;
 
 namespace Illustra.Views
 {
@@ -106,9 +104,9 @@ namespace Illustra.Views
                 if (Directory.Exists(path))
                 {
                     // フォルダ選択イベントを発行
-                    _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                    _eventAggregator?.GetEvent<FolderSelectedEvent>().Publish(
                         new FolderSelectedEventArgs(path, CONTROL_ID));
-                    _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish("");
+                    _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");
                 }
             }
         }
@@ -159,7 +157,7 @@ namespace Illustra.Views
         {
             if (e.Data.GetDataPresent("FavoriteFolder"))
             {
-                string sourceItem = e.Data.GetData("FavoriteFolder") as string;
+                string? sourceItem = e.Data.GetData("FavoriteFolder") as string;
                 if (sourceItem == null) return;
 
                 var treeView = sender as TreeView;
@@ -177,7 +175,7 @@ namespace Illustra.Views
 
                 if (obj is TreeViewItem item)
                 {
-                    string targetItem = item.DataContext as string;
+                    string? targetItem = item.DataContext as string;
                     if (targetItem == null) return;
 
                     if (sourceItem == targetItem) return;

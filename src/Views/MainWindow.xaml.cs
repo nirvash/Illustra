@@ -1,21 +1,18 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
 using Illustra.Helpers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using Illustra.Events;
+using System.Threading.Tasks;
 
 namespace Illustra.Views
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly IEventAggregator _eventAggregator;
-        private bool _isInitialized = false;
         private AppSettings _appSettings;
-        private readonly object _loadLock = new object();
         private bool _sortByDate = true;
         private bool _sortAscending = true;
         private double _mainSplitterPosition;
@@ -59,8 +56,6 @@ namespace Illustra.Views
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
-
-            _isInitialized = true;
         }
 
         /// <summary>
@@ -73,11 +68,14 @@ namespace Illustra.Views
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // スプリッター位置の復元
-            RestoreSplitterPositions();
+            await Task.Run(() =>
+            {
+                // スプリッター位置の復元
+                RestoreSplitterPositions();
 
-            // その他の設定を適用
-            ApplySettings();
+                // その他の設定を適用
+                ApplySettings();
+            });
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -94,7 +92,7 @@ namespace Illustra.Views
             _appSettings.WindowState = WindowState;
 
             // 現在のフォルダパスを保存
-            _appSettings.LastFolderPath = _currentFolderPath;
+            _appSettings.LastFolderPath = _currentFolderPath ?? "";
 
             // ソート順の設定を保存
             _appSettings.SortByDate = _sortByDate;
