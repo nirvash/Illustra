@@ -16,6 +16,8 @@
     <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>
     <!-- ビルド時のログ出力を詳細に -->
     <BuildLogVerbosity>detailed</BuildLogVerbosity>
+    <!-- Null参照警告を無効化 -->
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059</NoWarn>
   </PropertyGroup>
 
   <!-- デバッグビルド設定 -->
