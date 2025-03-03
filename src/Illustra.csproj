@@ -7,6 +7,33 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>assets\iLlustra.ico</ApplicationIcon>
+    <!-- 警告をエラーとして扱わない設定 -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>
+    <!-- ビルドログの詳細設定 -->
+    <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>
+    <!-- インメモリビルドログを有効化 -->
+    <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>
+    <!-- ビルド時のログ出力を詳細に -->
+    <BuildLogVerbosity>detailed</BuildLogVerbosity>
+  </PropertyGroup>
+
+  <!-- デバッグビルド設定 -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <!-- デバッグ時のエラー詳細情報を有効化 -->
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <!-- Just My Code機能を無効化すると、外部ライブラリのエラー箇所も表示される -->
+    <DebugJustMyCode>false</DebugJustMyCode>
+  </PropertyGroup>
+
+  <!-- リリースビルド設定 -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +44,8 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
     <PackageReference Include="VirtualizingWrapPanel" Version="2.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- ログ出力のためのNLog追加 -->
+    <PackageReference Include="NLog" Version="5.2.8" />
     <Resource Include="assets\illustra.ico" />
   </ItemGroup>
 </Project>
