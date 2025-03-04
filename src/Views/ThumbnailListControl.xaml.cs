@@ -190,17 +190,19 @@ namespace Illustra.Views
         /// <returns>前の画像のファイルパス、存在しない場合はnull</returns>
         public string? GetPreviousImage(string currentFilePath)
         {
-            if (_viewModel.Items.Count <= 1)
+            // フィルタリングされたアイテムのリストを取得
+            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+            if (filteredItems.Count <= 1)
                 return null;
 
             // 現在の画像のインデックスを検索
-            var currentIndex = _viewModel.Items.ToList().FindIndex(i => i.FullPath == currentFilePath);
+            var currentIndex = filteredItems.FindIndex(i => i.FullPath == currentFilePath);
             if (currentIndex < 0)
                 return null;
 
             // 前のインデックスを計算（リストの最初の場合は最後に循環）
-            var prevIndex = (currentIndex > 0) ? currentIndex - 1 : _viewModel.Items.Count - 1;
-            return _viewModel.Items[prevIndex].FullPath;
+            var prevIndex = (currentIndex > 0) ? currentIndex - 1 : filteredItems.Count - 1;
+            return filteredItems[prevIndex].FullPath;
         }
 
         /// <summary>
@@ -210,17 +212,19 @@ namespace Illustra.Views
         /// <returns>次の画像のファイルパス、存在しない場合はnull</returns>
         public string? GetNextImage(string currentFilePath)
         {
-            if (_viewModel.Items.Count <= 1)
+            // フィルタリングされたアイテムのリストを取得
+            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+            if (filteredItems.Count <= 1)
                 return null;
 
             // 現在の画像のインデックスを検索
-            var currentIndex = _viewModel.Items.ToList().FindIndex(i => i.FullPath == currentFilePath);
+            var currentIndex = filteredItems.FindIndex(i => i.FullPath == currentFilePath);
             if (currentIndex < 0)
                 return null;
 
             // 次のインデックスを計算（リストの最後の場合は最初に循環）
-            var nextIndex = (currentIndex < _viewModel.Items.Count - 1) ? currentIndex + 1 : 0;
-            return _viewModel.Items[nextIndex].FullPath;
+            var nextIndex = (currentIndex < filteredItems.Count - 1) ? currentIndex + 1 : 0;
+            return filteredItems[nextIndex].FullPath;
         }
 
         /// <summary>
@@ -320,7 +324,10 @@ namespace Illustra.Views
 
             DisplayGeneratedItemsInfo(ThumbnailItemsControl);
 
-            var matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
+            // まずフィルター適用後のアイテムリストから検索
+            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
+            var matchingItem = filteredItems.FirstOrDefault(x => x.FullPath == filePath);
+
             if (matchingItem != null)
             {
                 _currentSelectedFilePath = filePath;
@@ -329,10 +336,58 @@ namespace Illustra.Views
 
                 // FileSelectedEvent を発行
                 _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
+
+                // LastSelectedFilePath を保存
+                _appSettings.LastSelectedFilePath = filePath;
+                SettingsHelper.SaveSettings(_appSettings);
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("No matching item found");
+                System.Diagnostics.Debug.WriteLine("No matching item found in filtered list");
+
+                // フィルターされていない元のItemsから検索
+                matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
+                if (matchingItem != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Item found in original list but filtered out");
+
+                    // フィルター解除が必要
+                    if (_currentRatingFilter > 0)
+                    {
+                        // ユーザーにフィルターが適用されていて見つからない旨を通知
+                        MessageBoxResult result = MessageBox.Show(
+                            "選択したファイルは現在のレーティングフィルターで表示されていません。フィルターを解除しますか？",
+                            "フィルター解除の確認",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            // フィルターを解除
+                            ApplyFilterling(0);
+
+                            // 再度検索
+                            matchingItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(x => x.FullPath == filePath);
+                            if (matchingItem != null)
+                            {
+                                _currentSelectedFilePath = filePath;
+                                _viewModel.SelectedItem = matchingItem;
+                                ThumbnailItemsControl.ScrollIntoView(matchingItem);
+
+                                // FileSelectedEvent を発行
+                                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
+
+                                // LastSelectedFilePath を保存
+                                _appSettings.LastSelectedFilePath = filePath;
+                                SettingsHelper.SaveSettings(_appSettings);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("No matching item found even in the original list");
+                    }
+                }
             }
         }
 
