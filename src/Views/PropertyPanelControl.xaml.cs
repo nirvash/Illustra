@@ -54,11 +54,19 @@ namespace Illustra.Views
         private void OnFileSelected(string filePath)
         {
             Debug.WriteLine($"PropertyPanelControl: OnFileSelected: {filePath}");
-            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath) && _currentFilePath != filePath)
             {
                 _currentFilePath = filePath;
-                _ = LoadFilePropertiesAsync(filePath);
+                _ = LoadFilePropertiesAsync(filePath); // ToDo: プロパティが表示されていない
                 _ = LoadFileNodeAsync(filePath);
+                Visibility = Visibility.Visible;
+            }
+            else if (string.IsNullOrEmpty(filePath))
+            {
+                _currentFilePath = string.Empty;
+                ImageProperties = new ImagePropertiesModel();
+                DataContext = ImageProperties;
+                Visibility = Visibility.Collapsed;
             }
         }
 
@@ -69,10 +77,9 @@ namespace Illustra.Views
                 var fileInfo = new FileInfo(filePath);
                 ImageProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show($"ファイルのプロパティ読み込み中にエラーが発生しました：{ex.Message}", "エラー",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                // Ignore
             }
         }
 

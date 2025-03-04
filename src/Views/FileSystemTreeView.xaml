@@ -9,7 +9,6 @@
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300"
-             TabIndex="{Binding TabIndex}"
              x:Name="FileSystemTreeViewControl">
 
     <UserControl.Resources>
@@ -24,7 +23,7 @@
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
-                  IsTabStop="True" TabIndex="{Binding TabIndex}"
+                  IsTabStop="True" TabIndex="2"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto">
             <TreeView.ItemTemplate>

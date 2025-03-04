@@ -293,6 +293,7 @@ namespace Illustra.Views
             Debug.WriteLine($"OnSelectFileRequest: {filePath}");
             if (_viewModel.Items.Count == 0)
             {
+                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish("");
                 return;
             }
 
@@ -504,10 +505,18 @@ namespace Illustra.Views
         /// </summary>
         private void ThumbnailListControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // タブキーを無効化 (本当はフォルダーツリーにフォーカスしたい)
+            // タブキーを無効化して外側のコントロールにフォーカス移動
             if (e.Key == Key.Tab)
             {
                 e.Handled = true;
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    ThumbnailItemsControl.MoveFocus(new TraversalRequest(FocusNavigationDirection.Previous));
+                }
+                else
+                {
+                    ThumbnailItemsControl.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                }
                 return;
             }
 

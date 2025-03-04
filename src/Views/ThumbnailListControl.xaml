@@ -8,7 +8,6 @@
              xmlns:helpers="clr-namespace:Illustra.Helpers"
              xmlns:local="clr-namespace:Illustra.Controls"
              mc:Ignorable="d"
-             TabIndex="{Binding TabIndex}"
              d:DesignHeight="300" d:DesignWidth="300">
 
     <UserControl.Resources>
@@ -102,7 +101,8 @@
                   BorderThickness="0"
                   KeyDown="ThumbnailItemsControl_KeyDown"
                   PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
-                  IsTabStop="True" TabIndex="{Binding TabIndex}"
+                  KeyboardNavigation.TabNavigation="None"
+                  IsTabStop="True" TabIndex="3"
                   FocusVisualStyle="{x:Null}">
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>

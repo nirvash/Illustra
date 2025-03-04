@@ -11,7 +11,7 @@
         Height="600"
         Width="900">
 
-    <Grid KeyboardNavigation.TabNavigation="Continue">
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
