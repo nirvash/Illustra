@@ -10,6 +10,7 @@ using Prism.Ioc;
 using Illustra.Models;
 using Illustra.Events;
 using Illustra.Helpers;
+using System.Diagnostics;
 
 namespace Illustra.Views
 {
@@ -51,6 +52,7 @@ namespace Illustra.Views
 
         private void OnFileSelected(string filePath)
         {
+            Debug.WriteLine($"PropertyPanelControl: OnFileSelected: {filePath}");
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
                 _currentFilePath = filePath;
@@ -80,7 +82,7 @@ namespace Illustra.Views
                 _currentFileNode = await _db.GetFileNodeAsync(filePath);
                 if (_currentFileNode != null)
                 {
-                    UpdateRatingStars();
+                    await UpdateRatingStars();
                 }
             }
             catch (Exception ex)
@@ -90,7 +92,7 @@ namespace Illustra.Views
             }
         }
 
-        private void UpdateRatingStars()
+        private async Task UpdateRatingStars(bool updateDb = false)
         {
             if (_currentFileNode != null && PropertiesGrid != null)
             {
@@ -106,8 +108,11 @@ namespace Illustra.Views
                     }
                 }
 
-                // DBに保存
-                _db.UpdateRatingAsync(_currentFileNode.FullPath, _currentFileNode.Rating);
+                if (updateDb)
+                {
+                    // DBに保存
+                    await _db.UpdateRatingAsync(_currentFileNode.FullPath, _currentFileNode.Rating);
+                }
             }
         }
 
@@ -157,18 +162,19 @@ namespace Illustra.Views
                 new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = _currentFileNode.Rating });
 
             // UIを更新
-            UpdateRatingStars();
+            await UpdateRatingStars(true);
 
             // 非同期操作を待機
             await Task.CompletedTask;
         }
 
-        private void OnRatingChanged(RatingChangedEventArgs args)
+        // 外部でレーティングが変更された場合の処理
+        private async void OnRatingChanged(RatingChangedEventArgs args)
         {
             if (args.FilePath == _currentFilePath && _currentFileNode != null)
             {
                 _currentFileNode.Rating = args.Rating;
-                UpdateRatingStars();
+                await UpdateRatingStars();
             }
         }
     }

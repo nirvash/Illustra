@@ -355,8 +355,6 @@ namespace Illustra.Views
 
                 // FileSelectedEvent を発行
                 _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
-
-                LoadFilePropertiesAsync(filePath);
             }
             else
             {

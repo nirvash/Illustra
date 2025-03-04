@@ -220,11 +220,14 @@ namespace Illustra.Helpers
 
                 Debug.WriteLine($"既存ノード削除: {sw.ElapsedMilliseconds}ms");
                 // 既存ノードのレーティングを維持
-                foreach (var node in existingNodes)
+                foreach (var node in newNodes)
                 {
                     if (existingNodeDict.TryGetValue(node.FullPath, out var existingNode))
                     {
-                        node.Rating = existingNode.Rating;
+                        if (node.Rating != existingNode.Rating)
+                        {
+                            node.Rating = existingNode.Rating;
+                        }
                     }
                 }
 
