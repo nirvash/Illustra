@@ -7,9 +7,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/Illustra.sln",
-        "/property:GenerateFullPaths=true",
-        "/consoleloggerparameters:NoSummary",
+        "${workspaceFolder}/src/Illustra.csproj",
         "--verbosity",
         "detailed"
       ],
