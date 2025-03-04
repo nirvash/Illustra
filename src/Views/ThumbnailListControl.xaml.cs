@@ -101,6 +101,11 @@ namespace Illustra.Views
             if (args.Path == _currentFolderPath)
                 return;
 
+            // フォルダが変わったらフィルタを自動的に解除
+            _currentRatingFilter = 0;
+            UpdateFilterButtonStates(0);
+            _viewModel.ApplyRatingFilter(0);
+
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             LoadFileNodes(args.Path);
 
