@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using Illustra.Events;
@@ -46,6 +47,7 @@ namespace Illustra.Views
             _currentSelectedFilePath = args.Path;
 
             // Expand 処理は FileSystemTreeViewControl が行うのでここでは行わない
+            Debug.WriteLine($"FolderTreeControl: OnFolderSelected: Publish Events: {args.Path}");
             _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");
         }
 

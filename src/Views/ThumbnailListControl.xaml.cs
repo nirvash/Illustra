@@ -10,6 +10,7 @@ using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace Illustra.Views
 {
@@ -79,7 +80,7 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(SelectFile);
+            _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(OnSelectFileRequest);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
         }
 
@@ -227,6 +228,7 @@ namespace Illustra.Views
         /// </summary>
         private async void OnFileNodesLoaded(object? sender, EventArgs e)
         {
+            Debug.WriteLine("OnFileNodesLoaded");
             try
             {
                 if (_viewModel.Items.Count == 0)
@@ -234,29 +236,29 @@ namespace Illustra.Views
                     return;
                 }
 
-                // 最初のアイテムを選択
-                var firstItem = _viewModel.Items.FirstOrDefault();
-                if (firstItem != null)
-                {
-                    SelectThumbnail(firstItem.FullPath);
-                }
-
-                // スクロールビューアの取得
-                var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer != null)
-                {
-                    // スクロール位置をリセット
-                    scrollViewer.ScrollToTop();
-                }
-
+                string? filePath = null;
                 if (!_isFirstLoaded)
                 {
                     // 初回ロード時の処理
                     if (File.Exists(_appSettings.LastSelectedFilePath))
                     {
-                        SelectThumbnail(_appSettings.LastSelectedFilePath);
+                        filePath = _appSettings.LastSelectedFilePath;
                     }
                     _isFirstLoaded = true;
+                }
+                else
+                {
+                    // 最初のアイテムを選択
+                    var firstItem = _viewModel.Items.FirstOrDefault();
+                    if (firstItem != null)
+                    {
+                        filePath = firstItem.FullPath;
+                    }
+                }
+                if (filePath != null)
+                {
+                    SelectThumbnail(filePath);
+                    ThumbnailItemsControl.Focus(); // 初期フォーカスを取得
                 }
             }
             catch (Exception ex)
@@ -304,8 +306,9 @@ namespace Illustra.Views
             }
         }
 
-        private async void SelectFile(string filePath)
+        private async void OnSelectFileRequest(string filePath)
         {
+            Debug.WriteLine($"OnSelectFileRequest: {filePath}");
             if (_viewModel.Items.Count == 0)
             {
                 return;
@@ -709,12 +712,7 @@ namespace Illustra.Views
         {
             _currentFolderPath = path;
             _thumbnailLoader.LoadFileNodes(path);
-
-            // ファイル選択をクリア（新しいフォルダをロードするため）
-            _currentSelectedFilePath = "";
-            _viewModel.SelectedItem = null;
         }
-
 
         /// <summary>
         /// ウィンドウ全体でのキー入力を処理するハンドラ

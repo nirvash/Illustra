@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
+using System.Diagnostics;
 
 namespace Illustra.Views
 {
@@ -104,6 +105,7 @@ namespace Illustra.Views
                 if (Directory.Exists(path))
                 {
                     // フォルダ選択イベントを発行
+                    Debug.WriteLine($"FavoriteFoldersTreeView: SelectedItemChanged: Publish Events: {path}");
                     _eventAggregator?.GetEvent<FolderSelectedEvent>().Publish(
                         new FolderSelectedEventArgs(path, CONTROL_ID));
                     _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");

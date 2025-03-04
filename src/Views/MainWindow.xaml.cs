@@ -156,15 +156,6 @@ namespace Illustra.Views
             this.Close();
         }
 
-        private void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            // 現在のフォルダを再読み込み
-            if (!string.IsNullOrEmpty(_currentFolderPath))
-            {
-                ThumbnailList.LoadFileNodes(_currentFolderPath);
-            }
-        }
-
         private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
         {
             // 設定ウィンドウを表示

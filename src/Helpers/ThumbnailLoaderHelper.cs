@@ -142,17 +142,14 @@ public class ThumbnailLoaderHelper
             _viewModel.Items.ReplaceAll(fileNodes);
             _viewModel.SelectedItem = null;
 
+            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+
             Debug.WriteLine($"UIへのデータセット: {sw.ElapsedMilliseconds}ms");
 
-            // サムネイルロードイベント発行前に初期表示される分のサムネイルをロード
-            await Task.Delay(100); // UIの更新を待つ
+            await Task.Delay(100);
             await LoadInitialThumbnailsAsync();
 
             Debug.WriteLine($"初期サムネイルロード: {sw.ElapsedMilliseconds}ms");
-
-            // イベント発行
-            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
-
             Debug.WriteLine($"全体の処理時間: {sw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
