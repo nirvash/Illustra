@@ -99,11 +99,6 @@ namespace Illustra.Controls
             DependencyProperty.Register("EnableAnimation", typeof(bool), typeof(RatingStarControl),
                 new PropertyMetadata(false));
 
-        public bool EnableAnimation
-        {
-            get { return (bool)GetValue(EnableAnimationProperty); }
-            set { SetValue(EnableAnimationProperty, value); }
-        }
 
         #endregion
 
@@ -112,12 +107,6 @@ namespace Illustra.Controls
             if (d is RatingStarControl control)
             {
                 control.UpdateVisualState();
-
-                // IsFilled プロパティが変更され、アニメーションが有効な場合にのみアニメーションを実行
-                if (e.Property == IsFilledProperty && control.EnableAnimation && (bool)e.NewValue)
-                {
-                    control.PlayAnimation();
-                }
             }
         }
 

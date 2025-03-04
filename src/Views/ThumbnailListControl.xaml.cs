@@ -903,7 +903,68 @@ namespace Illustra.Views
             {
                 fileNode.Rating = args.Rating;
                 ApplyFilterling(_currentRatingFilter); // フィルターを再適用
+
+                // 選択中のファイルのレーティングが変更された場合はアニメーション実行
+                if (_viewModel.SelectedItem != null && _viewModel.SelectedItem.FullPath == args.FilePath)
+                {
+                    // UIスレッドで実行
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // 選択中アイテムのコンテナを取得
+                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(_viewModel.SelectedItem) as ListViewItem;
+                            if (container != null)
+                            {
+                                // DataTemplateの中のRatingStarControlを検索
+                                var starControl = FindVisualChild<RatingStarControl>(container);
+                                if (starControl != null)
+                                {
+                                    // 明示的にアニメーションを実行
+                                    starControl.PlayAnimation();
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"アニメーション実行中にエラー: {ex.Message}");
+                        }
+                    }, DispatcherPriority.Background);
+                }
             }
+        }
+
+        // DataTemplate内の特定の名前を持つ要素を検索するヘルパーメソッド
+        private T? FindElementInTemplate<T>(FrameworkElement container, string elementName) where T : FrameworkElement
+        {
+            if (container == null)
+                return null;
+
+            T? result = null;
+
+            // コンテナ内のすべての子要素を検索
+            var childCount = VisualTreeHelper.GetChildrenCount(container);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(container, i) as DependencyObject;
+                if (child == null) continue;
+
+                // 目的の型と名前に一致する要素を検索
+                if (child is T element && (element.Name == elementName || string.IsNullOrEmpty(elementName)))
+                {
+                    return element;
+                }
+
+                // 再帰的に子要素を検索
+                if (child is FrameworkElement frameworkElement)
+                {
+                    result = FindElementInTemplate<T>(frameworkElement, elementName);
+                    if (result != null)
+                        return result;
+                }
+            }
+
+            return result;
         }
 
         // レーティング表示の色を取得するメソッド
