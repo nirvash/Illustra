@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
 namespace Illustra.Controls
@@ -93,6 +94,17 @@ namespace Illustra.Controls
             set { SetValue(TextEffectProperty, value); }
         }
 
+        // アニメーションを有効にするかどうか（選択中のアイテムのみTrue）
+        public static readonly DependencyProperty EnableAnimationProperty =
+            DependencyProperty.Register("EnableAnimation", typeof(bool), typeof(RatingStarControl),
+                new PropertyMetadata(false));
+
+        public bool EnableAnimation
+        {
+            get { return (bool)GetValue(EnableAnimationProperty); }
+            set { SetValue(EnableAnimationProperty, value); }
+        }
+
         #endregion
 
         private static void OnVisualPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -100,7 +112,41 @@ namespace Illustra.Controls
             if (d is RatingStarControl control)
             {
                 control.UpdateVisualState();
+
+                // IsFilled プロパティが変更され、アニメーションが有効な場合にのみアニメーションを実行
+                if (e.Property == IsFilledProperty && control.EnableAnimation && (bool)e.NewValue)
+                {
+                    control.PlayAnimation();
+                }
             }
+        }
+
+        /// <summary>
+        /// 星マークのアニメーションを明示的に再生します。
+        /// </summary>
+        public void PlayAnimation()
+        {
+            if (StarScale == null) return;
+
+            // X方向のアニメーション
+            var xAnimation = new DoubleAnimation
+            {
+                To = 1.2,
+                Duration = TimeSpan.FromMilliseconds(100),
+                AutoReverse = true
+            };
+
+            // Y方向のアニメーション
+            var yAnimation = new DoubleAnimation
+            {
+                To = 1.2,
+                Duration = TimeSpan.FromMilliseconds(100),
+                AutoReverse = true
+            };
+
+            // アニメーションを開始
+            StarScale.BeginAnimation(ScaleTransform.ScaleXProperty, xAnimation);
+            StarScale.BeginAnimation(ScaleTransform.ScaleYProperty, yAnimation);
         }
 
         private void UpdateVisualState()

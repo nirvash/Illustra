@@ -20,30 +20,8 @@
                   Stroke="{Binding StrokeColor, ElementName=root}"
                   StrokeThickness="1.5">
                 <Path.RenderTransform>
-                    <ScaleTransform CenterX="25" CenterY="25" ScaleX="1" ScaleY="1" />
+                    <ScaleTransform x:Name="StarScale" CenterX="25" CenterY="25" ScaleX="1" ScaleY="1" />
                 </Path.RenderTransform>
-                <Path.Style>
-                    <Style TargetType="Path">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsFilled, ElementName=root}" Value="True">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation
-                                                Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                To="1.2" Duration="0:0:0.1"
-                                                AutoReverse="True"/>
-                                            <DoubleAnimation
-                                                Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                To="1.2" Duration="0:0:0.1"
-                                                AutoReverse="True"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Path.Style>
             </Path>
 
             <!-- 数字表示 -->
@@ -59,4 +37,6 @@
                       Foreground="{Binding TextColor, ElementName=root}" />
         </Grid>
     </Viewbox>
+
+    <!-- アニメーションはXAMLから削除して、コードビハインドで制御します -->
 </UserControl>
