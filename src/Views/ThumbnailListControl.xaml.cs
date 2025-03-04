@@ -226,7 +226,7 @@ namespace Illustra.Views
         /// <summary>
         /// サムネイルのロード完了時に前回選択したファイルを選択する処理
         /// </summary>
-        private async void OnFileNodesLoaded(object? sender, EventArgs e)
+        private void OnFileNodesLoaded(object? sender, EventArgs e)
         {
             Debug.WriteLine("OnFileNodesLoaded");
             try
@@ -277,32 +277,6 @@ namespace Illustra.Views
             if (!string.IsNullOrEmpty(_currentSelectedFilePath))
             {
                 SelectThumbnail(_currentSelectedFilePath);
-            }
-        }
-
-        private int _currentRatingFilter = -1; // -1は未フィルタ状態
-
-        /// <summary>
-        /// レーティングによるフィルタリングを適用します
-        /// </summary>
-        /// <param name="rating">フィルタリングするレーティング値（0-5）。同じ値を指定すると解除。</param>
-        public async Task ApplyRatingFilterAsync(int rating)
-        {
-            if (rating < 0 || rating > 5)
-                return;
-
-            _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
-
-            // 同じレーティングが指定された場合はフィルタを解除
-            if (_currentRatingFilter == rating)
-            {
-                _currentRatingFilter = -1;
-                await _viewModel.SortItemsAsync(false, true); // デフォルトソート
-            }
-            else
-            {
-                _currentRatingFilter = rating;
-                await _viewModel.FilterByRatingAsync(rating);
             }
         }
 
@@ -466,7 +440,7 @@ namespace Illustra.Views
             if (panel == null) return;
 
             var selectedIndex = ThumbnailItemsControl.SelectedIndex;
-            if (selectedIndex == -1 && _viewModel.Items.Count > 0)
+            if (selectedIndex == -1 && _viewModel.FilteredItems.Cast<FileNodeModel>().Any())
             {
                 // 選択がない場合は先頭を選択
                 selectedIndex = 0;
@@ -474,7 +448,7 @@ namespace Illustra.Views
             if (selectedIndex == -1) return;
 
             int itemsPerRow = Math.Max(1, (int)(panel.ActualWidth / (ThumbnailSizeSlider.Value + 6))); // 6はマージン
-            int totalItems = ThumbnailItemsControl.Items.Count;
+            int totalItems = _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
             int totalRows = (totalItems + itemsPerRow - 1) / itemsPerRow;
             Debug.WriteLine($"selected: {selectedIndex}, total: {totalItems}, rows: {totalRows}");
 
@@ -493,26 +467,26 @@ namespace Illustra.Views
 
                 case Key.Home:
                     // 先頭アイテムに移動
-                    targetItem = _viewModel.Items[0];
+                    targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault();
                     e.Handled = true;
                     break;
 
                 case Key.End:
                     // 最後のアイテムに移動
-                    targetItem = _viewModel.Items[totalItems - 1];
+                    targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().LastOrDefault();
                     e.Handled = true;
                     break;
 
                 case Key.Right:
                     if (selectedIndex + 1 < totalItems)
                     {
-                        targetItem = _viewModel.Items[selectedIndex + 1];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(selectedIndex + 1);
                         e.Handled = true;
                     }
                     else if (!e.IsRepeat) // キーリピートでない場合のみ循環
                     {
                         // 最後のアイテムで右キーを押したとき、先頭に循環
-                        targetItem = _viewModel.Items[0];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault();
                         e.Handled = true;
                     }
                     break;
@@ -533,7 +507,7 @@ namespace Illustra.Views
 
                             // 存在するアイテム数を超えないように制限
                             targetIndex = Math.Min(targetIndex, totalItems - 1);
-                            targetItem = _viewModel.Items[targetIndex];
+                            targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
                             e.Handled = true;
                         }
                         else if (!e.IsRepeat) // キーリピートでない場合のみ循環
@@ -542,7 +516,7 @@ namespace Illustra.Views
                             int lastRow = (totalItems - 1) / itemsPerRow;
                             int lastRowItemCount = totalItems - (lastRow * itemsPerRow);
                             int targetIndex = (lastRow * itemsPerRow) + Math.Min(itemsPerRow, lastRowItemCount) - 1;
-                            targetItem = _viewModel.Items[targetIndex];
+                            targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
                             e.Handled = true;
                         }
                     }
@@ -551,7 +525,7 @@ namespace Illustra.Views
                         // 通常の左キー処理
                         if (selectedIndex - 1 >= 0)
                         {
-                            targetItem = _viewModel.Items[selectedIndex - 1];
+                            targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(selectedIndex - 1);
                             e.Handled = true;
                         }
                     }
@@ -563,7 +537,7 @@ namespace Illustra.Views
                     {
                         // 通常の上移動
                         int targetIndex = selectedIndex - itemsPerRow;
-                        targetItem = _viewModel.Items[targetIndex];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
                         e.Handled = true;
                     }
                     else if (!e.IsRepeat) // キーリピートでない場合のみ循環
@@ -572,7 +546,7 @@ namespace Illustra.Views
                         int currentColumn = selectedIndex % itemsPerRow;
                         int lastRowStartIndex = ((totalItems - 1) / itemsPerRow) * itemsPerRow;
                         int targetIndex = Math.Min(lastRowStartIndex + currentColumn, totalItems - 1);
-                        targetItem = _viewModel.Items[targetIndex];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
                         e.Handled = true;
                     }
                     break;
@@ -583,7 +557,7 @@ namespace Illustra.Views
                     if (nextRowIndex < totalItems)
                     {
                         // 通常の下移動
-                        targetItem = _viewModel.Items[nextRowIndex];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(nextRowIndex);
                         e.Handled = true;
                     }
                     else if (!e.IsRepeat) // キーリピートでない場合のみ循環
@@ -591,7 +565,7 @@ namespace Illustra.Views
                         // 最下段から最上段へ循環
                         int currentColumn = selectedIndex % itemsPerRow;
                         int targetIndex = Math.Min(currentColumn, totalItems - 1);
-                        targetItem = _viewModel.Items[targetIndex];
+                        targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
                         e.Handled = true;
                     }
                     break;
@@ -601,7 +575,7 @@ namespace Illustra.Views
             {
                 e.Handled = true; // イベントを確実に処理済みとしてマーク
 
-                var index = _viewModel.Items.IndexOf(targetItem);
+                var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(targetItem);
                 Debug.WriteLine($"target: {index}, path: {targetItem.FullPath}");
 
                 // ViewModelを通じて選択を更新
@@ -706,7 +680,7 @@ namespace Illustra.Views
             return _viewModel;
         }
 
-        internal void LoadFileNodes(string path)
+        internal void LoadFileNodes(string path, int rating = 0)
         {
             _currentFolderPath = path;
             _thumbnailLoader.LoadFileNodes(path);
@@ -785,28 +759,18 @@ namespace Illustra.Views
 
             return count;
         }
+        private int _currentRatingFilter = 0;
 
-        private async void RatingFilter_Click(object sender, RoutedEventArgs e)
+        private void RatingFilter_Click(object sender, RoutedEventArgs e)
         {
             if (!(sender is Button button) ||
                 !int.TryParse(button.Tag?.ToString(), out int rating))
                 return;
-
-            try
-            {
-                // ボタンの選択状態を更新
-                UpdateFilterButtonStates(rating);
-
-                // フィルタリングを適用
-                await _viewModel.FilterByRatingAsync(rating);
-
-                // フィルター解除ボタンを有効化
-                ClearFilterButton.IsEnabled = true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"レーティングフィルター適用中にエラーが発生: {ex.Message}");
-            }
+            ApplyFilterling(rating);
+        }
+        private void ClearFilter_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyFilterling(-1);
         }
 
         private void UpdateFilterButtonStates(int selectedRating)
@@ -834,21 +798,13 @@ namespace Illustra.Views
             ClearFilterButton.IsEnabled = selectedRating != -1;
         }
 
-        private async void ClearFilter_Click(object sender, RoutedEventArgs e)
+        private void ApplyFilterling(int rating)
         {
             try
             {
-                // フィルターをクリア（全件表示）
-                if (!string.IsNullOrEmpty(_currentFolderPath))
-                {
-                    LoadFileNodes(_currentFolderPath);
-                }
-
-                // すべてのフィルターボタンをリセット
-                UpdateFilterButtonStates(0);
-
-                // フィルター解除ボタンを無効化
-                ClearFilterButton.IsEnabled = false;
+                _currentRatingFilter = rating;
+                UpdateFilterButtonStates(rating);
+                _viewModel.ApplyRatingFilter(rating);
             }
             catch (Exception ex)
             {
@@ -862,7 +818,9 @@ namespace Illustra.Views
             if (fileNode != null)
             {
                 fileNode.Rating = args.Rating;
+                ApplyFilterling(_currentRatingFilter); // フィルターを再適用
             }
         }
+
     }
 }

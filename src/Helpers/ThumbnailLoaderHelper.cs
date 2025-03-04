@@ -142,6 +142,7 @@ public class ThumbnailLoaderHelper
             _viewModel.Items.ReplaceAll(fileNodes);
             _viewModel.SelectedItem = null;
 
+            // 初期選択を実行する前にUIを更新させる
             FileNodesLoaded?.Invoke(this, EventArgs.Empty);
 
             Debug.WriteLine($"UIへのデータセット: {sw.ElapsedMilliseconds}ms");
