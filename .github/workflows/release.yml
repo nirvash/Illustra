@@ -10,9 +10,12 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      issues: read # 既知の問題を取得するための権限を追加
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # すべての履歴を取得して変更履歴を生成するため
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -32,6 +35,63 @@ jobs:
         run: |
           cd publish
           7z a -tzip "../Illustra-${{ github.ref_name }}.zip" *
+
+      - name: Read Release Notes
+        id: read_release_notes
+        run: |
+          if (Test-Path ".github/workflows/summary.txt") {
+            $notes = Get-Content -Path ".github/workflows/summary.txt" -Raw
+            if ([string]::IsNullOrWhiteSpace($notes)) {
+              $notes = "- メンテナンスの改善とバグ修正"
+            }
+            $notesFormatted = $notes -replace "`n", "%0A"
+            echo "summary=$notesFormatted" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "summary=- メンテナンスの改善とバグ修正%0A- アプリケーションのパフォーマンス向上" >> $env:GITHUB_OUTPUT
+          }
+        shell: pwsh
+
+      - name: Get Known Issues
+        id: issues
+        run: |
+          $token = "${{ github.token }}"
+          $repoUrl = "${{ github.repository }}"
+
+          # GraphQL APIで未解決のバグ Issues を取得
+          $query = @"
+          query {
+            repository(owner: \"$($repoUrl.Split('/')[0])\", name: \"$($repoUrl.Split('/')[1])\") {
+              issues(first: 5, states: OPEN, labels: ["bug"]) {
+                nodes {
+                  title
+                  url
+                }
+              }
+            }
+          }
+          "@
+
+          $headers = @{
+            "Authorization" = "Bearer $token"
+            "Content-Type" = "application/json"
+          }
+
+          $response = Invoke-RestMethod -Uri "https://api.github.com/graphql" -Method Post -Headers $headers -Body (ConvertTo-Json @{ query = $query })
+
+          # 既知の問題リストを生成
+          $issues = $response.data.repository.issues.nodes | ForEach-Object { "- [$($_.title)]($($_.url))" }
+
+          # 既知の問題がない場合のデフォルトメッセージ
+          if ($issues.Count -eq 0) {
+            $issues = "- 現在、既知の問題はありません。"
+          }
+
+          # 改行をGitHub Actionsの特殊構文に変換
+          $issuesList = $issues -join "%0A"
+
+          # 出力設定
+          echo "issues=$issuesList" >> $env:GITHUB_OUTPUT
+        shell: pwsh
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -53,7 +113,16 @@ jobs:
             - .NET 9.0 以降（実行ファイルに同梱）
 
             ### 📝 変更点
-            - リリースノートをここに記載
+            ${{ steps.read_release_notes.outputs.summary }}
 
             ### 🔍 既知の問題
-            - 既知の問題があればここに記載
+            ${{ steps.issues.outputs.issues }}
+
+            ### 📄 詳細な変更履歴
+            <details>
+            <summary>すべてのコミット履歴を表示</summary>
+
+            ```
+            ${{ steps.read_release_notes.outputs.summary }}
+            ```
+            </details>

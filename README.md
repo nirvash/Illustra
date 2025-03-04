@@ -13,6 +13,9 @@ Illustraは、高速で使いやすいWindows用画像ビューアです。大�
 - 🖼️ カスタマイズ可能なサムネイルサイズ
 - ⌨️ キーボードによる快適な操作
 - 🔄 スムーズな画像切り替え
+- ⭐ 画像レーティングシステム（1-5星）とフィルタリング機能
+- 🔍 レーティングによる画像検索
+- 🔄 日付/ファイル名によるソート機能
 - 🎯 設定の永続化対応
 
 ### 動作環境
@@ -33,8 +36,11 @@ Illustraは、高速で使いやすいWindows用画像ビューアです。大�
 2. サムネイルをクリックまたはキーボードで選択
 3. Enter キーまたはダブルクリックで画像を表示
 4. 画像表示中は左右キーまたはマウスホイールで前後の画像に移動
-5. F11 キーでフルスクリーン切り替え
-6. Esc キーで画像ビューを閉じる
+5. 画像にレーティングを付けるにはプロパティパネルの星マークボタンをクリック
+6. 特定のレーティングでフィルターするにはフィルターボタンをクリック
+7. ソート順を変更するには画面上部のソートボタンをクリック
+8. F11 キーでフルスクリーン切り替え
+9. Esc キーで画像ビューを閉じる
 
 ### キーボードショートカット
 
@@ -59,6 +65,9 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - 🖼️ Customizable thumbnail size
 - ⌨️ Comfortable keyboard operation
 - 🔄 Smooth image switching
+- ⭐ Image rating system (1-5 stars) with filtering capabilities
+- 🔍 Image search by rating
+- 🔄 Sorting by date or filename
 - 🎯 Persistent settings support
 
 ### System Requirements
@@ -79,8 +88,11 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 2. Click or use keyboard to select thumbnails
 3. Press Enter or double-click to view images
 4. Use left/right keys or mouse wheel to navigate between images
-5. Press F11 to toggle fullscreen
-6. Press Esc to close image view
+5. Assign ratings to images by clicking the star buttons in the property panel
+6. Filter by specific rating using the filter buttons
+7. Change sort order using the sort buttons at the top
+8. Press F11 to toggle fullscreen
+9. Press Esc to close image view
 
 ### Keyboard Shortcuts
 
