@@ -33,6 +33,8 @@ namespace Illustra.Views
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
         private const string CONTROL_ID = "ThumbnailList";
+        private bool _isSortAscending = true;
+        private bool _isSortByDate = true;
 
 
         #region IActiveAware Implementation
@@ -278,13 +280,28 @@ namespace Illustra.Views
 
         public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending)
         {
+            var currentSelectedPath = _currentSelectedFilePath;
             _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
             await _viewModel.SortItemsAsync(sortByDate, sortAscending);
 
-            // 再選択してスクロール
-            if (!string.IsNullOrEmpty(_currentSelectedFilePath))
+            if (!string.IsNullOrEmpty(currentSelectedPath))
             {
-                SelectThumbnail(_currentSelectedFilePath);
+                // UIの更新を待つ
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                // 選択とスクロールを実行
+                SelectThumbnail(currentSelectedPath);
+
+                // ScrollIntoViewを確実に実行
+                var item = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(x => x.FullPath == currentSelectedPath);
+                if (item != null)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        ThumbnailItemsControl.ScrollIntoView(item);
+                        ThumbnailItemsControl.UpdateLayout();
+                    }, DispatcherPriority.Render);
+                }
             }
         }
 
@@ -981,5 +998,18 @@ namespace Illustra.Views
             };
         }
 
+        private async void SortToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _isSortAscending = !_isSortAscending;
+            SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+        }
+
+        private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _isSortByDate = !_isSortByDate;
+            SortTypeText.Text = _isSortByDate ? "日付" : "名前";
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+        }
     }
 }
