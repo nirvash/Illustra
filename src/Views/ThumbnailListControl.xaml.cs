@@ -779,23 +779,33 @@ namespace Illustra.Views
             foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
             {
                 button.Foreground = Brushes.Gray;
+
+                // タグから位置を取得
+                if (int.TryParse(button.Tag?.ToString(), out int position))
+                {
+                    // 星マークを更新（選択状態または非選択状態）
+                    button.Content = RatingHelper.GetStarAtPosition(position, selectedRating);
+                }
             }
 
-            // 選択されたボタンをハイライト
-            if (selectedRating >= 1 && selectedRating <= 5)
+            // 選択されたレーティング以下の星をハイライト
+            if (selectedRating >= 1)
             {
-                var button = GetType().GetField($"Filter{selectedRating}",
-                    System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Instance)?.GetValue(this) as Button;
-
-                if (button != null)
+                for (int i = 1; i <= selectedRating; i++)
                 {
-                    button.Foreground = Brushes.Gold;
+                    var button = GetType().GetField($"Filter{i}",
+                        System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance)?.GetValue(this) as Button;
+
+                    if (button != null)
+                    {
+                        button.Foreground = RatingHelper.GetRatingColor(i);
+                    }
                 }
             }
 
             // フィルター解除ボタンの状態を更新
-            ClearFilterButton.IsEnabled = selectedRating != -1;
+            ClearFilterButton.IsEnabled = selectedRating != 0;
         }
 
         private void ApplyFilterling(int rating)
@@ -804,7 +814,18 @@ namespace Illustra.Views
             {
                 _currentRatingFilter = rating;
                 UpdateFilterButtonStates(rating);
-                _viewModel.ApplyRatingFilter(rating);
+
+                // レーティングフィルターの適用
+                if (rating > 0)
+                {
+                    _viewModel.ApplyRatingFilter(rating); // 選択されたレーティングのみを表示
+                }
+                else
+                {
+                    _viewModel.ApplyRatingFilter(0); // フィルタなし
+                }
+
+                ClearFilterButton.IsEnabled = rating != 0;
             }
             catch (Exception ex)
             {
@@ -820,6 +841,20 @@ namespace Illustra.Views
                 fileNode.Rating = args.Rating;
                 ApplyFilterling(_currentRatingFilter); // フィルターを再適用
             }
+        }
+
+        // レーティング表示の色を取得するメソッド
+        public static Brush GetRatingDisplayColor(int rating)
+        {
+            return rating switch
+            {
+                1 => Brushes.Red,
+                2 => Brushes.Orange,
+                3 => Brushes.Gold,
+                4 => Brushes.LightGreen,
+                5 => Brushes.DeepSkyBlue,
+                _ => Brushes.Gray
+            };
         }
 
     }

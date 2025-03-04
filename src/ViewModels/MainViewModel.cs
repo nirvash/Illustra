@@ -60,27 +60,29 @@ namespace Illustra.ViewModels
             _currentFolderPath = path;
         }
 
+        private int _currentRatingFilter = 0;
+
         private bool FilterItems(object item)
         {
             if (item is FileNodeModel fileNode)
             {
-                // Apply filtering logic here (e.g., based on rating)
-                return true; // Change this to apply actual filtering
+                // レーティングフィルターが適用されていない場合は全て表示
+                if (_currentRatingFilter <= 0)
+                    return true;
+
+                // 単一レーティングのみを表示
+                return fileNode.Rating == _currentRatingFilter;
             }
             return false;
         }
 
-        // rating = -1 はフィルタなし
+        /// <summary>
+        /// レーティングフィルターを適用します
+        /// </summary>
+        /// <param name="rating">フィルターするレーティング値。0はフィルターなし</param>
         public void ApplyRatingFilter(int rating)
         {
-            _filteredItems.Filter = item =>
-            {
-                if (item is FileNodeModel fileNode)
-                {
-                    return rating == -1 || fileNode.Rating == rating;
-                }
-                return false;
-            };
+            _currentRatingFilter = rating;
             _filteredItems.Refresh();
         }
 
