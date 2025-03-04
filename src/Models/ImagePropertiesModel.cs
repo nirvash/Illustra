@@ -4,6 +4,11 @@ using System.Runtime.CompilerServices;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Threading.Tasks;
+using System.Linq;
+using MetadataExtractor;
+using MetadataExtractor.Formats.Exif;
+using SkiaSharp;
+using Illustra.Helpers;
 
 namespace Illustra.Models
 {
@@ -21,6 +26,18 @@ namespace Illustra.Models
         private DateTime _lastModified;
         private string _fileType = string.Empty;
         private string _folderPath = string.Empty;
+        private int _width;
+        private int _height;
+        private string _imageFormat = string.Empty;
+        private string _colorDepth = string.Empty;
+        private string _userComment = string.Empty;
+        private DateTime _dateTaken;
+        private string _isoSpeed = string.Empty;
+        private string _exposureTime = string.Empty;
+        private string _fNumber = string.Empty;
+        private string _cameraModel = string.Empty;
+        private bool _folderPathExpanded = false;
+        private string _folderPathShort = string.Empty;
 
         public string FilePath
         {
@@ -194,9 +211,175 @@ namespace Illustra.Models
                 if (_folderPath != value)
                 {
                     _folderPath = value;
+                    UpdateFolderPathShort();
                     OnPropertyChanged();
                 }
             }
+        }
+
+        public string FolderPathShort
+        {
+            get => _folderPathShort;
+            private set
+            {
+                if (_folderPathShort != value)
+                {
+                    _folderPathShort = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool FolderPathExpanded
+        {
+            get => _folderPathExpanded;
+            set
+            {
+                if (_folderPathExpanded != value)
+                {
+                    _folderPathExpanded = value;
+                    OnPropertyChanged();
+                    SaveExpandedState();
+                }
+            }
+        }
+
+        // 追加プロパティ
+        public int Width
+        {
+            get => _width;
+            set
+            {
+                if (_width != value)
+                {
+                    _width = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int Height
+        {
+            get => _height;
+            set
+            {
+                if (_height != value)
+                {
+                    _height = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ImageFormat
+        {
+            get => _imageFormat;
+            set
+            {
+                if (_imageFormat != value)
+                {
+                    _imageFormat = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ColorDepth
+        {
+            get => _colorDepth;
+            set
+            {
+                if (_colorDepth != value)
+                {
+                    _colorDepth = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string UserComment
+        {
+            get => _userComment;
+            set
+            {
+                if (_userComment != value)
+                {
+                    _userComment = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime DateTaken
+        {
+            get => _dateTaken;
+            set
+            {
+                if (_dateTaken != value)
+                {
+                    _dateTaken = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ISOSpeed
+        {
+            get => _isoSpeed;
+            set
+            {
+                if (_isoSpeed != value)
+                {
+                    _isoSpeed = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ExposureTime
+        {
+            get => _exposureTime;
+            set
+            {
+                if (_exposureTime != value)
+                {
+                    _exposureTime = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string FNumber
+        {
+            get => _fNumber;
+            set
+            {
+                if (_fNumber != value)
+                {
+                    _fNumber = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string CameraModel
+        {
+            get => _cameraModel;
+            set
+            {
+                if (_cameraModel != value)
+                {
+                    _cameraModel = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // FileSizeBytes は FileSize と同じものとして扱います
+        public long FileSizeBytes
+        {
+            get => _fileSize;
+            set => FileSize = value;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -217,58 +400,137 @@ namespace Illustra.Models
             Rating = 0;
             Preview = null;
             FileType = string.Empty;
+            Width = 0;
+            Height = 0;
+            ImageFormat = string.Empty;
+            ColorDepth = string.Empty;
+            UserComment = string.Empty;
+            DateTaken = DateTime.MinValue;
+            ISOSpeed = string.Empty;
+            ExposureTime = string.Empty;
+            FNumber = string.Empty;
+            CameraModel = string.Empty;
+            FolderPath = string.Empty;
+            FolderPathShort = string.Empty;
         }
 
+        /// <summary>
+        /// 指定したファイルパスから画像プロパティを非同期的に読み込みます
+        /// </summary>
         public static async Task<ImagePropertiesModel> LoadFromFileAsync(string filePath)
         {
-            var model = new ImagePropertiesModel();
+            var properties = new ImagePropertiesModel();
 
             try
             {
+                if (!File.Exists(filePath))
+                    return properties;
+
+                properties.FilePath = filePath;
+                properties.FileName = Path.GetFileName(filePath);
+
                 var fileInfo = new FileInfo(filePath);
-                if (fileInfo.Exists)
+                properties.FileSizeBytes = fileInfo.Length;
+                properties.CreationTime = fileInfo.CreationTime;
+                properties.LastModified = fileInfo.LastWriteTime;
+
+                await Task.Run(() =>
                 {
-                    model.FilePath = filePath;
-                    model.FileName = fileInfo.Name;
-                    model.FileSize = fileInfo.Length;
-                    model.CreationTime = fileInfo.CreationTime;
-                    model.LastModified = fileInfo.LastWriteTime;
-                    model.FileType = fileInfo.Extension;
-                    model.FolderPath = fileInfo.DirectoryName ?? string.Empty;
-
-                    // Load image dimensions if it's an image file
-                    await Task.Run(() =>
+                    try
                     {
-                        try
+                        using (var stream = File.OpenRead(filePath))
+                        using (var skStream = new SKManagedStream(stream))
+                        using (var codec = SKCodec.Create(skStream))
                         {
-                            var imageInfo = new BitmapImage();
-                            imageInfo.BeginInit();
-                            imageInfo.UriSource = new Uri(filePath);
-                            imageInfo.CacheOption = BitmapCacheOption.OnLoad;
-                            imageInfo.EndInit();
-
-                            model.Dimensions = $"{imageInfo.PixelWidth} x {imageInfo.PixelHeight}";
-
-                            // Create a small preview
-                            var preview = new TransformedBitmap(imageInfo, new System.Windows.Media.ScaleTransform(
-                                100.0 / imageInfo.PixelWidth,
-                                100.0 / imageInfo.PixelHeight));
-                            model.Preview = preview;
+                            if (codec != null)
+                            {
+                                var info = codec.Info;
+                                properties.Width = info.Width;
+                                properties.Height = info.Height;
+                                properties.ImageFormat = codec.EncodedFormat.ToString();
+                                properties.Resolution = $"{info.Width} x {info.Height} ピクセル";
+                                properties.ColorDepth = GetColorDepth(codec);
+                            }
                         }
-                        catch
-                        {
-                            // Not an image or couldn't load
-                            model.Dimensions = "N/A";
-                        }
-                    });
+
+                        // Exif情報の読み取り
+                        ReadExifData(filePath, properties);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"画像プロパティ読み取りエラー: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"プロパティ読み込みエラー: {ex.Message}");
+            }
+
+            return properties;
+        }
+
+        private static void ReadExifData(string filePath, ImagePropertiesModel properties)
+        {
+            try
+            {
+                var directories = ImageMetadataReader.ReadMetadata(filePath);
+                var exif = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
+                var exifIfd0 = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
+
+                if (exif != null)
+                {
+                    // ユーザーコメント
+                    properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+
+                    // 撮影日時
+                    exif.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out DateTime dateTime);
+                    properties.DateTaken = dateTime;
+
+                    // ISO感度
+                    exif.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out int iso);
+                    properties.ISOSpeed = $"ISO {iso}";
+
+                    // 露出時間
+                    exif.TryGetRational(ExifDirectoryBase.TagExposureTime, out Rational exposure);
+                    // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
+                    if (exposure.ToDouble() >= 1.0)
+                    {
+                        properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
+                    }
+                    else
+                    {
+                        properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
+                    }
+
+                    // F値
+                    exif.TryGetRational(ExifDirectoryBase.TagFNumber, out Rational fNumber);
+                    properties.FNumber = $"F{fNumber.ToDouble():0.#}";
+                }
+
+                if (exifIfd0 != null)
+                {
+                    // カメラ情報
+                    string make = string.Empty;
+                    string model = string.Empty;
+
+                    try { make = exifIfd0.GetString(ExifDirectoryBase.TagMake) ?? string.Empty; } catch (MetadataException) { }
+                    try { model = exifIfd0.GetString(ExifDirectoryBase.TagModel) ?? string.Empty; } catch (MetadataException) { }
+
+                    if (!string.IsNullOrEmpty(make) && !string.IsNullOrEmpty(model))
+                    {
+                        properties.CameraModel = $"{make} {model}";
+                    }
+                    else if (!string.IsNullOrEmpty(model))
+                    {
+                        properties.CameraModel = model;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading file properties: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Exif読み取りエラー: {ex.Message}");
             }
-
-            return model;
         }
 
         private static string FormatFileSize(long bytes)
@@ -284,6 +546,72 @@ namespace Illustra.Models
             }
 
             return $"{number:0.##} {suffixes[counter]}";
+        }
+
+        private static string GetColorDepth(SKCodec codec)
+        {
+            try
+            {
+                var info = codec.Info;
+
+                // カラータイプに基づいて推測
+                switch (info.ColorType)
+                {
+                    case SKColorType.Rgba8888:
+                    case SKColorType.Rgb888x:
+                        return "24/32 bit";
+                    case SKColorType.Rgb565:
+                        return "16 bit";
+                    case SKColorType.Gray8:
+                        return "8 bit";
+                    default:
+                        return info.ColorType.ToString();
+                }
+            }
+            catch
+            {
+                return "Unknown";
+            }
+        }
+
+        private void UpdateFolderPathShort()
+        {
+            if (string.IsNullOrEmpty(_folderPath))
+            {
+                FolderPathShort = string.Empty;
+                return;
+            }
+
+            try
+            {
+                var parts = _folderPath.Split(Path.DirectorySeparatorChar);
+                if (parts.Length <= 2)
+                {
+                    FolderPathShort = _folderPath;
+                }
+                else
+                {
+                    FolderPathShort = $"{parts[0]}{Path.DirectorySeparatorChar}...{Path.DirectorySeparatorChar}{parts[^1]}";
+                }
+            }
+            catch
+            {
+                FolderPathShort = _folderPath;
+            }
+        }
+
+        private void SaveExpandedState()
+        {
+            var settings = SettingsHelper.GetSettings();
+            settings.FolderPathExpanded = _folderPathExpanded;
+            SettingsHelper.SaveSettings(settings);
+        }
+
+        private void LoadExpandedState()
+        {
+            var settings = SettingsHelper.GetSettings();
+            _folderPathExpanded = settings.FolderPathExpanded;
+            OnPropertyChanged(nameof(FolderPathExpanded));
         }
     }
 }

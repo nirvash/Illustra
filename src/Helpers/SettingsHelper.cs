@@ -1,9 +1,11 @@
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 
 namespace Illustra.Helpers
 {
@@ -45,17 +47,22 @@ namespace Illustra.Helpers
 
         // アプリケーションの言語設定
         public string Language { get; set; } = CultureInfo.CurrentUICulture.Name;
+
+        // プロパティパネルのフォルダパス折りたたみ状態
+        public bool FolderPathExpanded { get; set; } = false;
+
+        // プロパティパネルの詳細情報の折りたたみ状態
+        public bool DetailsExpanded { get; set; } = false;
     }
 
     public static class SettingsHelper
     {
+        private static AppSettings? _currentSettings;
+
         private static readonly string SettingsFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Illustra",
             "settings.json");
-
-        // 現在のアプリケーション設定を保持
-        private static AppSettings? _currentSettings;
 
         // デフォルトの翻訳を保持
         private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()

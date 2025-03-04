@@ -27,12 +27,21 @@ namespace Illustra.Views
                 nameof(ImageProperties),
                 typeof(ImagePropertiesModel),
                 typeof(PropertyPanelControl),
-                new PropertyMetadata(null));
+                new PropertyMetadata(null, OnImagePropertiesChanged));
 
         public ImagePropertiesModel? ImageProperties
         {
             get => (ImagePropertiesModel?)GetValue(ImagePropertiesProperty);
             set => SetValue(ImagePropertiesProperty, value);
+        }
+
+        private static void OnImagePropertiesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is PropertyPanelControl control)
+            {
+                control.DataContext = e.NewValue;
+                control.UpdatePropertiesDisplay();
+            }
         }
 
         public PropertyPanelControl()
@@ -228,6 +237,18 @@ namespace Illustra.Views
             {
                 _currentFileNode.Rating = args.Rating;
                 await UpdateRatingStars();
+            }
+        }
+
+        private void UpdatePropertiesDisplay()
+        {
+            if (ImageProperties != null)
+            {
+                // ファイルが実際に存在する場合のみレーティングを表示
+                if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
+                {
+                    _ = LoadFileNodeAsync(ImageProperties.FilePath);
+                }
             }
         }
     }
