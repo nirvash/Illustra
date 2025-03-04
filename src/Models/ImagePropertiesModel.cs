@@ -20,6 +20,7 @@ namespace Illustra.Models
         private DateTime _creationTime;
         private DateTime _lastModified;
         private string _fileType = string.Empty;
+        private string _folderPath = string.Empty;
 
         public string FilePath
         {
@@ -67,6 +68,19 @@ namespace Illustra.Models
         }
 
         public string Dimensions
+        {
+            get => _dimensions;
+            set
+            {
+                if (_dimensions != value)
+                {
+                    _dimensions = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Resolution
         {
             get => _dimensions;
             set
@@ -172,6 +186,19 @@ namespace Illustra.Models
             }
         }
 
+        public string FolderPath
+        {
+            get => _folderPath;
+            set
+            {
+                if (_folderPath != value)
+                {
+                    _folderPath = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -195,7 +222,7 @@ namespace Illustra.Models
         public static async Task<ImagePropertiesModel> LoadFromFileAsync(string filePath)
         {
             var model = new ImagePropertiesModel();
-            
+
             try
             {
                 var fileInfo = new FileInfo(filePath);
@@ -207,25 +234,29 @@ namespace Illustra.Models
                     model.CreationTime = fileInfo.CreationTime;
                     model.LastModified = fileInfo.LastWriteTime;
                     model.FileType = fileInfo.Extension;
-                    
+                    model.FolderPath = fileInfo.DirectoryName ?? string.Empty;
+
                     // Load image dimensions if it's an image file
-                    await Task.Run(() => {
-                        try {
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
                             var imageInfo = new BitmapImage();
                             imageInfo.BeginInit();
                             imageInfo.UriSource = new Uri(filePath);
                             imageInfo.CacheOption = BitmapCacheOption.OnLoad;
                             imageInfo.EndInit();
-                            
+
                             model.Dimensions = $"{imageInfo.PixelWidth} x {imageInfo.PixelHeight}";
-                            
+
                             // Create a small preview
                             var preview = new TransformedBitmap(imageInfo, new System.Windows.Media.ScaleTransform(
                                 100.0 / imageInfo.PixelWidth,
                                 100.0 / imageInfo.PixelHeight));
                             model.Preview = preview;
                         }
-                        catch {
+                        catch
+                        {
                             // Not an image or couldn't load
                             model.Dimensions = "N/A";
                         }
@@ -236,7 +267,7 @@ namespace Illustra.Models
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading file properties: {ex.Message}");
             }
-            
+
             return model;
         }
 
@@ -245,13 +276,13 @@ namespace Illustra.Models
             string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
             int counter = 0;
             double number = bytes;
-            
+
             while (number > 1024 && counter < suffixes.Length - 1)
             {
                 number /= 1024;
                 counter++;
             }
-            
+
             return $"{number:0.##} {suffixes[counter]}";
         }
     }

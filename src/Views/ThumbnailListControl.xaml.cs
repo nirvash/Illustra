@@ -832,6 +832,9 @@ namespace Illustra.Views
                     button.Foreground = Brushes.Gold;
                 }
             }
+
+            // フィルター解除ボタンの状態を更新
+            ClearFilterButton.IsEnabled = selectedRating != -1;
         }
 
         private async void ClearFilter_Click(object sender, RoutedEventArgs e)

@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using Prism.Events;
 using Prism.Ioc;
 using Illustra.Models;
@@ -35,6 +36,7 @@ namespace Illustra.Views
         public PropertyPanelControl()
         {
             InitializeComponent();
+            ImageProperties = new ImagePropertiesModel();
             DataContext = ImageProperties;
 
             Loaded += PropertyPanelControl_Loaded;
@@ -62,15 +64,7 @@ namespace Illustra.Views
             try
             {
                 var fileInfo = new FileInfo(filePath);
-                ImageProperties = new ImagePropertiesModel
-                {
-                    FilePath = filePath,
-                    FileName = fileInfo.Name,
-                    FileSize = fileInfo.Length,
-                    CreationTime = fileInfo.CreationTime,
-                    LastModified = fileInfo.LastWriteTime,
-                    FileType = fileInfo.Extension
-                };
+                ImageProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
             }
             catch (Exception ex)
             {
@@ -100,15 +94,42 @@ namespace Illustra.Views
         {
             if (_currentFileNode != null && PropertiesGrid != null)
             {
-                foreach (var element in PropertiesGrid.Children)
+                // Visual Treeを再帰的に検索
+                var buttonList = FindButtonsInVisualTree(PropertiesGrid);
+
+                foreach (var button in buttonList)
                 {
-                    if (element is Button button && button.Tag != null &&
-                        int.TryParse(button.Tag.ToString(), out int rating))
+                    if (button.Tag != null && int.TryParse(button.Tag.ToString(), out int rating))
                     {
                         button.Content = rating <= _currentFileNode.Rating ? "★" : "☆";
                     }
                 }
             }
+        }
+
+        // Visual Tree内のすべてのButtonを探す再帰関数
+        private List<Button> FindButtonsInVisualTree(DependencyObject parent)
+        {
+            var result = new List<Button>();
+
+            // 子要素の数を取得
+            int childCount = VisualTreeHelper.GetChildrenCount(parent);
+
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                // 子がButtonならリストに追加
+                if (child is Button button)
+                {
+                    result.Add(button);
+                }
+
+                // 再帰的に子の子も検索
+                result.AddRange(FindButtonsInVisualTree(child));
+            }
+
+            return result;
         }
 
         private async void RatingStar_Click(object sender, RoutedEventArgs e)
@@ -134,6 +155,9 @@ namespace Illustra.Views
 
             // UIを更新
             UpdateRatingStars();
+
+            // 非同期操作を待機
+            await Task.CompletedTask;
         }
 
         private void OnRatingChanged(RatingChangedEventArgs args)

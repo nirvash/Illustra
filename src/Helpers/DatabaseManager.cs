@@ -21,7 +21,7 @@ namespace Illustra.Helpers
         private readonly string _dbPath;
         private const int MaxRetryCount = 5;
         private const int RetryDelayMilliseconds = 200;
-        private const int CurrentSchemaVersion = 4; // スキーマバージョンを定義
+        private const int CurrentSchemaVersion = 7; // スキーマバージョンを定義
 
         public DatabaseManager()
         {
@@ -97,18 +97,32 @@ namespace Illustra.Helpers
 
         public async Task<List<FileNodeModel>> GetFileNodesAsync(string folderPath)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             using var db = new DataConnection(_dataProvider, _connectionString);
-            return await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
+            //            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
+            var query = "SELECT * FROM FileNodeModel WHERE FolderPath = @p";
+            var result = await db.QueryToListAsync<FileNodeModel>(query, new { p = folderPath });
+            sw.Stop();
+            Debug.WriteLine($"GetFileNodesAsync executed in {sw.ElapsedMilliseconds} ms");
+            return result;
         }
 
         public async Task<FileNodeModel?> GetFileNodeAsync(string fullPath)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             using var db = new DataConnection(_dataProvider, _connectionString);
-            return await db.GetTable<FileNodeModel>().FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
+            var result = await db.GetTable<FileNodeModel>().FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
+            sw.Stop();
+            Debug.WriteLine($"GetFileNodeAsync executed in {sw.ElapsedMilliseconds} ms");
+            return result;
         }
 
         public async Task<List<FileNodeModel>> GetSortedFileNodesAsync(string folderPath, bool sortByDate, bool sortAscending)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             using var db = new DataConnection(_dataProvider, _connectionString);
             var query = db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath);
 
@@ -121,13 +135,21 @@ namespace Illustra.Helpers
                 query = sortAscending ? query.OrderBy(fn => fn.FileName) : query.OrderByDescending(fn => fn.FileName);
             }
 
-            return await query.ToListAsync();
+            var result = await query.ToListAsync();
+            sw.Stop();
+            Debug.WriteLine($"GetSortedFileNodesAsync executed in {sw.ElapsedMilliseconds} ms");
+            return result;
         }
 
         public async Task<List<FileNodeModel>> GetFileNodesByRatingAsync(string folderPath, int rating)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             using var db = new DataConnection(_dataProvider, _connectionString);
-            return await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath && fn.Rating == rating).ToListAsync();
+            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath && fn.Rating == rating).ToListAsync();
+            sw.Stop();
+            Debug.WriteLine($"GetFileNodesByRatingAsync executed in {sw.ElapsedMilliseconds} ms");
+            return result;
         }
 
         public async Task UpdateRatingAsync(string fullPath, int rating)
@@ -229,11 +251,15 @@ namespace Illustra.Helpers
         private async Task ExecuteWithRetryAsync(Func<Task> operation)
         {
             int retryCount = 0;
+            var sw = new Stopwatch();
             while (true)
             {
                 try
                 {
+                    sw.Start();
                     await operation();
+                    sw.Stop();
+                    Debug.WriteLine($"Query executed in {sw.ElapsedMilliseconds} ms");
                     break;
                 }
                 catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: 'database is locked'
@@ -243,7 +269,13 @@ namespace Illustra.Helpers
                     {
                         throw;
                     }
-                    await Task.Delay(RetryDelayMilliseconds);
+                    int delay = RetryDelayMilliseconds * (int)Math.Pow(2, retryCount - 1); // Exponential backoff
+                    Debug.WriteLine($"Database is locked, retrying in {delay} ms");
+                    await Task.Delay(delay);
+                }
+                finally
+                {
+                    sw.Reset();
                 }
             }
         }

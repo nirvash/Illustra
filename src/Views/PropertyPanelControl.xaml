@@ -109,7 +109,7 @@
                            Text="画像形式: "
                            Margin="0,0,10,5"/>
                 <TextBlock Grid.Row="5" Grid.Column="1"
-                           Text="{Binding ImageFormat}"
+                           Text="{Binding FileType}"
                            Margin="0,0,0,5"/>
             </Grid>
         </Grid>

@@ -164,8 +164,8 @@ public class ThumbnailLoaderHelper
             else
             {
                 fileNodes = _appSettings.SortAscending ?
-                    fileNodes.OrderBy(fn => fn.Name).ToList() :
-                    fileNodes.OrderByDescending(fn => fn.Name).ToList();
+                    fileNodes.OrderBy(fn => fn.FileName).ToList() :
+                    fileNodes.OrderByDescending(fn => fn.FileName).ToList();
             }
 
             Debug.WriteLine($"並べ替え: {sw.ElapsedMilliseconds}ms");

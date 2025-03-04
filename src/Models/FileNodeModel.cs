@@ -3,6 +3,7 @@ using System.Windows.Media.Imaging;
 using System.Runtime.CompilerServices;
 using System.IO;
 using Illustra.Helpers;
+using LinqToDB.Mapping;
 
 namespace Illustra.Models
 {
@@ -13,7 +14,7 @@ namespace Illustra.Models
         Loaded,       // 正常にロードされた
         Error         // ロード中にエラー発生
     }
-
+    [Table(Name = "FileNodeModel")]
     public class FileNodeModel : INotifyPropertyChanged
     {
         // 一時的にデータベース更新を停止するフラグ
@@ -34,7 +35,7 @@ namespace Illustra.Models
                 LastModified = fileInfo.LastWriteTime;
                 FileSize = fileInfo.Length;
                 FileType = Path.GetExtension(filePath);
-                Name = Path.GetFileName(filePath);
+                FileName = Path.GetFileName(filePath);
                 IsImage = IsImageExtension(FileType);
             }
             ThumbnailInfo = thumbnailInfo ?? new ThumbnailInfo(null, ThumbnailState.NotLoaded);
@@ -48,27 +49,41 @@ namespace Illustra.Models
                    extension == ".gif" || extension == ".bmp" || extension == ".webp";
         }
 
-        private string _name = string.Empty;
-        public string Name
+        private string _fileName = string.Empty;
+        [Column, NotNull]
+        public string FileName
         {
-            get => _name;
+            get => _fileName;
             set
             {
-                if (_name != value)
+                if (_fileName != value)
                 {
-                    _name = value;
-                    OnPropertyChanged(nameof(Name));
-                    OnPropertyChanged(nameof(FileName)); // 連動させる
+                    _fileName = value;
+                    OnPropertyChanged(nameof(FileName));
                 }
             }
         }
 
-        public string FullPath { get; set; } = string.Empty;
-
-        public string FolderPath
+        [Column, PrimaryKey, NotNull]
+        public string FullPath
         {
-            get => Path.GetDirectoryName(FullPath) ?? string.Empty;
+            get => _fullPath;
+            set
+            {
+                if (_fullPath != value)
+                {
+                    _fullPath = value;
+                    FolderPath = Path.GetDirectoryName(value) ?? string.Empty;
+                    OnPropertyChanged(nameof(FullPath));
+                    OnPropertyChanged(nameof(FolderPath));
+                }
+            }
         }
+        private string _fullPath = string.Empty;
+
+        // フォルダでフィルタするためのカラム
+        [Column, NotNull]
+        public string FolderPath { get; set; } = string.Empty;
 
         private ThumbnailInfo? _thumbnailInfo = null;
         public ThumbnailInfo? ThumbnailInfo
@@ -84,23 +99,21 @@ namespace Illustra.Models
             }
         }
 
+        [Column, NotNull]
         public DateTime CreationTime { get; set; }
 
+        [Column, NotNull]
         public DateTime LastModified { get; set; }
 
+        [Column, NotNull]
         public long FileSize { get; set; }
 
+        [Column, NotNull]
         public string FileType { get; set; } = string.Empty;
 
-        // データベースと連携するためのプロパティ
-        // Name -> FileName へのマッピング
-        public string FileName
-        {
-            get => Name;
-            set => Name = value;
-        }
-
         private int _rating;
+
+        [Column, NotNull]
         public int Rating
         {
             get => _rating;
@@ -110,17 +123,12 @@ namespace Illustra.Models
                 {
                     _rating = Math.Max(0, Math.Min(5, value)); // 0-5の範囲に制限
                     OnPropertyChanged(nameof(Rating));
-
-                    // レーティング更新が抑制されていない場合のみデータベースを更新
-                    if (!_suppressRatingUpdates)
-                    {
-                        _ = SaveRatingAsync(_rating);  // データベース更新を非同期で実行
-                    }
                 }
             }
         }
 
         private bool _isImage;
+        [Column, NotNull]
         public bool IsImage
         {
             get => _isImage;
