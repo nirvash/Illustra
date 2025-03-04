@@ -2,9 +2,8 @@
 /.idea/
 /*.code-workspace
 
-# .vscode ディレクトリを除外
-.vscode/
-# tasks.json だけは含める
+# .vscode ディレクトリ設定
+.vscode/*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/settings.json
