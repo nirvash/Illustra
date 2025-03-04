@@ -80,6 +80,7 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(SelectFile);
+            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
         }
 
         private void OnFolderSelected(FolderSelectedEventArgs args)
@@ -856,6 +857,15 @@ namespace Illustra.Views
             catch (Exception ex)
             {
                 Debug.WriteLine($"フィルタークリア中にエラーが発生: {ex.Message}");
+            }
+        }
+
+        private void OnRatingChanged(RatingChangedEventArgs args)
+        {
+            var fileNode = _viewModel.Items.FirstOrDefault(fn => fn.FullPath == args.FilePath);
+            if (fileNode != null)
+            {
+                fileNode.Rating = args.Rating;
             }
         }
     }

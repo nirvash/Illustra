@@ -123,28 +123,12 @@ public class ThumbnailLoaderHelper
             {
                 _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
                 FileNodesLoaded?.Invoke(this, EventArgs.Empty);
-                MessageBox.Show($"フォルダ '{folderPath}' へのアクセスが拒否されました。", "アクセスエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 先にUIを空にして、ユーザーに反応を示す
-            _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
-
-            Debug.WriteLine($"UI cleared: {sw.ElapsedMilliseconds}ms");
-
-            // 別スレッドでファイル列挙を行う
-            var imageFilePaths = await Task.Run(() =>
-                Directory.EnumerateFiles(folderPath)
-                    .Where(IsImageFile)
-                    .ToList());
-
-            Debug.WriteLine($"画像ファイル列挙: {sw.ElapsedMilliseconds}ms, {imageFilePaths.Count}件");
-
             // 既存ノードの取得と新規ノードの作成を一括で行う
-            var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, imageFilePaths);
+            var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, IsImageFile);
             var dummyImage = GetDummyImage();
-
-            Debug.WriteLine($"DBからのノード取得と作成: {sw.ElapsedMilliseconds}ms");
 
             // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
             foreach (var node in fileNodes)
@@ -154,23 +138,7 @@ public class ThumbnailLoaderHelper
 
             Debug.WriteLine($"サムネイル情報設定: {sw.ElapsedMilliseconds}ms");
 
-            // 並べ替え（メモリ内で処理）
-            if (_appSettings.SortByDate)
-            {
-                fileNodes = _appSettings.SortAscending ?
-                    fileNodes.OrderBy(fn => fn.CreationTime).ToList() :
-                    fileNodes.OrderByDescending(fn => fn.CreationTime).ToList();
-            }
-            else
-            {
-                fileNodes = _appSettings.SortAscending ?
-                    fileNodes.OrderBy(fn => fn.FileName).ToList() :
-                    fileNodes.OrderByDescending(fn => fn.FileName).ToList();
-            }
-
-            Debug.WriteLine($"並べ替え: {sw.ElapsedMilliseconds}ms");
-
-            // UIへの一括更新
+            // モデルにノードを設定
             _viewModel.Items.ReplaceAll(fileNodes);
             _viewModel.SelectedItem = null;
 
@@ -190,7 +158,6 @@ public class ThumbnailLoaderHelper
         catch (Exception ex)
         {
             Debug.WriteLine($"フォルダ '{folderPath}' の処理中にエラーが発生しました: {ex.Message}");
-            MessageBox.Show($"フォルダ '{folderPath}' の処理中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

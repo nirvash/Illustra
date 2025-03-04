@@ -17,9 +17,6 @@ namespace Illustra.Models
     [Table(Name = "FileNodeModel")]
     public class FileNodeModel : INotifyPropertyChanged
     {
-        // 一時的にデータベース更新を停止するフラグ
-        private static bool _suppressRatingUpdates = false;
-
         public FileNodeModel()
         {
             // デフォルトコンストラクタ（データベースからの復元用）
@@ -28,15 +25,16 @@ namespace Illustra.Models
         public FileNodeModel(string filePath, ThumbnailInfo? thumbnailInfo = null)
         {
             FullPath = filePath;
+            FolderPath = Path.GetDirectoryName(filePath) ?? string.Empty;
+            FileType = Path.GetExtension(filePath);
+            FileName = Path.GetFileName(filePath);
+            IsImage = IsImageExtension(FileType);
             if (File.Exists(filePath))
             {
                 var fileInfo = new FileInfo(filePath);
                 CreationTime = fileInfo.CreationTime;
                 LastModified = fileInfo.LastWriteTime;
                 FileSize = fileInfo.Length;
-                FileType = Path.GetExtension(filePath);
-                FileName = Path.GetFileName(filePath);
-                IsImage = IsImageExtension(FileType);
             }
             ThumbnailInfo = thumbnailInfo ?? new ThumbnailInfo(null, ThumbnailState.NotLoaded);
         }
@@ -73,9 +71,7 @@ namespace Illustra.Models
                 if (_fullPath != value)
                 {
                     _fullPath = value;
-                    FolderPath = Path.GetDirectoryName(value) ?? string.Empty;
                     OnPropertyChanged(nameof(FullPath));
-                    OnPropertyChanged(nameof(FolderPath));
                 }
             }
         }
@@ -83,7 +79,19 @@ namespace Illustra.Models
 
         // フォルダでフィルタするためのカラム
         [Column, NotNull]
-        public string FolderPath { get; set; } = string.Empty;
+        public string FolderPath
+        {
+            get => _folderPath;
+            set
+            {
+                if (_folderPath != value)
+                {
+                    _folderPath = value;
+                    OnPropertyChanged(nameof(FolderPath));
+                }
+            }
+        }
+        private string _folderPath = string.Empty;
 
         private ThumbnailInfo? _thumbnailInfo = null;
         public ThumbnailInfo? ThumbnailInfo
@@ -142,48 +150,7 @@ namespace Illustra.Models
             }
         }
 
-        private static readonly DatabaseManager _db = new();
-
-        /// <summary>
-        /// 一時的にレーティング更新を抑制します
-        /// </summary>
-        /// <param name="suppress">trueで抑制、falseで再開</param>
-        public static void SuppressRatingUpdates(bool suppress)
-        {
-            _suppressRatingUpdates = suppress;
-        }
-
-        /// <summary>
-        /// ファイルノードをデータベースに保存します
-        /// </summary>
-        public async Task SaveAsync()
-        {
-            await _db.SaveFileNodeAsync(this);
-        }
-
-        /// <summary>
-        /// レーティングを更新してデータベースに保存します
-        /// </summary>
-        private async Task SaveRatingAsync(int rating)
-        {
-            try
-            {
-                await _db.UpdateRatingAsync(FullPath, rating);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"レーティングの保存中にエラーが発生: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// レーティングを強制的に保存します（バッチ操作後の更新用）
-        /// </summary>
-        public async Task ForceSaveRatingAsync()
-        {
-            await SaveRatingAsync(_rating);
-        }
-
+        // List View に変更を通知する。データベースへの連携には使わないこと
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

@@ -21,7 +21,7 @@ namespace Illustra.Helpers
         private readonly string _dbPath;
         private const int MaxRetryCount = 5;
         private const int RetryDelayMilliseconds = 200;
-        private const int CurrentSchemaVersion = 7; // スキーマバージョンを定義
+        private const int CurrentSchemaVersion = 8; // スキーマバージョンを定義
 
         public DatabaseManager()
         {
@@ -100,9 +100,7 @@ namespace Illustra.Helpers
             var sw = new Stopwatch();
             sw.Start();
             using var db = new DataConnection(_dataProvider, _connectionString);
-            //            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
-            var query = "SELECT * FROM FileNodeModel WHERE FolderPath = @p";
-            var result = await db.QueryToListAsync<FileNodeModel>(query, new { p = folderPath });
+            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
             sw.Stop();
             Debug.WriteLine($"GetFileNodesAsync executed in {sw.ElapsedMilliseconds} ms");
             return result;
@@ -165,12 +163,19 @@ namespace Illustra.Helpers
         {
             await ExecuteWithRetryAsync(async () =>
             {
-                using var db = new DataConnection(_dataProvider, _connectionString);
-                await db.BulkCopyAsync(fileNodes);
+                try
+                {
+                    using var db = new DataConnection(_dataProvider, _connectionString);
+                    await db.BulkCopyAsync(fileNodes);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"SaveFileNodesBatchAsync中にエラーが発生しました: {ex.Message}");
+                }
             });
         }
 
-        public async Task<List<FileNodeModel>> GetOrCreateFileNodesAsync(string folderPath, IEnumerable<string> filePaths)
+        public async Task<List<FileNodeModel>> GetOrCreateFileNodesAsync(string folderPath, Func<string, bool> fileFilter)
         {
             var sw = new Stopwatch();
             sw.Start();
@@ -186,24 +191,16 @@ namespace Illustra.Helpers
                 Debug.WriteLine($"既存ノード取得: {sw.ElapsedMilliseconds}ms");
                 Debug.WriteLine($"既存ノード数: {existingNodes.Count}");
 
-                // 新規作成が必要なファイルを特定
-                var newFilePaths = filePaths.Where(path => !existingNodeDict.ContainsKey(path)).ToList();
-                var newNodes = new List<FileNodeModel>(newFilePaths.Count);
+                // ディレクトリからファイルパスを列挙
+                var filePaths = Directory.EnumerateFiles(folderPath).Where(fileFilter).ToList();
+                var newNodes = new List<FileNodeModel>(filePaths.Count);
 
-                // 新規ファイルノードを作成
-                foreach (var filePath in newFilePaths)
+                // 最新のファイルノードを作成
+                foreach (var filePath in filePaths)
                 {
                     try
                     {
-                        var fileInfo = new FileInfo(filePath);
-                        var node = new FileNodeModel(filePath)
-                        {
-                            CreationTime = fileInfo.CreationTime,
-                            LastModified = fileInfo.LastWriteTime,
-                            FileSize = fileInfo.Length,
-                            FileType = Path.GetExtension(filePath),
-                            IsImage = true
-                        };
+                        var node = new FileNodeModel(filePath);
                         newNodes.Add(node);
                     }
                     catch (Exception ex)
@@ -212,7 +209,24 @@ namespace Illustra.Helpers
                     }
                 }
 
-                Debug.WriteLine($"新規ノード作成: {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"最新ノード作成: {sw.ElapsedMilliseconds}ms");
+
+                // DB上から該当フォルダのレコードを削除
+                await ExecuteWithRetryAsync(async () =>
+                {
+                    using var db = new DataConnection(_dataProvider, _connectionString);
+                    await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).DeleteAsync();
+                });
+
+                Debug.WriteLine($"既存ノード削除: {sw.ElapsedMilliseconds}ms");
+                // 既存ノードのレーティングを維持
+                foreach (var node in existingNodes)
+                {
+                    if (existingNodeDict.TryGetValue(node.FullPath, out var existingNode))
+                    {
+                        node.Rating = existingNode.Rating;
+                    }
+                }
 
                 // 新規ノードをバッチ保存
                 if (newNodes.Count > 0)
@@ -222,13 +236,11 @@ namespace Illustra.Helpers
 
                 Debug.WriteLine($"新規ノードバッチ保存: {sw.ElapsedMilliseconds}ms");
 
-                // 全ノードを返す
-                var allNodes = existingNodes.Concat(newNodes).ToList();
 
                 sw.Stop();
                 Debug.WriteLine($"GetOrCreateFileNodes処理時間: {sw.ElapsedMilliseconds}ms");
 
-                return allNodes;
+                return newNodes;
             }
             catch (SqliteException ex)
             {
@@ -246,6 +258,15 @@ namespace Illustra.Helpers
         {
             using var db = new DataConnection(_connectionString);
             return await db.GetTable<FileNodeModel>().Where(fn => fn.FullPath == filePath).Select(fn => fn.Rating).FirstOrDefaultAsync();
+        }
+
+        public async Task UpdateFileNode(FileNodeModel fileNode)
+        {
+            await ExecuteWithRetryAsync(async () =>
+            {
+                using var db = new DataConnection(_dataProvider, _connectionString);
+                await db.UpdateAsync(fileNode);
+            });
         }
 
         private async Task ExecuteWithRetryAsync(Func<Task> operation)

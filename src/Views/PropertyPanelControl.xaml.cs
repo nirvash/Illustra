@@ -94,6 +94,7 @@ namespace Illustra.Views
         {
             if (_currentFileNode != null && PropertiesGrid != null)
             {
+                // レーティングが設定されている場合は星を黄色にする
                 // Visual Treeを再帰的に検索
                 var buttonList = FindButtonsInVisualTree(PropertiesGrid);
 
@@ -104,6 +105,9 @@ namespace Illustra.Views
                         button.Content = rating <= _currentFileNode.Rating ? "★" : "☆";
                     }
                 }
+
+                // DBに保存
+                _db.UpdateRatingAsync(_currentFileNode.FullPath, _currentFileNode.Rating);
             }
         }
 
@@ -145,7 +149,6 @@ namespace Illustra.Views
             }
             else
             {
-                // 新しいレーティングを設定
                 _currentFileNode.Rating = rating;
             }
 
