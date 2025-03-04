@@ -37,6 +37,9 @@ public class ThumbnailLoaderHelper
 
     private volatile bool _isLoading = false;
 
+    public bool SortByDate { get; set; } = true;
+    public bool SortAscending { get; set; } = true;
+
     /// <summary>
     /// サムネイルのサイズを設定します
     /// </summary>
@@ -74,6 +77,8 @@ public class ThumbnailLoaderHelper
 
         // 設定を読み込む
         _appSettings = SettingsHelper.GetSettings();
+        SortByDate = _appSettings.SortByDate;
+        SortAscending = _appSettings.SortAscending;
     }
 
     /// <summary>
@@ -128,6 +133,14 @@ public class ThumbnailLoaderHelper
 
             // 既存ノードの取得と新規ノードの作成を一括で行う
             var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, IsImageFile);
+
+            Debug.WriteLine($"ノード取得完了: {sw.ElapsedMilliseconds}ms");
+
+            // ソート条件に従ってノードを並び替え
+            fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending);
+
+            Debug.WriteLine($"ソート完了: {sw.ElapsedMilliseconds}ms");
+
             var dummyImage = GetDummyImage();
 
             // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
@@ -170,14 +183,16 @@ public class ThumbnailLoaderHelper
     {
         try
         {
-            if (_viewModel.Items.Count == 0) return;
+            // フィルタされたアイテムの個数をチェック
+            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
+            if (!filteredItems.Any()) return;
 
             var scrollViewer = FindVisualChild<ScrollViewer>(_thumbnailListBox);
             if (scrollViewer != null)
             {
                 // 最初の画面に表示される項目のみロード（仮想化されている場合は20個程度）
                 var startIndex = 0;
-                var endIndex = Math.Min(20, _viewModel.Items.Count - 1);
+                var endIndex = Math.Min(20, filteredItems.Count() - 1);
 
                 await LoadMoreThumbnailsAsync(startIndex, endIndex);
             }
@@ -244,11 +259,15 @@ public class ThumbnailLoaderHelper
     public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
     {
         var cancellationToken = GetCurrentCancellationToken();
-        var nodes = _viewModel.Items.ToArray();
+
+        // フィルタされていないアイテムのコレクション
+        var allNodes = _viewModel.Items.ToArray();
+        // フィルタされたアイテムのリストを取得（実際に表示されているもの）
+        var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
 
         // インデックスの範囲チェック
         startIndex = Math.Max(0, startIndex);
-        endIndex = Math.Min(nodes.Length - 1, endIndex);
+        endIndex = Math.Min(filteredNodes.Length - 1, endIndex);
 
         if (startIndex > endIndex || startIndex < 0) return;
 
@@ -262,8 +281,8 @@ public class ThumbnailLoaderHelper
 
             int batchEnd = Math.Min(batchStart + batchSize - 1, endIndex);
 
-            // 非同期でバッチ処理を実行
-            var task = ProcessBatchAsync(nodes, batchStart, batchEnd, cancellationToken);
+            // 非同期でバッチ処理を実行（フィルタされたアイテムを使用）
+            var task = ProcessBatchAsync(filteredNodes, batchStart, batchEnd, cancellationToken);
             tasks.Add(task);
 
             // UIがフリーズしないように少し待つ

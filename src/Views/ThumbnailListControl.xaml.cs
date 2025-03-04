@@ -319,6 +319,13 @@ namespace Illustra.Views
                         ThumbnailItemsControl.ScrollIntoView(item);
                         ThumbnailItemsControl.UpdateLayout();
                     }, DispatcherPriority.Render);
+
+                    // 現在表示されている範囲のサムネイルを再ロード
+                    var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    if (scrollViewer != null)
+                    {
+                        await LoadVisibleThumbnailsAsync(scrollViewer);
+                    }
                 }
             }
         }
@@ -463,7 +470,7 @@ namespace Illustra.Views
                     // ItemsControl が初期化されるのを待つ
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
 
-                    if (ThumbnailItemsControl == null || _viewModel.Items.Count == 0)
+                    if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
                         return;
 
                     int firstIndexToLoad = 0;
@@ -487,7 +494,7 @@ namespace Illustra.Views
                     // 前後10個ずつのサムネイルをロード
                     int bufferSize = 10;
                     firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, firstIndexToLoad + bufferSize);
+                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
 
                     // 可視範囲のサムネイルをロード
                     await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
@@ -1020,6 +1027,7 @@ namespace Illustra.Views
         {
             _isSortAscending = !_isSortAscending;
             _appSettings.SortAscending = _isSortAscending;
+            _thumbnailLoader.SortAscending = _isSortAscending;
             SettingsHelper.SaveSettings(_appSettings);
             SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
@@ -1029,6 +1037,7 @@ namespace Illustra.Views
         {
             _isSortByDate = !_isSortByDate;
             _appSettings.SortByDate = _isSortByDate;
+            _thumbnailLoader.SortByDate = _isSortByDate;
             SettingsHelper.SaveSettings(_appSettings);
             SortTypeText.Text = _isSortByDate ? "日付" : "名前";
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
