@@ -11,6 +11,7 @@ using Illustra.Models;
 using Illustra.Events;
 using Illustra.Helpers;
 using System.Diagnostics;
+using Illustra.Controls;
 
 namespace Illustra.Views
 {
@@ -96,15 +97,30 @@ namespace Illustra.Views
         {
             if (_currentFileNode != null && PropertiesGrid != null)
             {
-                // レーティングが設定されている場合は星を黄色にする
-                // Visual Treeを再帰的に検索
                 var buttonList = FindButtonsInVisualTree(PropertiesGrid);
 
                 foreach (var button in buttonList)
                 {
                     if (button.Tag != null && int.TryParse(button.Tag.ToString(), out int rating))
                     {
-                        button.Content = rating <= _currentFileNode.Rating ? "★" : "☆";
+                        var starControl = FindVisualChild<RatingStarControl>(button);
+                        if (starControl != null)
+                        {
+                            // レーティングに応じて塗りつぶし状態を設定
+                            starControl.IsFilled = rating <= _currentFileNode.Rating;
+
+                            // レーティング値に応じた色を設定（空白時は透明）
+                            if (rating <= _currentFileNode.Rating)
+                            {
+                                starControl.StarFill = RatingHelper.GetRatingColor(rating);
+                                starControl.TextColor = RatingHelper.GetTextColor(rating);
+                            }
+                            else
+                            {
+                                starControl.StarFill = Brushes.Transparent;
+                                starControl.TextColor = Brushes.DarkGray;
+                            }
+                        }
                     }
                 }
 
@@ -139,6 +155,36 @@ namespace Illustra.Views
             }
 
             return result;
+        }
+
+        // ヘルパーメソッド: Visual Tree内の特定の型の子要素を検索
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+
+            // Check if we're on the UI thread
+            if (!parent.Dispatcher.CheckAccess())
+            {
+                // If not, invoke the method on the UI thread and wait for the result
+                return parent.Dispatcher.Invoke(() => FindVisualChild<T>(parent));
+            }
+
+            // Now safely on UI thread
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                if (child is T t)
+                {
+                    return t;
+                }
+                var result = FindVisualChild<T>(child);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            return null;
         }
 
         private async void RatingStar_Click(object sender, RoutedEventArgs e)

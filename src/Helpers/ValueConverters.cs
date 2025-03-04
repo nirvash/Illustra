@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace Illustra
+namespace Illustra.Helpers
 {
     public class StringToVisibilityConverter : IValueConverter
     {
@@ -36,30 +36,6 @@ namespace Illustra
         }
     }
 
-    /// <summary>
-    /// レーティングの値を表示・非表示に変換するコンバーター
-    /// </summary>
-    public class RatingToVisibilityConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is int rating && parameter is string strParam &&
-                int.TryParse(strParam, out int starValue))
-            {
-                return rating >= starValue ? Visibility.Visible : Visibility.Collapsed;
-            }
-            return Visibility.Collapsed;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-    }
-}
-
-namespace Illustra.Helpers
-{
     /// <summary>
     /// レーティング値を可視性に変換するコンバーター
     /// </summary>
@@ -132,6 +108,26 @@ namespace Illustra.Helpers
                 return RatingHelper.GetRatingStarWithNumber(rating);
             }
             return "";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// レーティング値に対応したテキスト色に変換するコンバーター
+    /// </summary>
+    public class RatingToTextColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is int rating)
+            {
+                return RatingHelper.GetTextColor(rating);
+            }
+            return RatingHelper.GetTextColor(0);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

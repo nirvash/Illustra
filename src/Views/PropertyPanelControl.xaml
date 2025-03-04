@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Illustra.Views"
+             xmlns:controls="clr-namespace:Illustra.Controls"
+             xmlns:helpers="clr-namespace:Illustra.Helpers"
              mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid x:Name="PropertiesGrid" Margin="10">
@@ -29,23 +31,38 @@
                 <Button x:Name="RatingStar1"
                         Style="{StaticResource RatingStarButton}"
                         Tag="1"
-                        Click="RatingStar_Click"/>
+                        Click="RatingStar_Click">
+                    <controls:RatingStarControl RatingValue="1" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                </Button>
                 <Button x:Name="RatingStar2"
                         Style="{StaticResource RatingStarButton}"
                         Tag="2"
-                        Click="RatingStar_Click"/>
+                        Click="RatingStar_Click">
+                    <controls:RatingStarControl RatingValue="2" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                </Button>
                 <Button x:Name="RatingStar3"
                         Style="{StaticResource RatingStarButton}"
                         Tag="3"
-                        Click="RatingStar_Click"/>
+                        Click="RatingStar_Click">
+                    <controls:RatingStarControl RatingValue="3" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                </Button>
                 <Button x:Name="RatingStar4"
                         Style="{StaticResource RatingStarButton}"
                         Tag="4"
-                        Click="RatingStar_Click"/>
+                        Click="RatingStar_Click">
+                    <controls:RatingStarControl RatingValue="4" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                </Button>
                 <Button x:Name="RatingStar5"
                         Style="{StaticResource RatingStarButton}"
                         Tag="5"
-                        Click="RatingStar_Click"/>
+                        Click="RatingStar_Click">
+                    <controls:RatingStarControl RatingValue="5" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                </Button>
             </StackPanel>
 
             <!-- ファイル情報 -->

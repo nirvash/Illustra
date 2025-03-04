@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
 using System.Windows.Controls.Primitives;
+using Illustra.Controls;
 
 namespace Illustra.Views
 {
@@ -70,6 +71,9 @@ namespace Illustra.Views
             _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
             _thumbnailLoadTimer.Start();
+
+            // フィルターボタンの初期状態を設定
+            UpdateFilterButtonStates(0);
 
             _isInitialized = true;
         }
@@ -833,34 +837,22 @@ namespace Illustra.Views
             // すべてのフィルターボタンをリセット
             foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
             {
-                button.Foreground = Brushes.Gray;
-
-                // タグから位置を取得
                 if (int.TryParse(button.Tag?.ToString(), out int position))
                 {
-                    // 星マークを更新（選択状態または非選択状態）
-                    button.Content = RatingHelper.GetStarAtPosition(position, selectedRating);
-                }
-            }
-
-            // 選択されたレーティング以下の星をハイライト
-            if (selectedRating >= 1)
-            {
-                for (int i = 1; i <= selectedRating; i++)
-                {
-                    var button = GetType().GetField($"Filter{i}",
-                        System.Reflection.BindingFlags.NonPublic |
-                        System.Reflection.BindingFlags.Instance)?.GetValue(this) as Button;
-
-                    if (button != null)
+                    var starControl = FindVisualChild<RatingStarControl>(button);
+                    if (starControl != null)
                     {
-                        button.Foreground = RatingHelper.GetRatingColor(i);
+                        starControl.IsFilled = position <= selectedRating;
+                        starControl.StarFill = position <= selectedRating ?
+                            RatingHelper.GetRatingColor(position) :
+                            Brushes.Transparent;
+                        starControl.TextColor = RatingHelper.GetTextColor(position);
                     }
                 }
             }
 
             // フィルター解除ボタンの状態を更新
-            ClearFilterButton.IsEnabled = selectedRating != 0;
+            ClearFilterButton.IsEnabled = selectedRating > 0;
         }
 
         private void ApplyFilterling(int rating)

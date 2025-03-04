@@ -129,8 +129,8 @@ namespace Illustra.Models
             {
                 if (_rating != value)
                 {
-                    _rating = Math.Max(0, Math.Min(5, value)); // 0-5の範囲に制限
-                    OnPropertyChanged(nameof(Rating));
+                    _rating = value;
+                    OnPropertyChanged();
                 }
             }
         }
