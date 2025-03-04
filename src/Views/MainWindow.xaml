@@ -11,14 +11,14 @@
         Height="600"
         Width="900">
 
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Continue">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- メニューバー -->
-        <Menu Grid.Row="0">
+        <Menu Grid.Row="0" KeyboardNavigation.TabNavigation="None">
             <MenuItem Header="ファイル(_F)">
                 <MenuItem Header="終了(_X)" Click="ExitMenuItem_Click" />
             </MenuItem>
@@ -62,17 +62,21 @@
 
                 <!-- お気に入りフォルダコントロール -->
                 <local:FavoriteFoldersControl Grid.Row="0"
-                    x:Name="FavoriteFolders" />
+                    TabIndex="1"
+                    x:Name="FavoriteFolders"/>
 
                 <!-- フォルダツリーのグリッドスプリッター（水平分割） -->
                 <GridSplitter Grid.Row="1"
                               x:Name="FavoritesSplitter"
                               Height="3"
                               HorizontalAlignment="Stretch"
-                              Background="#FFCCCCCC" />
+                              Background="#FFCCCCCC"
+                              Focusable="False"
+                              KeyboardNavigation.TabNavigation="None"/>
 
                 <!-- フォルダツリーコントロール -->
                 <local:FolderTreeControl Grid.Row="2"
+                    TabIndex="2"
                     x:Name="FolderTree" />
             </Grid>
 
@@ -82,7 +86,9 @@
                         Width="3"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Stretch"
-                        Background="#FFCCCCCC" />
+                        Background="#FFCCCCCC"
+                        Focusable="False"
+                        KeyboardNavigation.TabNavigation="None"/>
 
             <!-- 右側：メインコンテンツエリア -->
             <Grid Grid.Column="2" x:Name="RightPanelGrid">
@@ -94,6 +100,7 @@
 
                 <!-- サムネイル表示エリア -->
                 <local:ThumbnailListControl Grid.Row="0"
+                    TabIndex="3"
                     x:Name="ThumbnailList" />
 
                 <!-- プロパティパネルとのグリッドスプリッター -->
@@ -101,10 +108,12 @@
                               x:Name="PropertySplitter"
                               Height="4"
                               HorizontalAlignment="Stretch"
-                              Background="#FFCCCCCC" />
+                              Background="#FFCCCCCC"
+                              Focusable="False"
+                              KeyboardNavigation.TabNavigation="None" />
 
                 <!-- プロパティペイン -->
-                <Grid Grid.Row="2" Margin="5">
+                <Grid Grid.Row="2" Margin="5" KeyboardNavigation.TabNavigation="None">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>

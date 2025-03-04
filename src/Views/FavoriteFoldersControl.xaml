@@ -4,14 +4,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
+             TabIndex="{Binding TabIndex}"
              d:DesignHeight="300" d:DesignWidth="300">
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FavoriteFoldersTreeView"
                   SelectedItemChanged="FavoriteFoldersTreeView_SelectedItemChanged"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  IsTabStop="True" TabIndex="{Binding TabIndex}"
                   AllowDrop="True"
                   PreviewMouseLeftButtonDown="FavoriteFolders_PreviewMouseLeftButtonDown"
                   PreviewMouseMove="FavoriteFolders_PreviewMouseMove"

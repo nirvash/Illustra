@@ -8,6 +8,7 @@
              xmlns:helpers="clr-namespace:Illustra.Helpers"
              xmlns:local="clr-namespace:Illustra.Controls"
              mc:Ignorable="d"
+             TabIndex="{Binding TabIndex}"
              d:DesignHeight="300" d:DesignWidth="300">
 
     <UserControl.Resources>
@@ -29,50 +30,61 @@
         </Grid.RowDefinitions>
 
         <!-- サムネイルサイズ調整用のスライダー -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
-            <TextBlock Text="サムネイルサイズ:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <Slider x:Name="ThumbnailSizeSlider"
-                    Width="150"
-                    Minimum="60"
-                    Maximum="480"
-                    Value="120"
-                    TickFrequency="20"
-                    IsSnapToTickEnabled="True"
-                    ValueChanged="ThumbnailSizeSlider_ValueChanged"/>
-            <TextBlock x:Name="ThumbnailSizeText" Text="120" VerticalAlignment="Center" Margin="5,0,0,0"/>
+        <Grid Grid.Row="0" Margin="5" KeyboardNavigation.TabNavigation="None">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- サムネイルサイズ -->
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/> <!-- レーティングフィルター -->
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal"  Grid.Column="0">
+                <TextBlock Text="サムネイルサイズ:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock x:Name="ThumbnailSizeText" Text="120" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                <Slider x:Name="ThumbnailSizeSlider"
+                        Width="150"
+                        Minimum="60"
+                        Maximum="480"
+                        Value="120"
+                        TickFrequency="20"
+                        IsSnapToTickEnabled="True"
+                        VerticalAlignment="Center"
+                        ValueChanged="ThumbnailSizeSlider_ValueChanged"/>
+            </StackPanel>
 
             <!-- レーティングフィルター (新規追加) -->
-            <TextBlock Text="レーティング:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <StackPanel Orientation="Horizontal" Margin="0,0,5,0">
-                <Button Tag="1" Click="RatingFilter_Click" x:Name="Filter1" ToolTip="★1でフィルター"
-                        Style="{StaticResource RatingStarButton}" Padding="1">
-                    <local:RatingStarControl RatingValue="1" Height="18" Width="18" IsFilled="False"
-                                             TextColor="{x:Static helpers:RatingHelper.TextColor}" />
-                </Button>
-                <Button Tag="2" Click="RatingFilter_Click" x:Name="Filter2" ToolTip="★2でフィルター"
-                        Style="{StaticResource RatingStarButton}" Padding="1">
-                    <local:RatingStarControl RatingValue="2" Height="18" Width="18" IsFilled="False"
-                                             TextColor="{x:Static helpers:RatingHelper.TextColor}" />
-                </Button>
-                <Button Tag="3" Click="RatingFilter_Click" x:Name="Filter3" ToolTip="★3でフィルター"
-                        Style="{StaticResource RatingStarButton}" Padding="1">
-                    <local:RatingStarControl RatingValue="3" Height="18" Width="18" IsFilled="False"
-                                             TextColor="{x:Static helpers:RatingHelper.TextColor}" />
-                </Button>
-                <Button Tag="4" Click="RatingFilter_Click" x:Name="Filter4" ToolTip="★4でフィルター"
-                        Style="{StaticResource RatingStarButton}" Padding="1">
-                    <local:RatingStarControl RatingValue="4" Height="18" Width="18" IsFilled="False"
-                                             TextColor="{x:Static helpers:RatingHelper.TextColor}" />
-                </Button>
-                <Button Tag="5" Click="RatingFilter_Click" x:Name="Filter5" ToolTip="★5でフィルター"
-                        Style="{StaticResource RatingStarButton}" Padding="1">
-                    <local:RatingStarControl RatingValue="5" Height="18" Width="18" IsFilled="False"
-                                             TextColor="{x:Static helpers:RatingHelper.TextColor}" />
-                </Button>
+            <StackPanel Orientation="Horizontal" Grid.Column="2">
+                <TextBlock Text="レーティング:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,5,0">
+                    <Button Tag="1" Click="RatingFilter_Click" x:Name="Filter1" ToolTip="★1でフィルター"
+                            Style="{StaticResource RatingStarButton}" Padding="1">
+                        <local:RatingStarControl RatingValue="1" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    </Button>
+                    <Button Tag="2" Click="RatingFilter_Click" x:Name="Filter2" ToolTip="★2でフィルター"
+                            Style="{StaticResource RatingStarButton}" Padding="1">
+                        <local:RatingStarControl RatingValue="2" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    </Button>
+                    <Button Tag="3" Click="RatingFilter_Click" x:Name="Filter3" ToolTip="★3でフィルター"
+                            Style="{StaticResource RatingStarButton}" Padding="1">
+                        <local:RatingStarControl RatingValue="3" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    </Button>
+                    <Button Tag="4" Click="RatingFilter_Click" x:Name="Filter4" ToolTip="★4でフィルター"
+                            Style="{StaticResource RatingStarButton}" Padding="1">
+                        <local:RatingStarControl RatingValue="4" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    </Button>
+                    <Button Tag="5" Click="RatingFilter_Click" x:Name="Filter5" ToolTip="★5でフィルター"
+                            Style="{StaticResource RatingStarButton}" Padding="1">
+                        <local:RatingStarControl RatingValue="5" Height="18" Width="18" IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    </Button>
+                </StackPanel>
+                <Button Content="フィルター解除" Click="ClearFilter_Click" Margin="0,0,5,0"
+                        x:Name="ClearFilterButton" IsEnabled="False"/>
             </StackPanel>
-            <Button Content="フィルター解除" Click="ClearFilter_Click" Margin="0,0,5,0"
-                    x:Name="ClearFilterButton" IsEnabled="False"/>
-        </StackPanel>
+        </Grid>
 
         <ListView x:Name="ThumbnailItemsControl"
                   Grid.Row="1"
@@ -90,9 +102,7 @@
                   BorderThickness="0"
                   KeyDown="ThumbnailItemsControl_KeyDown"
                   PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
-                  KeyboardNavigation.DirectionalNavigation="Contained"
-                  KeyboardNavigation.TabNavigation="Cycle"
-                  Focusable="True"
+                  IsTabStop="True" TabIndex="{Binding TabIndex}"
                   FocusVisualStyle="{x:Null}">
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>

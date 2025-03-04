@@ -266,7 +266,7 @@ namespace Illustra.Views
                 if (filePath != null)
                 {
                     SelectThumbnail(filePath);
-                    ThumbnailItemsControl.Focus(); // 初期フォーカスを取得
+                    // ThumbnailItemsControl.Focus(); // 初期フォーカスを取得
                 }
             }
             catch (Exception ex)
@@ -312,7 +312,7 @@ namespace Illustra.Views
 
             // サムネイルにフォーカスを設定
             await Task.Delay(50);
-            ThumbnailItemsControl.Focus();
+            // ThumbnailItemsControl.Focus();
         }
 
         /// <summary>
@@ -476,7 +476,7 @@ namespace Illustra.Views
                 SelectThumbnail(fileNode.FullPath);
 
                 // 親のListViewにフォーカスを与える
-                ThumbnailItemsControl.Focus();
+                // ThumbnailItemsControl.Focus();
             }
         }
 
@@ -486,6 +486,53 @@ namespace Illustra.Views
             {
                 ShowImageViewer(fileNode.FullPath);
                 e.Handled = true;
+            }
+        }
+
+
+        internal void ApplySettings()
+        {
+            // 設定を再読み込み
+            _appSettings = SettingsHelper.GetSettings();
+
+            // サムネイルサイズを設定
+            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
+        }
+
+        /// <summary>
+        /// ウィンドウ全体でのキー入力を処理するハンドラ
+        /// </summary>
+        private void ThumbnailListControl_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // タブキーを無効化 (本当はフォルダーツリーにフォーカスしたい)
+            if (e.Key == Key.Tab)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // ThumbnailItemsControlが有効な場合、キー操作を処理
+            if (_viewModel.Items.Count > 0 &&
+                (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down ||
+                 e.Key == Key.Home || e.Key == Key.End || e.Key == Key.Enter))
+            {
+
+                // Enterキーが押されて選択アイテムがある場合はビューアを表示
+                if (e.Key == Key.Return && _viewModel.SelectedItem != null)
+                {
+                    ShowImageViewer(_viewModel.SelectedItem.FullPath);
+                    e.Handled = true;
+                    return;
+                }
+
+                // 直接ThumbnailItemsControl_KeyDownメソッドを呼び出して処理
+                ThumbnailItemsControl_KeyDown(ThumbnailItemsControl, e);
+
+                // イベントが処理されたことを示す
+                if (e.Handled)
+                {
+                    return;
+                }
             }
         }
 
@@ -745,46 +792,6 @@ namespace Illustra.Views
             _thumbnailLoader.LoadFileNodes(path);
         }
 
-        /// <summary>
-        /// ウィンドウ全体でのキー入力を処理するハンドラ
-        /// </summary>
-        private void ThumbnailListControl_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            // ThumbnailItemsControlが有効な場合、キー操作を処理
-            if (_viewModel.Items.Count > 0 &&
-                (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down ||
-                 e.Key == Key.Home || e.Key == Key.End || e.Key == Key.Enter))
-            {
-                // ウィンドウレベルでキー処理をする前に、ListViewにフォーカスを与える
-                ThumbnailItemsControl.Focus();
-
-                // Enterキーが押されて選択アイテムがある場合はビューアを表示
-                if (e.Key == Key.Return && _viewModel.SelectedItem != null)
-                {
-                    ShowImageViewer(_viewModel.SelectedItem.FullPath);
-                    e.Handled = true;
-                    return;
-                }
-
-                // 直接ThumbnailItemsControl_KeyDownメソッドを呼び出して処理
-                ThumbnailItemsControl_KeyDown(ThumbnailItemsControl, e);
-
-                // イベントが処理されたことを示す
-                if (e.Handled)
-                {
-                    return;
-                }
-            }
-        }
-
-        internal void ApplySettings()
-        {
-            // 設定を再読み込み
-            _appSettings = SettingsHelper.GetSettings();
-
-            // サムネイルサイズを設定
-            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
-        }
 
 
         public void DisplayGeneratedItemsInfo(ListView listView)

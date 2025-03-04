@@ -9,13 +9,14 @@
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300"
+             TabIndex="{Binding TabIndex}"
              x:Name="FileSystemTreeViewControl">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
 
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView ItemsSource="{Binding RootItems}"
                   SelectedItemChanged="TreeView_SelectedItemChanged"
                   ContextMenuOpening="TreeView_ContextMenuOpening"
@@ -23,6 +24,7 @@
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
+                  IsTabStop="True" TabIndex="{Binding TabIndex}"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto">
             <TreeView.ItemTemplate>

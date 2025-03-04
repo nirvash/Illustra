@@ -69,7 +69,6 @@ namespace Illustra.Views
                 {
                     ignoreSelectedChangedOnce = true;
                     item.IsSelected = true;
-                    item.Focus();
                 }
             }
             else if (FavoriteFoldersTreeView.SelectedItem != null)
