@@ -77,6 +77,12 @@ namespace Illustra.Views
             // フィルターボタンの初期状態を設定
             UpdateFilterButtonStates(0);
 
+            // ソート設定を復元
+            _isSortByDate = _appSettings.SortByDate;
+            _isSortAscending = _appSettings.SortAscending;
+            SortTypeText.Text = _isSortByDate ? "日付" : "名前";
+            SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
+
             _isInitialized = true;
         }
 
@@ -90,13 +96,16 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
         }
 
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
             if (args.Path == _currentFolderPath)
                 return;
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             LoadFileNodes(args.Path);
+
+            // ソート条件を適用
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
 
         public void SaveAllData()
@@ -104,6 +113,13 @@ namespace Illustra.Views
             // 現在のサムネイルサイズを保存
             _appSettings.ThumbnailSize = (int)ThumbnailSizeSlider.Value;
             _appSettings.LastSelectedFilePath = _currentSelectedFilePath ?? "";
+
+            // ソート条件を保存
+            _appSettings.SortByDate = _isSortByDate;
+            _appSettings.SortAscending = _isSortAscending;
+
+            // 設定を保存
+            SettingsHelper.SaveSettings(_appSettings);
         }
 
         /// <summary>
@@ -246,6 +262,9 @@ namespace Illustra.Views
                     return;
                 }
 
+                // ソート条件を適用
+                _ = SortThumbnailAsync(_isSortByDate, _isSortAscending);
+
                 string? filePath = null;
                 if (!_isFirstLoaded)
                 {
@@ -268,7 +287,6 @@ namespace Illustra.Views
                 if (filePath != null)
                 {
                     SelectThumbnail(filePath);
-                    // ThumbnailItemsControl.Focus(); // 初期フォーカスを取得
                 }
             }
             catch (Exception ex)
@@ -469,7 +487,7 @@ namespace Illustra.Views
                     // 前後10個ずつのサムネイルをロード
                     int bufferSize = 10;
                     firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
+                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, firstIndexToLoad + bufferSize);
 
                     // 可視範囲のサムネイルをロード
                     await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
@@ -1001,6 +1019,8 @@ namespace Illustra.Views
         private async void SortToggle_Click(object sender, RoutedEventArgs e)
         {
             _isSortAscending = !_isSortAscending;
+            _appSettings.SortAscending = _isSortAscending;
+            SettingsHelper.SaveSettings(_appSettings);
             SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
@@ -1008,6 +1028,8 @@ namespace Illustra.Views
         private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
         {
             _isSortByDate = !_isSortByDate;
+            _appSettings.SortByDate = _isSortByDate;
+            SettingsHelper.SaveSettings(_appSettings);
             SortTypeText.Text = _isSortByDate ? "日付" : "名前";
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
