@@ -271,6 +271,7 @@ namespace Illustra.Views
                 _ = SortThumbnailAsync(_isSortByDate, _isSortAscending);
 
                 string? filePath = null;
+                bool needFocus = !_isFirstLoaded;
                 if (!_isFirstLoaded)
                 {
                     // 初回ロード時の処理
@@ -289,9 +290,27 @@ namespace Illustra.Views
                         filePath = firstItem.FullPath;
                     }
                 }
-                if (filePath != null)
+
+                // 初回起動時のみリストアイテムにフォーカスを設定させる
+                if (needFocus)
                 {
                     SelectThumbnail(filePath);
+                    // 選択中のサムネイルにフォーカスを設定
+                    // レイアウト更新後にフォーカスを設定するための処理
+                    EventHandler layoutUpdatedHandler = null;
+                    layoutUpdatedHandler = (s, e) =>
+                    {
+                        // イベントは一度だけ処理するため、ハンドラを削除
+                        ThumbnailItemsControl.LayoutUpdated -= layoutUpdatedHandler;
+
+                        _ = Dispatcher.InvokeAsync(() =>
+                        {
+                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(ThumbnailItemsControl.SelectedItem) as ListViewItem;
+                            container?.Focus();
+                        }, DispatcherPriority.Input); // InputはRenderの後に処理される
+                    };
+
+                    ThumbnailItemsControl.LayoutUpdated += layoutUpdatedHandler;
                 }
             }
             catch (Exception ex)
@@ -335,7 +354,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void OnSelectFileRequest(string filePath)
+        private void OnSelectFileRequest(string filePath)
         {
             Debug.WriteLine($"OnSelectFileRequest: {filePath}");
             if (_viewModel.Items.Count == 0)
@@ -359,7 +378,7 @@ namespace Illustra.Views
             SelectThumbnail(filePath);
 
             // サムネイルにフォーカスを設定
-            await Task.Delay(50);
+            // await Task.Delay(50);
             // ThumbnailItemsControl.Focus();
         }
 
