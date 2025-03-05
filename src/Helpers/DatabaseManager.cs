@@ -192,7 +192,7 @@ namespace Illustra.Helpers
                 Debug.WriteLine($"既存ノード数: {existingNodes.Count}");
 
                 // ディレクトリからファイルパスを列挙
-                var filePaths = Directory.EnumerateFiles(folderPath).Where(fileFilter).ToList();
+                var filePaths = Directory.EnumerateFiles(folderPath).Where(FileHelper.IsImageFile).ToList();
                 var newNodes = new List<FileNodeModel>(filePaths.Count);
 
                 // 最新のファイルノードを作成
@@ -254,6 +254,81 @@ namespace Illustra.Helpers
             {
                 Debug.WriteLine($"GetOrCreateFileNodesAsync中にエラーが発生しました: {ex.Message}");
                 throw;
+            }
+        }
+
+        public async Task<FileNodeModel> HandleFileRenamedAsync(string oldPath, string newPath)
+        {
+            try
+            {
+                // まずDBから古いパスのノードを探す
+                var fileNode = await GetFileNodeAsync(oldPath);
+
+                // 古いパスのノードが見つからない場合は新規作成
+                if (fileNode == null)
+                {
+                    return await CreateFileNodeAsync(newPath);
+                }
+
+                // ファイル情報を更新
+                var fileInfo = new FileInfo(newPath);
+                if (!fileInfo.Exists)
+                {
+                    Debug.WriteLine($"New file not found: {newPath}");
+                    return null;
+                }
+
+                // 新しいパスの情報で更新
+                fileNode.FullPath = newPath;
+                fileNode.FolderPath = Path.GetDirectoryName(newPath);
+                fileNode.FileName = Path.GetFileName(newPath);
+                fileNode.LastModified = fileInfo.LastWriteTime;
+
+                // DBを更新
+                await UpdateFileNode(fileNode);
+                return fileNode;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error handling renamed file {oldPath} -> {newPath}: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<FileNodeModel> CreateFileNodeAsync(string filePath)
+        {
+            var folderPath = Path.GetDirectoryName(filePath);
+            var fileName = Path.GetFileName(filePath);
+
+            try
+            {
+                // ファイル情報を取得
+                var fileInfo = new FileInfo(filePath);
+                if (!fileInfo.Exists)
+                {
+                    Debug.WriteLine($"File not found: {filePath}");
+                    return null;
+                }
+
+                // 新規ファイルノードを作成
+                var newNode = new FileNodeModel
+                {
+                    FullPath = filePath,
+                    FolderPath = folderPath,
+                    FileName = fileName,
+                    CreationTime = fileInfo.CreationTime,
+                    LastModified = fileInfo.LastWriteTime,
+                    Rating = 0
+                };
+
+                // DBに保存
+                await SaveFileNodeAsync(newNode);
+                return newNode;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error creating file node for {filePath}: {ex.Message}");
+                return null;
             }
         }
 

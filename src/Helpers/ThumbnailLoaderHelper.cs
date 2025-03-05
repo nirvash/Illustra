@@ -132,7 +132,7 @@ public class ThumbnailLoaderHelper
             }
 
             // 既存ノードの取得と新規ノードの作成を一括で行う
-            var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, IsImageFile);
+            var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile);
 
             Debug.WriteLine($"ノード取得完了: {sw.ElapsedMilliseconds}ms");
 
@@ -364,14 +364,8 @@ public class ThumbnailLoaderHelper
         }
     }
 
-    static private bool IsImageFile(string filePath)
-    {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
-        return extension == ".jpg" || extension == ".jpeg" || extension == ".png" ||
-               extension == ".gif" || extension == ".bmp" || extension == ".webp";
-    }
 
-    private BitmapSource GetDummyImage()
+    public BitmapSource GetDummyImage()
     {
         lock (_staticLock)
         {
@@ -450,5 +444,54 @@ public class ThumbnailLoaderHelper
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 新しいファイルノードを作成します
+    /// </summary>
+    /// <param name="path">ファイルパス</param>
+    /// <returns>作成されたファイルノード</returns>
+    public async Task<FileNodeModel?> CreateFileNodeAsync(string path)
+    {
+        try
+        {
+            var fileNode = await _db.CreateFileNodeAsync(path);
+            if (fileNode != null)
+            {
+                fileNode.ThumbnailInfo = new ThumbnailInfo(GetDummyImage(), ThumbnailState.NotLoaded);
+            }
+
+            return fileNode;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ファイルノード作成中にエラーが発生しました: {ex.Message}");
+            return null;
+        }
+    }
+
+
+    /// <summary>
+    /// ファイルの名前変更処理を行います
+    /// </summary>
+    /// <param name="oldPath">変更前のファイルパス</param>
+    /// <param name="newPath">変更後のファイルパス</param>
+    /// <returns>作成された新しいファイルノード</returns>
+    public async Task<FileNodeModel?> HandleFileRenamed(string oldPath, string newPath)
+    {
+        try
+        {
+            var fileNode = await _db.HandleFileRenamedAsync(oldPath, newPath);
+            if (fileNode != null)
+            {
+                fileNode.ThumbnailInfo = new ThumbnailInfo(GetDummyImage(), ThumbnailState.NotLoaded);
+            }
+            return fileNode;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ファイル名変更処理中にエラーが発生しました: {ex.Message}");
+            return null;
+        }
     }
 }

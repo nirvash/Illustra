@@ -15,7 +15,7 @@ using Illustra.Controls;
 
 namespace Illustra.Views
 {
-    public partial class ThumbnailListControl : UserControl, IActiveAware
+    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
     {
         private IEventAggregator _eventAggregator = null!;
         private MainViewModel _viewModel;
@@ -27,6 +27,7 @@ namespace Illustra.Views
         private AppSettings _appSettings;
         private bool _isFirstLoaded = false;
         private ThumbnailLoaderHelper _thumbnailLoader;
+        private FileSystemMonitor _fileSystemMonitor;
 
         private bool _isInitialized = false;
 
@@ -63,6 +64,9 @@ namespace Illustra.Views
             // サムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel);
             _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
+
+            // ファイルシステム監視の初期化
+            _fileSystemMonitor = new FileSystemMonitor(this);
 
             // サムネイルサイズを設定から復元
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
@@ -108,7 +112,16 @@ namespace Illustra.Views
             _viewModel.ApplyRatingFilter(0);
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
+            // 以前のフォルダの監視を停止
+            if (_fileSystemMonitor.IsMonitoring)
+            {
+                _fileSystemMonitor.StopMonitoring();
+            }
+
             LoadFileNodes(folderPath);
+
+            // 新しいフォルダの監視を開始
+            _fileSystemMonitor.StartMonitoring(folderPath);
 
             // ソート条件を適用
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
@@ -258,6 +271,103 @@ namespace Illustra.Views
         /// <summary>
         /// サムネイルのロード完了時に前回選択したファイルを選択する処理
         /// </summary>
+        #region IFileSystemChangeHandler Implementation
+        public void OnFileCreated(string path)
+        {
+            Debug.WriteLine($"File created: {path}");
+            if (!FileHelper.IsImageFile(path)) return;
+
+            Dispatcher.Invoke(async () =>
+            {
+                try
+                {
+                    // 既存のファイルノードをチェック
+                    if (_viewModel.Items.Any(x => x.FullPath == path))
+                    {
+                        Debug.WriteLine($"File already exists in the list: {path}");
+                        return;
+                    }
+
+                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
+                    if (fileNode != null)
+                    {
+                        _viewModel.AddItem(fileNode);
+
+                        // サムネイル生成をトリガー
+                        var index = _viewModel.Items.IndexOf(fileNode);
+                        if (index >= 0)
+                        {
+                            await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error processing created file: {ex.Message}");
+                }
+            });
+        }
+
+        public void OnFileDeleted(string path)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == path);
+                if (fileNode != null)
+                {
+                    _viewModel.Items.Remove(fileNode);
+                }
+            });
+        }
+
+        public void OnFileRenamed(string oldPath, string newPath)
+        {
+            Debug.WriteLine($"File renamed: {oldPath} -> {newPath}");
+            if (!FileHelper.IsImageFile(newPath)) return;
+
+            Dispatcher.Invoke(async () =>
+            {
+                try
+                {
+                    // 一覧から検索
+                    var existingNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == oldPath);
+
+                    // 新規ノードの取得
+                    var newNode = await _thumbnailLoader.HandleFileRenamed(oldPath, newPath);
+                    if (existingNode != null)
+                    {
+                        if (newNode != null)
+                        {
+                            existingNode.FullPath = newNode.FullPath;
+                            existingNode.Rating = newNode.Rating;
+                            existingNode.FileName = newNode.FileName;
+                            existingNode.ThumbnailInfo = newNode.ThumbnailInfo;
+
+                            // サムネイル生成をトリガー
+                            var index = _viewModel.Items.IndexOf(existingNode);
+                            if (index >= 0)
+                            {
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                            }
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"Error processing renamed file: {newPath}. {oldPath} is not found.");
+                        }
+                    }
+                    else if (newNode != null)
+                    {
+                        OnFileCreated(newPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error processing renamed file: {ex.Message}");
+                }
+            });
+        }
+        #endregion
+
         private void OnFileNodesLoaded(object? sender, EventArgs e)
         {
             Debug.WriteLine("OnFileNodesLoaded");
