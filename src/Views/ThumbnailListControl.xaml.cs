@@ -909,7 +909,9 @@ namespace Illustra.Views
                         starControl.StarFill = position <= selectedRating ?
                             RatingHelper.GetRatingColor(position) :
                             Brushes.Transparent;
-                        starControl.TextColor = RatingHelper.GetTextColor(position);
+                        starControl.TextColor = position <= selectedRating ?
+                            RatingHelper.GetTextColor(position) :
+                            Brushes.Gray;
                     }
                 }
             }
