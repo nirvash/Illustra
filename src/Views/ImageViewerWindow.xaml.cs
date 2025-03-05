@@ -10,6 +10,7 @@ using Prism.Ioc;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.Events;
+using System.Windows.Media.Animation;
 
 namespace Illustra.Views
 {
@@ -73,6 +74,8 @@ namespace Illustra.Views
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        private DispatcherTimer hideCursorTimer;
+
         public ImageViewerWindow(string filePath)
         {
             InitializeComponent();
@@ -95,6 +98,14 @@ namespace Illustra.Views
                 {
                     TitleBar.Visibility = Visibility.Collapsed;
                 }
+            };
+
+            // マウスカーソル非表示用のタイマー
+            hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            hideCursorTimer.Tick += (s, args) =>
+            {
+                Mouse.OverrideCursor = Cursors.None;
+                hideCursorTimer.Stop();
             };
 
             // ウィンドウの状態を復元
@@ -543,6 +554,10 @@ namespace Illustra.Views
                 TitleBar.Visibility = Visibility.Collapsed;
                 _titleBarTimer.Stop();
 
+                // マウスカーソルを表示状態に戻す
+                Mouse.OverrideCursor = Cursors.Arrow;
+                hideCursorTimer.Stop();
+
                 // 状態変更をすぐに保存
                 SaveCurrentSettings();
             }
@@ -569,6 +584,10 @@ namespace Illustra.Views
             // 閉じる過程での最初の段階でフルスクリーン状態を保存
             // 共通メソッドを使用して設定を保存
             SaveCurrentSettings();
+
+            // タイマーをキャンセルしてマウスカーソルを表示状態に戻す
+            Mouse.OverrideCursor = Cursors.Arrow;
+            hideCursorTimer.Stop();
 
             base.OnClosing(e);
         }
@@ -622,6 +641,18 @@ namespace Illustra.Views
                 target = VisualTreeHelper.GetParent(target);
             }
             return false;
+        }
+
+        private void MainGrid_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isFullScreen) return;
+
+            MainGrid.Opacity = 1;
+            MainGrid.IsHitTestVisible = true;
+            Mouse.OverrideCursor = Cursors.Arrow;
+
+            hideCursorTimer.Stop();
+            hideCursorTimer.Start();
         }
     }
 }

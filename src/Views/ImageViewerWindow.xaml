@@ -25,7 +25,7 @@
         <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
     </Window.Resources>
 
-    <Grid x:Name="MainGrid">
+    <Grid x:Name="MainGrid" MouseMove="MainGrid_MouseMove">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto" x:Name="SplitterColumn"/> <!-- スプリッター用 -->
