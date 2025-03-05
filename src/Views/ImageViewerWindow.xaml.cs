@@ -152,6 +152,9 @@ namespace Illustra.Views
             PropertyPanel.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
             PropertySplitter.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
 
+            // 保存されていた幅を読み込む
+            _lastPropertyPanelWidth = settings.PropertyColumnWidth;
+
             // プロパティパネル列の幅を設定
             if (!settings.VisiblePropertyPanel)
             {
@@ -160,8 +163,6 @@ namespace Illustra.Views
             }
             else if (settings.PropertyColumnWidth > 0)
             {
-                // 保存されていた幅を読み込む
-                _lastPropertyPanelWidth = settings.PropertyColumnWidth;
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(settings.PropertyColumnWidth);
             }
@@ -356,24 +357,46 @@ namespace Illustra.Views
         {
             if (PropertyPanel.Visibility == Visibility.Visible)
             {
+                // プロパティパネル・スプリッターを非表示にする前に現在の幅を保存
+                _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
+
+                // 幅が0以下の場合はデフォルト値を設定
+                if (_lastPropertyPanelWidth <= 0)
+                {
+                    _lastPropertyPanelWidth = 250;
+                }
+
                 // プロパティパネル・スプリッターを非表示にする
-                _lastPropertyPanelWidth = PropertyPanel.ActualWidth;
                 PropertyPanel.Visibility = Visibility.Collapsed;
                 PropertySplitter.Visibility = Visibility.Collapsed;
+
+                // カラムの幅を0に設定
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
             }
             else
             {
-                // プロパティパネルを表示する：保存していた幅を復元
-                PropertyPanel.Width = _lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250;
+                // プロパティパネルを表示する
                 PropertyPanel.Visibility = Visibility.Visible;
                 PropertySplitter.Visibility = Visibility.Visible;
 
                 // カラムの幅を復元
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250);
+
+                // 保存していた幅または設定から幅を取得
+                double panelWidth = _lastPropertyPanelWidth;
+
+                // 幅が0以下の場合は、設定から取得または既定値を使用
+                if (panelWidth <= 0)
+                {
+                    var settings = ViewerSettingsHelper.LoadSettings();
+                    panelWidth = settings.PropertyColumnWidth > 0 ? settings.PropertyColumnWidth : 250;
+                }
+
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(panelWidth);
             }
+
+            // 設定を保存
             SaveCurrentSettings();
         }
 
@@ -591,6 +614,11 @@ namespace Illustra.Views
         // 現在のウィンドウ設定を保存する共通メソッド
         private void SaveCurrentSettings()
         {
+            // プロパティパネルの幅を取得（非表示の場合は前回保存した値を使用）
+            double propertyWidth = PropertyPanel.Visibility == Visibility.Visible
+                ? MainGrid.ColumnDefinitions[2].ActualWidth
+                : _lastPropertyPanelWidth;
+
             var settings = new ViewerSettings
             {
                 Left = _isFullScreen ? double.NaN : Left,
@@ -599,7 +627,7 @@ namespace Illustra.Views
                 Height = _isFullScreen ? 600 : Height,
                 IsFullScreen = _isFullScreen,
                 VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
-                PropertyColumnWidth = PropertyPanel.ActualWidth
+                PropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250 // 値が0以下の場合はデフォルト値を使用
             };
             ViewerSettingsHelper.SaveSettings(settings);
         }
@@ -672,10 +700,10 @@ namespace Illustra.Views
         {
             if (!_isFullScreen) return;
 
-            MainGrid.Opacity = 1;
-            MainGrid.IsHitTestVisible = true;
-            Mouse.OverrideCursor = Cursors.Arrow;
+            // マウスカーソルを表示
+            Mouse.OverrideCursor = null; // nullに設定することでデフォルトのカーソルに戻す
 
+            // カーソル非表示タイマーをリセット
             hideCursorTimer.Stop();
             hideCursorTimer.Start();
         }

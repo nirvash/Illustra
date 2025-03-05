@@ -69,6 +69,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Stretch"
                     Background="#CCCCCC"
+                    Cursor="SizeWE"
                     Visibility="{Binding ElementName=PropertyPanel, Path=Visibility}" />
 
         <!-- プロパティパネル -->
