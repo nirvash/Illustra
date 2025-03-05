@@ -98,7 +98,8 @@ namespace Illustra.Views
 
         private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (args.Path == _currentFolderPath)
+            string folderPath = args.Path;
+            if (folderPath == _currentFolderPath)
                 return;
 
             // フォルダが変わったらフィルタを自動的に解除
@@ -107,7 +108,7 @@ namespace Illustra.Views
             _viewModel.ApplyRatingFilter(0);
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            LoadFileNodes(args.Path);
+            LoadFileNodes(folderPath);
 
             // ソート条件を適用
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
