@@ -69,7 +69,7 @@ namespace Illustra.Helpers
             _processTimer.Start();
         }
 
-        private void ProcessQueuedEvents(object sender, ElapsedEventArgs e)
+        private void ProcessQueuedEvents(object? sender, ElapsedEventArgs e)
         {
             while (_eventQueue.TryDequeue(out var evt))
             {

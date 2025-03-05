@@ -8,6 +8,7 @@ using Illustra.Events;
 using Illustra.Models;
 using Illustra.ViewModels;
 using System.Diagnostics;
+using System.Collections.Specialized;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
 using System.Windows.Controls.Primitives;
@@ -30,12 +31,19 @@ namespace Illustra.Views
         private FileSystemMonitor _fileSystemMonitor;
 
         private bool _isInitialized = false;
+private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
+private readonly DispatcherTimer _thumbnailLoadTimer;
+private const string CONTROL_ID = "ThumbnailList";
+private bool _isSortAscending = true;
+private bool _isSortByDate = true;
 
-        private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
-        private readonly DispatcherTimer _thumbnailLoadTimer;
-        private const string CONTROL_ID = "ThumbnailList";
-        private bool _isSortAscending = true;
-        private bool _isSortByDate = true;
+// ドラッグ＆ドロップ関連
+private readonly DragDropHelper _dragDropHelper;
+private readonly FileOperationHelper _fileOperationHelper;
+private Point? _dragStartPoint;
+private bool _isDragging;
+private static readonly double DragThreshold = 5.0;
+
 
 
         #region IActiveAware Implementation
@@ -54,6 +62,11 @@ namespace Illustra.Views
             // ViewModelの初期化
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
+
+            // ドラッグ＆ドロップヘルパーの初期化
+            _dragDropHelper = new DragDropHelper();
+            _fileOperationHelper = new FileOperationHelper();
+            _fileOperationHelper.ProgressChanged += OnFileOperationProgress;
 
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
@@ -148,7 +161,7 @@ namespace Illustra.Views
         {
             try
             {
-                var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
                 {
                     double multiplier = _appSettings?.MouseWheelMultiplier ?? 1.0;
@@ -192,7 +205,7 @@ namespace Illustra.Views
         }
         private async void ThumbnailItemsControl_Loaded(object sender, RoutedEventArgs e)
         {
-            var scrollViewer = await Task.Run(() => FindVisualChild<ScrollViewer>(ThumbnailItemsControl));
+            var scrollViewer = await Task.Run(() => UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl));
             if (scrollViewer != null)
             {
                 // 実際のScrollViewerにイベントハンドラを直接登録
@@ -456,7 +469,7 @@ namespace Illustra.Views
                     }, DispatcherPriority.Render);
 
                     // 現在表示されている範囲のサムネイルを再ロード
-                    var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                     if (scrollViewer != null)
                     {
                         await LoadVisibleThumbnailsAsync(scrollViewer);
@@ -748,10 +761,10 @@ namespace Illustra.Views
 
         private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
         {
-            var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
             if (scrollViewer == null) return;
 
-            var panel = FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
+            var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
             if (panel == null) return;
 
             var selectedIndex = ThumbnailItemsControl.SelectedIndex;
@@ -950,7 +963,7 @@ namespace Illustra.Views
                 ThumbnailItemsControl.InvalidateVisual();
 
                 // ScrollViewerも更新
-                var scrollViewer = FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
                 {
                     scrollViewer.InvalidateMeasure();
@@ -965,34 +978,72 @@ namespace Illustra.Views
             }
         }
 
-        // ヘルパーメソッド: 子要素を検索
-        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        private void ThumbnailItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (parent == null) return null;
+            if (!(e.OriginalSource is DependencyObject originalSource))
+                return;
 
-            // Check if we're on the UI thread
-            if (!parent.Dispatcher.CheckAccess())
+            // クリックされた要素に関連するListViewItemを検索
+            var listViewItem = UIHelper.FindAncestor<ListViewItem>(originalSource);
+            if (listViewItem == null)
+                return;
+
+            // ドラッグ開始位置を記録
+            _dragStartPoint = e.GetPosition(this);
+            _isDragging = false;
+        }
+
+        private void ThumbnailItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || !_dragStartPoint.HasValue || _isDragging)
+                return;
+
+            // ドラッグ開始判定
+            Point currentPosition = e.GetPosition(this);
+            Vector diff = _dragStartPoint.Value - currentPosition;
+
+            if (Math.Abs(diff.X) > DragThreshold || Math.Abs(diff.Y) > DragThreshold)
             {
-                // If not, invoke the method on the UI thread and wait for the result
-                return parent.Dispatcher.Invoke(() => FindVisualChild<T>(parent));
+                StartDrag();
+            }
+        }
+
+        private void StartDrag()
+        {
+            var selectedItems = ThumbnailItemsControl.SelectedItems.Cast<FileNodeModel>().ToList();
+            if (!selectedItems.Any())
+                return;
+
+            _isDragging = true;
+
+            // DataObjectの準備
+            var fileDropList = new StringCollection();
+            foreach (var item in selectedItems)
+            {
+                fileDropList.Add(item.FullPath);
             }
 
-            // Now safely on UI thread
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
+            var dataObject = new DataObject();
+            dataObject.SetFileDropList(fileDropList);
 
-                if (child is T t)
-                {
-                    return t;
-                }
-                var result = FindVisualChild<T>(child);
-                if (result != null)
-                {
-                    return result;
-                }
-            }
-            return null;
+            // ドラッグ視覚効果の作成
+            var dragVisual = _dragDropHelper.CreateDragVisual(selectedItems);
+
+            // ドラッグ＆ドロップ操作の開始
+            var result = DragDrop.DoDragDrop(ThumbnailItemsControl, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
+
+            // ドラッグ終了時の処理
+            _isDragging = false;
+            _dragStartPoint = null;
+        }
+
+        private void OnFileOperationProgress(object? sender, FileOperationProgressEventArgs e)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                // 進捗状況をステータスバーなどに表示
+                Debug.WriteLine($"File Operation Progress: {e.CurrentFile}/{e.TotalFiles} - {e.OperationType}");
+            });
         }
         private void ShowImageViewer(string filePath)
         {
@@ -1077,7 +1128,7 @@ namespace Illustra.Views
             {
                 if (int.TryParse(button.Tag?.ToString(), out int position))
                 {
-                    var starControl = FindVisualChild<RatingStarControl>(button);
+                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(button);
                     if (starControl != null)
                     {
                         starControl.IsFilled = position <= selectedRating;
@@ -1141,7 +1192,7 @@ namespace Illustra.Views
                             if (container != null)
                             {
                                 // DataTemplateの中のRatingStarControlを検索
-                                var starControl = FindVisualChild<RatingStarControl>(container);
+                                var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
                                 if (starControl != null)
                                 {
                                     // 明示的にアニメーションを実行
