@@ -1,11 +1,15 @@
+using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.Windows.Media;
+using Prism.Events;
+using Prism.Ioc;
 using Illustra.Helpers;
 using Illustra.Models;
+using Illustra.Events;
 
 namespace Illustra.Views
 {
@@ -272,6 +276,51 @@ namespace Illustra.Views
             {
                 TogglePropertyPanel();
             }
+            // レーティング設定のショートカットキー
+            else if (e.Key >= Key.D1 && e.Key <= Key.D5) // メインの数字キー
+            {
+                SetRating(e.Key - Key.D1 + 1);
+                e.Handled = true;
+            }
+            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad5) // テンキー
+            {
+                SetRating(e.Key - Key.NumPad1 + 1);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D0 || e.Key == Key.NumPad0 || e.Key == Key.X) // レーティングをクリア
+            {
+                SetRating(0);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Z)
+            {
+                SetRating(5);
+                e.Handled = true;
+            }
+        }
+
+        // レーティングを設定する新しいメソッド
+        private async void SetRating(int rating)
+        {
+            if (Properties == null || string.IsNullOrEmpty(_currentFilePath)) return;
+
+            // 同じレーティングの場合はクリア
+            if (Properties.Rating == rating && rating != 0)
+            {
+                rating = 0;
+            }
+
+            // レーティングを更新
+            Properties.Rating = rating;
+
+            // データベースを更新
+            var dbManager = new DatabaseManager();
+            await dbManager.UpdateRatingAsync(_currentFilePath, rating);
+
+            // イベントを発行して他の画面に通知
+            var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
+                new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = rating });
         }
 
         private void TogglePropertyPanel()
