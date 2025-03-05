@@ -44,7 +44,9 @@
                                     <Border x:Name="ItemBorder"
                                            Background="Transparent"
                                            BorderThickness="1"
-                                           Padding="2,1">
+                                           CornerRadius="8"
+                                           Margin="-2"
+                                           Padding="4,3">
                                         <ContentPresenter x:Name="PART_Header"
                                                        ContentSource="Header" />
                                     </Border>
