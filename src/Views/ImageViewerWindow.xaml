@@ -23,6 +23,7 @@
         <helpers:RatingToColorConverter x:Key="RatingToColorConverter"/>
         <helpers:RatingToTextColorConverter x:Key="RatingToTextColorConverter"/>
         <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
 
     <Grid x:Name="MainGrid" MouseMove="MainGrid_MouseMove">
@@ -96,7 +97,24 @@
                        Foreground="White"
                        Margin="10,0,0,0"
                        VerticalAlignment="Center"/>
+                <Button Content="⤢"
+                        Width="24"
+                        Height="24"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0"
+                        Click="FullScreenButton_Click"/>
             </Grid>
         </Border>
+
+        <!-- ウィンドウモードの全画面ボタン -->
+        <Button x:Name="EnterFullScreenButton"
+                Content="⤢"
+                Width="24"
+                Height="24"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="10"
+                Click="FullScreenButton_Click"/>
     </Grid>
 </Window>

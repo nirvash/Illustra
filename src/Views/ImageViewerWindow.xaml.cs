@@ -11,6 +11,8 @@ using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.Events;
 using System.Windows.Media.Animation;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Illustra.Views
 {
@@ -20,6 +22,19 @@ namespace Illustra.Views
         private WindowState _previousWindowState;
         private WindowStyle _previousWindowStyle;
         private bool _isFullScreen = false;
+
+        public bool IsFullScreen
+        {
+            get => _isFullScreen;
+            private set
+            {
+                if (_isFullScreen != value)
+                {
+                    _isFullScreen = value;
+                    OnPropertyChanged(nameof(IsFullScreen));
+                }
+            }
+        }
 
         private readonly DispatcherTimer _titleBarTimer;
         private const double TITLE_BAR_SHOW_AREA = 100; // マウスがここまで近づいたらタイトルバーを表示
@@ -131,7 +146,7 @@ namespace Illustra.Views
             Height = Math.Min(settings.Height, screenHeight);
 
             // フルスクリーン設定を保存して、Loaded後に適用
-            _isFullScreen = settings.IsFullScreen;
+            IsFullScreen = settings.IsFullScreen; // プロパティ経由で設定
 
             // プロパティパネルの表示状態を設定
             PropertyPanel.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
@@ -218,6 +233,9 @@ namespace Illustra.Views
                 // 確実に設定が有効になるように少し待つ
                 await Task.Delay(50);
             }
+
+            // ボタンの表示状態を更新
+            UpdateButtonVisibility();
 
             // フォーカスを確実に設定
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
@@ -342,8 +360,6 @@ namespace Illustra.Views
                 _lastPropertyPanelWidth = PropertyPanel.ActualWidth;
                 PropertyPanel.Visibility = Visibility.Collapsed;
                 PropertySplitter.Visibility = Visibility.Collapsed;
-
-                // カラムの幅を0に設定
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
             }
@@ -527,6 +543,12 @@ namespace Illustra.Views
             }
         }
 
+        private void UpdateButtonVisibility()
+        {
+            // フルスクリーンモードに応じてボタンの表示/非表示を切り替え
+            EnterFullScreenButton.Visibility = IsFullScreen ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private void ToggleFullScreen()
         {
             if (!_isFullScreen)
@@ -538,7 +560,7 @@ namespace Illustra.Views
                 // フルスクリーンに切り替え
                 WindowStyle = WindowStyle.None;
                 WindowState = WindowState.Maximized;
-                _isFullScreen = true;
+                IsFullScreen = true; // プロパティ経由で設定
 
                 // 状態変更をすぐに保存
                 SaveCurrentSettings();
@@ -548,7 +570,7 @@ namespace Illustra.Views
                 // 保存していた状態に戻す
                 WindowStyle = _previousWindowStyle;
                 WindowState = _previousWindowState;
-                _isFullScreen = false;
+                IsFullScreen = false; // プロパティ経由で設定
 
                 // タイトルバーを非表示
                 TitleBar.Visibility = Visibility.Collapsed;
@@ -561,6 +583,9 @@ namespace Illustra.Views
                 // 状態変更をすぐに保存
                 SaveCurrentSettings();
             }
+
+            // ボタンの表示状態を更新
+            UpdateButtonVisibility();
         }
 
         // 現在のウィンドウ設定を保存する共通メソッド
@@ -653,6 +678,11 @@ namespace Illustra.Views
 
             hideCursorTimer.Stop();
             hideCursorTimer.Start();
+        }
+
+        private void FullScreenButton_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleFullScreen();
         }
     }
 }
