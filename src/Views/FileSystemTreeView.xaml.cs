@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using Illustra.Helpers;
 using Illustra.Models;
@@ -56,28 +57,25 @@ namespace Illustra.Views
             }
         }
 
-        // パスを選択するためのパブリックメソッド
-        public void Expand(string path)
+        /// <summary>
+        /// ビジュアルツリーから指定された型の子要素を検索します
+        /// </summary>
+        private static T FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
         {
-            if (_viewModel == null)
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
             {
-                Debug.WriteLine("ViewModel is not initialized.");
-                return;
+                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+
+                if (child != null && child is T)
+                    return (T)child;
+
+                T childOfChild = FindVisualChild<T>(child);
+                if (childOfChild != null)
+                    return childOfChild;
             }
 
-
-            try
-            {
-                _viewModel.Expand(path);
-                // 選択されたアイテムまでスクロール
-                ScrollToSelectedItem();
-            }
-            finally
-            {
-
-            }
+            return null;
         }
-
         private void ScrollToSelectedItem()
         {
             if (_viewModel?.SelectedItem == null)
@@ -86,6 +84,13 @@ namespace Illustra.Views
             var treeView = FindVisualChild<TreeView>(this);
             if (treeView == null)
                 return;
+
+            // 選択されたアイテムが既に表示されているかをチェック
+            if (TreeViewVisibilityHelper.IsItemVisible(treeView, _viewModel.SelectedItem))
+                return;
+
+            // 以下、アイテムが表示されていない場合の処理
+            Debug.WriteLine($"Scrolling to item: {_viewModel.SelectedItem.Name}");
 
             // 選択されたアイテムの親階層を取得
             var path = _viewModel.SelectedItem.FullPath;
@@ -118,12 +123,18 @@ namespace Illustra.Views
                 currentPath = Path.Combine(currentPath, part);
 
                 // 現在のTreeViewItemの子アイテムを探す
-                var nextItem = currentContainer.ItemContainerGenerator.Items
-                    .OfType<FileSystemItemModel>()
-                    .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
+                var nextItem = _viewModel.RootItems.FirstOrDefault(item =>
+                            item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
 
                 if (nextItem == null)
-                    break;
+                {
+                    // 子階層から探す
+                    nextItem = currentContainer.Items.OfType<FileSystemItemModel>()
+                        .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
+
+                    if (nextItem == null)
+                        break;
+                }
 
                 // 子アイテムのTreeViewItemを取得
                 currentContainer.IsExpanded = true;
@@ -135,29 +146,46 @@ namespace Illustra.Views
 
                 // 次の階層に進む
                 currentContainer = nextContainer;
-                currentContainer.BringIntoView();
-                currentContainer.UpdateLayout();
             }
 
             // 最終的な目的のアイテムまでスクロール
-            currentContainer.BringIntoView();
-            currentContainer.IsSelected = true;
+            if (currentContainer != null)
+            {
+                currentContainer.BringIntoView();
+                currentContainer.IsSelected = true;
+            }
         }
 
-        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+
+
+        private TreeViewItem GetTreeViewItemForItem(ItemsControl parent, object item)
         {
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            if (parent == null || item == null)
+                return null;
+
+            if (parent.ItemContainerGenerator.Status != GeneratorStatus.ContainersGenerated)
+                return null;
+
+            var container = parent.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+            if (container != null)
+                return container;
+
+            // 子アイテムを再帰的に検索
+            for (int i = 0; i < parent.Items.Count; i++)
             {
-                var child = VisualTreeHelper.GetChild(parent, i);
+                var childContainer = parent.ItemContainerGenerator.ContainerFromIndex(i) as TreeViewItem;
+                if (childContainer == null)
+                    continue;
 
-                if (child is T t)
-                    return t;
-
-                var result = FindVisualChild<T>(child);
-                if (result != null)
-                    return result;
+                if (childContainer.IsExpanded)
+                {
+                    var result = GetTreeViewItemForItem(childContainer, item);
+                    if (result != null)
+                        return result;
+                }
             }
-            return null!;
+
+            return null;
         }
 
         private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -188,12 +216,12 @@ namespace Illustra.Views
             }
         }
 
-        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             var parentObject = VisualTreeHelper.GetParent(child);
-            if (parentObject == null) return null!;
+            if (parentObject == null) return null;
             if (parentObject is T parent) return parent;
-            return FindVisualParent<T>(parentObject);
+            return FindVisualParent<T>(parentObject); // 再帰的に親を検索
         }
     }
 }

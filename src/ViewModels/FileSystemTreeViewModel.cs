@@ -15,6 +15,7 @@ namespace Illustra.ViewModels
         private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
+        private bool _isExpandingPath = false;
 
         public FileSystemTreeViewModel(IEventAggregator eventAggregator, string? initialPath = null)
         {
@@ -92,7 +93,7 @@ namespace Illustra.ViewModels
                     ((DelegateCommand<FileSystemItemModel>)AddToFavoritesCommand).RaiseCanExecuteChanged();
                     ((DelegateCommand<FileSystemItemModel>)RemoveFromFavoritesCommand).RaiseCanExecuteChanged();
 
-                    if (_selectedItem != null && _selectedItem.IsFolder)
+                    if (_selectedItem != null && _selectedItem.IsFolder && !_isExpandingPath)
                     {
                         // 選択されたフォルダのパスをイベントとして発行
                         _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(

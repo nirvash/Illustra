@@ -306,10 +306,11 @@ namespace Illustra.Views
             {
                 _currentFolderPath = args.Path;
                 ClearPropertiesDisplay();
-
-                // 自身からフォルダ選択イベントを発行する場合
-                _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
-                    new FolderSelectedEventArgs(args.Path, CONTROL_ID));
+                /*
+                                // 自身からフォルダ選択イベントを発行する場合
+                                _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                                    new FolderSelectedEventArgs(args.Path, CONTROL_ID));
+                                    */
             }
         }
 
