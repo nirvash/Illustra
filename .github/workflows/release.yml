@@ -57,26 +57,15 @@ jobs:
           $token = "${{ github.token }}"
           $repoUrl = "${{ github.repository }}"
 
-          # GraphQL APIで未解決のバグ Issues を取得
-          $query = @"
-          query {
-            repository(owner: \"$($repoUrl.Split('/')[0])\", name: \"$($repoUrl.Split('/')[1])\") {
-              issues(first: 5, states: OPEN, labels: ["bug"]) {
-                nodes {
-                  title
-                  url
-                }
-              }
-            }
-          }
-          "@
+          # GraphQLクエリを1行で作成
+          $query = '{ "query": "query { repository(owner: \"' + $repoUrl.Split('/')[0] + '\", name: \"' + $repoUrl.Split('/')[1] + '\") { issues(first: 5, states: OPEN, labels: [\"bug\"]) { nodes { title url } } } }" }'
 
           $headers = @{
             "Authorization" = "Bearer $token"
             "Content-Type" = "application/json"
           }
 
-          $response = Invoke-RestMethod -Uri "https://api.github.com/graphql" -Method Post -Headers $headers -Body (ConvertTo-Json @{ query = $query })
+          $response = Invoke-RestMethod -Uri "https://api.github.com/graphql" -Method Post -Headers $headers -Body $query
 
           # 既知の問題リストを生成
           $issues = $response.data.repository.issues.nodes | ForEach-Object { "- [$($_.title)]($($_.url))" }
