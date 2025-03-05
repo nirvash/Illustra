@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.ComponentModel;
+using System.Windows.Media;
 using Illustra.Helpers;
 using Illustra.Models;
 
@@ -168,8 +169,42 @@ namespace Illustra.Views
             }));
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Tab)
+            {
+                // `PropertyPanel` 内にフォーカスがあるかチェック
+                if (IsDescendantOfPropertyPanel(Keyboard.FocusedElement as DependencyObject, PropertyPanel))
+                {
+                    e.Handled = true; // `Tab` の通常動作を無効化
+                    // フォーカスを解除
+                    FocusManager.SetFocusedElement(this, null);
+                    Keyboard.ClearFocus();
+                    this.Focus(); // フォーカスをウィンドウに戻す
+                }
+            }
+        }
+
+        private bool IsDescendantOfPropertyPanel(DependencyObject target, DependencyObject parent)
+        {
+            while (target != null)
+            {
+                if (target == parent)
+                {
+                    return true;
+                }
+                target = VisualTreeHelper.GetParent(target);
+            }
+            return false;
+        }
+
+
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Tab)
+            {
+                e.Handled = true; // `Tab` キーでのフォーカス移動を抑止
+            }
             if (e.Key == Key.Enter || e.Key == Key.Escape)
             {
                 // クローズ処理を共通メソッドに委託
@@ -432,7 +467,6 @@ namespace Illustra.Views
                 Height = _isFullScreen ? 600 : Height,
                 IsFullScreen = _isFullScreen,
                 VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
-                // パネルが非表示の場合は保存されている幅を使用、表示されている場合は現在の幅を保存
                 PropertyColumnWidth = PropertyPanel.Visibility == Visibility.Visible
                     ? MainGrid.ColumnDefinitions[2].ActualWidth
                     : _lastPropertyPanelWidth
@@ -468,6 +502,36 @@ namespace Illustra.Views
                 NavigateToNextImage();
             }
             e.Handled = true;
+        }
+
+        private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // クリックされた要素を取得
+            var clickedElement = e.OriginalSource as DependencyObject;
+
+            // `PropertyPanel` 内がクリックされたかチェック
+            if (clickedElement != null && IsDescendantOf(clickedElement, PropertyPanel))
+            {
+                return; // `PropertyPanel` 内なら何もしない
+            }
+
+            // フォーカスを解除
+            FocusManager.SetFocusedElement(this, null);
+            Keyboard.ClearFocus();
+            this.Focus();
+        }
+
+        private bool IsDescendantOf(DependencyObject target, DependencyObject parent)
+        {
+            while (target != null)
+            {
+                if (target == parent)
+                {
+                    return true;
+                }
+                target = VisualTreeHelper.GetParent(target);
+            }
+            return false;
         }
     }
 }

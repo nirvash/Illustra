@@ -11,6 +11,8 @@
         Icon="{StaticResource AppIcon}"
         WindowStartupLocation="CenterScreen"
         KeyDown="Window_KeyDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseDown="Window_PreviewMouseDown"
         MouseDoubleClick="Window_MouseDoubleClick"
         MouseMove="Window_MouseMove"
         PreviewMouseWheel="Window_PreviewMouseWheel">
