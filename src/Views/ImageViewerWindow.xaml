@@ -4,6 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Illustra.Views"
+        xmlns:helpers="clr-namespace:Illustra.Helpers"
+        xmlns:controls="clr-namespace:Illustra.Controls"
         mc:Ignorable="d"
         Title="{Binding FileName}"
         Height="600"
@@ -16,20 +18,50 @@
         MouseDoubleClick="Window_MouseDoubleClick"
         MouseMove="Window_MouseMove"
         PreviewMouseWheel="Window_PreviewMouseWheel">
+
+    <Window.Resources>
+        <helpers:RatingToColorConverter x:Key="RatingToColorConverter"/>
+        <helpers:RatingToTextColorConverter x:Key="RatingToTextColorConverter"/>
+        <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
+    </Window.Resources>
+
     <Grid x:Name="MainGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/> <!-- スプリッター用 -->
-            <ColumnDefinition Width="250"/> <!-- プロパティパネル用 -->
+            <ColumnDefinition Width="Auto" x:Name="SplitterColumn"/> <!-- スプリッター用 -->
+            <ColumnDefinition Width="250" x:Name="PropertyColumn"/> <!-- プロパティパネル用 -->
         </Grid.ColumnDefinitions>
 
-        <Image x:Name="MainImage"
-               Grid.Column="0"
-               Source="{Binding ImageSource}"
-               Stretch="Uniform"
-               RenderOptions.BitmapScalingMode="HighQuality"/>
+        <!-- メイン表示領域とレーティング表示をまとめたGrid -->
+        <Grid Grid.Column="0">
+            <!-- メイン表示領域 -->
+            <Image x:Name="MainImage"
+                   Source="{Binding ImageSource}"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Grid>
 
-        <!-- プロパティパネルのスプリッター -->
+        <!-- レーティング表示（全体の右上に配置） -->
+        <controls:RatingStarControl
+            x:Name="RatingStarMark"
+            Grid.ColumnSpan="3"
+            RatingValue="{Binding Properties.Rating, UpdateSourceTrigger=PropertyChanged}"
+            IsFilled="{Binding Properties.Rating, Converter={StaticResource RatingToBooleanConverter}, UpdateSourceTrigger=PropertyChanged}"
+            StarFill="{Binding Properties.Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
+            StrokeColor="White"
+            TextColor="{Binding Properties.Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"
+            Width="28" Height="28"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="0,10,10,0"
+            Panel.ZIndex="1">
+            <controls:RatingStarControl.Effect>
+                <DropShadowEffect Color="Black" Direction="315"
+                                ShadowDepth="1" BlurRadius="2" Opacity="0.7"/>
+            </controls:RatingStarControl.Effect>
+        </controls:RatingStarControl>
+
+        <!-- スプリッター -->
         <GridSplitter x:Name="PropertySplitter"
                     Grid.Column="1"
                     Width="3"
@@ -61,9 +93,9 @@
                 Visibility="Collapsed">
             <Grid>
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
-                           Foreground="White"
-                           Margin="10,0,0,0"
-                           VerticalAlignment="Center"/>
+                       Foreground="White"
+                       Margin="10,0,0,0"
+                       VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>

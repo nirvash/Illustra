@@ -20,6 +20,7 @@
 
             <!-- レーティング用コンバーター (新規追加) -->
             <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
+            <helpers:RatingToBooleanConverter x:Key="RatingToBooleanConverter"/>
 
             <!-- レーティング用スター表示ボタンのスタイル -->
             <Style x:Key="RatingStarButton" TargetType="Button">

@@ -143,14 +143,14 @@ namespace Illustra.Controls
             // StarPathがnullの場合は処理をスキップ
             if (StarPath == null) return;
 
-            // 塗りつぶし状態に応じて色を設定
-            StarPath.Fill = IsFilled ? StarFill : Brushes.Transparent;
+            // レーティング値に基づいて塗りつぶし状態を設定
+            StarPath.Fill = RatingValue > 0 ? StarFill : Brushes.Transparent;
 
             // RatingTextがnullの場合は処理をスキップ
             if (RatingText == null) return;
 
             // テキストの表示状態を設定
-            RatingText.Visibility = RatingValue > 0 && IsFilled ? Visibility.Visible : Visibility.Collapsed;
+            RatingText.Visibility = RatingValue > 0 ? Visibility.Visible : Visibility.Collapsed;
 
             // テキストの色を設定
             RatingText.Foreground = TextColor;

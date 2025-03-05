@@ -31,9 +31,32 @@ namespace Illustra.Views
             {
                 if (_properties != value)
                 {
+                    var oldProperties = _properties;
                     _properties = value;
+
+                    // 明示的に変更を通知
                     OnPropertyChanged(nameof(Properties));
+
+                    // Ratingプロパティの変更を監視するためのハンドラーを設定
+                    if (oldProperties != null)
+                    {
+                        oldProperties.PropertyChanged -= Properties_PropertyChanged;
+                    }
+                    if (_properties != null)
+                    {
+                        _properties.PropertyChanged += Properties_PropertyChanged;
+                    }
                 }
+            }
+        }
+
+        private void Properties_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ImagePropertiesModel.Rating))
+            {
+                // Ratingが変更された時、改めてPropertiesの変更を通知
+                OnPropertyChanged(nameof(Properties));
+                System.Diagnostics.Debug.WriteLine($"Rating changed to: {Properties.Rating}");
             }
         }
 
@@ -100,20 +123,17 @@ namespace Illustra.Views
             PropertySplitter.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
 
             // プロパティパネル列の幅を設定
-            if (settings.PropertyColumnWidth > 0)
+            if (!settings.VisiblePropertyPanel)
+            {
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+            }
+            else if (settings.PropertyColumnWidth > 0)
             {
                 // 保存されていた幅を読み込む
                 _lastPropertyPanelWidth = settings.PropertyColumnWidth;
-
-                // パネルが表示されていない場合は、幅を0に設定
-                if (!settings.VisiblePropertyPanel)
-                {
-                    MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
-                }
-                else
-                {
-                    MainGrid.ColumnDefinitions[2].Width = new GridLength(settings.PropertyColumnWidth);
-                }
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(settings.PropertyColumnWidth);
             }
 
             // ウィンドウが表示された後に実行する処理
@@ -125,17 +145,41 @@ namespace Illustra.Views
             try
             {
                 ImageSource = new BitmapImage(new Uri(filePath));
+
+                // ファイルからプロパティを読み込む
                 var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                Properties = newProperties;
+
+                // データベースからレーティングを読み込んで設定
+                var dbManager = new DatabaseManager();
+                var fileNode = await dbManager.GetFileNodeAsync(filePath);
+                if (fileNode != null)
+                {
+                    newProperties.Rating = fileNode.Rating;
+                }
+
+                // デバッグ出力
+                System.Diagnostics.Debug.WriteLine($"Loading properties for {filePath}");
+                System.Diagnostics.Debug.WriteLine($"Rating value from DB: {newProperties.Rating}");
+
+                Properties = newProperties;  // このセッターで PropertyChanged が発火する
+
+                // セット後の確認
+                System.Diagnostics.Debug.WriteLine($"Properties after set - Rating: {Properties.Rating}");
+
+                _currentFilePath = filePath;
+                FileName = System.IO.Path.GetFileName(filePath);
 
                 // PropertyPanelControlにプロパティを設定
                 if (PropertyPanelControl != null)
                 {
-                    PropertyPanelControl.ImageProperties = newProperties;
-
-                    // DataContextを明示的に更新して確実に表示を更新
-                    PropertyPanelControl.DataContext = newProperties;
+                    PropertyPanelControl.ImageProperties = Properties;
+                    PropertyPanelControl.DataContext = Properties;
+                    System.Diagnostics.Debug.WriteLine($"PropertyPanelControl updated with rating: {Properties.Rating}");
                 }
+
+                OnPropertyChanged(nameof(ImageSource));
+                OnPropertyChanged(nameof(FileName));
+                OnPropertyChanged(nameof(Properties));  // 明示的に Properties の変更を通知
             }
             catch (Exception ex)
             {
@@ -234,19 +278,25 @@ namespace Illustra.Views
         {
             if (PropertyPanel.Visibility == Visibility.Visible)
             {
-                // プロパティパネルを非表示にする：幅を保存してから0に設定
-                _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+                // プロパティパネル・スプリッターを非表示にする
+                _lastPropertyPanelWidth = PropertyPanel.ActualWidth;
                 PropertyPanel.Visibility = Visibility.Collapsed;
                 PropertySplitter.Visibility = Visibility.Collapsed;
+
+                // カラムの幅を0に設定
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
             }
             else
             {
                 // プロパティパネルを表示する：保存していた幅を復元
-                double width = _lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250;
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(width);
+                PropertyPanel.Width = _lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250;
                 PropertyPanel.Visibility = Visibility.Visible;
                 PropertySplitter.Visibility = Visibility.Visible;
+
+                // カラムの幅を復元
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth > 0 ? _lastPropertyPanelWidth : 250);
             }
             SaveCurrentSettings();
         }
@@ -365,15 +415,8 @@ namespace Illustra.Views
         {
             try
             {
-                // 画像を読み込み
-                _currentFilePath = filePath;
-                FileName = System.IO.Path.GetFileName(filePath);
-                LoadImageFromCache(filePath);
+                LoadImageAndProperties(filePath);
                 CacheImages(filePath);
-
-                // データバインディングを更新
-                Title = FileName;
-                MainImage.Source = ImageSource;
 
                 // 親ウィンドウのサムネイル選択を更新
                 Parent?.SyncThumbnailSelection(filePath);
@@ -467,9 +510,7 @@ namespace Illustra.Views
                 Height = _isFullScreen ? 600 : Height,
                 IsFullScreen = _isFullScreen,
                 VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
-                PropertyColumnWidth = PropertyPanel.Visibility == Visibility.Visible
-                    ? MainGrid.ColumnDefinitions[2].ActualWidth
-                    : _lastPropertyPanelWidth
+                PropertyColumnWidth = PropertyPanel.ActualWidth
             };
             ViewerSettingsHelper.SaveSettings(settings);
         }

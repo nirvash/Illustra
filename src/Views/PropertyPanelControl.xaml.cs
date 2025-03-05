@@ -99,6 +99,11 @@ namespace Illustra.Views
                 _currentFileNode = await _db.GetFileNodeAsync(filePath);
                 if (_currentFileNode != null)
                 {
+                    // FileNodeのRatingをImagePropertiesに反映
+                    if (ImageProperties != null)
+                    {
+                        ImageProperties.Rating = _currentFileNode.Rating;
+                    }
                     await UpdateRatingStars();
                 }
             }
@@ -219,6 +224,12 @@ namespace Illustra.Views
                 _currentFileNode.Rating = rating;
             }
 
+            // ImagePropertiesのRatingも更新
+            if (ImageProperties != null)
+            {
+                ImageProperties.Rating = _currentFileNode.Rating;
+            }
+
             // レーティング変更イベントを発行
             _eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
                 new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = _currentFileNode.Rating });
@@ -236,6 +247,11 @@ namespace Illustra.Views
             if (args.FilePath == _currentFilePath && _currentFileNode != null)
             {
                 _currentFileNode.Rating = args.Rating;
+                // ImagePropertiesのRatingも更新
+                if (ImageProperties != null)
+                {
+                    ImageProperties.Rating = args.Rating;
+                }
                 await UpdateRatingStars();
             }
         }

@@ -198,7 +198,7 @@
                                 <local:RatingStarControl
                                     x:Name="RatingStarMark"
                                     RatingValue="{Binding Rating, UpdateSourceTrigger=PropertyChanged}"
-                                    IsFilled="True"
+                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, UpdateSourceTrigger=PropertyChanged}"
                                     StarFill="{Binding Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
                                     StrokeColor="White"
                                     TextColor="{Binding Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"
