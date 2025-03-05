@@ -592,6 +592,29 @@ namespace Illustra.Views
             }
         }
 
+        // レーティングを設定する新しいメソッド
+        private async void SetRating(int rating)
+        {
+            if (_viewModel.SelectedItem == null) return;
+
+            // 同じレーティングの場合は何もしない
+            if (_viewModel.SelectedItem.Rating == rating && rating != 0)
+            {
+                return;
+            }
+
+            // レーティングを更新
+            _viewModel.SelectedItem.Rating = rating;
+
+            // データベースを更新
+            var dbManager = new DatabaseManager();
+            await dbManager.UpdateRatingAsync(_viewModel.SelectedItem.FullPath, rating);
+
+            // イベントを発行して他の画面に通知
+            var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
+                new RatingChangedEventArgs { FilePath = _viewModel.SelectedItem.FullPath, Rating = rating });
+        }
 
         private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
         {
@@ -731,6 +754,28 @@ namespace Illustra.Views
                         e.Handled = true;
                     }
                     break;
+            }
+
+            // レーティング設定のショートカットキー
+            if (e.Key >= Key.D1 && e.Key <= Key.D5) // メインの数字キー
+            {
+                SetRating(e.Key - Key.D1 + 1);
+                e.Handled = true;
+            }
+            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad5) // テンキー
+            {
+                SetRating(e.Key - Key.NumPad1 + 1);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D0 || e.Key == Key.NumPad0 || e.Key == Key.X) // レーティングをクリア
+            {
+                SetRating(0);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Z)
+            {
+                SetRating(5);
+                e.Handled = true;
             }
 
             if (e.Handled && targetItem != null)
