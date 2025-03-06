@@ -82,17 +82,19 @@
                                            Background="Transparent"
                                            BorderThickness="1"
                                            CornerRadius="8"
-                                           Margin="-2,-2,-2,-2"
-                                           Padding="4,3"
-                                           Panel.ZIndex="1"/>
+                                           Margin="18,-2,-2,-2"
+                                           Padding="0,3,4,3"
+                                           Panel.ZIndex="1"
+                                           IsHitTestVisible="False"/>
                                     <!-- 通常の選択状態用のBorder -->
                                     <Border x:Name="ItemBorder"
                                            Background="Transparent"
                                            BorderThickness="1"
                                            CornerRadius="8"
-                                           Margin="-2"
-                                           Padding="4,3"
-                                           Panel.ZIndex="0">
+                                           Margin="18,-2,-2,-2"
+                                           Padding="0,3,4,3"
+                                           Panel.ZIndex="0"
+                                           IsHitTestVisible="True">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -106,35 +108,36 @@
                                                             Height="10"
                                                             IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
                                                             ClickMode="Press"
-                                                            Visibility="{Binding HasItems, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <ToggleButton.Template>
-                                                        <ControlTemplate TargetType="ToggleButton">
-                                                            <Grid Width="10" Height="10">
-                                                                <Border Width="10" Height="10" Background="Transparent"/>
-                                                                <Canvas Width="10" Height="10">
-                                                                    <Path x:Name="ExpanderArrow"
-                                                                        Canvas.Left="1.5" Canvas.Top="2.5"
-                                                                        Fill="Transparent"
-                                                                        Stroke="#666666"
-                                                                        StrokeThickness="0.8"
-                                                                        Data="M 0 0 L 4 4 L 0 8 Z">
-                                                                    </Path>
-                                                                </Canvas>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="ExpanderArrow" Property="Data" Value="M 0 8 L 6 2 L 6 8 Z" />
-                                                                    <Setter TargetName="ExpanderArrow" Property="Fill" Value="#666666"/>
-                                                                    <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#666666"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="ExpanderArrow" Property="Fill" Value="#333333"/>
-                                                                    <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#333333"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </ToggleButton.Template>
-                                                </ToggleButton>
+                                                            Visibility="{Binding HasItems, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                            Panel.ZIndex="100">
+                                                <ToggleButton.Template>
+                                                    <ControlTemplate TargetType="ToggleButton">
+                                                        <Grid Width="10" Height="10" Background="Transparent" IsHitTestVisible="True">
+                                                            <Border Background="Transparent" IsHitTestVisible="True"/>
+                                                            <Canvas IsHitTestVisible="True">
+                                                                <Path x:Name="ExpanderArrow"
+                                                                    Canvas.Left="1.5" Canvas.Top="2.5"
+                                                                    Fill="#AAFFFFFF"
+                                                                    Stroke="#666666"
+                                                                    StrokeThickness="1.2"
+                                                                    Data="M 0 0 L 4 4 L 0 8 Z"
+                                                                    IsHitTestVisible="True"/>
+                                                            </Canvas>
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsChecked" Value="True">
+                                                                <Setter TargetName="ExpanderArrow" Property="Data" Value="M 0 8 L 6 2 L 6 8 Z" />
+                                                                <Setter TargetName="ExpanderArrow" Property="Fill" Value="#666666"/>
+                                                                <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#666666"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="ExpanderArrow" Property="Fill" Value="#333333"/>
+                                                                <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#333333"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </ToggleButton.Template>
+                                            </ToggleButton>
                                             <!-- ヘッダーコンテンツ -->
                                             <ContentPresenter x:Name="PART_Header"
                                                           Grid.Column="1"

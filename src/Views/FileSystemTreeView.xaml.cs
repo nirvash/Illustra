@@ -35,7 +35,6 @@ namespace Illustra.Views
             // マウスイベントハンドラを追加
             AddHandler(TreeViewItem.PreviewMouseDownEvent, new MouseButtonEventHandler(OnPreviewMouseDown), true);
         }
-
         private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             if (_isDragging)
@@ -44,6 +43,7 @@ namespace Illustra.Views
                 e.Handled = true;
             }
         }
+
 
         private void FileSystemTreeView_Loaded(object sender, RoutedEventArgs e)
         {
@@ -305,6 +305,24 @@ namespace Illustra.Views
                     return;
                 }
 
+                // ドラッグ元のパスを取得
+                string[] sourceFiles = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (sourceFiles != null && sourceFiles.Length > 0)
+                {
+                    // ドラッグ元とドロップ先が同じフォルダの場合はドロップ不可
+                    foreach (var file in sourceFiles)
+                    {
+                        string parentDir = Path.GetDirectoryName(file);
+                        if (string.Equals(parentDir, targetModel.FullPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // 同じフォルダへのドロップは禁止
+                            e.Effects = DragDropEffects.None;
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                }
+
                 // Ctrlキーが押されている場合はコピー、それ以外は移動
                 if ((e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey)
                 {
@@ -377,6 +395,18 @@ namespace Illustra.Views
                 {
                     e.Handled = true;
                     return;
+                }
+
+                // ドラッグ元とドロップ先が同じフォルダの場合はドロップ不可
+                foreach (var file in files)
+                {
+                    string parentDir = Path.GetDirectoryName(file);
+                    if (string.Equals(parentDir, targetModel.FullPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 同じフォルダへのドロップは禁止
+                        e.Handled = true;
+                        return;
+                    }
                 }
 
                 // ハイライトを元に戻す
