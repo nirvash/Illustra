@@ -125,7 +125,7 @@ namespace Illustra.Views
 
             return null;
         }
-        private void ScrollToSelectedItem()
+        private async void ScrollToSelectedItem()
         {
             if (_viewModel?.SelectedItem == null)
                 return;
@@ -134,14 +134,7 @@ namespace Illustra.Views
             if (treeView == null)
                 return;
 
-            // 選択されたアイテムが既に表示されているかをチェック
-            if (TreeViewVisibilityHelper.IsItemVisible(treeView, _viewModel.SelectedItem))
-                return;
-
-            // 以下、アイテムが表示されていない場合の処理
-            Debug.WriteLine($"Scrolling to item: {_viewModel.SelectedItem.Name}");
-
-            // 選択されたアイテムの親階層を取得
+            // 選択されたアイテムのパスを取得
             var path = _viewModel.SelectedItem.FullPath;
             var rootPath = Path.GetPathRoot(path);
             if (string.IsNullOrEmpty(rootPath))
@@ -153,55 +146,53 @@ namespace Illustra.Views
             if (rootItem == null)
                 return;
 
-            // ルートから順番にTreeViewItemを取得して展開
-            var currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
-            if (currentContainer == null)
-                return;
-
-            // ルートアイテムをBringIntoViewして、TreeViewItemが生成されるのを待つ
-            currentContainer.BringIntoView();
-            currentContainer.UpdateLayout();
-
             // ルートから目的のアイテムまでのパスを分解
             var pathParts = path.Substring(rootPath.Length)
                 .Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
             var currentPath = rootPath;
+            var currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
+            if (currentContainer == null)
+            {
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
+                if (currentContainer == null) return;
+            }
+
+            // 各階層を展開しながら目的のアイテムまで移動
             foreach (var part in pathParts)
             {
                 currentPath = Path.Combine(currentPath, part);
+                currentContainer.IsExpanded = true;
 
-                // 現在のTreeViewItemの子アイテムを探す
-                var nextItem = _viewModel.RootItems.FirstOrDefault(item =>
-                            item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
+                // UIの更新を待つ
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                var nextItem = currentContainer.Items.OfType<FileSystemItemModel>()
+                    .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
 
                 if (nextItem == null)
-                {
-                    // 子階層から探す
-                    nextItem = currentContainer.Items.OfType<FileSystemItemModel>()
-                        .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
-
-                    if (nextItem == null)
-                        break;
-                }
-
-                // 子アイテムのTreeViewItemを取得
-                currentContainer.IsExpanded = true;
-                currentContainer.UpdateLayout();
+                    break;
 
                 var nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
                 if (nextContainer == null)
-                    break;
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                    nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
+                    if (nextContainer == null) break;
+                }
 
-                // 次の階層に進む
                 currentContainer = nextContainer;
             }
 
             // 最終的な目的のアイテムまでスクロール
             if (currentContainer != null)
             {
-                currentContainer.BringIntoView();
-                currentContainer.IsSelected = true;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    currentContainer.BringIntoView();
+                    currentContainer.IsSelected = true;
+                }, DispatcherPriority.Render);
             }
         }
 
