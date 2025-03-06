@@ -97,7 +97,6 @@
         <ListView x:Name="ThumbnailItemsControl"
                            Grid.Row="1"
                            ItemsSource="{Binding FilteredItems}"
-                           SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                            SelectionMode="Extended"
                            IsSynchronizedWithCurrentItem="True"
                            Loaded="ThumbnailItemsControl_Loaded"

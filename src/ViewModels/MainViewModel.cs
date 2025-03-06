@@ -18,20 +18,36 @@ namespace Illustra.ViewModels
         {
             _filteredItems = CollectionViewSource.GetDefaultView(Items);
             _filteredItems.Filter = FilterItems;
+
+            // SelectedItemsの変更通知を設定
+            _selectedItems.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(SelectedItems));
+            };
         }
 
-        private FileNodeModel? _selectedItem;
-        public FileNodeModel? SelectedItem
+        private readonly ObservableCollection<FileNodeModel> _selectedItems = new();
+        public ObservableCollection<FileNodeModel> SelectedItems => _selectedItems;
+
+        // 通知なしで選択状態を更新するメソッド
+        public void UpdateSelectedItemsSilently(IEnumerable<FileNodeModel> items)
         {
-            get => _selectedItem;
-            set
+            _selectedItems.Clear();
+            foreach (var item in items)
             {
-                if (_selectedItem != value)
-                {
-                    _selectedItem = value;
-                    OnPropertyChanged(nameof(SelectedItem));
-                }
+                _selectedItems.Add(item);
             }
+        }
+
+        // 単一アイテムの追加・削除用メソッド
+        public void AddSelectedItemSilently(FileNodeModel item)
+        {
+            _selectedItems.Add(item);
+        }
+
+        public void RemoveSelectedItemSilently(FileNodeModel item)
+        {
+            _selectedItems.Remove(item);
         }
 
         public ICollectionView FilteredItems => _filteredItems;
@@ -39,7 +55,7 @@ namespace Illustra.ViewModels
         public void ClearItems()
         {
             Items.Clear();
-            SelectedItem = null;
+            SelectedItems.Clear();
         }
 
         public void AddItem(FileNodeModel item)

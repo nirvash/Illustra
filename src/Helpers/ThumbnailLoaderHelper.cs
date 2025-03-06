@@ -153,7 +153,7 @@ public class ThumbnailLoaderHelper
 
             // モデルにノードを設定
             _viewModel.Items.ReplaceAll(fileNodes);
-            _viewModel.SelectedItem = null;
+            _viewModel.SelectedItems.Clear();
 
             // 初期選択を実行する前にUIを更新させる
             FileNodesLoaded?.Invoke(this, EventArgs.Empty);
@@ -214,8 +214,6 @@ public class ThumbnailLoaderHelper
         try
         {
             var fileNodes = _viewModel.Items.ToList();
-
-            var selectedItem = _viewModel.SelectedItem;
 
             var dummyImage = GetDummyImage();
 

@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using WpfToolkit.Controls;
 using System.Windows.Controls.Primitives;
 using Illustra.Controls;
+using System.ComponentModel;
 
 namespace Illustra.Views
 {
@@ -22,7 +23,6 @@ namespace Illustra.Views
         private MainViewModel _viewModel;
         // 画像閲覧用
         private ImageViewerWindow? _currentViewerWindow;
-        private string? _currentSelectedFilePath;
         private string? _currentFolderPath;
 
         private AppSettings _appSettings;
@@ -31,18 +31,41 @@ namespace Illustra.Views
         private FileSystemMonitor _fileSystemMonitor;
 
         private bool _isInitialized = false;
-private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
-private readonly DispatcherTimer _thumbnailLoadTimer;
-private const string CONTROL_ID = "ThumbnailList";
-private bool _isSortAscending = true;
-private bool _isSortByDate = true;
+        private bool _isUpdatingSelection = false;  // 選択状態の更新中フラグ
 
-// ドラッグ＆ドロップ関連
-private readonly DragDropHelper _dragDropHelper;
-private readonly FileOperationHelper _fileOperationHelper;
-private Point? _dragStartPoint;
-private bool _isDragging;
-private static readonly double DragThreshold = 5.0;
+        /// <summary>
+        /// ViewModelの選択状態をUIに反映します
+        /// </summary>
+        private void UpdateUISelection()
+        {
+            if (_isUpdatingSelection) return;
+            _isUpdatingSelection = true;
+
+            try
+            {
+                ThumbnailItemsControl.SelectedItems.Clear();
+                foreach (var item in _viewModel.SelectedItems)
+                {
+                    ThumbnailItemsControl.SelectedItems.Add(item);
+                }
+            }
+            finally
+            {
+                _isUpdatingSelection = false;
+            }
+        }
+        private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
+        private readonly DispatcherTimer _thumbnailLoadTimer;
+        private const string CONTROL_ID = "ThumbnailList";
+        private bool _isSortAscending = true;
+        private bool _isSortByDate = true;
+
+        // ドラッグ＆ドロップ関連
+        private readonly DragDropHelper _dragDropHelper;
+        private readonly FileOperationHelper _fileOperationHelper;
+        private Point? _dragStartPoint;
+        private bool _isDragging;
+        private static readonly double DragThreshold = 25.0;
 
 
 
@@ -144,7 +167,7 @@ private static readonly double DragThreshold = 5.0;
         {
             // 現在のサムネイルサイズを保存
             _appSettings.ThumbnailSize = (int)ThumbnailSizeSlider.Value;
-            _appSettings.LastSelectedFilePath = _currentSelectedFilePath ?? "";
+            _appSettings.LastSelectedFilePath = _viewModel.SelectedItems.LastOrDefault()?.FullPath ?? "";
 
             // ソート条件を保存
             _appSettings.SortByDate = _isSortByDate;
@@ -197,9 +220,9 @@ private static readonly double DragThreshold = 5.0;
             Dispatcher.InvokeAsync(() =>
             {
                 // 選択したアイテムをビューに表示
-                if (_viewModel.SelectedItem != null)
+                if (_viewModel.SelectedItems.Any())
                 {
-                    ThumbnailItemsControl.ScrollIntoView(_viewModel.SelectedItem);
+                    ThumbnailItemsControl.ScrollIntoView(_viewModel.SelectedItems.First());
                 }
             }, DispatcherPriority.Render);
         }
@@ -215,18 +238,45 @@ private static readonly double DragThreshold = 5.0;
             // キーボードナビゲーションのイベントハンドラを追加
             ThumbnailItemsControl.KeyDown += ThumbnailItemsControl_KeyDown;
 
+            // プロパティ変更通知の購読
+            ((INotifyPropertyChanged)_viewModel).PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(MainViewModel.SelectedItems))
+                {
+                    UpdateUISelection();
+                }
+            };
+
             // ListViewの選択状態が変更されたときのイベントハンドラを追加
             ThumbnailItemsControl.SelectionChanged += (s, args) =>
             {
-                if (args.AddedItems.Count > 0 && args.AddedItems[0] is FileNodeModel selectedItem)
+                if (_isUpdatingSelection) return;
+                _isUpdatingSelection = true;
+
+                try
                 {
-                    // _viewModel とは TwoWay バインディングされているため、ここでの更新は不要
-                    _currentSelectedFilePath = selectedItem.FullPath;
+                    // 削除された項目を処理
+                    foreach (FileNodeModel item in args.RemovedItems)
+                    {
+                        _viewModel.RemoveSelectedItemSilently(item);
+                    }
 
-                    // FileSelectedEvent を発行
-                    _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedItem.FullPath);
+                    // 追加された項目を処理
+                    foreach (FileNodeModel item in args.AddedItems)
+                    {
+                        _viewModel.AddSelectedItemSilently(item);
+                    }
 
-                    LoadFilePropertiesAsync(selectedItem.FullPath);
+                    // 最後に選択されたアイテムについてイベントを発行
+                    if (args.AddedItems.Count > 0 && args.AddedItems[args.AddedItems.Count - 1] is FileNodeModel lastSelected)
+                    {
+                        _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(lastSelected.FullPath);
+                        LoadFilePropertiesAsync(lastSelected.FullPath);
+                    }
+                }
+                finally
+                {
+                    _isUpdatingSelection = false;
                 }
             };
         }
@@ -446,7 +496,7 @@ private static readonly double DragThreshold = 5.0;
 
         public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending)
         {
-            var currentSelectedPath = _currentSelectedFilePath;
+            var currentSelectedPath = _viewModel.SelectedItems.LastOrDefault()?.FullPath;
             _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
             await _viewModel.SortItemsAsync(sortByDate, sortAscending);
 
@@ -488,7 +538,7 @@ private static readonly double DragThreshold = 5.0;
             }
 
             // アイテムが選択済みの場合は何もしない
-            if (_viewModel.SelectedItem != null)
+            if (_viewModel.SelectedItems.Any())
             {
                 return;
             }
@@ -525,8 +575,12 @@ private static readonly double DragThreshold = 5.0;
 
             if (matchingItem != null)
             {
-                _currentSelectedFilePath = filePath;
-                _viewModel.SelectedItem = matchingItem;
+                if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
+                {
+                    ThumbnailItemsControl.SelectedItems.Add(matchingItem);
+                }
+                _viewModel.SelectedItems.Clear();
+                _viewModel.SelectedItems.Add(matchingItem);
                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                 // FileSelectedEvent を発行
@@ -565,8 +619,12 @@ private static readonly double DragThreshold = 5.0;
                             matchingItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(x => x.FullPath == filePath);
                             if (matchingItem != null)
                             {
-                                _currentSelectedFilePath = filePath;
-                                _viewModel.SelectedItem = matchingItem;
+                                if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
+                                {
+                                    ThumbnailItemsControl.SelectedItems.Add(matchingItem);
+                                }
+                                _viewModel.SelectedItems.Clear();
+                                _viewModel.SelectedItems.Add(matchingItem);
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                                 // FileSelectedEvent を発行
@@ -663,11 +721,44 @@ private static readonly double DragThreshold = 5.0;
         {
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
             {
-                // ViewModelのSelectedItemを更新
-                SelectThumbnail(fileNode.FullPath);
+                // 複数選択をサポート
+                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    if (_viewModel.SelectedItems.Contains(fileNode))
+                    {
+                        _viewModel.SelectedItems.Remove(fileNode);
+                    }
+                    else
+                    {
+                        _viewModel.SelectedItems.Add(fileNode);
+                    }
+                }
+                else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                {
+                    // Shiftキーが押されている場合は範囲選択
+                    var startIndex = ThumbnailItemsControl.SelectedIndex;
+                    var endIndex = ThumbnailItemsControl.Items.IndexOf(fileNode);
+                    if (startIndex < 0 || endIndex < 0) return;
 
-                // 親のListViewにフォーカスを与える
-                // ThumbnailItemsControl.Focus();
+                    var minIndex = Math.Min(startIndex, endIndex);
+                    var maxIndex = Math.Max(startIndex, endIndex);
+                    for (int i = minIndex; i <= maxIndex; i++)
+                    {
+                        var item = ThumbnailItemsControl.Items[i] as FileNodeModel;
+                        if (item != null && !_viewModel.SelectedItems.Contains(item))
+                        {
+                            _viewModel.SelectedItems.Add(item);
+                        }
+                    }
+                }
+                else
+                {
+                    // 単一選択
+                    _viewModel.SelectedItems.Clear();
+                    _viewModel.SelectedItems.Add(fileNode);
+                }
+
+                e.Handled = true;
             }
         }
 
@@ -717,9 +808,9 @@ private static readonly double DragThreshold = 5.0;
             {
 
                 // Enterキーが押されて選択アイテムがある場合はビューアを表示
-                if (e.Key == Key.Return && _viewModel.SelectedItem != null)
+                if (e.Key == Key.Return && _viewModel.SelectedItems.Any())
                 {
-                    ShowImageViewer(_viewModel.SelectedItem.FullPath);
+                    ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
                     e.Handled = true;
                     return;
                 }
@@ -738,25 +829,29 @@ private static readonly double DragThreshold = 5.0;
         // レーティングを設定する新しいメソッド
         private async void SetRating(int rating)
         {
-            if (_viewModel.SelectedItem == null) return;
+            if (!_viewModel.SelectedItems.Any()) return;
 
-            // 同じレーティングの場合は何もしない
-            if (_viewModel.SelectedItem.Rating == rating && rating != 0)
-            {
-                return;
-            }
-
-            // レーティングを更新
-            _viewModel.SelectedItem.Rating = rating;
-
-            // データベースを更新
             var dbManager = new DatabaseManager();
-            await dbManager.UpdateRatingAsync(_viewModel.SelectedItem.FullPath, rating);
-
-            // イベントを発行して他の画面に通知
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
-                new RatingChangedEventArgs { FilePath = _viewModel.SelectedItem.FullPath, Rating = rating });
+
+            foreach (var selectedItem in _viewModel.SelectedItems)
+            {
+                // 同じレーティングの場合はスキップ
+                if (selectedItem.Rating == rating && rating != 0)
+                {
+                    continue;
+                }
+
+                // レーティングを更新
+                selectedItem.Rating = rating;
+
+                // データベースを更新
+                await dbManager.UpdateRatingAsync(selectedItem.FullPath, rating);
+
+                // イベントを発行して他の画面に通知
+                eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
+                    new RatingChangedEventArgs { FilePath = selectedItem.FullPath, Rating = rating });
+            }
         }
 
         private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
@@ -767,7 +862,10 @@ private static readonly double DragThreshold = 5.0;
             var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
             if (panel == null) return;
 
-            var selectedIndex = ThumbnailItemsControl.SelectedIndex;
+            var selectedIndex = ThumbnailItemsControl.SelectedItems
+                .Cast<FileNodeModel>()
+                .Select(x => ThumbnailItemsControl.Items.IndexOf(x))
+                .Last(); // 最後に選択されたアイテムのインデックス
             if (selectedIndex == -1 && _viewModel.FilteredItems.Cast<FileNodeModel>().Any())
             {
                 // 選択がない場合は先頭を選択
@@ -785,9 +883,9 @@ private static readonly double DragThreshold = 5.0;
             switch (e.Key)
             {
                 case Key.Return:  // Enterキーの代わりにReturnを使用
-                    if (_viewModel.SelectedItem != null)
+                    if (_viewModel.SelectedItems.Any())
                     {
-                        ShowImageViewer(_viewModel.SelectedItem.FullPath);
+                        ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
                         e.Handled = true;
                         return;
                     }
@@ -929,8 +1027,8 @@ private static readonly double DragThreshold = 5.0;
                 Debug.WriteLine($"target: {index}, path: {targetItem.FullPath}");
 
                 // ViewModelを通じて選択を更新
-                _viewModel.SelectedItem = targetItem;
-                _currentSelectedFilePath = targetItem.FullPath;
+                _viewModel.SelectedItems.Clear();
+                _viewModel.SelectedItems.Add(targetItem);
                 // TBD: ファイルを開いたイベント発火
                 // LoadFilePropertiesAsync(targetItem.FullPath);
 
@@ -988,9 +1086,13 @@ private static readonly double DragThreshold = 5.0;
             if (listViewItem == null)
                 return;
 
-            // ドラッグ開始位置を記録
-            _dragStartPoint = e.GetPosition(this);
-            _isDragging = false;
+            // Ctrlキーが押されている場合はドラッグ開始位置を記録しない
+            if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                // ドラッグ開始位置を記録
+                _dragStartPoint = e.GetPosition(this);
+                _isDragging = false;
+            }
         }
 
         private void ThumbnailItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -1004,7 +1106,11 @@ private static readonly double DragThreshold = 5.0;
 
             if (Math.Abs(diff.X) > DragThreshold || Math.Abs(diff.Y) > DragThreshold)
             {
-                StartDrag();
+                // Ctrlキーが押されている場合はドラッグを開始しない
+                if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    StartDrag();
+                }
             }
         }
 
@@ -1180,31 +1286,34 @@ private static readonly double DragThreshold = 5.0;
                 ApplyFilterling(_currentRatingFilter); // フィルターを再適用
 
                 // 選択中のファイルのレーティングが変更された場合はアニメーション実行
-                if (_viewModel.SelectedItem != null && _viewModel.SelectedItem.FullPath == args.FilePath)
+                foreach (var selectedItem in _viewModel.SelectedItems)
                 {
-                    // UIスレッドで実行
-                    Dispatcher.InvokeAsync(() =>
+                    if (selectedItem.FullPath == args.FilePath)
                     {
-                        try
+                        // UIスレッドで実行
+                        Dispatcher.InvokeAsync(() =>
                         {
-                            // 選択中アイテムのコンテナを取得
-                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(_viewModel.SelectedItem) as ListViewItem;
-                            if (container != null)
+                            try
                             {
-                                // DataTemplateの中のRatingStarControlを検索
-                                var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
-                                if (starControl != null)
+                                // 選択中アイテムのコンテナを取得
+                                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                                if (container != null)
                                 {
-                                    // 明示的にアニメーションを実行
-                                    starControl.PlayAnimation();
+                                    // DataTemplateの中のRatingStarControlを検索
+                                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
+                                    if (starControl != null)
+                                    {
+                                        // 明示的にアニメーションを実行
+                                        starControl.PlayAnimation();
+                                    }
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"アニメーション実行中にエラー: {ex.Message}");
-                        }
-                    }, DispatcherPriority.Background);
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"アニメーション実行中にエラー: {ex.Message}");
+                            }
+                        }, DispatcherPriority.Background);
+                    }
                 }
             }
         }
