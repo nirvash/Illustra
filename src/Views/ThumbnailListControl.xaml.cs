@@ -1270,6 +1270,102 @@ namespace Illustra.Views
             }
         }
 
+        private void ThumbnailItemsControl_DragEnter(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            // ドロップされるファイルを取得
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files == null || !files.Any())
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            // 画像ファイルが含まれているかチェック
+            bool hasImageFile = files.Any(file => FileHelper.IsImageFile(file));
+            if (!hasImageFile)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            // Ctrlキーが押されている場合はコピー、それ以外は移動
+            e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) != 0 ?
+                DragDropEffects.Copy : DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private async void ThumbnailItemsControl_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files == null)
+                return;
+
+            var targetPath = _currentFolderPath;
+            if (string.IsNullOrEmpty(targetPath))
+                return;
+
+            // 画像ファイルのみをフィルタリング
+            var imageFiles = files.Where(file => FileHelper.IsImageFile(file)).ToList();
+            if (!imageFiles.Any())
+                return;
+
+            bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+            var operation = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
+
+            try
+            {
+                foreach (var file in imageFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    var destPath = Path.Combine(targetPath, fileName);
+
+                    if (isCopy)
+                    {
+                        // コピー処理
+                        await Task.Run(() => File.Copy(file, destPath, true));
+                    }
+                    else
+                    {
+                        // 移動処理（同じドライブ内ならFile.Move、異なるドライブ間ではコピー&削除）
+                        if (Path.GetPathRoot(file) == Path.GetPathRoot(destPath))
+                        {
+                            await Task.Run(() => File.Move(file, destPath, true));
+                        }
+                        else
+                        {
+                            await Task.Run(() =>
+                            {
+                                File.Copy(file, destPath, true);
+                                File.Delete(file);
+                            });
+                        }
+                    }
+                }
+
+                e.Effects = operation;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ファイルの{(isCopy ? "コピー" : "移動")}中にエラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                e.Effects = DragDropEffects.None;
+            }
+
+            e.Handled = true;
+        }
+
         private void StartDrag()
         {
             if (_isDragging) return;

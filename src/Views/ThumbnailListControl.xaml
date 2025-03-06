@@ -112,6 +112,8 @@
                            PreviewMouseLeftButtonDown="ThumbnailItemsControl_PreviewMouseLeftButtonDown"
                            PreviewMouseMove="ThumbnailItemsControl_PreviewMouseMove"
                            AllowDrop="True"
+                           Drop="ThumbnailItemsControl_Drop"
+                           DragEnter="ThumbnailItemsControl_DragEnter"
                            KeyboardNavigation.TabNavigation="None"
                            IsTabStop="True" TabIndex="3"
                            FocusVisualStyle="{x:Null}">
