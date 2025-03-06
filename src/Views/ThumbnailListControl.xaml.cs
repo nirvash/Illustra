@@ -1198,6 +1198,48 @@ namespace Illustra.Views
             // ドラッグ終了時の処理
             _isDragging = false;
             _dragStartPoint = null;
+
+            // ドラッグ＆ドロップ操作の結果を処理
+            ProcessDragDropResult(result, selectedItems);
+        }
+
+        /// <summary>
+        /// ドラッグ＆ドロップ操作の結果を処理します
+        /// </summary>
+        private async void ProcessDragDropResult(DragDropEffects result, List<FileNodeModel> draggedItems)
+        {
+            if (result == DragDropEffects.Move)
+            {
+                // 移動操作の場合、非同期でファイルの存在を確認
+                await Task.Run(() =>
+                {
+                    var removedItems = new List<FileNodeModel>();
+
+                    foreach (var item in draggedItems)
+                    {
+                        // ファイルが存在しない場合は削除リストに追加
+                        if (!File.Exists(item.FullPath))
+                        {
+                            removedItems.Add(item);
+                        }
+                    }
+
+                    // UIスレッドで一覧から削除
+                    if (removedItems.Any())
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            foreach (var item in removedItems)
+                            {
+                                _viewModel.Items.Remove(item);
+                            }
+
+                            // 削除されたファイル数を通知（デバッグ用）
+                            Debug.WriteLine($"{removedItems.Count}個のファイルが移動により一覧から削除されました");
+                        });
+                    }
+                });
+            }
         }
 
         private void OnFileOperationProgress(object? sender, FileOperationProgressEventArgs e)

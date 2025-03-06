@@ -16,17 +16,21 @@
     </UserControl.Resources>
 
     <Grid KeyboardNavigation.TabNavigation="Local">
-        <TreeView ItemsSource="{Binding RootItems}"
-                  SelectedItemChanged="TreeView_SelectedItemChanged"
-                  ContextMenuOpening="TreeView_ContextMenuOpening"
-                  VirtualizingStackPanel.IsVirtualizing="True"
-                  VirtualizingStackPanel.VirtualizationMode="Recycling"
-                  HorizontalAlignment="Stretch"
-                  VerticalAlignment="Stretch"
-                  IsTabStop="True" TabIndex="2"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                  Padding="0,0,0,0">
+        <TreeView x:Name="FolderTreeView"
+                   ItemsSource="{Binding RootItems}"
+                   SelectedItemChanged="TreeView_SelectedItemChanged"
+                   ContextMenuOpening="TreeView_ContextMenuOpening"
+                   VirtualizingStackPanel.IsVirtualizing="True"
+                   VirtualizingStackPanel.VirtualizationMode="Recycling"
+                   HorizontalAlignment="Stretch"
+                   VerticalAlignment="Stretch"
+                   IsTabStop="True" TabIndex="2"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   Padding="0,0,0,0"
+                   AllowDrop="True"
+                   Drop="TreeView_Drop"
+                   DragOver="TreeView_DragOver">
             <TreeView.Resources>
                 <!-- SystemColors.HighlightBrushKey と InactiveSelectionHighlightBrushKey を上書き -->
                 <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
