@@ -812,7 +812,9 @@ namespace Illustra.Views
             var dbManager = new DatabaseManager();
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
 
-            foreach (var selectedItem in _viewModel.SelectedItems)
+            // W/A 操作中にレーティングフィルタ適用によって SelectedItems が変更されるのでコピー
+            var items = _viewModel.SelectedItems.Cast<FileNodeModel>().ToList();
+            foreach (var selectedItem in items)
             {
                 // 同じレーティングの場合はスキップ
                 if (selectedItem.Rating == rating && rating != 0)
@@ -826,7 +828,7 @@ namespace Illustra.Views
                 // データベースを更新
                 await dbManager.UpdateRatingAsync(selectedItem.FullPath, rating);
 
-                // イベントを発行して他の画面に通知
+                // イベントを発行して他の画面に通知 (複数まとめて通知させたほうがよさそう)
                 eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
                     new RatingChangedEventArgs { FilePath = selectedItem.FullPath, Rating = rating });
             }
