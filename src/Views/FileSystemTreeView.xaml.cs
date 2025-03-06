@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
@@ -30,6 +31,18 @@ namespace Illustra.Views
             InitializeComponent();
             Loaded += FileSystemTreeView_Loaded;
             _fileOperationHelper = new FileOperationHelper();
+
+            // マウスイベントハンドラを追加
+            AddHandler(TreeViewItem.PreviewMouseDownEvent, new MouseButtonEventHandler(OnPreviewMouseDown), true);
+        }
+
+        private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragging)
+            {
+                // ドラッグ中はマウスイベントをキャンセル
+                e.Handled = true;
+            }
         }
 
         private void FileSystemTreeView_Loaded(object sender, RoutedEventArgs e)
@@ -59,24 +72,55 @@ namespace Illustra.Views
 
                 // 選択されたアイテムまでスクロール
                 ScrollToSelectedItem();
+
+                // ドラッグ＆ドロップ中のハイライトをクリア
+                if (_lastHighlightedItem != null)
+                {
+                    ResetHighlight(_lastHighlightedItem);
+                    _lastHighlightedItem = null;
+                }
+
+                // 選択されたアイテムのTreeViewItemを取得して更新を強制
+                var treeView = sender as TreeView;
+                if (treeView != null)
+                {
+                    var container = treeView.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+                    if (container != null)
+                    {
+                        container.Foreground = new SolidColorBrush(Colors.Black); // テキストカラーを設定
+                        container.Visibility = Visibility.Visible; // 表示状態を設定
+                        container.UpdateLayout(); // レイアウトを更新
+                    }
+                }
             }
         }
 
         /// <summary>
         /// ビジュアルツリーから指定された型の子要素を検索します
         /// </summary>
-        private static T FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
+        private static T FindDirectVisualChild<T>(DependencyObject obj, string name = null) where T : FrameworkElement
         {
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            DependencyObject child = null;
+            var childrenCount = VisualTreeHelper.GetChildrenCount(obj);
+
+            for (int i = 0; i < childrenCount; i++)
             {
-                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+                child = VisualTreeHelper.GetChild(obj, i);
 
-                if (child != null && child is T)
-                    return (T)child;
-
-                T childOfChild = FindVisualChild<T>(child);
-                if (childOfChild != null)
-                    return childOfChild;
+                if (child != null)
+                {
+                    if (child is T element)
+                    {
+                        if (name == null || element.Name == name)
+                            return element;
+                    }
+                    else if (!(child is ItemsPresenter)) // ItemsPresenterをスキップ（子フォルダの検索を防ぐ）
+                    {
+                        var result = FindDirectVisualChild<T>(child, name);
+                        if (result != null)
+                            return result;
+                    }
+                }
             }
 
             return null;
@@ -86,7 +130,7 @@ namespace Illustra.Views
             if (_viewModel?.SelectedItem == null)
                 return;
 
-            var treeView = FindVisualChild<TreeView>(this);
+            var treeView = FindDirectVisualChild<TreeView>(this);
             if (treeView == null)
                 return;
 
@@ -286,10 +330,30 @@ namespace Illustra.Views
         }
 
         /// <summary>
+        /// ドラッグ操作が終了したときの処理
+        /// </summary>
+        protected override void OnDragLeave(DragEventArgs e)
+        {
+            base.OnDragLeave(e);
+
+            // ハイライトを元に戻す
+            if (_lastHighlightedItem != null)
+            {
+                ResetHighlight(_lastHighlightedItem);
+                _lastHighlightedItem = null;
+            }
+        }
+
+        /// <summary>
         /// ドロップ時の処理
         /// </summary>
+        private bool _isDragging = false;
+
         private async void TreeView_Drop(object sender, DragEventArgs e)
         {
+            _isDragging = true;
+            TreeViewItem targetItem = null;
+
             try
             {
                 // ドラッグデータがファイルかどうかを確認
@@ -308,7 +372,7 @@ namespace Illustra.Views
                 }
 
                 // ドロップ先のTreeViewItemを取得
-                var targetItem = GetDropTargetItem(e.OriginalSource);
+                targetItem = GetDropTargetItem(e.OriginalSource);
                 if (targetItem == null || !(targetItem.DataContext is FileSystemItemModel targetModel) || !targetModel.IsFolder)
                 {
                     e.Handled = true;
@@ -339,11 +403,24 @@ namespace Illustra.Views
             }
             finally
             {
-                // 確実にハイライトを元に戻す
-                if (_lastHighlightedItem != null)
+                // ドラッグ状態をリセット
+                _isDragging = false;
+
+                // ドロップ先のアイテムの表示を更新
+                if (targetItem != null)
                 {
-                    ResetHighlight(_lastHighlightedItem);
-                    _lastHighlightedItem = null;
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        var model = targetItem.DataContext as FileSystemItemModel;
+                        if (model?.IsExpanded == true)
+                        {
+                            // フォルダの内容のみを更新
+                            model.IsExpanded = false;
+                            await Task.Delay(50);
+                            model.IsExpanded = true;
+                        }
+                        return Task.CompletedTask;
+                    }, DispatcherPriority.Normal);
                 }
             }
         }
@@ -365,20 +442,22 @@ namespace Illustra.Views
         /// </summary>
         private void HighlightDropTarget(TreeViewItem item)
         {
-            if (item == null) return;
-
-            // 背景色を変更してハイライト
-            var border = FindVisualChild<Border>(item);
+            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
             if (border != null)
             {
-                // 元の背景色を保存（Border.Tagプロパティを使用）
-                if (border.Tag == null)
+                if (item?.IsSelected == true)
                 {
-                    border.Tag = border.Background;
+                    // 選択中のアイテムは青みがかった緑色でハイライト
+                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 180, 180));
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 180, 180));
                 }
-
-                // ハイライト色を設定（ドロップ可能な状態を示す色）
-                border.Background = new SolidColorBrush(Color.FromArgb(100, 0, 200, 0)); // 薄い緑色
+                else
+                {
+                    // 非選択アイテムは通常の緑色でハイライト
+                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 200, 0));
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 200, 0));
+                }
+                border.BorderThickness = new Thickness(1);
             }
         }
 
@@ -389,12 +468,13 @@ namespace Illustra.Views
         {
             if (item == null) return;
 
-            var border = FindVisualChild<Border>(item);
-            if (border != null && border.Tag is Brush originalBrush)
+            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
+            if (border != null)
             {
-                // 元の背景色に戻す
-                border.Background = originalBrush;
-                border.Tag = null;
+                // ハイライトとボーダーをクリア
+                border.Background = Brushes.Transparent;
+                border.BorderBrush = Brushes.Transparent;
+                border.BorderThickness = new Thickness(0);
             }
         }
     }

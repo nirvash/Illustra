@@ -57,6 +57,7 @@
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Focusable" Value="{Binding IsFolder}"/>
                     <Setter Property="IsEnabled" Value="{Binding IsFolder}"/>
+                    <Setter Property="Margin" Value="0,2,0,2"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>
@@ -76,12 +77,22 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
+                                    <!-- ドラッグ＆ドロップ用のハイライトBorder -->
+                                    <Border x:Name="DropTargetBorder"
+                                           Background="Transparent"
+                                           BorderThickness="1"
+                                           CornerRadius="8"
+                                           Margin="-2,-2,-2,-2"
+                                           Padding="4,3"
+                                           Panel.ZIndex="1"/>
+                                    <!-- 通常の選択状態用のBorder -->
                                     <Border x:Name="ItemBorder"
                                            Background="Transparent"
                                            BorderThickness="1"
                                            CornerRadius="8"
                                            Margin="-2"
-                                           Padding="4,3">
+                                           Padding="4,3"
+                                           Panel.ZIndex="0">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -152,11 +163,25 @@
                                         <Setter TargetName="ItemBorder" Property="Background" Value="#FF007ACC" />
                                         <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
                                     </MultiTrigger>
-                                    <!-- マウスオーバー時の状態 -->
-                                    <Trigger Property="IsMouseOver" Value="True">
+                                    <!-- 選択状態かつマウスオーバー時の状態（選択状態の色を薄くする） -->
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="True" />
+                                            <Condition Property="IsMouseOver" Value="True" />
+                                        </MultiTrigger.Conditions>
+                                        <Setter TargetName="ItemBorder" Property="Background" Value="#88007ACC" />
+                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
+                                    </MultiTrigger>
+
+                                    <!-- 非選択状態のマウスオーバー時の状態 -->
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="False" />
+                                            <Condition Property="IsMouseOver" Value="True" />
+                                        </MultiTrigger.Conditions>
                                         <Setter TargetName="ItemBorder" Property="Background" Value="#1F000000" />
                                         <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="Black" />
-                                    </Trigger>
+                                    </MultiTrigger>
                                     <!-- 展開時に子アイテムを表示 -->
                                     <Trigger Property="IsExpanded" Value="True">
                                         <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />

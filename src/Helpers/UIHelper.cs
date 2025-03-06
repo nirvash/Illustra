@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Illustra.Helpers
 {
@@ -110,6 +111,24 @@ namespace Illustra.Helpers
             }
 
             return null;
+        }
+        /// <summary>
+        /// UIスレッドのメッセージループを処理して、保留中のUIイベントを処理します
+        /// </summary>
+        public static void DoEvents()
+        {
+            // 現在のディスパッチャを取得
+            var dispatcher = Application.Current.Dispatcher;
+
+            // UIスレッドでの実行を確認
+            if (!dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(DoEvents);
+                return;
+            }
+
+            // 保留中のすべてのUIイベントを処理
+            dispatcher.Invoke(delegate { }, DispatcherPriority.Background);
         }
     }
 }
