@@ -114,6 +114,7 @@
                            AllowDrop="True"
                            Drop="ThumbnailItemsControl_Drop"
                            DragEnter="ThumbnailItemsControl_DragEnter"
+                           DragOver="ThumbnailItemsControl_DragOver"
                            KeyboardNavigation.TabNavigation="None"
                            IsTabStop="True" TabIndex="3"
                            FocusVisualStyle="{x:Null}">

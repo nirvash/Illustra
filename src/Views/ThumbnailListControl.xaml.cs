@@ -1204,8 +1204,31 @@ namespace Illustra.Views
             }
         }
 
+        // ✅ スクロールバー要素かどうかを判定するメソッド
+        private bool IsInsideScrollbar(DependencyObject source)
+        {
+            while (source != null)
+            {
+                if (source is ScrollBar || source is RepeatButton) // スクロールバーかスクロールボタン
+                {
+                    return true;
+                }
+                source = VisualTreeHelper.GetParent(source);
+            }
+            return false;
+        }
+
         private void ThumbnailItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // スクロールバー関連の要素だった場合は処理をスキップ
+            // クリックされた要素を取得
+            DependencyObject source = e.OriginalSource as DependencyObject;
+
+            if (IsInsideScrollbar(source))
+            {
+                return; // スクロールバー上のクリックは無視
+            }
+
             // イベントを処理済みとしてマーク
             e.Handled = true;
 
@@ -1277,6 +1300,25 @@ namespace Illustra.Views
 
         private void ThumbnailItemsControl_DragEnter(object sender, DragEventArgs e)
         {
+            HandleDragEffect(sender, e);
+        }
+
+        private void ThumbnailItemsControl_DragOver(object sender, DragEventArgs e)
+        {
+            HandleDragEffect(sender, e);
+        }
+
+        private void HandleDragEffect(object sender, DragEventArgs e)
+        {
+            // サムネイル一覧からドラッグ開始した場合はドロップを禁止
+            if (_isDragging)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            // ドラッグデータのチェック
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.None;
@@ -1310,8 +1352,22 @@ namespace Illustra.Views
 
         private async void ThumbnailItemsControl_Drop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            // データ形式でドラッグ元を判定
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                // エクスプローラーなど外部からのドラッグ
+            }
+            else if (e.Data.GetDataPresent(DataFormats.StringFormat))
+            {
+                // アプリ内からのドラッグ＆ドロップの場合は禁止
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
                 return;
+            }
+            else
+            {
+                return;
+            }
 
             var files = e.Data.GetData(DataFormats.FileDrop) as string[];
             if (files == null)
