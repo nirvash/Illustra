@@ -139,17 +139,6 @@ namespace Illustra.Helpers
             return result;
         }
 
-        public async Task<List<FileNodeModel>> GetFileNodesByRatingAsync(string folderPath, int rating)
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-            using var db = new DataConnection(_dataProvider, _connectionString);
-            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath && fn.Rating == rating).ToListAsync();
-            sw.Stop();
-            Debug.WriteLine($"GetFileNodesByRatingAsync executed in {sw.ElapsedMilliseconds} ms");
-            return result;
-        }
-
         public async Task UpdateRatingAsync(string fullPath, int rating)
         {
             await ExecuteWithRetryAsync(async () =>
@@ -330,12 +319,6 @@ namespace Illustra.Helpers
                 Debug.WriteLine($"Error creating file node for {filePath}: {ex.Message}");
                 return null;
             }
-        }
-
-        public async Task<int> GetRatingAsync(string filePath)
-        {
-            using var db = new DataConnection(_connectionString);
-            return await db.GetTable<FileNodeModel>().Where(fn => fn.FullPath == filePath).Select(fn => fn.Rating).FirstOrDefaultAsync();
         }
 
         public async Task UpdateFileNode(FileNodeModel fileNode)
