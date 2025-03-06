@@ -389,11 +389,13 @@ namespace Illustra.Views
                 // ドロップ先のフォルダパスを取得
                 string targetFolderPath = targetModel.FullPath;
 
-                // コピーまたは移動操作を実行
-                bool isCopy = (e.Effects == DragDropEffects.Copy);
-                await _fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolderPath, isCopy);
-
+                // ドロップ時の選択を防ぐ
+                e.Effects = DragDropEffects.None;
                 e.Handled = true;
+
+                // コピーまたは移動操作を実行
+                bool isCopy = ((e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey);
+                await _fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolderPath, isCopy);
             }
             catch (Exception ex)
             {
