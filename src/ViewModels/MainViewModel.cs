@@ -23,6 +23,7 @@ namespace Illustra.ViewModels
             _selectedItems.CollectionChanged += (s, e) =>
             {
                 OnPropertyChanged(nameof(SelectedItems));
+                UpdateLastSelectedFlag();
             };
         }
 
@@ -103,6 +104,21 @@ namespace Illustra.ViewModels
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+        private void UpdateLastSelectedFlag()
+        {
+            // すべてのアイテムのフラグをリセット
+            foreach (var item in Items)
+            {
+                item.IsLastSelected = false;
+            }
+
+            // 選択アイテムがある場合のみ、最後のアイテムのフラグを設定
+            var lastSelectedItem = _selectedItems.LastOrDefault();
+            if (lastSelectedItem != null)
+            {
+                lastSelectedItem.IsLastSelected = true;
+            }
+        }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {

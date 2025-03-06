@@ -157,11 +157,20 @@
                                             BorderThickness="2"
                                             Opacity="0">
                                     </Border>
+                                    <!-- 最後に選択されたアイテムの追加ハイライト -->
+                                    <Border x:Name="LastSelectedBorder"
+                                            BorderBrush="#FFE2A500"
+                                            BorderThickness="3"
+                                            Opacity="0">
+                                    </Border>
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="SelectionBorder" Property="Opacity" Value="1" />
                                     </Trigger>
+                                    <DataTrigger Binding="{Binding IsLastSelected}" Value="True">
+                                        <Setter TargetName="LastSelectedBorder" Property="Opacity" Value="1" />
+                                    </DataTrigger>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter Property="Background" Value="#0F000000"/>
                                     </Trigger>

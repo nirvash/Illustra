@@ -261,14 +261,21 @@ namespace Illustra.Views
                         _viewModel.RemoveSelectedItemSilently(item);
                     }
 
-                    // 追加された項目を処理
+                    // 選択アイテムの更新（ViewModelのCollectionChangedイベントでIsLastSelectedが更新される）
                     foreach (FileNodeModel item in args.AddedItems)
                     {
                         _viewModel.AddSelectedItemSilently(item);
                     }
 
-                    // 最後に選択されたアイテムについてイベントを発行
-                    if (args.AddedItems.Count > 0 && args.AddedItems[args.AddedItems.Count - 1] is FileNodeModel lastSelected)
+                    // 削除された項目を処理
+                    foreach (FileNodeModel item in args.RemovedItems)
+                    {
+                        _viewModel.RemoveSelectedItemSilently(item);
+                    }
+
+                    // イベントの発行（最後に選択されたアイテムがある場合のみ）
+                    var lastSelected = _viewModel.SelectedItems.LastOrDefault();
+                    if (lastSelected != null)
                     {
                         _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(lastSelected.FullPath);
                         LoadFilePropertiesAsync(lastSelected.FullPath);
@@ -721,8 +728,9 @@ namespace Illustra.Views
         {
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
             {
-                // 複数選択をサポート
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                // 複数選択をサポート（IsLastSelectedはViewModelのCollectionChangedイベントで処理）
+                ModifierKeys modifiers = Keyboard.Modifiers;
+                if (modifiers == ModifierKeys.Control)
                 {
                     if (_viewModel.SelectedItems.Contains(fileNode))
                     {
@@ -733,19 +741,31 @@ namespace Illustra.Views
                         _viewModel.SelectedItems.Add(fileNode);
                     }
                 }
-                else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                else if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
                 {
                     // Shiftキーが押されている場合は範囲選択
-                    var startIndex = ThumbnailItemsControl.SelectedIndex;
+                    var lastSelected = _viewModel.SelectedItems.LastOrDefault();
+                    if (lastSelected == null) return;
+
+                    var startIndex = ThumbnailItemsControl.Items.IndexOf(lastSelected);
                     var endIndex = ThumbnailItemsControl.Items.IndexOf(fileNode);
                     if (startIndex < 0 || endIndex < 0) return;
 
-                    var minIndex = Math.Min(startIndex, endIndex);
-                    var maxIndex = Math.Max(startIndex, endIndex);
-                    for (int i = minIndex; i <= maxIndex; i++)
+                    if (modifiers == ModifierKeys.Shift)
                     {
-                        var item = ThumbnailItemsControl.Items[i] as FileNodeModel;
-                        if (item != null && !_viewModel.SelectedItems.Contains(item))
+                        // 既存の選択をクリア
+                        _viewModel.SelectedItems.Clear();
+                    }
+
+                    // 範囲内のアイテムを収集（視覚的な順序で）
+                    var indices = startIndex < endIndex ?
+                        Enumerable.Range(startIndex, endIndex - startIndex + 1) :
+                        Enumerable.Range(endIndex, startIndex - endIndex + 1).Reverse();
+
+                    // 範囲内のアイテムを選択
+                    foreach (var i in indices)
+                    {
+                        if (ThumbnailItemsControl.Items[i] is FileNodeModel item)
                         {
                             _viewModel.SelectedItems.Add(item);
                         }
@@ -862,10 +882,12 @@ namespace Illustra.Views
             var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
             if (panel == null) return;
 
-            var selectedIndex = ThumbnailItemsControl.SelectedItems
+            // 選択アイテムが1つ以上ある場合のみインデックスを取得
+            var selectedItem = ThumbnailItemsControl.SelectedItems
                 .Cast<FileNodeModel>()
-                .Select(x => ThumbnailItemsControl.Items.IndexOf(x))
-                .Last(); // 最後に選択されたアイテムのインデックス
+                .LastOrDefault();
+            var selectedIndex = selectedItem != null ?
+                ThumbnailItemsControl.Items.IndexOf(selectedItem) : -1;
             if (selectedIndex == -1 && _viewModel.FilteredItems.Cast<FileNodeModel>().Any())
             {
                 // 選択がない場合は先頭を選択

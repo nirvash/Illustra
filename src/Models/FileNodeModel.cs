@@ -150,6 +150,20 @@ namespace Illustra.Models
             }
         }
 
+        private bool _isLastSelected;
+        public bool IsLastSelected
+        {
+            get => _isLastSelected;
+            set
+            {
+                if (_isLastSelected != value)
+                {
+                    _isLastSelected = value;
+                    OnPropertyChanged(nameof(IsLastSelected));
+                }
+            }
+        }
+
         // List View に変更を通知する。データベースへの連携には使わないこと
         public event PropertyChangedEventHandler? PropertyChanged;
 
