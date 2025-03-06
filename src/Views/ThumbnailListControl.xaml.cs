@@ -1573,6 +1573,9 @@ namespace Illustra.Views
         {
             try
             {
+                // 現在の選択状態を保存
+                var selectedItems = _viewModel.SelectedItems.ToList();
+
                 _currentRatingFilter = rating;
                 UpdateFilterButtonStates(rating);
 
@@ -1584,6 +1587,18 @@ namespace Illustra.Views
                 else
                 {
                     _viewModel.ApplyRatingFilter(0); // フィルタなし
+                }
+
+                // フィルタ後のアイテムリストから、以前選択されていたアイテムのうち
+                // まだ表示されているものを再選択
+                var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
+                var itemsToReselect = selectedItems.Where(item =>
+                    filteredItems.Any(fi => fi.FullPath == item.FullPath));
+
+                _viewModel.SelectedItems.Clear();
+                foreach (var item in itemsToReselect)
+                {
+                    _viewModel.SelectedItems.Add(item);
                 }
 
                 ClearFilterButton.IsEnabled = rating != 0;
