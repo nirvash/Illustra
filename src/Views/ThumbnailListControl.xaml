@@ -107,7 +107,7 @@
                            VirtualizingPanel.IsVirtualizing="True"
                            VirtualizingPanel.VirtualizationMode="Recycling"
                            BorderThickness="0"
-                           KeyDown="ThumbnailItemsControl_KeyDown"
+                           PreviewKeyDown="ThumbnailItemsControl_PreviewKeyDown"
                            PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
                            PreviewMouseLeftButtonDown="ThumbnailItemsControl_PreviewMouseLeftButtonDown"
                            PreviewMouseMove="ThumbnailItemsControl_PreviewMouseMove"
