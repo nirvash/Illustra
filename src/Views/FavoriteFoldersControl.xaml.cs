@@ -39,12 +39,6 @@ namespace Illustra.Views
             // お気に入りフォルダの初期化
             _favoriteFolders = _appSettings.FavoriteFolders;
             FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
-
-            // ドラッグ&ドロップイベントの設定
-            FavoriteFoldersTreeView.PreviewMouseLeftButtonDown += FavoriteFolders_PreviewMouseLeftButtonDown;
-            FavoriteFoldersTreeView.PreviewMouseMove += FavoriteFolders_PreviewMouseMove;
-            FavoriteFoldersTreeView.DragOver += FavoriteFolders_DragOver;
-            FavoriteFoldersTreeView.Drop += FavoriteFolders_Drop;
         }
 
         private void FavoriteFoldersControl_Loaded(object sender, RoutedEventArgs e)
@@ -143,21 +137,44 @@ namespace Illustra.Views
 
         private void FavoriteFolders_DragOver(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent("FavoriteFolder") || sender != e.Source)
+            if (e.Data.GetDataPresent("FavoriteFolder"))
             {
-                e.Effects = DragDropEffects.None;
+                if (sender != e.Source)
+                {
+                    e.Effects = DragDropEffects.None;
+                }
+                else
+                {
+                    e.Effects = DragDropEffects.Move;
+                }
+            }
+            else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                // ドロップ先のTreeViewItemを取得
+                var targetItem = GetDropTargetItem(e.OriginalSource);
+                if (targetItem != null && targetItem.DataContext is string targetPath && Directory.Exists(targetPath))
+                {
+                    e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
+                        ? DragDropEffects.Copy
+                        : DragDropEffects.Move;
+                }
+                else
+                {
+                    e.Effects = DragDropEffects.None;
+                }
             }
             else
             {
-                e.Effects = DragDropEffects.Move;
+                e.Effects = DragDropEffects.None;
             }
             e.Handled = true;
         }
 
-        private void FavoriteFolders_Drop(object sender, DragEventArgs e)
+        private async void FavoriteFolders_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent("FavoriteFolder"))
             {
+                // お気に入りフォルダの並び替え処理（既存のコード）
                 string? sourceItem = e.Data.GetData("FavoriteFolder") as string;
                 if (sourceItem == null) return;
 
@@ -192,6 +209,36 @@ namespace Illustra.Views
                     }
                 }
             }
+            else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                // ファイルのドロップ処理
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files == null || files.Length == 0) return;
+
+                // ドロップ先のTreeViewItemを取得
+                var targetItem = GetDropTargetItem(e.OriginalSource);
+                if (targetItem == null || !(targetItem.DataContext is string targetPath) || !Directory.Exists(targetPath))
+                    return;
+
+                bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
+                var fileOperationHelper = new FileOperationHelper();
+                await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetPath, isCopy);
+            }
+        }
+
+        private TreeViewItem? GetDropTargetItem(object originalSource)
+        {
+            if (originalSource is DependencyObject depObj)
+            {
+                var item = depObj as TreeViewItem;
+                while (item == null && depObj != null)
+                {
+                    depObj = VisualTreeHelper.GetParent(depObj);
+                    item = depObj as TreeViewItem;
+                }
+                return item;
+            }
+            return null;
         }
 
         private void ReorderFavoriteFolders(string sourceItem, string targetItem)

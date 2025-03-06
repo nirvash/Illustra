@@ -39,7 +39,7 @@ namespace Illustra.Helpers
                     {
                         if (isCopy)
                         {
-                            await Task.Run(() => File.Copy(sourcePath, destinationPath, false));
+                            await Task.Run(() => File.Copy(sourcePath, destinationPath, true));
                         }
                         else
                         {

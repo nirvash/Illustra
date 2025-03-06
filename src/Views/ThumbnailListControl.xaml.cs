@@ -1173,34 +1173,31 @@ namespace Illustra.Views
 
         private void StartDrag()
         {
-            var selectedItems = ThumbnailItemsControl.SelectedItems.Cast<FileNodeModel>().ToList();
-            if (!selectedItems.Any())
-                return;
-
+            if (_isDragging) return;
             _isDragging = true;
 
-            // DataObjectの準備
-            var fileDropList = new StringCollection();
-            foreach (var item in selectedItems)
+            try
             {
-                fileDropList.Add(item.FullPath);
+                // 選択されたファイルのパスリストを作成
+                var selectedFiles = _viewModel.SelectedItems
+                    .Select(item => item.FullPath)
+                    .Where(path => !string.IsNullOrEmpty(path))
+                    .ToList();
+
+                if (selectedFiles.Count > 0)
+                {
+                    // DataObjectを作成
+                    var dataObject = new DataObject(DataFormats.FileDrop, selectedFiles.ToArray());
+
+                    // ドラッグ＆ドロップ操作を開始
+                    DragDrop.DoDragDrop(ThumbnailItemsControl, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
+                }
             }
-
-            var dataObject = new DataObject();
-            dataObject.SetFileDropList(fileDropList);
-
-            // ドラッグ視覚効果の作成
-            var dragVisual = _dragDropHelper.CreateDragVisual(selectedItems);
-
-            // ドラッグ＆ドロップ操作の開始
-            var result = DragDrop.DoDragDrop(ThumbnailItemsControl, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
-
-            // ドラッグ終了時の処理
-            _isDragging = false;
-            _dragStartPoint = null;
-
-            // ドラッグ＆ドロップ操作の結果を処理
-            ProcessDragDropResult(result, selectedItems);
+            finally
+            {
+                _isDragging = false;
+                _dragStartPoint = null;
+            }
         }
 
         /// <summary>
