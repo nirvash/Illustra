@@ -20,6 +20,7 @@ namespace Illustra.Views
         private IEventAggregator? _eventAggregator;
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FavoriteFolders";
+        private TreeViewItem? _lastHighlightedItem; // 最後にハイライトしたアイテム
 
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
@@ -137,93 +138,128 @@ namespace Illustra.Views
 
         private void FavoriteFolders_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("FavoriteFolder"))
+            try
             {
-                if (sender != e.Source)
+                // 前回ハイライトしたアイテムを元に戻す
+                if (_lastHighlightedItem != null)
                 {
-                    e.Effects = DragDropEffects.None;
+                    ResetHighlight(_lastHighlightedItem);
+                    _lastHighlightedItem = null;
+                }
+
+                if (e.Data.GetDataPresent("FavoriteFolder"))
+                {
+                    if (sender != e.Source)
+                    {
+                        e.Effects = DragDropEffects.None;
+                    }
+                    else
+                    {
+                        e.Effects = DragDropEffects.Move;
+                    }
+                }
+                else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                {
+                    // ドロップ先のTreeViewItemを取得
+                    var targetItem = GetDropTargetItem(e.OriginalSource);
+                    if (targetItem != null && targetItem.DataContext is string targetPath && Directory.Exists(targetPath))
+                    {
+                        e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
+                            ? DragDropEffects.Copy
+                            : DragDropEffects.Move;
+
+                        // ドロップ先のTreeViewItemをハイライト
+                        HighlightDropTarget(targetItem);
+                        _lastHighlightedItem = targetItem;
+                    }
+                    else
+                    {
+                        e.Effects = DragDropEffects.None;
+                    }
                 }
                 else
                 {
-                    e.Effects = DragDropEffects.Move;
-                }
-            }
-            else if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                // ドロップ先のTreeViewItemを取得
-                var targetItem = GetDropTargetItem(e.OriginalSource);
-                if (targetItem != null && targetItem.DataContext is string targetPath && Directory.Exists(targetPath))
-                {
-                    e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
-                        ? DragDropEffects.Copy
-                        : DragDropEffects.Move;
-                }
-                else
-                {
                     e.Effects = DragDropEffects.None;
                 }
+                e.Handled = true;
             }
-            else
+            catch (Exception ex)
             {
+                Debug.WriteLine($"DragOver処理中にエラーが発生しました: {ex.Message}");
                 e.Effects = DragDropEffects.None;
+                e.Handled = true;
             }
-            e.Handled = true;
         }
 
         private async void FavoriteFolders_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("FavoriteFolder"))
+            try
             {
-                // お気に入りフォルダの並び替え処理（既存のコード）
-                string? sourceItem = e.Data.GetData("FavoriteFolder") as string;
-                if (sourceItem == null) return;
-
-                var treeView = sender as TreeView;
-                if (treeView == null) return;
-
-                Point position = e.GetPosition(treeView);
-                var result = VisualTreeHelper.HitTest(treeView, position);
-                if (result == null) return;
-
-                var obj = result.VisualHit;
-                while (obj != null && !(obj is TreeViewItem) && !(obj is TreeView))
+                // ハイライトを元に戻す
+                if (_lastHighlightedItem != null)
                 {
-                    obj = VisualTreeHelper.GetParent(obj);
+                    ResetHighlight(_lastHighlightedItem);
+                    _lastHighlightedItem = null;
                 }
 
-                if (obj is TreeViewItem item)
+                if (e.Data.GetDataPresent("FavoriteFolder"))
                 {
-                    string? targetItem = item.DataContext as string;
-                    if (targetItem == null) return;
+                    // お気に入りフォルダの並び替え処理（既存のコード）
+                    string? sourceItem = e.Data.GetData("FavoriteFolder") as string;
+                    if (sourceItem == null) return;
 
-                    if (sourceItem == targetItem) return;
+                    var treeView = sender as TreeView;
+                    if (treeView == null) return;
 
-                    ReorderFavoriteFolders(sourceItem, targetItem);
-                }
-                else
-                {
-                    if (_favoriteFolders.Contains(sourceItem))
+                    Point position = e.GetPosition(treeView);
+                    var result = VisualTreeHelper.HitTest(treeView, position);
+                    if (result == null) return;
+
+                    var obj = result.VisualHit;
+                    while (obj != null && !(obj is TreeViewItem) && !(obj is TreeView))
                     {
-                        _favoriteFolders.Remove(sourceItem);
-                        _favoriteFolders.Add(sourceItem);
+                        obj = VisualTreeHelper.GetParent(obj);
+                    }
+
+                    if (obj is TreeViewItem item)
+                    {
+                        string? targetItem = item.DataContext as string;
+                        if (targetItem == null) return;
+
+                        if (sourceItem == targetItem) return;
+
+                        ReorderFavoriteFolders(sourceItem, targetItem);
+                    }
+                    else
+                    {
+                        if (_favoriteFolders.Contains(sourceItem))
+                        {
+                            _favoriteFolders.Remove(sourceItem);
+                            _favoriteFolders.Add(sourceItem);
+                        }
                     }
                 }
+                else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                {
+                    // ファイルのドロップ処理
+                    var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                    if (files == null || files.Length == 0) return;
+
+                    // ドロップ先のTreeViewItemを取得
+                    var targetItem = GetDropTargetItem(e.OriginalSource);
+                    if (targetItem == null || !(targetItem.DataContext is string targetPath) || !Directory.Exists(targetPath))
+                        return;
+
+                    bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
+                    var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                    var fileOperationHelper = new FileOperationHelper(db);
+                    await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetPath, isCopy);
+                }
             }
-            else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            catch (Exception ex)
             {
-                // ファイルのドロップ処理
-                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-                if (files == null || files.Length == 0) return;
-
-                // ドロップ先のTreeViewItemを取得
-                var targetItem = GetDropTargetItem(e.OriginalSource);
-                if (targetItem == null || !(targetItem.DataContext is string targetPath) || !Directory.Exists(targetPath))
-                    return;
-
-                bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
-                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
-                var fileOperationHelper = new FileOperationHelper(db);
-                await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetPath, isCopy);
+                Debug.WriteLine($"Drop処理中にエラーが発生しました: {ex.Message}");
+                MessageBox.Show($"ファイル操作中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -288,6 +324,96 @@ namespace Illustra.Views
         }
 
         public ObservableCollection<string> FavoriteFolders => _favoriteFolders;
-    }
 
+        #region ドラッグ＆ドロップハイライト関連
+
+        /// <summary>
+        /// ビジュアルツリーから指定された型の子要素を検索します
+        /// </summary>
+        private static T? FindDirectVisualChild<T>(DependencyObject obj, string name = null) where T : FrameworkElement
+        {
+            DependencyObject child = null;
+            var childrenCount = VisualTreeHelper.GetChildrenCount(obj);
+
+            for (int i = 0; i < childrenCount; i++)
+            {
+                child = VisualTreeHelper.GetChild(obj, i);
+
+                if (child != null)
+                {
+                    if (child is T element)
+                    {
+                        if (name == null || element.Name == name)
+                            return element;
+                    }
+                    else if (!(child is ItemsPresenter)) // ItemsPresenterをスキップ（子フォルダの検索を防ぐ）
+                    {
+                        var result = FindDirectVisualChild<T>(child, name);
+                        if (result != null)
+                            return result;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// ドロップ先のTreeViewItemをハイライト
+        /// </summary>
+        private void HighlightDropTarget(TreeViewItem item)
+        {
+            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
+            if (border != null)
+            {
+                if (item?.IsSelected == true)
+                {
+                    // 選択中のアイテムは青みがかった緑色でハイライト
+                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 180, 180));
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 180, 180));
+                }
+                else
+                {
+                    // 非選択アイテムは通常の緑色でハイライト
+                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 200, 0));
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 200, 0));
+                }
+                border.BorderThickness = new Thickness(1);
+            }
+        }
+
+        /// <summary>
+        /// ハイライトを元に戻す
+        /// </summary>
+        private void ResetHighlight(TreeViewItem item)
+        {
+            if (item == null) return;
+
+            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
+            if (border != null)
+            {
+                // ハイライトとボーダーをクリア
+                border.Background = Brushes.Transparent;
+                border.BorderBrush = Brushes.Transparent;
+                border.BorderThickness = new Thickness(0);
+            }
+        }
+
+        /// <summary>
+        /// ドラッグ操作が終了したときの処理
+        /// </summary>
+        protected override void OnDragLeave(DragEventArgs e)
+        {
+            base.OnDragLeave(e);
+
+            // ハイライトを元に戻す
+            if (_lastHighlightedItem != null)
+            {
+                ResetHighlight(_lastHighlightedItem);
+                _lastHighlightedItem = null;
+            }
+        }
+
+        #endregion
+    }
 }

@@ -38,22 +38,7 @@ namespace Illustra.Helpers
                 if (!File.Exists(file))
                     continue;
 
-                string fileName = Path.GetFileName(file);
-                string destPath = Path.Combine(targetFolder, fileName);
-
-                // 同名ファイルが存在する場合は名前を変更
-                if (File.Exists(destPath))
-                {
-                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-                    string extension = Path.GetExtension(fileName);
-                    int counter = 1;
-
-                    do
-                    {
-                        destPath = Path.Combine(targetFolder, $"{fileNameWithoutExt} ({counter}){extension}");
-                        counter++;
-                    } while (File.Exists(destPath));
-                }
+                string destPath = GetUniqueDestinationPath(file, targetFolder);
 
                 try
                 {
@@ -73,70 +58,59 @@ namespace Illustra.Helpers
             }
         }
 
+        /// <summary>
+        /// ファイルを移動し、関連するデータベース情報も更新します
+        /// </summary>
         public async Task MoveFile(string source, string dest)
         {
-            if (string.IsNullOrEmpty(source))
-                throw new ArgumentNullException(nameof(source));
-            if (string.IsNullOrEmpty(dest))
-                throw new ArgumentNullException(nameof(dest));
+            ValidateFilePaths(source, dest);
 
             try
             {
-                // レーティング情報の取得
+                // レーティング情報の取得とファイル操作
                 var sourceNode = await _db.GetFileNodeAsync(source);
                 var rating = sourceNode?.Rating ?? 0;
 
                 // ファイル移動
                 File.Move(source, dest);
 
-                // 新しいノードを作成
-                var newNode = new FileNodeModel(dest)
-                {
-                    Rating = rating
-                };
-                await _db.SaveFileNodeAsync(newNode);
-
-                // 古いノードを削除
-                if (sourceNode != null)
-                {
-                    await _db.DeleteFileNodeAsync(source);
-                }
+                // データベース更新
+                await UpdateDatabaseAfterFileOperation(source, dest, rating, true);
             }
             catch (Exception ex)
             {
-                throw new FileOperationException($"Failed to move file from {source} to {dest}", ex);
+                throw new FileOperationException($"ファイルの移動中にエラーが発生しました: {source} から {dest} へ", ex);
             }
         }
 
+        /// <summary>
+        /// ファイルをコピーし、関連するデータベース情報も作成します
+        /// </summary>
         public async Task CopyFile(string source, string dest)
         {
-            if (string.IsNullOrEmpty(source))
-                throw new ArgumentNullException(nameof(source));
-            if (string.IsNullOrEmpty(dest))
-                throw new ArgumentNullException(nameof(dest));
+            ValidateFilePaths(source, dest);
 
             try
             {
-                // レーティング情報の取得
+                // レーティング情報の取得とファイル操作
                 var sourceNode = await _db.GetFileNodeAsync(source);
                 var rating = sourceNode?.Rating ?? 0;
 
                 // ファイルコピー
                 File.Copy(source, dest);
 
-                // 新しいノードを作成
-                var newNode = new FileNodeModel(dest)
-                {
-                    Rating = rating
-                };
-                await _db.SaveFileNodeAsync(newNode);
+                // データベース更新（コピーの場合は元ファイルのノードは削除しない）
+                await UpdateDatabaseAfterFileOperation(source, dest, rating, false);
             }
             catch (Exception ex)
             {
-                throw new FileOperationException($"Failed to copy file from {source} to {dest}", ex);
+                throw new FileOperationException($"ファイルのコピー中にエラーが発生しました: {source} から {dest} へ", ex);
             }
         }
 
+        /// <summary>
+        /// ファイルを削除し、関連するデータベース情報も削除します
+        /// </summary>
         public async Task DeleteFile(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -152,9 +126,68 @@ namespace Illustra.Helpers
             }
             catch (Exception ex)
             {
-                throw new FileOperationException($"Failed to delete file: {path}", ex);
+                throw new FileOperationException($"ファイルの削除中にエラーが発生しました: {path}", ex);
             }
         }
+
+        #region プライベートヘルパーメソッド
+
+        /// <summary>
+        /// ソースパスとターゲットフォルダから一意のファイルパスを生成します
+        /// </summary>
+        private string GetUniqueDestinationPath(string sourcePath, string targetFolder)
+        {
+            string fileName = Path.GetFileName(sourcePath);
+            string destPath = Path.Combine(targetFolder, fileName);
+
+            // 同名ファイルが存在する場合は名前を変更
+            if (File.Exists(destPath))
+            {
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                string extension = Path.GetExtension(fileName);
+                int counter = 1;
+
+                do
+                {
+                    destPath = Path.Combine(targetFolder, $"{fileNameWithoutExt} ({counter}){extension}");
+                    counter++;
+                } while (File.Exists(destPath));
+            }
+
+            return destPath;
+        }
+
+        /// <summary>
+        /// ファイルパスのバリデーションを行います
+        /// </summary>
+        private void ValidateFilePaths(string source, string dest)
+        {
+            if (string.IsNullOrEmpty(source))
+                throw new ArgumentNullException(nameof(source));
+            if (string.IsNullOrEmpty(dest))
+                throw new ArgumentNullException(nameof(dest));
+        }
+
+        /// <summary>
+        /// ファイル操作後のデータベース更新を行います
+        /// </summary>
+        private async Task UpdateDatabaseAfterFileOperation(string source, string dest, int rating, bool isMove)
+        {
+            // 新しいノードを作成
+            var newNode = new FileNodeModel(dest)
+            {
+                Rating = rating
+            };
+            await _db.SaveFileNodeAsync(newNode);
+
+            // 移動の場合は古いノードを削除
+            if (isMove)
+            {
+                await _db.DeleteFileNodeAsync(source);
+            }
+        }
+
+        #endregion
     }
 
     public class FileOperationException : Exception
