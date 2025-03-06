@@ -68,7 +68,6 @@ namespace Illustra.Views
         private static readonly double DragThreshold = 5.0;  // ドラッグ開始の距離しきい値（ピクセル）
         private static readonly int DragTimeout = 100;       // ドラッグ判定のタイムアウト（ミリ秒）
         private DispatcherTimer? _dragTimer;
-        private bool _isPotentialClick;                      // クリック操作の可能性を示すフラグ
 
 
 
@@ -1123,7 +1122,7 @@ namespace Illustra.Views
             timer.Stop();
             timer.Tick -= DragTimer_Tick;
 
-            if (!_isPotentialClick || !_dragStartPoint.HasValue)
+            if (!_dragStartPoint.HasValue)
                 return;
 
             // タイマー満了時、まだマウスがほとんど動いていない場合はクリック操作として処理
@@ -1138,8 +1137,6 @@ namespace Illustra.Views
                     HandleSelectionClick(fileNode);
                 }
             }
-
-            _isPotentialClick = false;
         }
 
         private void HandleSelectionClick(FileNodeModel fileNode)
@@ -1215,13 +1212,9 @@ namespace Illustra.Views
             // フォーカスを即座に設定
             listViewItem.Focus();
 
-            // 選択済みアイテムをクリックした場合は、すぐには選択処理を行わない
-            bool isSelectedItem = _viewModel.SelectedItems.Contains(fileNode);
-
             // ドラッグ開始位置を記録
             _dragStartPoint = e.GetPosition(this);
             _isDragging = false;
-            _isPotentialClick = !isSelectedItem; // 選択済みアイテムの場合はクリックを保留
 
             // タイマーをリセット
             if (_dragTimer != null)
@@ -1256,8 +1249,7 @@ namespace Illustra.Views
             // 移動距離がしきい値を超えた場合はドラッグを開始
             if (Math.Abs(diff.X) > threshold || Math.Abs(diff.Y) > threshold)
             {
-                // クリック操作の可能性を解除
-                _isPotentialClick = false;
+                // ドラッグ操作の開始
 
                 // タイマーが存在する場合は停止・破棄
                 if (_dragTimer != null)
@@ -1323,7 +1315,6 @@ namespace Illustra.Views
             {
                 _isDragging = false;
                 _dragStartPoint = null;
-                _isPotentialClick = false;
             }
         }
 
