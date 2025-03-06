@@ -1048,11 +1048,46 @@ namespace Illustra.Views
                 var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(targetItem);
                 Debug.WriteLine($"target: {index}, path: {targetItem.FullPath}");
 
-                // ViewModelを通じて選択を更新
-                _viewModel.SelectedItems.Clear();
-                _viewModel.SelectedItems.Add(targetItem);
-                // TBD: ファイルを開いたイベント発火
-                // LoadFilePropertiesAsync(targetItem.FullPath);
+                bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+                bool isCtrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+                if (isShiftPressed)
+                {
+                    // Shift + 移動キー: 範囲選択
+                    var startItem = _viewModel.SelectedItems.LastOrDefault();
+                    if (startItem != null)
+                    {
+                        var startIndex = ThumbnailItemsControl.Items.IndexOf(startItem);
+                        var endIndex = ThumbnailItemsControl.Items.IndexOf(targetItem);
+                        if (startIndex >= 0 && endIndex >= 0)
+                        {
+                            // Shift + 移動キーも範囲追加にする
+
+                            var minIndex = Math.Min(startIndex, endIndex);
+                            var maxIndex = Math.Max(startIndex, endIndex);
+                            for (int i = minIndex; i <= maxIndex; i++)
+                            {
+                                var item = ThumbnailItemsControl.Items[i] as FileNodeModel;
+                                if (item != null && !_viewModel.SelectedItems.Contains(item))
+                                {
+                                    _viewModel.SelectedItems.Add(item);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // 通常の選択
+                    if (!isCtrlPressed)
+                    {
+                        _viewModel.SelectedItems.Clear();
+                    }
+                    if (!_viewModel.SelectedItems.Contains(targetItem))
+                    {
+                        _viewModel.SelectedItems.Add(targetItem);
+                    }
+                }
 
                 // スクロール処理とフォーカス処理
                 ThumbnailItemsControl.ScrollIntoView(targetItem);
