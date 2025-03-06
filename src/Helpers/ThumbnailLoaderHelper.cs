@@ -31,7 +31,7 @@ public class ThumbnailLoaderHelper
     private readonly ThumbnailListControl _control;
     private readonly MainViewModel _viewModel;
     private readonly Action<string> _selectCallback;
-    private readonly DatabaseManager _db = new();
+    private readonly DatabaseManager _db;
 
     public event EventHandler? FileNodesLoaded;
 
@@ -67,12 +67,18 @@ public class ThumbnailLoaderHelper
     /// <summary>
     /// サムネイルローダーを初期化します
     /// </summary>
-    public ThumbnailLoaderHelper(ItemsControl thumbnailListBox, Action<string> selectCallback, ThumbnailListControl control, MainViewModel viewModel)
+    public ThumbnailLoaderHelper(
+        ItemsControl thumbnailListBox,
+        Action<string> selectCallback,
+        ThumbnailListControl control,
+        MainViewModel viewModel,
+        DatabaseManager db)
     {
         _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
         _selectCallback = selectCallback;
         _control = control ?? throw new ArgumentNullException(nameof(control));
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
         _viewModelItems = viewModel.Items ?? throw new ArgumentNullException(nameof(viewModel.Items));
 
         // 設定を読み込む

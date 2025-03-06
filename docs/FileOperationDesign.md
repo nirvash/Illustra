@@ -1,171 +1,105 @@
 # ファイル操作機能の設計
 
-## 背景と目的
+[Previous content up to "## 注意点" section remains unchanged...]
 
-現状の課題として以下が挙げられます：
-- ファイル操作が複数のヘルパークラスに分散している
-- ファイルの移動/コピー時のレーティング引き継ぎ機能がない
-- データベースアクセスの一元管理が必要
+## リファクタリング実装プラン
 
-これらの課題を解決するため、ファイル操作とデータベースアクセスの再設計を行います。
+### Phase 1: DIコンテナ導入とThumbnailLoaderHelper修正
 
-## アーキテクチャ設計
-
-### クラス構成
-
-```mermaid
-classDiagram
-    class IDatabase {
-        <<interface>>
-        +GetFileNode(string path)
-        +SaveFileNode(FileNodeModel node)
-        +UpdateRating(string path, int rating)
-        +GetRating(string path)
-    }
-
-    class DatabaseManager {
-        -static DatabaseManager _instance
-        +static Instance() DatabaseManager
-        -DatabaseManager()
-        +GetFileNode(string path)
-        +SaveFileNode(FileNodeModel node)
-        +UpdateRating(string path, int rating)
-        +GetRating(string path)
-    }
-
-    class FileOperationHelper {
-        -IDatabase _db
-        +FileOperationHelper(IDatabase db)
-        +MoveFile(string source, string dest)
-        +CopyFile(string source, string dest)
-    }
-
-    class ThumbnailLoaderHelper {
-        -IDatabase _db
-        +ThumbnailLoaderHelper(IDatabase db)
-        +LoadThumbnail(string path)
-        +RefreshThumbnail(string path)
-    }
-
-    DatabaseManager ..|> IDatabase
-    FileOperationHelper --> IDatabase
-    ThumbnailLoaderHelper --> IDatabase
-```
-
-### 責務の分離
-
-1. **FileOperationHelper**
-   - ファイル操作（移動、コピー、削除、名前変更）の一元管理
-   - レーティング情報の自動的な引き継ぎ処理
-   - データベース更新処理の統合
-
-2. **ThumbnailLoaderHelper**
-   - サムネイル管理に特化
-   - 画像の読み込みとキャッシュ管理
-   - サムネイルのリフレッシュ処理
-
-3. **DatabaseManager（シングルトン）**
-   - データベースアクセスの一元管理
-   - トランザクション制御
-   - リトライロジックの集中管理
-
-## 実装詳細
-
-### データベースアクセス
-
+1. DIコンテナの設定
 ```csharp
-public interface IDatabase
+// Startup.cs または App.xaml.cs
+public partial class App : Application
 {
-    Task<FileNodeModel?> GetFileNodeAsync(string path);
-    Task SaveFileNodeAsync(FileNodeModel node);
-    Task UpdateRatingAsync(string path, int rating);
-    Task<int> GetRatingAsync(string path);
-}
+    private ServiceProvider? _serviceProvider;
 
-public class DatabaseManager : IDatabase
-{
-    private static readonly Lazy<DatabaseManager> _instance =
-        new Lazy<DatabaseManager>(() => new DatabaseManager());
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        var services = new ServiceCollection();
+        ConfigureServices(services);
+        _serviceProvider = services.BuildServiceProvider();
+    }
 
-    public static DatabaseManager Instance => _instance.Value;
+    private void ConfigureServices(IServiceCollection services)
+    {
+        // データベース
+        services.AddSingleton<DatabaseManager>();
+    }
+
+    // ServiceProviderは内部的にのみ公開
+    internal static IServiceProvider? ServiceProvider =>
+        (Current as App)?._serviceProvider;
 }
 ```
 
-### ファイル操作の実装
-
+2. ThumbnailLoaderHelperの修正
 ```csharp
-public class FileOperationHelper : IFileOperationHelper
+public class ThumbnailLoaderHelper
 {
-    private readonly IDatabase _db;
+    private readonly DatabaseManager _db;
 
-    public async Task MoveFile(string source, string dest)
+    public ThumbnailLoaderHelper(
+        ItemsControl thumbnailListBox,
+        Action<string> selectCallback,
+        ThumbnailListControl control,
+        MainViewModel viewModel)
     {
-        await HandleFileOperation(source, dest, isMove: true);
-    }
+        // 必要なコンポーネントで直接ServiceProviderを使用
+        _db = App.ServiceProvider?.GetRequiredService<DatabaseManager>() ??
+            throw new InvalidOperationException("DatabaseManager is not registered");
 
-    private async Task HandleFileOperation(string source, string dest, bool isMove)
-    {
-        // 1. 移動元のファイルのレーティングを取得
-        var sourceNode = await _db.GetFileNodeAsync(source);
-        var rating = sourceNode?.Rating ?? 0;
-
-        // 2. ファイル操作の実行
-        if (isMove)
-        {
-            File.Move(source, dest);
-        }
-        else
-        {
-            File.Copy(source, dest);
-        }
-
-        // 3. 新しいファイルノードを作成し、レーティングを設定
-        var newNode = new FileNodeModel(dest)
-        {
-            Rating = rating
-        };
-        await _db.SaveFileNodeAsync(newNode);
+        _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
+        _selectCallback = selectCallback;
+        _control = control ?? throw new ArgumentNullException(nameof(control));
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
     }
 }
 ```
 
-## 利点
+### メリット
+1. シンプルな依存関係
+   - 必要なコンポーネントでのみServiceProviderを使用
+   - 既存のコンストラクタシグネチャを維持
+   - 上位レイヤーへの影響を最小化
 
-1. **保守性の向上**
-   - 責務が明確に分離される
-   - ファイル操作のロジックが一箇所に集中
-   - データベースアクセスが一元管理される
+2. カプセル化の維持
+   - DIコンテナは必要なコンポーネントでのみ使用
+   - 他のコンポーネントには依存関係を見せない
+   - アプリケーション構造の単純化
 
-2. **テスタビリティの向上**
-   - インターフェースによる依存性の分離
-   - モックオブジェクトによるテストが容易
-   - データベースアクセスの抽象化
+3. 段階的な導入
+   - 既存コードへの影響を最小限に抑制
+   - 必要な箇所から順次対応可能
+   - 問題発生時の切り戻しが容易
 
-3. **機能の改善**
-   - レーティング引き継ぎが自動的に行われる
-   - ファイル操作の整合性が向上
-   - トランザクション管理が容易
+### 確認項目
+1. 機能テスト
+   - サムネイル表示
+   - レーティング情報の保持
+   - ファイル操作
 
-## 実装手順
+2. エラーケース
+   - DIコンテナ未初期化
+   - データベースアクセスエラー
 
-1. データベースアクセスの改善
-   - IDatabaseインターフェースの作成
-   - DatabaseManagerのシングルトン化
-   - 既存コードの修正
+### リスク対応
+1. 初期化エラー
+   - 適切な例外メッセージ
+   - エラーログの記録
+   - リトライロジックの検討
 
-2. ファイル操作の統合
-   - FileOperationHelperの作成
-   - 既存の散在したファイル操作コードの移行
-   - レーティング引き継ぎ機能の実装
+2. パフォーマンス確認
+   - メモリ使用量
+   - 初期化時間
+   - UI応答性
 
-3. ThumbnailLoaderHelperの修正
-   - ファイル操作関連のコードを削除
-   - データベースアクセスの更新
-   - インターフェース依存への変更
+### 成功基準
+- [ ] 既存機能が正常に動作
+- [ ] パフォーマンスが維持されている
+- [ ] エラー処理が適切に機能
+- [ ] メモリリークが発生していない
 
-## 注意点
-
-- ファイル操作時の例外処理を適切に実装する
-- データベーストランザクションの範囲を適切に設定する
-- 非同期処理の適切な実装を心がける
-- テストケースの充実化を図る
+### 次のステップ
+1. エラー処理の改善
+2. テストケースの作成
+3. パフォーマンス計測と最適化

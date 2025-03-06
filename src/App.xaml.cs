@@ -26,6 +26,7 @@ namespace Illustra
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
             containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
+            containerRegistry.RegisterSingleton<DatabaseManager>();
         }
 
         protected override void OnStartup(StartupEventArgs e)

@@ -96,8 +96,9 @@ namespace Illustra.Views
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
 
-            // サムネイルローダーの初期化
-            _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel);
+            // DatabaseManagerの取得とサムネイルローダーの初期化
+            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
             _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
 
             // ファイルシステム監視の初期化
@@ -809,7 +810,7 @@ namespace Illustra.Views
         {
             if (!_viewModel.SelectedItems.Any()) return;
 
-            var dbManager = new DatabaseManager();
+            var dbManager = ContainerLocator.Container.Resolve<DatabaseManager>();
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
 
             // W/A 操作中にレーティングフィルタ適用によって SelectedItems が変更されるのでコピー
