@@ -184,8 +184,7 @@
                 <DataTemplate>
                     <Border Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
                             Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
-                            BorderThickness="0"
-                            MouseLeftButtonDown="Thumbnail_MouseLeftButtonDown">
+                            BorderThickness="0">
                         <Grid>
                             <Image Source="{Binding ThumbnailInfo.Thumbnail}"
                                     Stretch="Uniform"

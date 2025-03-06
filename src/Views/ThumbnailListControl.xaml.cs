@@ -65,7 +65,10 @@ namespace Illustra.Views
         private readonly FileOperationHelper _fileOperationHelper;
         private Point? _dragStartPoint;
         private bool _isDragging;
-        private static readonly double DragThreshold = 25.0;
+        private static readonly double DragThreshold = 5.0;  // ドラッグ開始の距離しきい値（ピクセル）
+        private static readonly int DragTimeout = 100;       // ドラッグ判定のタイムアウト（ミリ秒）
+        private DispatcherTimer? _dragTimer;
+        private bool _isPotentialClick;                      // クリック操作の可能性を示すフラグ
 
 
 
@@ -724,64 +727,6 @@ namespace Illustra.Views
         /// <summary>
         /// サムネイルがクリックされたときの処理
         /// </summary>
-        private void Thumbnail_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
-            {
-                // 複数選択をサポート（IsLastSelectedはViewModelのCollectionChangedイベントで処理）
-                ModifierKeys modifiers = Keyboard.Modifiers;
-                if (modifiers == ModifierKeys.Control)
-                {
-                    if (_viewModel.SelectedItems.Contains(fileNode))
-                    {
-                        _viewModel.SelectedItems.Remove(fileNode);
-                    }
-                    else
-                    {
-                        _viewModel.SelectedItems.Add(fileNode);
-                    }
-                }
-                else if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-                {
-                    // Shiftキーが押されている場合は範囲選択
-                    var lastSelected = _viewModel.SelectedItems.LastOrDefault();
-                    if (lastSelected == null) return;
-
-                    var startIndex = ThumbnailItemsControl.Items.IndexOf(lastSelected);
-                    var endIndex = ThumbnailItemsControl.Items.IndexOf(fileNode);
-                    if (startIndex < 0 || endIndex < 0) return;
-
-                    if (modifiers == ModifierKeys.Shift)
-                    {
-                        // 既存の選択をクリア
-                        _viewModel.SelectedItems.Clear();
-                    }
-
-                    // 範囲内のアイテムを収集（視覚的な順序で）
-                    var indices = startIndex < endIndex ?
-                        Enumerable.Range(startIndex, endIndex - startIndex + 1) :
-                        Enumerable.Range(endIndex, startIndex - endIndex + 1).Reverse();
-
-                    // 範囲内のアイテムを選択
-                    foreach (var i in indices)
-                    {
-                        if (ThumbnailItemsControl.Items[i] is FileNodeModel item)
-                        {
-                            _viewModel.SelectedItems.Add(item);
-                        }
-                    }
-                }
-                else
-                {
-                    // 単一選択
-                    _viewModel.SelectedItems.Clear();
-                    _viewModel.SelectedItems.Add(fileNode);
-                }
-
-                e.Handled = true;
-            }
-        }
-
         private void Thumbnail_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
@@ -1133,40 +1078,153 @@ namespace Illustra.Views
             }
         }
 
+        private void DragTimer_Tick(object sender, EventArgs e)
+        {
+            var timer = (DispatcherTimer)sender;
+            timer.Stop();
+            timer.Tick -= DragTimer_Tick;
+
+            if (!_isPotentialClick || !_dragStartPoint.HasValue)
+                return;
+
+            // タイマー満了時、まだマウスがほとんど動いていない場合はクリック操作として処理
+            var currentPosition = Mouse.GetPosition(this);
+            var diff = _dragStartPoint.Value - currentPosition;
+
+            if (Math.Abs(diff.X) <= DragThreshold && Math.Abs(diff.Y) <= DragThreshold)
+            {
+                if (timer.Tag is ListViewItem listViewItem &&
+                    listViewItem.DataContext is FileNodeModel fileNode)
+                {
+                    HandleSelectionClick(fileNode);
+                }
+            }
+
+            _isPotentialClick = false;
+        }
+
+        private void HandleSelectionClick(FileNodeModel fileNode)
+        {
+            ModifierKeys modifiers = Keyboard.Modifiers;
+
+            if (modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+クリック: 選択のトグル
+                if (_viewModel.SelectedItems.Contains(fileNode))
+                {
+                    _viewModel.SelectedItems.Remove(fileNode);
+                }
+                else
+                {
+                    _viewModel.SelectedItems.Add(fileNode);
+                }
+            }
+            else if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            {
+                // Shift+クリック: 範囲選択
+                var lastSelected = _viewModel.SelectedItems.LastOrDefault();
+                if (lastSelected != null)
+                {
+                    var startIndex = ThumbnailItemsControl.Items.IndexOf(lastSelected);
+                    var endIndex = ThumbnailItemsControl.Items.IndexOf(fileNode);
+                    if (startIndex >= 0 && endIndex >= 0)
+                    {
+                        if (modifiers == ModifierKeys.Shift)
+                        {
+                            _viewModel.SelectedItems.Clear();
+                        }
+
+                        var indices = startIndex < endIndex ?
+                            Enumerable.Range(startIndex, endIndex - startIndex + 1) :
+                            Enumerable.Range(endIndex, startIndex - endIndex + 1).Reverse();
+
+                        foreach (var i in indices)
+                        {
+                            if (ThumbnailItemsControl.Items[i] is FileNodeModel item)
+                            {
+                                _viewModel.SelectedItems.Add(item);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // 通常クリック: 単一選択
+                _viewModel.SelectedItems.Clear();
+                _viewModel.SelectedItems.Add(fileNode);
+            }
+        }
+
         private void ThumbnailItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // イベントを処理済みとしてマーク
+            e.Handled = true;
+
             if (!(e.OriginalSource is DependencyObject originalSource))
                 return;
 
-            // クリックされた要素に関連するListViewItemを検索
             var listViewItem = UIHelper.FindAncestor<ListViewItem>(originalSource);
-            if (listViewItem == null)
+            if (listViewItem == null || !(listViewItem.DataContext is FileNodeModel fileNode))
                 return;
 
-            // Ctrlキーが押されている場合はドラッグ開始位置を記録しない
-            if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+            // 選択済みアイテムをクリックした場合は、すぐには選択処理を行わない
+            bool isSelectedItem = _viewModel.SelectedItems.Contains(fileNode);
+
+            // ドラッグ開始位置を記録
+            _dragStartPoint = e.GetPosition(this);
+            _isDragging = false;
+            _isPotentialClick = !isSelectedItem; // 選択済みアイテムの場合はクリックを保留
+
+            // タイマーをリセット
+            if (_dragTimer != null)
             {
-                // ドラッグ開始位置を記録
-                _dragStartPoint = e.GetPosition(this);
-                _isDragging = false;
+                _dragTimer.Stop();
+                _dragTimer.Tick -= DragTimer_Tick;
             }
+
+            // ドラッグ判定タイマーを開始
+            _dragTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(DragTimeout)
+            };
+            _dragTimer.Tick += DragTimer_Tick;
+            _dragTimer.Tag = listViewItem;
+            _dragTimer.Start();
         }
 
         private void ThumbnailItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            // ドラッグの前提条件をチェック
             if (e.LeftButton != MouseButtonState.Pressed || !_dragStartPoint.HasValue || _isDragging)
                 return;
 
-            // ドラッグ開始判定
+            // 現在位置から移動距離を計算
             Point currentPosition = e.GetPosition(this);
             Vector diff = _dragStartPoint.Value - currentPosition;
 
-            if (Math.Abs(diff.X) > DragThreshold || Math.Abs(diff.Y) > DragThreshold)
+            // 選択済みアイテムの場合はより小さいしきい値を使用
+            double threshold = _dragTimer == null ? DragThreshold * 0.5 : DragThreshold;
+
+            // 移動距離がしきい値を超えた場合はドラッグを開始
+            if (Math.Abs(diff.X) > threshold || Math.Abs(diff.Y) > threshold)
             {
-                // Ctrlキーが押されている場合はドラッグを開始しない
-                if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                // クリック操作の可能性を解除
+                _isPotentialClick = false;
+
+                // タイマーが存在する場合は停止・破棄
+                if (_dragTimer != null)
+                {
+                    _dragTimer.Stop();
+                    _dragTimer.Tick -= DragTimer_Tick;
+                    _dragTimer = null;
+                }
+
+                // 選択アイテムが存在する場合のみドラッグを開始
+                if (_viewModel.SelectedItems.Any())
                 {
                     StartDrag();
+                    e.Handled = true;
                 }
             }
         }
@@ -1178,7 +1236,7 @@ namespace Illustra.Views
 
             try
             {
-                // 選択されたファイルのパスリストを作成
+                // ドラッグする項目のリストを作成
                 var selectedFiles = _viewModel.SelectedItems
                     .Select(item => item.FullPath)
                     .Where(path => !string.IsNullOrEmpty(path))
@@ -1187,16 +1245,38 @@ namespace Illustra.Views
                 if (selectedFiles.Count > 0)
                 {
                     // DataObjectを作成
-                    var dataObject = new DataObject(DataFormats.FileDrop, selectedFiles.ToArray());
+                    var dataObject = new DataObject();
+                    // ファイルドロップとして登録
+                    dataObject.SetData(DataFormats.FileDrop, selectedFiles.ToArray());
+                    // ファイルパスのリストとして登録（内部処理用）
+                    dataObject.SetData("FileItems", selectedFiles);
 
-                    // ドラッグ＆ドロップ操作を開始
-                    DragDrop.DoDragDrop(ThumbnailItemsControl, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
+                    try
+                    {
+                        // ドラッグ＆ドロップ操作を開始
+                        var result = DragDrop.DoDragDrop(
+                            ThumbnailItemsControl,
+                            dataObject,
+                            DragDropEffects.Copy | DragDropEffects.Move
+                        );
+
+                        // 移動操作が成功した場合は、移動された項目を処理
+                        if (result == DragDropEffects.Move)
+                        {
+                            ProcessDragDropResult(result, _viewModel.SelectedItems.ToList());
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"ドラッグ＆ドロップ操作中にエラーが発生: {ex.Message}");
+                    }
                 }
             }
             finally
             {
                 _isDragging = false;
                 _dragStartPoint = null;
+                _isPotentialClick = false;
             }
         }
 
