@@ -221,7 +221,8 @@ namespace Illustra.Views
                     return;
 
                 bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
-                var fileOperationHelper = new FileOperationHelper();
+                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                var fileOperationHelper = new FileOperationHelper(db);
                 await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetPath, isCopy);
             }
         }

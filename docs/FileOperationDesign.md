@@ -1,105 +1,150 @@
 # ファイル操作機能の設計
 
-[Previous content up to "## 注意点" section remains unchanged...]
+[Previous content up to the "## まとめ" section remains unchanged...]
 
-## リファクタリング実装プラン
+## 次フェーズ：FileOperationHelperの実装計画
 
-### Phase 1: DIコンテナ導入とThumbnailLoaderHelper修正
+### 1. クラス設計
 
-1. DIコンテナの設定
 ```csharp
-// Startup.cs または App.xaml.cs
-public partial class App : Application
-{
-    private ServiceProvider? _serviceProvider;
-
-    protected override void OnStartup(StartupEventArgs e)
-    {
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        _serviceProvider = services.BuildServiceProvider();
-    }
-
-    private void ConfigureServices(IServiceCollection services)
-    {
-        // データベース
-        services.AddSingleton<DatabaseManager>();
-    }
-
-    // ServiceProviderは内部的にのみ公開
-    internal static IServiceProvider? ServiceProvider =>
-        (Current as App)?._serviceProvider;
-}
-```
-
-2. ThumbnailLoaderHelperの修正
-```csharp
-public class ThumbnailLoaderHelper
+public class FileOperationHelper
 {
     private readonly DatabaseManager _db;
 
-    public ThumbnailLoaderHelper(
-        ItemsControl thumbnailListBox,
-        Action<string> selectCallback,
-        ThumbnailListControl control,
-        MainViewModel viewModel)
+    public FileOperationHelper(DatabaseManager db)
     {
-        // 必要なコンポーネントで直接ServiceProviderを使用
-        _db = App.ServiceProvider?.GetRequiredService<DatabaseManager>() ??
-            throw new InvalidOperationException("DatabaseManager is not registered");
+        _db = db ?? throw new ArgumentNullException(nameof(db));
+    }
 
-        _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
-        _selectCallback = selectCallback;
-        _control = control ?? throw new ArgumentNullException(nameof(control));
-        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+    public async Task MoveFile(string source, string dest)
+    {
+        // レーティング情報の取得
+        var sourceNode = await _db.GetFileNodeAsync(source);
+        var rating = sourceNode?.Rating ?? 0;
+
+        // ファイル移動
+        File.Move(source, dest);
+
+        // 新しいノードを作成
+        var newNode = new FileNodeModel(dest)
+        {
+            Rating = rating
+        };
+        await _db.SaveFileNodeAsync(newNode);
+
+        // 古いノードを削除
+        if (sourceNode != null)
+        {
+            await _db.DeleteFileNodeAsync(source);
+        }
+    }
+
+    public async Task CopyFile(string source, string dest)
+    {
+        // レーティング情報の取得
+        var sourceNode = await _db.GetFileNodeAsync(source);
+        var rating = sourceNode?.Rating ?? 0;
+
+        // ファイルコピー
+        File.Copy(source, dest);
+
+        // 新しいノードを作成
+        var newNode = new FileNodeModel(dest)
+        {
+            Rating = rating
+        };
+        await _db.SaveFileNodeAsync(newNode);
+    }
+
+    public async Task DeleteFile(string path)
+    {
+        // ファイル削除
+        File.Delete(path);
+
+        // データベースから削除
+        await _db.DeleteFileNodeAsync(path);
     }
 }
 ```
 
-### メリット
-1. シンプルな依存関係
-   - 必要なコンポーネントでのみServiceProviderを使用
-   - 既存のコンストラクタシグネチャを維持
-   - 上位レイヤーへの影響を最小化
+### 2. DIコンテナ設定の更新
 
-2. カプセル化の維持
-   - DIコンテナは必要なコンポーネントでのみ使用
-   - 他のコンポーネントには依存関係を見せない
-   - アプリケーション構造の単純化
+```csharp
+protected override void RegisterTypes(IContainerRegistry containerRegistry)
+{
+    containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
+    containerRegistry.RegisterSingleton<DatabaseManager>();
+    containerRegistry.RegisterTransient<FileOperationHelper>();
+}
+```
 
-3. 段階的な導入
-   - 既存コードへの影響を最小限に抑制
-   - 必要な箇所から順次対応可能
-   - 問題発生時の切り戻しが容易
+### 3. 移行手順
 
-### 確認項目
-1. 機能テスト
-   - サムネイル表示
-   - レーティング情報の保持
-   - ファイル操作
+1. ファイル操作関連のコードの特定
+   - ThumbnailLoaderHelperからの移行
+   - ThumbnailListControlからの移行
+
+2. 段階的な移行
+   ```csharp
+   // ThumbnailListControlでの使用例
+   public class ThumbnailListControl
+   {
+       private readonly FileOperationHelper _fileOperationHelper;
+
+       public ThumbnailListControl()
+       {
+           _fileOperationHelper = ContainerLocator.Container.Resolve<FileOperationHelper>();
+       }
+   }
+   ```
+
+### 4. テスト計画
+
+1. 基本機能テスト
+   - ファイルの移動
+   - ファイルのコピー
+   - ファイルの削除
+   - レーティングの引き継ぎ
 
 2. エラーケース
-   - DIコンテナ未初期化
-   - データベースアクセスエラー
+   - ファイルが存在しない
+   - 権限エラー
+   - DBアクセスエラー
 
-### リスク対応
-1. 初期化エラー
-   - 適切な例外メッセージ
-   - エラーログの記録
-   - リトライロジックの検討
+3. 統合テスト
+   - ThumbnailLoaderHelperとの連携
+   - UIコンポーネントとの連携
 
-2. パフォーマンス確認
-   - メモリ使用量
-   - 初期化時間
-   - UI応答性
+### 5. 移行後の検証項目
 
-### 成功基準
-- [ ] 既存機能が正常に動作
-- [ ] パフォーマンスが維持されている
-- [ ] エラー処理が適切に機能
-- [ ] メモリリークが発生していない
+- [ ] 既存機能が正常に動作することの確認
+- [ ] レーティング情報が正しく引き継がれることの確認
+- [ ] エラーハンドリングの動作確認
+- [ ] パフォーマンスへの影響確認
 
-### 次のステップ
-1. エラー処理の改善
-2. テストケースの作成
-3. パフォーマンス計測と最適化
+### 6. 期待される効果
+
+1. **責務の明確化**
+   - ファイル操作に特化したクラスの提供
+   - コードの可読性向上
+   - メンテナンス性の向上
+
+2. **再利用性の向上**
+   - 他のコンポーネントからの利用が容易
+   - 依存関係の明確化
+   - テストの容易性
+
+3. **エラーハンドリングの改善**
+   - 一貫したエラー処理
+   - トランザクション管理の改善
+   - ログ記録の統一
+
+## 実装スケジュール
+
+1. FileOperationHelperクラスの作成
+2. 既存コードの移行
+3. テストの実装
+4. 動作検証
+5. 必要に応じた調整
+
+この計画に基づいて、FileOperationHelperの実装を進めていきます。

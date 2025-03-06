@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,6 +15,9 @@ using WpfToolkit.Controls;
 using System.Windows.Controls.Primitives;
 using Illustra.Controls;
 using System.ComponentModel;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Illustra.Views
 {
@@ -84,20 +88,20 @@ namespace Illustra.Views
             InitializeComponent();
             Loaded += ThumbnailListControl_Loaded;
 
+            // 設定を読み込む
+            _appSettings = SettingsHelper.GetSettings();
+
             // ViewModelの初期化
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
 
+            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+
             // ドラッグ＆ドロップヘルパーの初期化
             _dragDropHelper = new DragDropHelper();
-            _fileOperationHelper = new FileOperationHelper();
-            _fileOperationHelper.ProgressChanged += OnFileOperationProgress;
-
-            // 設定を読み込む
-            _appSettings = SettingsHelper.GetSettings();
+            _fileOperationHelper = new FileOperationHelper(db);
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
-            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
             _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
 
@@ -1698,58 +1702,58 @@ namespace Illustra.Views
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
 
-       /// <summary>
-       /// VirtualizingWrapPanelの実際のレイアウトから列数を取得します
-       /// </summary>
-       private int GetItemsPerRow(VirtualizingWrapPanel panel)
-       {
-           if (ThumbnailItemsControl.Items.Count == 0 || panel == null)
-               return 1;
+        /// <summary>
+        /// VirtualizingWrapPanelの実際のレイアウトから列数を取得します
+        /// </summary>
+        private int GetItemsPerRow(VirtualizingWrapPanel panel)
+        {
+            if (ThumbnailItemsControl.Items.Count == 0 || panel == null)
+                return 1;
 
-           // パネルの幅から推定される列数を計算（フォールバック用）
-           double expectedItemWidth = ThumbnailSizeSlider.Value + 12; // マージンとパディングを考慮
-           int estimatedColumns = Math.Max(1, (int)(panel.ActualWidth / expectedItemWidth));
+            // パネルの幅から推定される列数を計算（フォールバック用）
+            double expectedItemWidth = ThumbnailSizeSlider.Value + 12; // マージンとパディングを考慮
+            int estimatedColumns = Math.Max(1, (int)(panel.ActualWidth / expectedItemWidth));
 
-           var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-           if (scrollViewer == null)
-               return estimatedColumns;
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer == null)
+                return estimatedColumns;
 
-           // Viewportの範囲を取得
-           var viewport = new Rect(new Point(scrollViewer.HorizontalOffset, scrollViewer.VerticalOffset),
-                                 new Size(scrollViewer.ViewportWidth, scrollViewer.ViewportHeight));
+            // Viewportの範囲を取得
+            var viewport = new Rect(new Point(scrollViewer.HorizontalOffset, scrollViewer.VerticalOffset),
+                                  new Size(scrollViewer.ViewportWidth, scrollViewer.ViewportHeight));
 
-           double? firstRowY = null;
-           int itemsInFirstRow = 0;
+            double? firstRowY = null;
+            int itemsInFirstRow = 0;
 
-           // 表示範囲内の最初の行を見つけてカウント
-           for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-           {
-               var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-               if (container != null)
-               {
-                   var bounds = container.TransformToAncestor(scrollViewer).TransformBounds(new Rect(container.RenderSize));
-                   if (bounds.IntersectsWith(viewport))
-                   {
-                       var pos = container.TransformToAncestor(panel).Transform(new Point(0, 0));
-                       if (!firstRowY.HasValue)
-                       {
-                           firstRowY = pos.Y;
-                           itemsInFirstRow = 1;
-                       }
-                       else if (Math.Abs(pos.Y - firstRowY.Value) <= 1) // 1ピクセルの誤差を許容
-                       {
-                           itemsInFirstRow++;
-                       }
-                       else if (pos.Y > firstRowY.Value)
-                       {
-                           // 次の行に到達したら終了
-                           return itemsInFirstRow;
-                       }
-                   }
-               }
-           }
+            // 表示範囲内の最初の行を見つけてカウント
+            for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+            {
+                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                if (container != null)
+                {
+                    var bounds = container.TransformToAncestor(scrollViewer).TransformBounds(new Rect(container.RenderSize));
+                    if (bounds.IntersectsWith(viewport))
+                    {
+                        var pos = container.TransformToAncestor(panel).Transform(new Point(0, 0));
+                        if (!firstRowY.HasValue)
+                        {
+                            firstRowY = pos.Y;
+                            itemsInFirstRow = 1;
+                        }
+                        else if (Math.Abs(pos.Y - firstRowY.Value) <= 1) // 1ピクセルの誤差を許容
+                        {
+                            itemsInFirstRow++;
+                        }
+                        else if (pos.Y > firstRowY.Value)
+                        {
+                            // 次の行に到達したら終了
+                            return itemsInFirstRow;
+                        }
+                    }
+                }
+            }
 
-           return itemsInFirstRow > 0 ? itemsInFirstRow : estimatedColumns;
-       }
+            return itemsInFirstRow > 0 ? itemsInFirstRow : estimatedColumns;
+        }
     }
 }

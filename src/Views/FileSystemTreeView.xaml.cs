@@ -30,10 +30,15 @@ namespace Illustra.Views
         {
             InitializeComponent();
             Loaded += FileSystemTreeView_Loaded;
-            _fileOperationHelper = new FileOperationHelper();
 
             // マウスイベントハンドラを追加
             AddHandler(TreeViewItem.PreviewMouseDownEvent, new MouseButtonEventHandler(OnPreviewMouseDown), true);
+        }
+
+        private void InitializeFileOperationHelper()
+        {
+            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _fileOperationHelper = new FileOperationHelper(db);
         }
         private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
@@ -58,6 +63,9 @@ namespace Illustra.Views
             }
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
+
+            // FileOperationHelperの初期化
+            InitializeFileOperationHelper();
         }
 
         // TreeViewの選択変更イベントハンドラ

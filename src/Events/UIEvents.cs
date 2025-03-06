@@ -52,4 +52,45 @@ namespace Illustra.Events
     /// レーティングが変更されたときにトリガーされるイベント
     /// </summary>
     public class RatingChangedEvent : PubSubEvent<RatingChangedEventArgs> { }
+    /// <summary>
+    /// ファイル操作の進行状況イベントの引数
+    /// </summary>
+    public class FileOperationProgressEventArgs : EventArgs
+    {
+        public string FileName { get; set; }
+        public long BytesTransferred { get; set; }
+        public long TotalBytes { get; set; }
+        public double ProgressPercentage => (double)BytesTransferred / TotalBytes * 100;
+
+        // 追加プロパティ
+        public int CurrentFile { get; set; }
+        public int TotalFiles { get; set; }
+        public string OperationType { get; set; }
+
+        public FileOperationProgressEventArgs(string fileName, long bytesTransferred, long totalBytes)
+        {
+            FileName = fileName;
+            BytesTransferred = bytesTransferred;
+            TotalBytes = totalBytes;
+            OperationType = "Unknown";
+            CurrentFile = 1;
+            TotalFiles = 1;
+        }
+
+        public FileOperationProgressEventArgs(string fileName, long bytesTransferred, long totalBytes,
+            int currentFile, int totalFiles, string operationType)
+        {
+            FileName = fileName;
+            BytesTransferred = bytesTransferred;
+            TotalBytes = totalBytes;
+            CurrentFile = currentFile;
+            TotalFiles = totalFiles;
+            OperationType = operationType;
+        }
+    }
+
+    /// <summary>
+    /// ファイル操作の進行状況イベント
+    /// </summary>
+    public class FileOperationProgressEvent : PubSubEvent<FileOperationProgressEventArgs> { }
 }

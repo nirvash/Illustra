@@ -2,160 +2,166 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows;
+using Illustra.Models;
 
 namespace Illustra.Helpers
 {
     public class FileOperationHelper
     {
-        /// <summary>
-        /// ファイル操作の進捗状況を通知するイベント
-        /// </summary>
-        public event EventHandler<FileOperationProgressEventArgs>? ProgressChanged;
+        private readonly DatabaseManager _db;
+
+        public FileOperationHelper(DatabaseManager db)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+        }
 
         /// <summary>
-        /// ファイル操作を実行します
+        /// 複数のファイルに対してコピーまたは移動操作を実行します
         /// </summary>
-        public async Task ExecuteFileOperation(IList<string> sourcePaths, string targetPath, bool isCopy)
+        /// <param name="files">操作対象のファイルパスリスト</param>
+        /// <param name="targetFolder">コピー/移動先のフォルダパス</param>
+        /// <param name="isCopy">trueの場合はコピー、falseの場合は移動</param>
+        /// <returns>操作の完了を表すTask</returns>
+        public async Task ExecuteFileOperation(List<string> files, string targetFolder, bool isCopy)
         {
+            if (files == null || files.Count == 0)
+                throw new ArgumentException("ファイルリストが空です", nameof(files));
+
+            if (string.IsNullOrEmpty(targetFolder))
+                throw new ArgumentNullException(nameof(targetFolder));
+
+            if (!Directory.Exists(targetFolder))
+                throw new DirectoryNotFoundException($"ターゲットフォルダが見つかりません: {targetFolder}");
+
+            foreach (var file in files)
+            {
+                if (!File.Exists(file))
+                    continue;
+
+                string fileName = Path.GetFileName(file);
+                string destPath = Path.Combine(targetFolder, fileName);
+
+                // 同名ファイルが存在する場合は名前を変更
+                if (File.Exists(destPath))
+                {
+                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                    string extension = Path.GetExtension(fileName);
+                    int counter = 1;
+
+                    do
+                    {
+                        destPath = Path.Combine(targetFolder, $"{fileNameWithoutExt} ({counter}){extension}");
+                        counter++;
+                    } while (File.Exists(destPath));
+                }
+
+                try
+                {
+                    if (isCopy)
+                    {
+                        await CopyFile(file, destPath);
+                    }
+                    else
+                    {
+                        await MoveFile(file, destPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new FileOperationException($"ファイル操作中にエラーが発生しました: {ex.Message}", ex);
+                }
+            }
+        }
+
+        public async Task MoveFile(string source, string dest)
+        {
+            if (string.IsNullOrEmpty(source))
+                throw new ArgumentNullException(nameof(source));
+            if (string.IsNullOrEmpty(dest))
+                throw new ArgumentNullException(nameof(dest));
+
             try
             {
-                // 操作前の検証
-                ValidateOperation(sourcePaths, targetPath);
+                // レーティング情報の取得
+                var sourceNode = await _db.GetFileNodeAsync(source);
+                var rating = sourceNode?.Rating ?? 0;
 
-                int total = sourcePaths.Count;
-                int current = 0;
+                // ファイル移動
+                File.Move(source, dest);
 
-                foreach (var sourcePath in sourcePaths)
+                // 新しいノードを作成
+                var newNode = new FileNodeModel(dest)
                 {
-                    current++;
-                    string fileName = Path.GetFileName(sourcePath);
-                    string destinationPath = Path.Combine(targetPath, fileName);
+                    Rating = rating
+                };
+                await _db.SaveFileNodeAsync(newNode);
 
-                    // 同名ファイルの処理
-                    destinationPath = GetUniqueFilePath(destinationPath);
-
-                    try
-                    {
-                        if (isCopy)
-                        {
-                            await Task.Run(() => File.Copy(sourcePath, destinationPath, true));
-                        }
-                        else
-                        {
-                            await Task.Run(() => File.Move(sourcePath, destinationPath));
-                        }
-
-                        // 進捗を通知
-                        OnProgressChanged(new FileOperationProgressEventArgs(
-                            sourcePath,
-                            destinationPath,
-                            current,
-                            total,
-                            isCopy ? FileOperationType.Copy : FileOperationType.Move));
-                    }
-                    catch (Exception ex)
-                    {
-                        // 個別のファイル操作のエラーを通知
-                        MessageBox.Show(
-                            $"ファイル {fileName} の{(isCopy ? "コピー" : "移動")}中にエラーが発生しました：\n{ex.Message}",
-                            "エラー",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-                    }
+                // 古いノードを削除
+                if (sourceNode != null)
+                {
+                    await _db.DeleteFileNodeAsync(source);
                 }
             }
             catch (Exception ex)
             {
-                // 全体的なエラーを通知
-                MessageBox.Show(
-                    $"ファイル操作中にエラーが発生しました：\n{ex.Message}",
-                    "エラー",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                throw;
+                throw new FileOperationException($"Failed to move file from {source} to {dest}", ex);
             }
         }
 
-        /// <summary>
-        /// ファイル操作の検証を行います
-        /// </summary>
-        private void ValidateOperation(IList<string> sourcePaths, string targetPath)
+        public async Task CopyFile(string source, string dest)
         {
-            if (sourcePaths == null || sourcePaths.Count == 0)
-                throw new ArgumentException("ソースファイルが指定されていません。");
+            if (string.IsNullOrEmpty(source))
+                throw new ArgumentNullException(nameof(source));
+            if (string.IsNullOrEmpty(dest))
+                throw new ArgumentNullException(nameof(dest));
 
-            if (string.IsNullOrEmpty(targetPath))
-                throw new ArgumentException("移動先が指定されていません。");
-
-            if (!Directory.Exists(targetPath))
-                throw new DirectoryNotFoundException("指定された移動先フォルダが見つかりません。");
-
-            foreach (var path in sourcePaths)
+            try
             {
-                if (!File.Exists(path))
-                    throw new FileNotFoundException($"ファイル {Path.GetFileName(path)} が見つかりません。");
+                // レーティング情報の取得
+                var sourceNode = await _db.GetFileNodeAsync(source);
+                var rating = sourceNode?.Rating ?? 0;
+
+                // ファイルコピー
+                File.Copy(source, dest);
+
+                // 新しいノードを作成
+                var newNode = new FileNodeModel(dest)
+                {
+                    Rating = rating
+                };
+                await _db.SaveFileNodeAsync(newNode);
+            }
+            catch (Exception ex)
+            {
+                throw new FileOperationException($"Failed to copy file from {source} to {dest}", ex);
             }
         }
 
-        /// <summary>
-        /// 重複しないファイルパスを取得します
-        /// </summary>
-        private string GetUniqueFilePath(string originalPath)
+        public async Task DeleteFile(string path)
         {
-            if (!File.Exists(originalPath))
-                return originalPath;
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentNullException(nameof(path));
 
-            string directory = Path.GetDirectoryName(originalPath) ?? "";
-            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(originalPath);
-            string extension = Path.GetExtension(originalPath);
-            int counter = 1;
-
-            string newPath;
-            do
+            try
             {
-                newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
-                counter++;
-            } while (File.Exists(newPath));
+                // ファイル削除
+                File.Delete(path);
 
-            return newPath;
-        }
-
-        /// <summary>
-        /// 進捗状況の変更を通知します
-        /// </summary>
-        private void OnProgressChanged(FileOperationProgressEventArgs e)
-        {
-            ProgressChanged?.Invoke(this, e);
+                // データベースから削除
+                await _db.DeleteFileNodeAsync(path);
+            }
+            catch (Exception ex)
+            {
+                throw new FileOperationException($"Failed to delete file: {path}", ex);
+            }
         }
     }
 
-    public class FileOperationProgressEventArgs : EventArgs
+    public class FileOperationException : Exception
     {
-        public string SourcePath { get; }
-        public string DestinationPath { get; }
-        public int CurrentFile { get; }
-        public int TotalFiles { get; }
-        public FileOperationType OperationType { get; }
-
-        public FileOperationProgressEventArgs(
-            string sourcePath,
-            string destinationPath,
-            int currentFile,
-            int totalFiles,
-            FileOperationType operationType)
+        public FileOperationException(string message, Exception? innerException = null)
+            : base(message, innerException)
         {
-            SourcePath = sourcePath;
-            DestinationPath = destinationPath;
-            CurrentFile = currentFile;
-            TotalFiles = totalFiles;
-            OperationType = operationType;
         }
-    }
-
-    public enum FileOperationType
-    {
-        Copy,
-        Move
     }
 }

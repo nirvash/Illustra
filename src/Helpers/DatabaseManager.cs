@@ -330,6 +330,17 @@ namespace Illustra.Helpers
             });
         }
 
+        public async Task DeleteFileNodeAsync(string fullPath)
+        {
+            await ExecuteWithRetryAsync(async () =>
+            {
+                using var db = new DataConnection(_dataProvider, _connectionString);
+                await db.GetTable<FileNodeModel>()
+                    .Where(fn => fn.FullPath == fullPath)
+                    .DeleteAsync();
+            });
+        }
+
         private async Task ExecuteWithRetryAsync(Func<Task> operation)
         {
             int retryCount = 0;
