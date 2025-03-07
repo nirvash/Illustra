@@ -77,15 +77,6 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <!-- ドラッグ＆ドロップ用のハイライトBorder -->
-                                    <Border x:Name="DropTargetBorder"
-                                           Background="Transparent"
-                                           BorderThickness="1"
-                                           CornerRadius="8"
-                                           Margin="18,-2,-2,-2"
-                                           Padding="0,3,4,3"
-                                           Panel.ZIndex="1"
-                                           IsHitTestVisible="False"/>
                                     <!-- 通常の選択状態用のBorder -->
                                     <Border x:Name="ItemBorder"
                                            Background="Transparent"

@@ -78,10 +78,27 @@ namespace Illustra.Views
 
         public class CustomDropHandler : DefaultDropHandler
         {
+            private ThumbnailListControl _control = null;
+            public CustomDropHandler(ThumbnailListControl control)
+            {
+                _control = control;
+            }
             public override void DragOver(IDropInfo dropInfo)
             {
                 base.DragOver(dropInfo);
-                dropInfo.DropTargetAdorner = DropTargetAdorners.Insert;
+                // サムネイル一覧からサムネイル一覧へのドロップ無効
+                /*
+                var visualTarget = dropInfo.VisualTarget as FrameworkElement;
+                if (visualTarget.Name == "ThumbnailItemsControl")
+                {
+                    dropInfo.Effects = DragDropEffects.None;
+                    dropInfo.DropTargetAdorner = DropTargetAdorners.Hint;
+                    return;
+                }*/
+                if (dropInfo.DropTargetAdorner == DropTargetAdorners.Insert)
+                {
+                    dropInfo.DropTargetAdorner = null;
+                }
 
                 var dataObject = dropInfo.Data as IDataObject;
                 // look for drag&drop new files
@@ -95,20 +112,9 @@ namespace Illustra.Views
                 }
             }
 
-            public override void Drop(IDropInfo dropInfo)
+            public override void Drop(IDropInfo e)
             {
-                var dataObject = dropInfo.Data as DataObject;
-                // look for drag&drop new files
-                if (dataObject != null && dataObject.ContainsFileDropList())
-                {
-                    // this.HandleDropActionAsync(dropInfo, dataObject.GetFileDropList());
-                }
-                else
-                {
-                    GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
-                    var data = dropInfo.Data;
-                    // do something with the data
-                }
+                _control.ThumbnailItemsControl_Drop(e);
             }
         }
 
@@ -127,8 +133,7 @@ namespace Illustra.Views
 
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
-            //            gdd.DragDrop.SetDropHandler(ThumbnailItemsControl, new gdd.DefaultDropHandler());
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new DefaultDragHandler());
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
@@ -1207,81 +1212,73 @@ namespace Illustra.Views
         {
             HandleDragEffect(sender, e);
         }
-        private async void ThumbnailItemsControl_Drop(object sender, DragEventArgs e)
+        public async void ThumbnailItemsControl_Drop(IDropInfo e)
         {
-            // データ形式でドラッグ元を判定
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                // エクスプローラーなど外部からのドラッグ
-            }
-            else if (e.Data.GetDataPresent(DataFormats.StringFormat))
-            {
-                // アプリ内からのドラッグ＆ドロップの場合は禁止
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-                return;
-            }
-            else
+            // サムネイル一覧からサムネイル一覧へのドロップ無効
+            var dataObject = e.Data as DataObject;
+            if (e.Data is FileNodeModel || e.Data is IEnumerable<FileNodeModel>)
             {
                 return;
             }
 
-            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-            if (files == null)
-                return;
-
-            var targetPath = _currentFolderPath;
-            if (string.IsNullOrEmpty(targetPath))
-                return;
-
-            // 画像ファイルのみをフィルタリング
-            var imageFiles = files.Where(file => FileHelper.IsImageFile(file)).ToList();
-            if (!imageFiles.Any())
-                return;
-
-            bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
-            var operation = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
-
-            try
+            // look for drag&drop new files
+            if (dataObject != null && dataObject.ContainsFileDropList())
             {
-                foreach (var file in imageFiles)
+                var files = dataObject.GetFileDropList().OfType<string>().ToList();
+                if (files == null)
+                    return;
+
+                var targetPath = _currentFolderPath;
+                if (string.IsNullOrEmpty(targetPath))
+                    return;
+
+                // 画像ファイルのみをフィルタリング
+                var imageFiles = files.Where(file => FileHelper.IsImageFile(file)).ToList();
+                if (!imageFiles.Any())
+                    return;
+
+                bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+                var operation = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
+
+                try
                 {
-                    var fileName = Path.GetFileName(file);
-                    var destPath = Path.Combine(targetPath, fileName);
+                    foreach (var file in imageFiles)
+                    {
+                        var fileName = Path.GetFileName(file);
+                        var destPath = Path.Combine(targetPath, fileName);
 
-                    if (isCopy)
-                    {
-                        // コピー処理
-                        await Task.Run(() => File.Copy(file, destPath, true));
-                    }
-                    else
-                    {
-                        // 移動処理（同じドライブ内ならFile.Move、異なるドライブ間ではコピー&削除）
-                        if (Path.GetPathRoot(file) == Path.GetPathRoot(destPath))
+                        if (isCopy)
                         {
-                            await Task.Run(() => File.Move(file, destPath, true));
+                            // コピー処理
+                            await Task.Run(() => File.Copy(file, destPath, true));
                         }
                         else
                         {
-                            await Task.Run(() =>
+                            // 移動処理（同じドライブ内ならFile.Move、異なるドライブ間ではコピー&削除）
+                            if (Path.GetPathRoot(file) == Path.GetPathRoot(destPath))
                             {
-                                File.Copy(file, destPath, true);
-                                File.Delete(file);
-                            });
+                                await Task.Run(() => File.Move(file, destPath, true));
+                            }
+                            else
+                            {
+                                await Task.Run(() =>
+                                {
+                                    File.Copy(file, destPath, true);
+                                    File.Delete(file);
+                                });
+                            }
                         }
                     }
+
+                    e.Effects = operation;
                 }
-
-                e.Effects = operation;
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"ファイルの{(isCopy ? "コピー" : "移動")}中にエラーが発生しました: {ex.Message}",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    e.Effects = DragDropEffects.None;
+                }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ファイルの{(isCopy ? "コピー" : "移動")}中にエラーが発生しました: {ex.Message}",
-                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                e.Effects = DragDropEffects.None;
-            }
-
-            e.Handled = true;
         }
 
         /// <summary>

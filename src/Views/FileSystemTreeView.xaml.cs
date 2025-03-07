@@ -1,10 +1,8 @@
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Illustra.Helpers;
@@ -24,7 +22,6 @@ namespace Illustra.Views
         private IEventAggregator? _eventAggregator;
         private AppSettings? _appSettings;
         private FileOperationHelper _fileOperationHelper;
-        private TreeViewItem? _lastHighlightedItem; // 最後にハイライトしたアイテム
 
         public class CustomDropHandler : IDropTarget
         {
@@ -50,9 +47,6 @@ namespace Illustra.Views
         {
             InitializeComponent();
             Loaded += FileSystemTreeView_Loaded;
-
-            // マウスイベントハンドラを追加
-            AddHandler(TreeViewItem.PreviewMouseDownEvent, new MouseButtonEventHandler(OnPreviewMouseDown), true);
         }
 
         private void InitializeFileOperationHelper()
@@ -60,15 +54,6 @@ namespace Illustra.Views
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
             _fileOperationHelper = new FileOperationHelper(db);
         }
-        private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (_isDragging)
-            {
-                // ドラッグ中はマウスイベントをキャンセル
-                e.Handled = true;
-            }
-        }
-
 
         private void FileSystemTreeView_Loaded(object sender, RoutedEventArgs e)
         {
@@ -84,7 +69,6 @@ namespace Illustra.Views
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
-            //            gdd.DragDrop.SetDropHandler(FolderTreeView, new gdd.DefaultDropHandler());
 
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
@@ -102,13 +86,6 @@ namespace Illustra.Views
 
                 // 選択されたアイテムまでスクロール
                 ScrollToSelectedItem();
-
-                // ドラッグ＆ドロップ中のハイライトをクリア
-                if (_lastHighlightedItem != null)
-                {
-                    ResetHighlight(_lastHighlightedItem);
-                    _lastHighlightedItem = null;
-                }
 
                 // 選択されたアイテムのTreeViewItemを取得して更新を強制
                 var treeView = sender as TreeView;
@@ -295,120 +272,8 @@ namespace Illustra.Views
         }
 
         /// <summary>
-        /// ドラッグオーバー時の処理
-        /// </summary>
-        private void TreeView_DragOver(object sender, DragEventArgs e)
-        {
-            try
-            {
-                // 前回ハイライトしたアイテムを元に戻す
-                if (_lastHighlightedItem != null)
-                {
-                    ResetHighlight(_lastHighlightedItem);
-                    _lastHighlightedItem = null;
-                }
-
-                // 1. データのすべての形式を表示
-                string[] formats = e.Data.GetFormats();
-                Console.WriteLine("データのフォーマット:");
-                foreach (var format in formats)
-                {
-                    Console.WriteLine(format);
-                }
-                string[] sourceFiles = new string[0];
-                if (e.Data.GetDataPresent("GongSolutions.Wpf.DragDrop"))
-                {
-                    object[] objArray = e.Data.GetData("GongSolutions.Wpf.DragDrop") as object[];
-                    if (objArray != null)
-                    {
-                        var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
-                        foreach (var node in nodeArray)
-                        {
-                            sourceFiles.Append(node.FullPath);
-                        }
-                    }
-                }
-
-                // ドラッグデータがファイルかどうかを確認
-                if (!sourceFiles.Any())
-                {
-                    e.Effects = DragDropEffects.None;
-                    e.Handled = true;
-                    return;
-                }
-
-                // ドロップ先のTreeViewItemを取得
-                var targetItem = GetDropTargetItem(e.OriginalSource);
-                if (targetItem == null || !(targetItem.DataContext is FileSystemItemModel targetModel) || !targetModel.IsFolder)
-                {
-                    // フォルダでない場合はドロップ不可
-                    e.Effects = DragDropEffects.None;
-                    e.Handled = true;
-                    return;
-                }
-
-                // ドラッグ元のパスを取得
-                if (sourceFiles != null && sourceFiles.Length > 0)
-                {
-                    // ドラッグ元とドロップ先が同じフォルダの場合はドロップ不可
-                    foreach (var file in sourceFiles)
-                    {
-                        string parentDir = Path.GetDirectoryName(file);
-                        if (string.Equals(parentDir, targetModel.FullPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            // 同じフォルダへのドロップは禁止
-                            e.Effects = DragDropEffects.None;
-                            e.Handled = true;
-                            return;
-                        }
-                    }
-                }
-
-                // Ctrlキーが押されている場合はコピー、それ以外は移動
-                if ((e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey)
-                {
-                    e.Effects = DragDropEffects.Copy;
-                }
-                else
-                {
-                    e.Effects = DragDropEffects.Move;
-                }
-
-                // ドロップ先のTreeViewItemをハイライト
-                HighlightDropTarget(targetItem);
-                _lastHighlightedItem = targetItem;
-
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"DragOver処理中にエラーが発生しました: {ex.Message}");
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-            }
-        }
-
-        /// <summary>
-        /// ドラッグ操作が終了したときの処理
-        /// </summary>
-        protected override void OnDragLeave(DragEventArgs e)
-        {
-            base.OnDragLeave(e);
-
-            // ハイライトを元に戻す
-            if (_lastHighlightedItem != null)
-            {
-                ResetHighlight(_lastHighlightedItem);
-                _lastHighlightedItem = null;
-            }
-        }
-
-        /// <summary>
         /// ドロップ時の処理
         /// </summary>
-        private bool _isDragging = false;
-
-
         private void TreeView_DragOver(IDropInfo dropInfo)
         {
             var files = DragDropHelper.GetDroppedFiles(dropInfo);
@@ -441,7 +306,6 @@ namespace Illustra.Views
 
         private async void TreeView_Drop(IDropInfo dropInfo)
         {
-            _isDragging = true;
             TreeViewItem targetItem = null;
 
             try
@@ -449,7 +313,6 @@ namespace Illustra.Views
                 var files = DragDropHelper.GetDroppedFiles(dropInfo);
                 if (files.Count == 0)
                 {
-                    _isDragging = false;
                     return;
                 }
 
@@ -464,13 +327,6 @@ namespace Illustra.Views
                 {
                     // 同じフォルダへのドロップは禁止
                     return;
-                }
-
-                // ハイライトを元に戻す
-                if (_lastHighlightedItem != null)
-                {
-                    ResetHighlight(_lastHighlightedItem);
-                    _lastHighlightedItem = null;
                 }
 
                 // ドロップ先のフォルダパスを取得
@@ -492,9 +348,6 @@ namespace Illustra.Views
             }
             finally
             {
-                // ドラッグ状態をリセット
-                _isDragging = false;
-
                 // ドロップ先のアイテムの表示を更新
                 if (targetItem != null)
                 {
@@ -511,59 +364,6 @@ namespace Illustra.Views
                         return Task.CompletedTask;
                     }, DispatcherPriority.Normal);
                 }
-            }
-        }
-
-        /// <summary>
-        /// ドロップ先のTreeViewItemを取得
-        /// </summary>
-        private TreeViewItem GetDropTargetItem(object originalSource)
-        {
-            if (originalSource is DependencyObject depObj)
-            {
-                return FindVisualParent<TreeViewItem>(depObj);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// ドロップ先のTreeViewItemをハイライト
-        /// </summary>
-        private void HighlightDropTarget(TreeViewItem item)
-        {
-            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
-            if (border != null)
-            {
-                if (item?.IsSelected == true)
-                {
-                    // 選択中のアイテムは青みがかった緑色でハイライト
-                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 180, 180));
-                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 180, 180));
-                }
-                else
-                {
-                    // 非選択アイテムは通常の緑色でハイライト
-                    border.Background = new SolidColorBrush(Color.FromArgb(80, 0, 200, 0));
-                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 200, 0));
-                }
-                border.BorderThickness = new Thickness(1);
-            }
-        }
-
-        /// <summary>
-        /// ハイライトを元に戻す
-        /// </summary>
-        private void ResetHighlight(TreeViewItem item)
-        {
-            if (item == null) return;
-
-            var border = FindDirectVisualChild<Border>(item, "DropTargetBorder");
-            if (border != null)
-            {
-                // ハイライトとボーダーをクリア
-                border.Background = Brushes.Transparent;
-                border.BorderBrush = Brushes.Transparent;
-                border.BorderThickness = new Thickness(0);
             }
         }
     }
