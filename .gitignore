@@ -3,7 +3,13 @@
 /*.code-workspace
 
 # .vscode ディレクトリ設定
+# .vscode フォルダを明示的に除外しない
+!.vscode/
+
+# ただし、デフォルトでは中身を無視
 .vscode/*
+
+# ただし、特定のファイルはトラッキング対象にする
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/settings.json
