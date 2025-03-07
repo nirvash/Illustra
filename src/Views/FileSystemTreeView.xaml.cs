@@ -84,7 +84,7 @@ namespace Illustra.Views
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
-            //            gdd.DragDrop.SetDropHandler(FileSystemTreeViewControl, new gdd.DefaultDropHandler());
+            //            gdd.DragDrop.SetDropHandler(FolderTreeView, new gdd.DefaultDropHandler());
 
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
@@ -408,42 +408,10 @@ namespace Illustra.Views
         /// </summary>
         private bool _isDragging = false;
 
-        private List<string> GetDroppedFIles(IDropInfo dropInfo)
-        {
-            // ドロップされたファイルのパスを取得
-            var files = new List<string>();
-            if (dropInfo.Data is FileNodeModel droppedItem)
-            {
-                files.Add(droppedItem.FullPath);
-            }
-            else if (dropInfo.Data != null)
-            {
-                var objArray = dropInfo.Data as IEnumerable<object>;
-                var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
-                foreach (var node in nodeArray)
-                {
-                    files.Add(node.FullPath);
-                }
-            }
-            return files;
-        }
-
-        private bool IsSameDirectory(List<string> files, string targetPath)
-        {
-            foreach (var file in files)
-            {
-                string parentDir = Path.GetDirectoryName(file);
-                if (string.Equals(parentDir, targetPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
 
         private void TreeView_DragOver(IDropInfo dropInfo)
         {
-            var files = GetDroppedFIles(dropInfo);
+            var files = DragDropHelper.GetDroppedFiles(dropInfo);
             if (files.Count == 0)
             {
                 dropInfo.Effects = DragDropEffects.None;
@@ -454,19 +422,20 @@ namespace Illustra.Views
             var targetModel = dropInfo.TargetItem as FileSystemItemModel;
             if (targetModel == null || !targetModel.IsFolder)
             {
+                dropInfo.Effects = DragDropEffects.None;
                 return;
             }
 
-            if (!IsSameDirectory(files, targetModel.FullPath))
+            if (DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
             {
-                if ((dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey)
-                {
-                    dropInfo.Effects = DragDropEffects.Copy;
-                }
-                else
-                {
-                    dropInfo.Effects = DragDropEffects.Move;
-                }
+                dropInfo.Effects = DragDropEffects.None;
+                return;
+            }
+            else
+            {
+                dropInfo.Effects = (dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.Move;
             }
         }
 
@@ -477,7 +446,7 @@ namespace Illustra.Views
 
             try
             {
-                var files = GetDroppedFIles(dropInfo);
+                var files = DragDropHelper.GetDroppedFiles(dropInfo);
                 if (files.Count == 0)
                 {
                     _isDragging = false;
@@ -491,7 +460,7 @@ namespace Illustra.Views
                     return;
                 }
 
-                if (IsSameDirectory(files, targetModel.FullPath))
+                if (DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
                 {
                     // 同じフォルダへのドロップは禁止
                     return;

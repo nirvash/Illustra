@@ -4,11 +4,46 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Illustra.Models;
+using GongSolutions.Wpf.DragDrop;
+using System.IO;
 
 namespace Illustra.Helpers
 {
     public class DragDropHelper
     {
+        public static List<string> GetDroppedFiles(IDropInfo dropInfo)
+        {
+            // ドロップされたファイルのパスを取得
+            var files = new List<string>();
+            if (dropInfo.Data is FileNodeModel droppedItem)
+            {
+                files.Add(droppedItem.FullPath);
+            }
+            else if (dropInfo.Data != null)
+            {
+                var objArray = dropInfo.Data as IEnumerable<object>;
+                var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
+                foreach (var node in nodeArray)
+                {
+                    files.Add(node.FullPath);
+                }
+            }
+            return files;
+        }
+
+        public static bool IsSameDirectory(List<string> files, string targetPath)
+        {
+            foreach (var file in files)
+            {
+                string parentDir = Path.GetDirectoryName(file);
+                if (string.Equals(parentDir, targetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>
         /// ドラッグ操作の視覚効果を作成します
         /// </summary>

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300">
 
@@ -14,11 +15,9 @@
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   IsTabStop="True" TabIndex="1"
-                  AllowDrop="True"
-                  PreviewMouseLeftButtonDown="FavoriteFolders_PreviewMouseLeftButtonDown"
-                  PreviewMouseMove="FavoriteFolders_PreviewMouseMove"
-                  DragOver="FavoriteFolders_DragOver"
-                  Drop="FavoriteFolders_Drop">
+                  dd:DragDrop.IsDragSource="True"
+                  dd:DragDrop.IsDropTarget="True"
+                  AllowDrop="True">
             <TreeView.Resources>
                 <!-- SystemColors.HighlightBrushKey と InactiveSelectionHighlightBrushKey を上書き -->
                 <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
@@ -41,15 +40,6 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <!-- ドラッグ＆ドロップ用のハイライトBorder -->
-                                    <Border x:Name="DropTargetBorder"
-                                           Background="Transparent"
-                                           BorderThickness="1"
-                                           CornerRadius="8"
-                                           Margin="-2"
-                                           Padding="4,3"
-                                           Panel.ZIndex="1"
-                                           IsHitTestVisible="False"/>
                                     <!-- 通常の選択状態用のBorder -->
                                     <Border x:Name="ItemBorder"
                                            Background="Transparent"
