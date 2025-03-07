@@ -25,24 +25,19 @@
                                  Grid.Row="1"
                                  Margin="10"
                                  SelectionMode="Extended"
-                                 AllowDrop="True"
-                                 MouseDoubleClick="ListView_MouseDoubleClick">
-            <ListView.ItemContainerStyle>
-                <Style TargetType="{x:Type ListViewItem}">
-                    <Setter Property="IsSelected"
-                            Value="{Binding IsSelected, Mode=TwoWay}"/>
-                </Style>
-            </ListView.ItemContainerStyle>
+                                 ItemsSource="{Binding}"
+                                 MouseDoubleClick="ListView_MouseDoubleClick"
+                                 AllowDrop="True">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="ID"
-                                    DisplayMemberBinding="{Binding Id}"
+                                    DisplayMemberBinding="{Binding Id, Mode=TwoWay}"
                                     Width="50"/>
                     <GridViewColumn Header="名前"
-                                    DisplayMemberBinding="{Binding Name}"
+                                    DisplayMemberBinding="{Binding Name, Mode=TwoWay}"
                                     Width="150"/>
                     <GridViewColumn Header="説明"
-                                    DisplayMemberBinding="{Binding Description}"
+                                    DisplayMemberBinding="{Binding Description, Mode=TwoWay}"
                                     Width="300"/>
                 </GridView>
             </ListView.View>

@@ -63,6 +63,22 @@
         "kind": "test",
         "isDefault": true
       }
-    }
+    },
+    {
+      "label": "build sample",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/sample/DraggableListView/DraggableListViewSample.csproj",
+        "--verbosity",
+        "detailed"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
   ]
 }
