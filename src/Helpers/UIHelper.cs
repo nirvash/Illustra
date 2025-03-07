@@ -130,5 +130,29 @@ namespace Illustra.Helpers
             // 保留中のすべてのUIイベントを処理
             dispatcher.Invoke(delegate { }, DispatcherPriority.Background);
         }
+
+        /// <summary>
+        /// 指定された型の視覚ツリーの親を探します
+        /// </summary>
+        /// <typeparam name="T">探す親の型</typeparam>
+        /// <param name="child">検索を開始する子要素</param>
+        /// <returns>見つかった親要素、見つからない場合はnull</returns>
+        public static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            // 引数の検証
+            if (child == null)
+                return null;
+
+            // 親要素を取得
+            DependencyObject parent = VisualTreeHelper.GetParent(child);
+
+            // 再帰的に親ツリーを上に検索
+            while (parent != null && !(parent is T))
+            {
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+
+            return parent as T;
+        }
     }
 }

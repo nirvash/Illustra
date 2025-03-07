@@ -47,6 +47,20 @@ namespace Illustra.Models
                    extension == ".gif" || extension == ".bmp" || extension == ".webp";
         }
 
+        private bool _isSelected = false;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged(nameof(IsSelected));
+                }
+            }
+        }
+
         private string _fileName = string.Empty;
         [Column, NotNull]
         public string FileName
@@ -130,7 +144,7 @@ namespace Illustra.Models
                 if (_rating != value)
                 {
                     _rating = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Rating));
                 }
             }
         }
@@ -167,7 +181,7 @@ namespace Illustra.Models
         // List View に変更を通知する。データベースへの連携には使わないこと
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
