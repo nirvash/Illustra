@@ -1229,15 +1229,15 @@ namespace Illustra.Views
                 return; // スクロールバー上のクリックは無視
             }
 
-            // イベントを処理済みとしてマーク
-            e.Handled = true;
-
             if (!(e.OriginalSource is DependencyObject originalSource))
                 return;
 
             var listViewItem = UIHelper.FindAncestor<ListViewItem>(originalSource);
             if (listViewItem == null || !(listViewItem.DataContext is FileNodeModel fileNode))
                 return;
+
+            // イベントを処理済みとしてマーク
+            e.Handled = true;
 
             // フォーカスを即座に設定
             listViewItem.Focus();
