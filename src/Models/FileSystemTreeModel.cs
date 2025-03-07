@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
+
 namespace Illustra.Models
 {
     /// <summary>
@@ -11,6 +12,7 @@ namespace Illustra.Models
     /// </summary>
     public class FileSystemTreeModel : INotifyPropertyChanged
     {
+
         private ObservableCollection<FileSystemItemModel> _rootItems;
         private bool _isLoading;
 
@@ -521,5 +523,6 @@ namespace Illustra.Models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
     }
 }

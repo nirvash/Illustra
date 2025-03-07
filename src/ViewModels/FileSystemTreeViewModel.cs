@@ -5,11 +5,15 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Models;
+using GongSolutions.Wpf.DragDrop;
+using System.Windows;
 
 namespace Illustra.ViewModels
 {
     public class FileSystemTreeViewModel : INotifyPropertyChanged
     {
+
+
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
         private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);

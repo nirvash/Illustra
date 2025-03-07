@@ -37,6 +37,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
     <PackageReference Include="linq2db" Version="5.4.1" />
     <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />

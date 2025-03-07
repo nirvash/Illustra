@@ -7,6 +7,7 @@
              xmlns:models="clr-namespace:Illustra.Models"
              xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
+             xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300"
              x:Name="FileSystemTreeViewControl">
@@ -28,9 +29,8 @@
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
                    Padding="0,0,0,0"
-                   AllowDrop="True"
-                   Drop="TreeView_Drop"
-                   DragOver="TreeView_DragOver">
+                   dd:DragDrop.IsDragSource="False"
+                   dd:DragDrop.IsDropTarget="True">
             <TreeView.Resources>
                 <!-- SystemColors.HighlightBrushKey と InactiveSelectionHighlightBrushKey を上書き -->
                 <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->

@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GongSolutions.Wpf.DragDrop;
 
 namespace Illustra.Views
 {
@@ -67,13 +68,6 @@ namespace Illustra.Views
         // ドラッグ＆ドロップ関連
         private readonly DragDropHelper _dragDropHelper;
         private readonly FileOperationHelper _fileOperationHelper;
-        private Point? _dragStartPoint;
-        private bool _isDragging;
-        private static readonly double DragThreshold = 5.0;  // ドラッグ開始の距離しきい値（ピクセル）
-        private static readonly int DragTimeout = 100;       // ドラッグ判定のタイムアウト（ミリ秒）
-        private DispatcherTimer? _dragTimer;
-
-
 
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
@@ -81,6 +75,42 @@ namespace Illustra.Views
         public event EventHandler? IsActiveChanged;
 #pragma warning restore 0067 // 警告の無視を終了
         #endregion
+
+        public class CustomDropHandler : DefaultDropHandler
+        {
+            public override void DragOver(IDropInfo dropInfo)
+            {
+                base.DragOver(dropInfo);
+                dropInfo.DropTargetAdorner = DropTargetAdorners.Insert;
+
+                var dataObject = dropInfo.Data as IDataObject;
+                // look for drag&drop new files
+                if (dataObject != null && dataObject.GetDataPresent(DataFormats.FileDrop))
+                {
+                    dropInfo.Effects = DragDropEffects.Copy;
+                }
+                else
+                {
+                    dropInfo.Effects = DragDropEffects.Move;
+                }
+            }
+
+            public override void Drop(IDropInfo dropInfo)
+            {
+                var dataObject = dropInfo.Data as DataObject;
+                // look for drag&drop new files
+                if (dataObject != null && dataObject.ContainsFileDropList())
+                {
+                    // this.HandleDropActionAsync(dropInfo, dataObject.GetFileDropList());
+                }
+                else
+                {
+                    GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
+                    var data = dropInfo.Data;
+                    // do something with the data
+                }
+            }
+        }
 
         // xaml でインスタンス化するためのデフォルトコンストラクタ
         public ThumbnailListControl()
@@ -97,9 +127,9 @@ namespace Illustra.Views
 
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
-            // ドラッグ＆ドロップヘルパーの初期化
-            _dragDropHelper = new DragDropHelper();
-            _fileOperationHelper = new FileOperationHelper(db);
+            //            gdd.DragDrop.SetDropHandler(ThumbnailItemsControl, new gdd.DefaultDropHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new DefaultDragHandler());
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
@@ -1123,195 +1153,13 @@ namespace Illustra.Views
             }
         }
 
-        private void DragTimer_Tick(object sender, EventArgs e)
-        {
-            var timer = (DispatcherTimer)sender;
-            timer.Stop();
-            timer.Tick -= DragTimer_Tick;
 
-            if (!_dragStartPoint.HasValue)
-                return;
 
-            // タイマー満了時、まだマウスがほとんど動いていない場合はクリック操作として処理
-            var currentPosition = Mouse.GetPosition(this);
-            var diff = _dragStartPoint.Value - currentPosition;
-
-            if (Math.Abs(diff.X) <= DragThreshold && Math.Abs(diff.Y) <= DragThreshold)
-            {
-                if (timer.Tag is ListViewItem listViewItem &&
-                    listViewItem.DataContext is FileNodeModel fileNode)
-                {
-                    HandleSelectionClick(fileNode);
-                }
-            }
-        }
-
-        private void HandleSelectionClick(FileNodeModel fileNode)
-        {
-            ModifierKeys modifiers = Keyboard.Modifiers;
-
-            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(fileNode) as ListViewItem;
-
-            if (modifiers == ModifierKeys.Control)
-            {
-                // Ctrl+クリック: 選択のトグル
-                if (_viewModel.SelectedItems.Contains(fileNode))
-                {
-                    _viewModel.SelectedItems.Remove(fileNode);
-                }
-                else
-                {
-                    _viewModel.SelectedItems.Add(fileNode);
-                }
-                container?.Focus();
-            }
-            else if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-            {
-                // Shift+クリック: 範囲選択
-                var lastSelected = _viewModel.SelectedItems.LastOrDefault();
-                if (lastSelected != null)
-                {
-                    var startIndex = ThumbnailItemsControl.Items.IndexOf(lastSelected);
-                    var endIndex = ThumbnailItemsControl.Items.IndexOf(fileNode);
-                    if (startIndex >= 0 && endIndex >= 0)
-                    {
-                        if (modifiers == ModifierKeys.Shift)
-                        {
-                            _viewModel.SelectedItems.Clear();
-                        }
-
-                        var indices = startIndex < endIndex ?
-                            Enumerable.Range(startIndex, endIndex - startIndex + 1) :
-                            Enumerable.Range(endIndex, startIndex - endIndex + 1).Reverse();
-
-                        foreach (var i in indices)
-                        {
-                            if (ThumbnailItemsControl.Items[i] is FileNodeModel item)
-                            {
-                                _viewModel.SelectedItems.Add(item);
-                            }
-                        }
-                    }
-                }
-                container?.Focus();
-            }
-            else
-            {
-                // 通常クリック: 単一選択
-                _viewModel.SelectedItems.Clear();
-                _viewModel.SelectedItems.Add(fileNode);
-                container?.Focus();
-            }
-        }
-
-        // ✅ スクロールバー要素かどうかを判定するメソッド
-        private bool IsInsideScrollbar(DependencyObject source)
-        {
-            while (source != null)
-            {
-                if (source is ScrollBar || source is RepeatButton) // スクロールバーかスクロールボタン
-                {
-                    return true;
-                }
-                source = VisualTreeHelper.GetParent(source);
-            }
-            return false;
-        }
-
-        private void ThumbnailItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            // スクロールバー関連の要素だった場合は処理をスキップ
-            // クリックされた要素を取得
-            DependencyObject source = e.OriginalSource as DependencyObject;
-
-            if (IsInsideScrollbar(source))
-            {
-                return; // スクロールバー上のクリックは無視
-            }
-
-            if (!(e.OriginalSource is DependencyObject originalSource))
-                return;
-
-            var listViewItem = UIHelper.FindAncestor<ListViewItem>(originalSource);
-            if (listViewItem == null || !(listViewItem.DataContext is FileNodeModel fileNode))
-                return;
-
-            // イベントを処理済みとしてマーク
-            e.Handled = true;
-
-            // フォーカスを即座に設定
-            listViewItem.Focus();
-
-            // ドラッグ開始位置を記録
-            _dragStartPoint = e.GetPosition(this);
-            _isDragging = false;
-
-            // タイマーをリセット
-            if (_dragTimer != null)
-            {
-                _dragTimer.Stop();
-                _dragTimer.Tick -= DragTimer_Tick;
-            }
-
-            // ドラッグ判定タイマーを開始
-            _dragTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(DragTimeout)
-            };
-            _dragTimer.Tick += DragTimer_Tick;
-            _dragTimer.Tag = listViewItem;
-            _dragTimer.Start();
-        }
-
-        private void ThumbnailItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            // ドラッグの前提条件をチェック
-            if (e.LeftButton != MouseButtonState.Pressed || !_dragStartPoint.HasValue || _isDragging)
-                return;
-
-            // 現在位置から移動距離を計算
-            Point currentPosition = e.GetPosition(this);
-            Vector diff = _dragStartPoint.Value - currentPosition;
-
-            // 選択済みアイテムの場合はより小さいしきい値を使用
-            double threshold = _dragTimer == null ? DragThreshold * 0.5 : DragThreshold;
-
-            // 移動距離がしきい値を超えた場合はドラッグを開始
-            if (Math.Abs(diff.X) > threshold || Math.Abs(diff.Y) > threshold)
-            {
-                // ドラッグ操作の開始
-
-                // タイマーが存在する場合は停止・破棄
-                if (_dragTimer != null)
-                {
-                    _dragTimer.Stop();
-                    _dragTimer.Tick -= DragTimer_Tick;
-                    _dragTimer = null;
-                }
-
-                // 選択アイテムが存在する場合のみドラッグを開始
-                if (_viewModel.SelectedItems.Any())
-                {
-                    StartDrag();
-                    e.Handled = true;
-                }
-            }
-        }
-
-        private void ThumbnailItemsControl_DragEnter(object sender, DragEventArgs e)
-        {
-            HandleDragEffect(sender, e);
-        }
-
-        private void ThumbnailItemsControl_DragOver(object sender, DragEventArgs e)
-        {
-            HandleDragEffect(sender, e);
-        }
 
         private void HandleDragEffect(object sender, DragEventArgs e)
         {
             // サムネイル一覧からドラッグ開始した場合はドロップを禁止
-            if (_isDragging)
+            if (false)
             {
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
@@ -1350,6 +1198,15 @@ namespace Illustra.Views
             e.Handled = true;
         }
 
+        private void ThumbnailItemsControl_DragEnter(object sender, DragEventArgs e)
+        {
+            HandleDragEffect(sender, e);
+        }
+
+        private void ThumbnailItemsControl_DragOver(object sender, DragEventArgs e)
+        {
+            HandleDragEffect(sender, e);
+        }
         private async void ThumbnailItemsControl_Drop(object sender, DragEventArgs e)
         {
             // データ形式でドラッグ元を判定
@@ -1425,56 +1282,6 @@ namespace Illustra.Views
             }
 
             e.Handled = true;
-        }
-
-        private void StartDrag()
-        {
-            if (_isDragging) return;
-            _isDragging = true;
-
-            try
-            {
-                // ドラッグする項目のリストを作成
-                var selectedFiles = _viewModel.SelectedItems
-                    .Select(item => item.FullPath)
-                    .Where(path => !string.IsNullOrEmpty(path))
-                    .ToList();
-
-                if (selectedFiles.Count > 0)
-                {
-                    // DataObjectを作成
-                    var dataObject = new DataObject();
-                    // ファイルドロップとして登録
-                    dataObject.SetData(DataFormats.FileDrop, selectedFiles.ToArray());
-                    // ファイルパスのリストとして登録（内部処理用）
-                    dataObject.SetData("FileItems", selectedFiles);
-
-                    try
-                    {
-                        // ドラッグ＆ドロップ操作を開始
-                        var result = DragDrop.DoDragDrop(
-                            ThumbnailItemsControl,
-                            dataObject,
-                            DragDropEffects.Copy | DragDropEffects.Move
-                        );
-
-                        // 移動操作が成功した場合は、移動された項目を処理
-                        if (result == DragDropEffects.Move)
-                        {
-                            ProcessDragDropResult(result, _viewModel.SelectedItems.ToList());
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"ドラッグ＆ドロップ操作中にエラーが発生: {ex.Message}");
-                    }
-                }
-            }
-            finally
-            {
-                _isDragging = false;
-                _dragStartPoint = null;
-            }
         }
 
         /// <summary>

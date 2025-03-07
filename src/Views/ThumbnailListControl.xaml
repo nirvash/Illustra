@@ -7,6 +7,7 @@
              xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
              xmlns:helpers="clr-namespace:Illustra.Helpers"
              xmlns:local="clr-namespace:Illustra.Controls"
+             xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300">
 
@@ -107,14 +108,9 @@
                            VirtualizingPanel.IsVirtualizing="True"
                            VirtualizingPanel.VirtualizationMode="Recycling"
                            BorderThickness="0"
-                           PreviewKeyDown="ThumbnailItemsControl_PreviewKeyDown"
-                           PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel"
-                           PreviewMouseLeftButtonDown="ThumbnailItemsControl_PreviewMouseLeftButtonDown"
-                           PreviewMouseMove="ThumbnailItemsControl_PreviewMouseMove"
                            AllowDrop="True"
-                           Drop="ThumbnailItemsControl_Drop"
-                           DragEnter="ThumbnailItemsControl_DragEnter"
-                           DragOver="ThumbnailItemsControl_DragOver"
+                           dd:DragDrop.IsDragSource="True"
+                           dd:DragDrop.IsDropTarget="True"
                            KeyboardNavigation.TabNavigation="None"
                            IsTabStop="True" TabIndex="3"
                            FocusVisualStyle="{x:Null}">

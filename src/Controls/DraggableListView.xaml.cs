@@ -96,20 +96,6 @@ namespace Illustra.Controls
             }
         }
 
-        // ダブルクリックイベントの定義
-        public static readonly RoutedEvent MouseDoubleClickEvent = EventManager.RegisterRoutedEvent(
-            "MouseDoubleClick",
-            RoutingStrategy.Bubble,
-            typeof(MouseButtonEventHandler),
-            typeof(DraggableListView));
-
-        // ダブルクリックイベントのCLRラッパー
-        public event MouseButtonEventHandler MouseDoubleClick
-        {
-            add { AddHandler(MouseDoubleClickEvent, value); }
-            remove { RemoveHandler(MouseDoubleClickEvent, value); }
-        }
-
         private void ListView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // ドラッグ開始位置を記録

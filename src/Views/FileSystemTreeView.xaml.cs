@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
+using GongSolutions.Wpf.DragDrop;
 
 namespace Illustra.Views
 {
@@ -25,6 +26,25 @@ namespace Illustra.Views
         private FileOperationHelper _fileOperationHelper;
         private TreeViewItem? _lastHighlightedItem; // 最後にハイライトしたアイテム
 
+        public class CustomDropHandler : IDropTarget
+        {
+            private readonly FileSystemTreeView _parent = null;
+
+            public CustomDropHandler(FileSystemTreeView parent)
+            {
+                _parent = parent;
+            }
+
+            public void DragOver(IDropInfo dropInfo)
+            {
+                _parent.TreeView_DragOver(dropInfo);
+            }
+
+            public void Drop(IDropInfo dropInfo)
+            {
+                _parent.TreeView_Drop(dropInfo);
+            }
+        }
 
         public FileSystemTreeView()
         {
@@ -63,6 +83,8 @@ namespace Illustra.Views
             }
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
+            //            gdd.DragDrop.SetDropHandler(FileSystemTreeViewControl, new gdd.DefaultDropHandler());
 
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
@@ -286,8 +308,29 @@ namespace Illustra.Views
                     _lastHighlightedItem = null;
                 }
 
+                // 1. データのすべての形式を表示
+                string[] formats = e.Data.GetFormats();
+                Console.WriteLine("データのフォーマット:");
+                foreach (var format in formats)
+                {
+                    Console.WriteLine(format);
+                }
+                string[] sourceFiles = new string[0];
+                if (e.Data.GetDataPresent("GongSolutions.Wpf.DragDrop"))
+                {
+                    object[] objArray = e.Data.GetData("GongSolutions.Wpf.DragDrop") as object[];
+                    if (objArray != null)
+                    {
+                        var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
+                        foreach (var node in nodeArray)
+                        {
+                            sourceFiles.Append(node.FullPath);
+                        }
+                    }
+                }
+
                 // ドラッグデータがファイルかどうかを確認
-                if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                if (!sourceFiles.Any())
                 {
                     e.Effects = DragDropEffects.None;
                     e.Handled = true;
@@ -305,7 +348,6 @@ namespace Illustra.Views
                 }
 
                 // ドラッグ元のパスを取得
-                string[] sourceFiles = e.Data.GetData(DataFormats.FileDrop) as string[];
                 if (sourceFiles != null && sourceFiles.Length > 0)
                 {
                     // ドラッグ元とドロップ先が同じフォルダの場合はドロップ不可
@@ -366,46 +408,93 @@ namespace Illustra.Views
         /// </summary>
         private bool _isDragging = false;
 
-        private async void TreeView_Drop(object sender, DragEventArgs e)
+        private List<string> GetDroppedFIles(IDropInfo dropInfo)
+        {
+            // ドロップされたファイルのパスを取得
+            var files = new List<string>();
+            if (dropInfo.Data is FileNodeModel droppedItem)
+            {
+                files.Add(droppedItem.FullPath);
+            }
+            else if (dropInfo.Data != null)
+            {
+                var objArray = dropInfo.Data as IEnumerable<object>;
+                var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
+                foreach (var node in nodeArray)
+                {
+                    files.Add(node.FullPath);
+                }
+            }
+            return files;
+        }
+
+        private bool IsSameDirectory(List<string> files, string targetPath)
+        {
+            foreach (var file in files)
+            {
+                string parentDir = Path.GetDirectoryName(file);
+                if (string.Equals(parentDir, targetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void TreeView_DragOver(IDropInfo dropInfo)
+        {
+            var files = GetDroppedFIles(dropInfo);
+            if (files.Count == 0)
+            {
+                dropInfo.Effects = DragDropEffects.None;
+                return;
+            }
+
+            // ドロップ先を取得
+            var targetModel = dropInfo.TargetItem as FileSystemItemModel;
+            if (targetModel == null || !targetModel.IsFolder)
+            {
+                return;
+            }
+
+            if (!IsSameDirectory(files, targetModel.FullPath))
+            {
+                if ((dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey)
+                {
+                    dropInfo.Effects = DragDropEffects.Copy;
+                }
+                else
+                {
+                    dropInfo.Effects = DragDropEffects.Move;
+                }
+            }
+        }
+
+        private async void TreeView_Drop(IDropInfo dropInfo)
         {
             _isDragging = true;
             TreeViewItem targetItem = null;
 
             try
             {
-                // ドラッグデータがファイルかどうかを確認
-                if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                var files = GetDroppedFIles(dropInfo);
+                if (files.Count == 0)
                 {
-                    e.Handled = true;
+                    _isDragging = false;
                     return;
                 }
 
-                // ドロップされたファイルのパスを取得
-                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-                if (files == null || files.Length == 0)
+                // ドロップ先を取得
+                var targetModel = dropInfo.TargetItem as FileSystemItemModel;
+                if (targetModel == null || !targetModel.IsFolder)
                 {
-                    e.Handled = true;
                     return;
                 }
 
-                // ドロップ先のTreeViewItemを取得
-                targetItem = GetDropTargetItem(e.OriginalSource);
-                if (targetItem == null || !(targetItem.DataContext is FileSystemItemModel targetModel) || !targetModel.IsFolder)
+                if (IsSameDirectory(files, targetModel.FullPath))
                 {
-                    e.Handled = true;
+                    // 同じフォルダへのドロップは禁止
                     return;
-                }
-
-                // ドラッグ元とドロップ先が同じフォルダの場合はドロップ不可
-                foreach (var file in files)
-                {
-                    string parentDir = Path.GetDirectoryName(file);
-                    if (string.Equals(parentDir, targetModel.FullPath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // 同じフォルダへのドロップは禁止
-                        e.Handled = true;
-                        return;
-                    }
                 }
 
                 // ハイライトを元に戻す
@@ -419,18 +508,18 @@ namespace Illustra.Views
                 string targetFolderPath = targetModel.FullPath;
 
                 // ドロップ時の選択を防ぐ
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
+                dropInfo.Effects = DragDropEffects.None;
+                // dropInfo.Handled = true;
 
                 // コピーまたは移動操作を実行
-                bool isCopy = ((e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey);
+                bool isCopy = ((dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey);
                 await _fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolderPath, isCopy);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Drop処理中にエラーが発生しました: {ex.Message}");
                 MessageBox.Show($"ファイル操作中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                e.Handled = true;
+                // dropInfo.Handled = true;
             }
             finally
             {
