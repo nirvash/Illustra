@@ -136,6 +136,9 @@ namespace Illustra.Views
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new DefaultDragHandler());
 
+            // キーボードイベントハンドラのバインド
+            ThumbnailItemsControl.KeyDown += ThumbnailItemsControl_KeyDown;
+
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
             _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
@@ -779,70 +782,6 @@ namespace Illustra.Views
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
         }
 
-        /// <summary>
-        /// キー入力を処理するハンドラ
-        /// </summary>
-        private void ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            // タブキーを無効化して外側のコントロールにフォーカス移動
-            if (e.Key == Key.Tab)
-            {
-                e.Handled = true;
-                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-                {
-                    ThumbnailItemsControl.MoveFocus(new TraversalRequest(FocusNavigationDirection.Previous));
-                }
-                else
-                {
-                    ThumbnailItemsControl.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-                }
-                return;
-            }
-
-            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-            if (scrollViewer == null) return;
-
-            var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
-            if (panel == null) return;
-
-            // 選択アイテムが1つ以上ある場合のみインデックスを取得
-            var selectedItem = ThumbnailItemsControl.SelectedItems
-                .Cast<FileNodeModel>()
-                .LastOrDefault();
-            var selectedIndex = selectedItem != null ?
-                ThumbnailItemsControl.Items.IndexOf(selectedItem) : -1;
-            if (selectedIndex == -1 && _viewModel.FilteredItems.Cast<FileNodeModel>().Any())
-            {
-                // 選択がない場合は先頭を選択
-                selectedIndex = 0;
-            }
-            if (selectedIndex == -1) return;
-
-            FileNodeModel? targetItem = null;
-
-            // まず、Ctrl+A での全選択を処理
-            if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)
-            {
-                HandleSelectAll();
-                e.Handled = true;
-                return;
-            }
-
-            // 次に、ナビゲーションキーを処理
-            targetItem = HandleNavigationKey(e, selectedIndex, panel);
-
-            // レーティングキーを処理
-            if (HandleRatingKey(e))
-            {
-                return;
-            }
-
-            // 最後に選択の処理を行う
-            if (e.Handled && targetItem != null)
-            {
-                HandleSelectionWithTarget(targetItem);
-            }
-        }
 
         // レーティングを設定する新しいメソッド
         private async void SetRating(int rating)
@@ -874,45 +813,25 @@ namespace Illustra.Views
             }
         }
 
-        /// <summary>
-        /// 全選択（Ctrl+A）の処理を行います
-        /// </summary>
-        private void HandleSelectAll()
+        private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
         {
-            var allItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-            var selectedItems = _viewModel.SelectedItems.ToList();
-
-            // 現在選択されているノードの直前にまだ選択されていないノードを追加する
-            if (selectedItems.Any())
+            var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+            if (panel != null)
             {
-                var firstSelectedIndex = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(selectedItems.First());
-                var unselectedItems = allItems.Take(firstSelectedIndex)
-                    .Where(item => !selectedItems.Contains(item))
-                    .ToList();
+                // ナビゲーションキーの処理
+                HandleNavigationKey(e);
+                if (e.Handled) return;
 
-                foreach (var item in unselectedItems)
-                {
-                    _viewModel.SelectedItems.Add(item);
-                }
-            }
-
-            // まだ選択されていない残りのアイテムをすべて選択する
-            foreach (var item in allItems)
-            {
-                if (!_viewModel.SelectedItems.Contains(item))
-                {
-                    _viewModel.SelectedItems.Add(item);
-                }
+                // レーティングキーの処理
+                HandleRatingKey(e);
             }
         }
 
         /// <summary>
-        /// ナビゲーションキー（矢印キー、Home、End、Return）の処理を行います
+        /// ナビゲーションキーの処理を行います
         /// </summary>
-        private FileNodeModel? HandleNavigationKey(KeyEventArgs e, int selectedIndex, VirtualizingWrapPanel panel)
+        private void HandleNavigationKey(KeyEventArgs e)
         {
-            FileNodeModel? targetItem = null;
-
             switch (e.Key)
             {
                 case Key.Return:
@@ -920,127 +839,12 @@ namespace Illustra.Views
                     {
                         ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
                         e.Handled = true;
-                        return null;
+                        return;
                     }
                     break;
-
-                case Key.Home:
-                    targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault();
-                    e.Handled = true;
-                    break;
-
-                case Key.End:
-                    targetItem = _viewModel.FilteredItems.Cast<FileNodeModel>().LastOrDefault();
-                    e.Handled = true;
-                    break;
-
-                case Key.Right:
-                case Key.Left:
-                case Key.Up:
-                case Key.Down:
-                    // ナビゲーションキーの場合のみ列数を計算
-                    int itemsPerRow = GetItemsPerRow(panel);
-                    int totalItems = ThumbnailItemsControl.Items.Count;
-
-                    targetItem = e.Key switch
-                    {
-                        Key.Right => HandleRightKey(selectedIndex, totalItems, e.IsRepeat),
-                        Key.Left => HandleLeftKey(selectedIndex, itemsPerRow, totalItems, e.IsRepeat),
-                        Key.Up => HandleUpKey(selectedIndex, itemsPerRow, totalItems, e.IsRepeat),
-                        Key.Down => HandleDownKey(selectedIndex, itemsPerRow, totalItems, e.IsRepeat),
-                        _ => null
-                    };
-
-                    if (targetItem != null) e.Handled = true;
-                    break;
             }
-
-            return targetItem;
         }
 
-        /// <summary>
-        /// 右キーの処理を行います
-        /// </summary>
-        private FileNodeModel? HandleRightKey(int selectedIndex, int totalItems, bool isRepeat)
-        {
-            if (selectedIndex + 1 < totalItems)
-            {
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(selectedIndex + 1);
-            }
-            else if (!isRepeat)
-            {
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault();
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 左キーの処理を行います
-        /// </summary>
-        private FileNodeModel? HandleLeftKey(int selectedIndex, int itemsPerRow, int totalItems, bool isRepeat)
-        {
-            if (selectedIndex % itemsPerRow == 0)
-            {
-                int prevRow = (selectedIndex / itemsPerRow) - 1;
-                if (prevRow >= 0)
-                {
-                    int targetIndex = (prevRow * itemsPerRow) + (itemsPerRow - 1);
-                    targetIndex = Math.Min(targetIndex, totalItems - 1);
-                    return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
-                }
-                else if (!isRepeat)
-                {
-                    int lastRow = (totalItems - 1) / itemsPerRow;
-                    int lastRowItemCount = totalItems - (lastRow * itemsPerRow);
-                    int targetIndex = (lastRow * itemsPerRow) + Math.Min(itemsPerRow, lastRowItemCount) - 1;
-                    return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
-                }
-            }
-            else if (selectedIndex - 1 >= 0)
-            {
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(selectedIndex - 1);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 上キーの処理を行います
-        /// </summary>
-        private FileNodeModel? HandleUpKey(int selectedIndex, int itemsPerRow, int totalItems, bool isRepeat)
-        {
-            if (selectedIndex >= itemsPerRow)
-            {
-                int targetIndex = selectedIndex - itemsPerRow;
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
-            }
-            else if (!isRepeat)
-            {
-                int currentColumn = selectedIndex % itemsPerRow;
-                int lastRowStartIndex = ((totalItems - 1) / itemsPerRow) * itemsPerRow;
-                int targetIndex = Math.Min(lastRowStartIndex + currentColumn, totalItems - 1);
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 下キーの処理を行います
-        /// </summary>
-        private FileNodeModel? HandleDownKey(int selectedIndex, int itemsPerRow, int totalItems, bool isRepeat)
-        {
-            int nextRowIndex = selectedIndex + itemsPerRow;
-            if (nextRowIndex < totalItems)
-            {
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(nextRowIndex);
-            }
-            else if (!isRepeat)
-            {
-                int currentColumn = selectedIndex % itemsPerRow;
-                int targetIndex = Math.Min(currentColumn, totalItems - 1);
-                return _viewModel.FilteredItems.Cast<FileNodeModel>().ElementAt(targetIndex);
-            }
-            return null;
-        }
 
         /// <summary>
         /// レーティングキーの処理を行います
@@ -1072,51 +876,6 @@ namespace Illustra.Views
                 return true;
             }
             return false;
-        }
-
-        /// <summary>
-        /// 選択ターゲットに対する選択処理を行います
-        /// </summary>
-        private void HandleSelectionWithTarget(FileNodeModel targetItem)
-        {
-            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-            bool isCtrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
-
-            if (isShiftPressed)
-            {
-                var startItem = _viewModel.SelectedItems.LastOrDefault();
-                if (startItem != null)
-                {
-                    var startIndex = ThumbnailItemsControl.Items.IndexOf(startItem);
-                    var endIndex = ThumbnailItemsControl.Items.IndexOf(targetItem);
-                    if (startIndex >= 0 && endIndex >= 0)
-                    {
-                        var minIndex = Math.Min(startIndex, endIndex);
-                        var maxIndex = Math.Max(startIndex, endIndex);
-                        for (int i = minIndex; i <= maxIndex; i++)
-                        {
-                            var item = ThumbnailItemsControl.Items[i] as FileNodeModel;
-                            if (item != null && !_viewModel.SelectedItems.Contains(item))
-                            {
-                                _viewModel.SelectedItems.Add(item);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (!isCtrlPressed)
-                {
-                    _viewModel.SelectedItems.Clear();
-                }
-                if (!_viewModel.SelectedItems.Contains(targetItem))
-                {
-                    _viewModel.SelectedItems.Add(targetItem);
-                }
-            }
-
-            ThumbnailItemsControl.ScrollIntoView(targetItem);
         }
 
 
@@ -1203,15 +962,6 @@ namespace Illustra.Views
             e.Handled = true;
         }
 
-        private void ThumbnailItemsControl_DragEnter(object sender, DragEventArgs e)
-        {
-            HandleDragEffect(sender, e);
-        }
-
-        private void ThumbnailItemsControl_DragOver(object sender, DragEventArgs e)
-        {
-            HandleDragEffect(sender, e);
-        }
         public async void ThumbnailItemsControl_Drop(IDropInfo e)
         {
             // サムネイル一覧からサムネイル一覧へのドロップ無効
@@ -1543,19 +1293,6 @@ namespace Illustra.Views
             return result;
         }
 
-        // レーティング表示の色を取得するメソッド
-        public static Brush GetRatingDisplayColor(int rating)
-        {
-            return rating switch
-            {
-                1 => Brushes.Red,
-                2 => Brushes.Orange,
-                3 => Brushes.Gold,
-                4 => Brushes.LightGreen,
-                5 => Brushes.DeepSkyBlue,
-                _ => Brushes.Gray
-            };
-        }
 
         private async void SortToggle_Click(object sender, RoutedEventArgs e)
         {
