@@ -2,10 +2,11 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Collections.Generic;
-using Illustra.Controls;
+using GongSolutions.Wpf.DragDrop;
 using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Controls;
 
 namespace DraggableListViewSample
 {
@@ -29,37 +30,57 @@ namespace DraggableListViewSample
                 });
             }
 
-            // ドロップを許可
-            listView.AllowDrop = true;
-            // ドロップイベントを追加
-            listView.Drop += ListView_Drop;
+            // ドラッグ＆ドロップの設定
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(listView, new CustomDropHandler(this));
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(listView, new DefaultDragHandler());
             DataContext = Items;
         }
 
-        private void ListView_Drop(object sender, DragEventArgs e)
+        public class CustomDropHandler : DefaultDropHandler
         {
-            if (e.Data.GetData(typeof(List<Node>)) is List<Node> droppedItems)
+            private readonly TestWindow _testWindow;
+
+            public CustomDropHandler(TestWindow testWindow)
             {
-                // ドロップされたアイテムの名前を取得
-                var itemNames = droppedItems.Select(item => item.Name).ToList();
+                _testWindow = testWindow;
+            }
 
-                // アイテム名を表示
-                MessageBox.Show(
-                    $"以下のアイテムがドロップされました：\n{string.Join("\n", itemNames)}",
-                    "ドロップされたアイテム",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+            public override void Drop(IDropInfo dropInfo)
+            {
+                var items = new List<Node>();
+                // 1つ
+                if (dropInfo.Data is Node droppedItem)
+                {
+                    items.Add(droppedItem);
+                }
+                else if (dropInfo.Data != null)
+                {
+                    var objArray = dropInfo.Data as IEnumerable<object>;
+                    var nodeArray = objArray.OfType<Node>().ToArray();
+                    items.AddRange(nodeArray);
+                }
+                if (items.Count > 0)
+                {
+                    // ドロップされたアイテムの名前を取得
+                    var itemNames = items.Select(item => item.Name).ToList();
 
-                // ステータステキストを更新
-                statusText.Text = $"{droppedItems.Count}個のアイテムがドロップされました";
-                Items[1].Name = "fuga";
+                    // アイテム名を表示
+                    MessageBox.Show(
+                        $"以下のアイテムにドロップされました：\n{string.Join("\n", itemNames)}\n",
+                        "ドロップされたアイテム: ???",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    // ステータステキストを更新
+                    _testWindow.statusText.Text = $"{items.Count}個のアイテムがドロップされました";
+                }
             }
         }
 
         private void ListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             // ListViewItem内のアイテムがダブルクリックされた場合のみ処理
-            if (e.OriginalSource is Node item)
+            if (e.OriginalSource is FrameworkElement element && element.DataContext is Node item)
             {
                 MessageBox.Show($"アイテム '{item.Name}' がダブルクリックされました。",
                                 "ダブルクリックイベント",
@@ -67,7 +88,6 @@ namespace DraggableListViewSample
                                 MessageBoxImage.Information);
 
                 statusText.Text = $"ダブルクリック: {item.Name}";
-                Items[1].Name = "hoge";
             }
         }
 
