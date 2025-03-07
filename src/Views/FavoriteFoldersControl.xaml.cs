@@ -214,16 +214,6 @@ namespace Illustra.Views
             }
         }
 
-        private void FavoriteFolders_DragOver(IDropInfo e)
-        {
-
-        }
-
-        private async void FavoriteFolders_Drop(IDropInfo e)
-        {
-
-        }
-
         public ObservableCollection<string> FavoriteFoldersList
         {
             get => _favoriteFolders;
