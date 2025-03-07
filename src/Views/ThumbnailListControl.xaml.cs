@@ -65,10 +65,6 @@ namespace Illustra.Views
         private bool _isSortAscending = true;
         private bool _isSortByDate = true;
 
-        // ドラッグ＆ドロップ関連
-        private readonly DragDropHelper _dragDropHelper;
-        private readonly FileOperationHelper _fileOperationHelper;
-
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
         public bool IsActive { get; set; }
@@ -83,32 +79,26 @@ namespace Illustra.Views
             {
                 _control = control;
             }
-            public override void DragOver(IDropInfo dropInfo)
+            public override void DragOver(IDropInfo e)
             {
-                base.DragOver(dropInfo);
+                base.DragOver(e);
                 // サムネイル一覧からサムネイル一覧へのドロップ無効
-                /*
-                var visualTarget = dropInfo.VisualTarget as FrameworkElement;
-                if (visualTarget.Name == "ThumbnailItemsControl")
+                var dataObject = e.Data as DataObject;
+                if (e.Data is FileNodeModel || e.Data is IEnumerable<FileNodeModel>)
                 {
-                    dropInfo.Effects = DragDropEffects.None;
-                    dropInfo.DropTargetAdorner = DropTargetAdorners.Hint;
                     return;
-                }*/
-                if (dropInfo.DropTargetAdorner == DropTargetAdorners.Insert)
-                {
-                    dropInfo.DropTargetAdorner = null;
                 }
 
-                var dataObject = dropInfo.Data as IDataObject;
+                if (e.DropTargetAdorner == DropTargetAdorners.Insert)
+                {
+                    e.DropTargetAdorner = null;
+                }
+
                 // look for drag&drop new files
                 if (dataObject != null && dataObject.GetDataPresent(DataFormats.FileDrop))
                 {
-                    dropInfo.Effects = DragDropEffects.Copy;
-                }
-                else
-                {
-                    dropInfo.Effects = DragDropEffects.Move;
+                    bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+                    e.Effects = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
                 }
             }
 
@@ -815,23 +805,33 @@ namespace Illustra.Views
 
         private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
         {
+            // ナビゲーションキーの処理
+            var selectedIndex = ThumbnailItemsControl.SelectedIndex;
             var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
             if (panel != null)
             {
-                // ナビゲーションキーの処理
-                HandleNavigationKey(e);
-                if (e.Handled) return;
+                var targetItem = HandleNavigationKey(e);
+                if (targetItem != null)
+                {
+                    ThumbnailItemsControl.SelectedItem = targetItem;
+                    ThumbnailItemsControl.ScrollIntoView(targetItem);
+                }
+            }
 
-                // レーティングキーの処理
-                HandleRatingKey(e);
+            // レーティングキーの処理
+            if (HandleRatingKey(e))
+            {
+                e.Handled = true;
             }
         }
 
         /// <summary>
-        /// ナビゲーションキーの処理を行います
+        /// ナビゲーションキー（矢印キー、Home、End、Return）の処理を行います
         /// </summary>
-        private void HandleNavigationKey(KeyEventArgs e)
+        private FileNodeModel? HandleNavigationKey(KeyEventArgs e)
         {
+            FileNodeModel? targetItem = null;
+
             switch (e.Key)
             {
                 case Key.Return:
@@ -839,10 +839,12 @@ namespace Illustra.Views
                     {
                         ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
                         e.Handled = true;
-                        return;
+                        return null;
                     }
                     break;
             }
+
+            return targetItem;
         }
 
 
@@ -915,51 +917,6 @@ namespace Illustra.Views
                     }, DispatcherPriority.Background);
                 }
             }
-        }
-
-
-
-
-        private void HandleDragEffect(object sender, DragEventArgs e)
-        {
-            // サムネイル一覧からドラッグ開始した場合はドロップを禁止
-            if (false)
-            {
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-                return;
-            }
-
-            // ドラッグデータのチェック
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-                return;
-            }
-
-            // ドロップされるファイルを取得
-            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-            if (files == null || !files.Any())
-            {
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-                return;
-            }
-
-            // 画像ファイルが含まれているかチェック
-            bool hasImageFile = files.Any(file => FileHelper.IsImageFile(file));
-            if (!hasImageFile)
-            {
-                e.Effects = DragDropEffects.None;
-                e.Handled = true;
-                return;
-            }
-
-            // Ctrlキーが押されている場合はコピー、それ以外は移動
-            e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) != 0 ?
-                DragDropEffects.Copy : DragDropEffects.Move;
-            e.Handled = true;
         }
 
         public async void ThumbnailItemsControl_Drop(IDropInfo e)
