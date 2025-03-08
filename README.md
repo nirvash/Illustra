@@ -49,6 +49,7 @@ Illustraは、高速で使いやすいWindows用画像ビューアです。大�
 | ←/→/↑/↓ | サムネイル選択の移動 |
 | Home/End | 先頭/末尾のサムネイルへ移動 |
 | Enter | 選択中の画像を表示 |
+| 1-5 | 選択中の画像にレーティングを設定 |
 | F11 | フルスクリーン切り替え |
 | Esc | 画像ビューを閉じる |
 
@@ -101,6 +102,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 | ←/→/↑/↓ | Move thumbnail selection |
 | Home/End | Move to first/last thumbnail |
 | Enter | Display selected image |
+| 1-5 | Set rating for selected image |
 | F11 | Toggle fullscreen |
 | Esc | Close image view |
 
