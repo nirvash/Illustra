@@ -40,11 +40,11 @@ jobs:
         id: read_release_notes
         run: |
           if (Test-Path ".github/workflows/summary.txt") {
-            $notes = Get-Content -Path ".github/workflows/summary.txt" -Raw
+            $notes = Get-Content -Path ".github/workflows/summary.txt"
             if ([string]::IsNullOrWhiteSpace($notes)) {
               $notes = "- メンテナンスの改善とバグ修正"
             }
-            $notesFormatted = $notes -replace "`n", "%0A"
+            $notesFormatted = $notes -join "%0A"
             echo "summary=$notesFormatted" >> $env:GITHUB_OUTPUT
           } else {
             echo "summary=- メンテナンスの改善とバグ修正%0A- アプリケーションのパフォーマンス向上" >> $env:GITHUB_OUTPUT
