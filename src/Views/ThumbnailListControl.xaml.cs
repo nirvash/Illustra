@@ -1157,12 +1157,13 @@ namespace Illustra.Views
             ClearFilterButton.IsEnabled = selectedRating > 0;
         }
 
-        private void ApplyFilterling(int rating)
+        private async void ApplyFilterling(int rating)
         {
             try
             {
-                // 現在の選択状態を保存
-                var selectedItems = _viewModel.SelectedItems.ToList();
+                // 現在のフォーカスアイテムを保存
+                var focusedItem = _viewModel.SelectedItems.LastOrDefault();
+                var focusedPath = focusedItem?.FullPath;
 
                 _currentRatingFilter = rating;
                 UpdateFilterButtonStates(rating);
@@ -1177,16 +1178,34 @@ namespace Illustra.Views
                     _viewModel.ApplyRatingFilter(0); // フィルタなし
                 }
 
-                // フィルタ後のアイテムリストから、以前選択されていたアイテムのうち
-                // まだ表示されているものを再選択
-                var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
-                var itemsToReselect = selectedItems.Where(item =>
-                    filteredItems.Any(fi => fi.FullPath == item.FullPath));
+                // フィルタ後のアイテムリスト
+                var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
 
-                _viewModel.SelectedItems.Clear();
-                foreach (var item in itemsToReselect)
+                // 選択するアイテムを決定
+                FileNodeModel? itemToSelect = null;
+                if (focusedPath != null)
                 {
-                    _viewModel.SelectedItems.Add(item);
+                    // 前回フォーカスされていたアイテムがフィルタ後も存在する場合はそれを選択
+                    itemToSelect = filteredItems.FirstOrDefault(fi => fi.FullPath == focusedPath);
+                }
+
+                // フォーカスアイテムが見つからない場合は先頭のアイテムを選択
+                if (itemToSelect == null && filteredItems.Any())
+                {
+                    itemToSelect = filteredItems.First();
+                }
+
+                // 選択を更新
+                _viewModel.SelectedItems.Clear();
+                if (itemToSelect != null)
+                {
+                    _viewModel.SelectedItems.Add(itemToSelect);
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        ThumbnailItemsControl.ScrollIntoView(itemToSelect);
+                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(itemToSelect) as ListViewItem;
+                        container?.Focus();
+                    });
                 }
 
                 ClearFilterButton.IsEnabled = rating != 0;
