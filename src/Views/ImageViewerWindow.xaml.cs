@@ -175,7 +175,16 @@ namespace Illustra.Views
         {
             try
             {
-                ImageSource = new BitmapImage(new Uri(filePath));
+                // BitmapImageの作成と設定
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad; // ファイルを読み込み後にクローズ
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // 既存のキャッシュを無視
+                bitmap.UriSource = new Uri(filePath);
+                bitmap.EndInit();
+                bitmap.Freeze(); // UIスレッドでの使用を最適化
+
+                ImageSource = bitmap;
 
                 // ファイルからプロパティを読み込む
                 var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
@@ -211,6 +220,10 @@ namespace Illustra.Views
                 OnPropertyChanged(nameof(ImageSource));
                 OnPropertyChanged(nameof(FileName));
                 OnPropertyChanged(nameof(Properties));  // 明示的に Properties の変更を通知
+
+                // 画像の読み込みが完了したらGCを促す
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
             }
             catch (Exception ex)
             {
@@ -453,10 +466,17 @@ namespace Illustra.Views
                         {
                             var image = new BitmapImage();
                             image.BeginInit();
-                            image.CacheOption = BitmapCacheOption.OnLoad; // メモリ効率を改善
+                            image.CacheOption = BitmapCacheOption.OnLoad; // ファイルを読み込み後にクローズ
+                            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // 既存のキャッシュを無視
                             image.UriSource = new Uri(targetPath);
                             image.EndInit();
-                            image.Freeze(); // UIスレッドの効率を改善
+                            image.Freeze(); // UIスレッドでの使用を最適化
+
+                            // 古いキャッシュを削除
+                            if (_imageCache.ContainsKey(targetPath))
+                            {
+                                _imageCache.Remove(targetPath);
+                            }
 
                             _imageCache[targetPath] = image;
                             _cacheOrder.Enqueue(targetPath);
@@ -634,13 +654,28 @@ namespace Illustra.Views
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            // 閉じる過程での最初の段階でフルスクリーン状態を保存
-            // 共通メソッドを使用して設定を保存
-            SaveCurrentSettings();
+            try
+            {
+                // 閉じる過程での最初の段階でフルスクリーン状態を保存
+                // 共通メソッドを使用して設定を保存
+                SaveCurrentSettings();
 
-            // タイマーをキャンセルしてマウスカーソルを表示状態に戻す
-            Mouse.OverrideCursor = Cursors.Arrow;
-            hideCursorTimer.Stop();
+                // タイマーをキャンセルしてマウスカーソルを表示状態に戻す
+                Mouse.OverrideCursor = Cursors.Arrow;
+                hideCursorTimer.Stop();
+
+                // 画像リソースの解放
+                ImageSource = null;
+                ClearCache();
+
+                // 明示的なGCを実行
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Closing error: {ex.Message}");
+            }
 
             base.OnClosing(e);
         }
