@@ -1128,6 +1128,24 @@ namespace Illustra.Views
             return _viewModel;
         }
 
+        /// <summary>
+        /// 選択中のサムネイルにフォーカスを設定します。
+        /// </summary>
+        public void FocusSelectedThumbnail()
+        {
+            if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
+            {
+                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                Dispatcher.InvokeAsync(() =>
+                {
+                    if (Window.GetWindow(this)?.IsActive == true)
+                    {
+                        container?.Focus();
+                    }
+                }, DispatcherPriority.Input);
+            }
+        }
+
         internal void LoadFileNodes(string path, int rating = 0)
         {
             _currentFolderPath = path;

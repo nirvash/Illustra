@@ -773,6 +773,9 @@ namespace Illustra.Views
         {
             base.OnClosed(e);
             // OnClosingで既に保存したので、ここでは何もしない
+
+            // サムネイルリストにフォーカスを設定
+            Parent?.FocusSelectedThumbnail();
         }
 
         private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
