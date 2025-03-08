@@ -96,10 +96,17 @@ namespace Illustra.Views
             InitializeComponent();
             FileName = System.IO.Path.GetFileName(filePath);
             _currentFilePath = filePath;
-
-            LoadImageAndProperties(filePath);
-
             DataContext = this;
+
+            // キャッシュから画像を読み込み（なければ新規作成）
+            LoadImageFromCache(filePath);
+
+            // プロパティの読み込み
+            LoadImagePropertiesAsync(filePath);
+
+            // イベントの購読
+            var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            eventAggregator?.GetEvent<RatingChangedEvent>()?.Subscribe(OnRatingChanged);
 
             // タイトルバー自動非表示用のタイマー
             _titleBarTimer = new DispatcherTimer
@@ -171,21 +178,10 @@ namespace Illustra.Views
             Loaded += (s, e) => OnWindowLoaded();
         }
 
-        private async void LoadImageAndProperties(string filePath)
+        private async void LoadImagePropertiesAsync(string filePath)
         {
             try
             {
-                // BitmapImageの作成と設定
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.CacheOption = BitmapCacheOption.OnLoad; // ファイルを読み込み後にクローズ
-                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // 既存のキャッシュを無視
-                bitmap.UriSource = new Uri(filePath);
-                bitmap.EndInit();
-                bitmap.Freeze(); // UIスレッドでの使用を最適化
-
-                ImageSource = bitmap;
-
                 // ファイルからプロパティを読み込む
                 var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
 
@@ -220,15 +216,11 @@ namespace Illustra.Views
                 OnPropertyChanged(nameof(ImageSource));
                 OnPropertyChanged(nameof(FileName));
                 OnPropertyChanged(nameof(Properties));  // 明示的に Properties の変更を通知
-
-                // 画像の読み込みが完了したらGCを促す
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
-                MessageBox.Show($"画像の読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"Error loading image properties: {ex.Message}");
+                MessageBox.Show($"画像プロパティの読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -358,17 +350,21 @@ namespace Illustra.Views
                 rating = 0;
             }
 
-            // レーティングを更新
-            Properties.Rating = rating;
+            // 現在の値と異なる場合のみ処理を実行
+            if (Properties.Rating != rating)
+            {
+                // レーティングを更新
+                Properties.Rating = rating;
 
-            // データベースを更新
-            var dbManager = new DatabaseManager();
-            await dbManager.UpdateRatingAsync(_currentFilePath, rating);
+                // データベースを更新
+                var dbManager = new DatabaseManager();
+                await dbManager.UpdateRatingAsync(_currentFilePath, rating);
 
-            // イベントを発行して他の画面に通知
-            var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
-                new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = rating });
+                // イベントを発行して他の画面に通知
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
+                    new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = rating });
+            }
         }
 
         private void TogglePropertyPanel()
@@ -448,84 +444,84 @@ namespace Illustra.Views
         }
 
         private const int CacheSize = 10; // キャッシュサイズを固定
-        private readonly Dictionary<string, BitmapSource> _imageCache = new();
-        private readonly Queue<string> _cacheOrder = new(); // キャッシュの順序を管理
+        private readonly LruCache<string, BitmapSource> _imageCache = new(CacheSize);
 
         private void CacheImages(string filePath)
         {
             var _viewModel = Parent?.GetViewModel();
             if (_viewModel == null) return;
+
             var fileNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
             var currentIndex = fileNodes.FindIndex(f => f.FullPath == filePath);
 
-            // 前後の画像をプリロード
-            for (int i = -CacheSize; i <= CacheSize; i++)
+            // 現在の画像の前後をプリロード
+            for (int i = -CacheSize / 2; i <= CacheSize / 2; i++)
             {
                 var index = currentIndex + i;
                 if (index >= 0 && index < fileNodes.Count)
                 {
                     var targetPath = fileNodes[index].FullPath;
-                    if (!_imageCache.ContainsKey(targetPath))
+                    try
                     {
-                        try
+                        if (!_imageCache.TryGetValue(targetPath, out _))
                         {
                             var image = new BitmapImage();
                             image.BeginInit();
-                            image.CacheOption = BitmapCacheOption.OnLoad; // ファイルを読み込み後にクローズ
-                            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // 既存のキャッシュを無視
+                            image.CacheOption = BitmapCacheOption.OnLoad;
+                            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                             image.UriSource = new Uri(targetPath);
                             image.EndInit();
-                            image.Freeze(); // UIスレッドでの使用を最適化
+                            image.Freeze();
 
-                            // 古いキャッシュを削除
-                            if (_imageCache.ContainsKey(targetPath))
-                            {
-                                _imageCache.Remove(targetPath);
-                            }
-
-                            _imageCache[targetPath] = image;
-                            _cacheOrder.Enqueue(targetPath);
-
-                            // キャッシュサイズを超えた場合、古いものから削除
-                            while (_cacheOrder.Count > CacheSize * 2 + 1)
-                            {
-                                var oldestPath = _cacheOrder.Dequeue();
-                                _imageCache.Remove(oldestPath);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"画像のキャッシュ中にエラーが発生: {ex.Message}");
+                            _imageCache.Add(targetPath, image);
+                            System.Diagnostics.Debug.WriteLine($"プリロード完了: {targetPath}");
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"画像のプリロード中にエラーが発生: {ex.Message}");
+                    }
                 }
+            }
+
+            // デバッグ情報を出力
+            System.Diagnostics.Debug.WriteLine($"キャッシュ状態 - アイテム数: {_imageCache.Count}/{_imageCache.Capacity}");
+            System.Diagnostics.Debug.WriteLine("キャッシュ内容 (新→古):");
+            foreach (var path in _imageCache.GetKeys())
+            {
+                System.Diagnostics.Debug.WriteLine($"  - {path}");
             }
         }
 
         private void ClearCache()
         {
             _imageCache.Clear();
-            _cacheOrder.Clear();
         }
 
         private void LoadImageFromCache(string filePath)
         {
             try
             {
+                BitmapSource image;
                 if (_imageCache.TryGetValue(filePath, out var cachedImage))
                 {
-                    ImageSource = cachedImage;
+                    System.Diagnostics.Debug.WriteLine($"キャッシュヒット: {filePath}");
+                    image = cachedImage;
                 }
                 else
                 {
-                    var image = new BitmapImage();
-                    image.BeginInit();
-                    image.CacheOption = BitmapCacheOption.OnLoad;
-                    image.UriSource = new Uri(filePath);
-                    image.EndInit();
-                    image.Freeze();
-                    ImageSource = image;
+                    System.Diagnostics.Debug.WriteLine($"キャッシュミス: {filePath}");
+                    var newImage = new BitmapImage();
+                    newImage.BeginInit();
+                    newImage.CacheOption = BitmapCacheOption.OnLoad;
+                    newImage.UriSource = new Uri(filePath);
+                    newImage.EndInit();
+                    newImage.Freeze();
+
+                    image = newImage;
+                    _imageCache.Add(filePath, newImage);
                 }
+                ImageSource = image;
             }
             catch (Exception ex)
             {
@@ -539,7 +535,13 @@ namespace Illustra.Views
         {
             try
             {
-                LoadImageAndProperties(filePath);
+                // まずキャッシュから読み込みを試みる
+                LoadImageFromCache(filePath);
+
+                // プロパティの読み込みと設定
+                LoadImagePropertiesAsync(filePath);
+
+                // キャッシュの更新（前後の画像をプリロード）
                 CacheImages(filePath);
 
                 // 親ウィンドウのサムネイル選択を更新
@@ -803,6 +805,14 @@ namespace Illustra.Views
                     "エラー",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        private void OnRatingChanged(RatingChangedEventArgs args)
+        {
+            if (args.FilePath == _currentFilePath && Properties != null)
+            {
+                Properties.Rating = args.Rating;
             }
         }
     }

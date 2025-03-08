@@ -89,22 +89,31 @@
         <!-- フルスクリーン時のタイトルバー -->
         <Border x:Name="TitleBar"
                 Grid.ColumnSpan="3"
-                Height="32"
+                Height="48"
                 VerticalAlignment="Top"
                 Background="#80000000"
                 Visibility="Collapsed">
             <Grid>
-                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
-                       Foreground="White"
-                       Margin="10,0,0,0"
-                       VerticalAlignment="Center"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
                 <Button Content="⤢"
+                        Grid.Column="0"
                         Width="24"
                         Height="24"
-                        HorizontalAlignment="Right"
+                        HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Margin="0,0,10,0"
+                        Margin="10,0,0,0"
                         Click="FullScreenButton_Click"/>
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                       Grid.Column="1"
+                       Foreground="White"
+                       FontSize="20"
+                       Margin="10,0,0,0"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

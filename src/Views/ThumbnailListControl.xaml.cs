@@ -1252,8 +1252,12 @@ namespace Illustra.Views
                     await Dispatcher.InvokeAsync(() =>
                     {
                         ThumbnailItemsControl.ScrollIntoView(itemToSelect);
-                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(itemToSelect) as ListViewItem;
-                        container?.Focus();
+                        // ウィンドウがアクティブな場合のみフォーカス処理を実行
+                        if (Window.GetWindow(this)?.IsActive == true)
+                        {
+                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(itemToSelect) as ListViewItem;
+                            container?.Focus();
+                        }
                     });
                 }
 
@@ -1271,7 +1275,11 @@ namespace Illustra.Views
             if (fileNode != null)
             {
                 fileNode.Rating = args.Rating;
-                ApplyFilterling(_currentRatingFilter); // フィルターを再適用
+                // フィルタが設定されている場合のみフィルタを再適用
+                if (_currentRatingFilter > 0)
+                {
+                    ApplyFilterling(_currentRatingFilter);
+                }
 
                 // 選択中のファイルのレーティングが変更された場合はアニメーション実行
                 foreach (var selectedItem in _viewModel.SelectedItems)
@@ -1283,16 +1291,20 @@ namespace Illustra.Views
                         {
                             try
                             {
-                                // 選択中アイテムのコンテナを取得
-                                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                                if (container != null)
+                                // ウィンドウがアクティブな場合のみフォーカス処理を実行
+                                if (Window.GetWindow(this)?.IsActive == true)
                                 {
-                                    // DataTemplateの中のRatingStarControlを検索
-                                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
-                                    if (starControl != null)
+                                    // 選択中アイテムのコンテナを取得
+                                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                                    if (container != null)
                                     {
-                                        // 明示的にアニメーションを実行
-                                        starControl.PlayAnimation();
+                                        // DataTemplateの中のRatingStarControlを検索
+                                        var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
+                                        if (starControl != null)
+                                        {
+                                            // 明示的にアニメーションを実行
+                                            starControl.PlayAnimation();
+                                        }
                                     }
                                 }
                             }

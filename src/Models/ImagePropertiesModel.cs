@@ -47,7 +47,7 @@ namespace Illustra.Models
                 if (_filePath != value)
                 {
                     _filePath = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FilePath));
                 }
             }
         }
@@ -60,7 +60,7 @@ namespace Illustra.Models
                 if (_fileName != value)
                 {
                     _fileName = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FileName));
                 }
             }
         }
@@ -73,7 +73,7 @@ namespace Illustra.Models
                 if (_fileSize != value)
                 {
                     _fileSize = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FileSize));
                     OnPropertyChanged(nameof(FileSizeFormatted));
                 }
             }
@@ -92,7 +92,7 @@ namespace Illustra.Models
                 if (_dimensions != value)
                 {
                     _dimensions = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Dimensions));
                 }
             }
         }
@@ -105,7 +105,7 @@ namespace Illustra.Models
                 if (_dimensions != value)
                 {
                     _dimensions = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Resolution));
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace Illustra.Models
                 if (_createdDate != value)
                 {
                     _createdDate = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CreatedDate));
                 }
             }
         }
@@ -131,7 +131,7 @@ namespace Illustra.Models
                 if (_modifiedDate != value)
                 {
                     _modifiedDate = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ModifiedDate));
                 }
             }
         }
@@ -144,7 +144,7 @@ namespace Illustra.Models
                 if (_rating != value)
                 {
                     _rating = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Rating));
                 }
             }
         }
@@ -157,7 +157,7 @@ namespace Illustra.Models
                 if (_preview != value)
                 {
                     _preview = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Preview));
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace Illustra.Models
                 {
                     _creationTime = value;
                     CreatedDate = value.ToString("yyyy/MM/dd HH:mm:ss");
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CreationTime));
                 }
             }
         }
@@ -185,7 +185,7 @@ namespace Illustra.Models
                 {
                     _lastModified = value;
                     ModifiedDate = value.ToString("yyyy/MM/dd HH:mm:ss");
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LastModified));
                 }
             }
         }
@@ -198,7 +198,7 @@ namespace Illustra.Models
                 if (_fileType != value)
                 {
                     _fileType = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FileType));
                 }
             }
         }
@@ -212,7 +212,7 @@ namespace Illustra.Models
                 {
                     _folderPath = value;
                     UpdateFolderPathShort();
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FolderPath));
                 }
             }
         }
@@ -225,7 +225,7 @@ namespace Illustra.Models
                 if (_folderPathShort != value)
                 {
                     _folderPathShort = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FolderPathShort));
                 }
             }
         }
@@ -238,7 +238,7 @@ namespace Illustra.Models
                 if (_folderPathExpanded != value)
                 {
                     _folderPathExpanded = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FolderPathExpanded));
                     SaveExpandedState();
                 }
             }
@@ -253,7 +253,7 @@ namespace Illustra.Models
                 if (_width != value)
                 {
                     _width = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Width));
                 }
             }
         }
@@ -266,7 +266,7 @@ namespace Illustra.Models
                 if (_height != value)
                 {
                     _height = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Height));
                 }
             }
         }
@@ -279,7 +279,7 @@ namespace Illustra.Models
                 if (_imageFormat != value)
                 {
                     _imageFormat = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ImageFormat));
                 }
             }
         }
@@ -292,7 +292,7 @@ namespace Illustra.Models
                 if (_colorDepth != value)
                 {
                     _colorDepth = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ColorDepth));
                 }
             }
         }
@@ -305,7 +305,7 @@ namespace Illustra.Models
                 if (_userComment != value)
                 {
                     _userComment = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(UserComment));
                 }
             }
         }
@@ -318,7 +318,7 @@ namespace Illustra.Models
                 if (_dateTaken != value)
                 {
                     _dateTaken = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DateTaken));
                 }
             }
         }
@@ -331,7 +331,7 @@ namespace Illustra.Models
                 if (_isoSpeed != value)
                 {
                     _isoSpeed = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ISOSpeed));
                 }
             }
         }
@@ -344,7 +344,7 @@ namespace Illustra.Models
                 if (_exposureTime != value)
                 {
                     _exposureTime = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ExposureTime));
                 }
             }
         }
@@ -357,7 +357,7 @@ namespace Illustra.Models
                 if (_fNumber != value)
                 {
                     _fNumber = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FNumber));
                 }
             }
         }
@@ -370,7 +370,7 @@ namespace Illustra.Models
                 if (_cameraModel != value)
                 {
                     _cameraModel = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CameraModel));
                 }
             }
         }
@@ -384,7 +384,7 @@ namespace Illustra.Models
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string? propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
