@@ -29,7 +29,7 @@ namespace Illustra.Models
                 if (_rootItems != value)
                 {
                     _rootItems = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(RootItems));
                 }
             }
         }
@@ -42,7 +42,7 @@ namespace Illustra.Models
                 if (_isLoading != value)
                 {
                     _isLoading = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsLoading));
                 }
             }
         }
@@ -361,9 +361,29 @@ namespace Illustra.Models
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string? propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /// <summary>
+        /// すべてのノードの選択状態をクリアする
+        /// </summary>
+        public void ClearSelection()
+        {
+            void ClearRecursive(FileSystemItemModel item)
+            {
+                item.IsSelected = false;
+                foreach (var child in item.Children)
+                {
+                    ClearRecursive(child);
+                }
+            }
+
+            foreach (var item in RootItems)
+            {
+                ClearRecursive(item);
+            }
         }
     }
 
@@ -404,7 +424,7 @@ namespace Illustra.Models
                 if (_name != value)
                 {
                     _name = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Name));
                 }
             }
         }
@@ -417,7 +437,7 @@ namespace Illustra.Models
                 if (_fullPath != value)
                 {
                     _fullPath = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(FullPath));
                 }
             }
         }
@@ -430,7 +450,7 @@ namespace Illustra.Models
                 if (_canExpand != value)
                 {
                     _canExpand = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CanExpand));
                 }
             }
         }
@@ -443,7 +463,7 @@ namespace Illustra.Models
                 if (_isExpanded != value)
                 {
                     _isExpanded = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsExpanded));
 
                     // 展開時に子フォルダが読み込まれていない場合は読み込む
                     if (value && IsFolder && CanExpand && _parentModel != null)
@@ -470,8 +490,13 @@ namespace Illustra.Models
             {
                 if (_isSelected != value)
                 {
+                    if (value && _parentModel != null)
+                    {
+                        // 新しく選択される場合のみ、他のノードの選択をクリア
+                        _parentModel.ClearSelection();
+                    }
                     _isSelected = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsSelected));
                 }
             }
         }
@@ -484,7 +509,7 @@ namespace Illustra.Models
                 if (_isFolder != value)
                 {
                     _isFolder = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsFolder));
                 }
             }
         }
@@ -497,7 +522,7 @@ namespace Illustra.Models
                 if (_children != value)
                 {
                     _children = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Children));
                 }
             }
         }
@@ -510,7 +535,7 @@ namespace Illustra.Models
                 if (_isLoading != value)
                 {
                     _isLoading = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsLoading));
                 }
             }
         }
@@ -519,7 +544,7 @@ namespace Illustra.Models
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string? propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

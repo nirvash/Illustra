@@ -14,11 +14,33 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <!-- TreeViewItem の展開状態をバインド -->
+        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <Setter Property="Padding" Value="-22" />
+
+            <!-- フォーカスされていない時のスタイル変更 -->
+            <Style.Triggers>
+                <!-- IsSelected が True & フォーカスがない時の背景色を変更 -->
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="LightBlue" />
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="True"/>
+                        <Condition Property="IsKeyboardFocusWithin" Value="False"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="LightBlue"/> <!-- フォーカスなし時の色 -->
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FolderTreeView"
                    ItemsSource="{Binding RootItems}"
+                   ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
                    SelectedItemChanged="TreeView_SelectedItemChanged"
                    ContextMenuOpening="TreeView_ContextMenuOpening"
                    VirtualizingStackPanel.IsVirtualizing="True"
@@ -28,179 +50,13 @@
                    IsTabStop="True" TabIndex="2"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                   Padding="0,0,0,0"
                    dd:DragDrop.IsDragSource="False"
                    dd:DragDrop.IsDropTarget="True">
-            <TreeView.Resources>
-                <!-- SystemColors.HighlightBrushKey と InactiveSelectionHighlightBrushKey を上書き -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="White"/> <!-- テキスト色を白に -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="White"/> <!-- テキスト色を白に -->
-            </TreeView.Resources>
             <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate DataType="{x:Type models:FileSystemItemModel}"
-                                      ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🔄" Margin="0,0,3,0"
-                                  Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <TextBlock Text="📁" Margin="0,0,3,0"
-                                  Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <TextBlock Text="{Binding Name}" />
-                    </StackPanel>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                    <TextBlock Margin="2" Text="{Binding Name}" />
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
-            <TreeView.ItemContainerStyle>
-                <Style TargetType="TreeViewItem">
-                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="Focusable" Value="{Binding IsFolder}"/>
-                    <Setter Property="IsEnabled" Value="{Binding IsFolder}"/>
-                    <Setter Property="Margin" Value="0,2,0,2"/>
-                    <Setter Property="ContextMenu">
-                        <Setter.Value>
-                            <ContextMenu>
-                                <MenuItem Header="お気に入りに追加" Command="{Binding AddToFavoritesCommand}"
-                                        CommandParameter="{Binding Item}"/>
-                                <MenuItem Header="お気に入りから削除" Command="{Binding RemoveFromFavoritesCommand}"
-                                        CommandParameter="{Binding Item}"/>
-                            </ContextMenu>
-                        </Setter.Value>
-                    </Setter>
-                    <!-- Template設定を追加 -->
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="TreeViewItem">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <!-- 通常の選択状態用のBorder -->
-                                    <Border x:Name="ItemBorder"
-                                           Background="Transparent"
-                                           BorderThickness="1"
-                                           CornerRadius="8"
-                                           Margin="18,-2,-2,-2"
-                                           Padding="0,3,4,3"
-                                           Panel.ZIndex="0"
-                                           IsHitTestVisible="True">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <!-- 展開ボタン -->
-                                            <ToggleButton x:Name="Expander"
-                                                            Grid.Column="0"
-                                                            Margin="4,0,0,0"
-                                                            Width="10"
-                                                            Height="10"
-                                                            IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
-                                                            ClickMode="Press"
-                                                            Visibility="{Binding HasItems, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                            Panel.ZIndex="100">
-                                                <ToggleButton.Template>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Grid Width="10" Height="10" Background="Transparent" IsHitTestVisible="True">
-                                                            <Border Background="Transparent" IsHitTestVisible="True"/>
-                                                            <Canvas IsHitTestVisible="True">
-                                                                <Path x:Name="ExpanderArrow"
-                                                                    Canvas.Left="1.5" Canvas.Top="2.5"
-                                                                    Fill="#AAFFFFFF"
-                                                                    Stroke="#666666"
-                                                                    StrokeThickness="1.2"
-                                                                    Data="M 0 0 L 4 4 L 0 8 Z"
-                                                                    IsHitTestVisible="True"/>
-                                                            </Canvas>
-                                                        </Grid>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="ExpanderArrow" Property="Data" Value="M 0 8 L 6 2 L 6 8 Z" />
-                                                                <Setter TargetName="ExpanderArrow" Property="Fill" Value="#666666"/>
-                                                                <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#666666"/>
-                                                            </Trigger>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="ExpanderArrow" Property="Fill" Value="#333333"/>
-                                                                <Setter TargetName="ExpanderArrow" Property="Stroke" Value="#333333"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </ToggleButton.Template>
-                                            </ToggleButton>
-                                            <!-- ヘッダーコンテンツ -->
-                                            <ContentPresenter x:Name="PART_Header"
-                                                          Grid.Column="1"
-                                                          ContentSource="Header" />
-                                        </Grid>
-                                    </Border>
-                                    <!-- 子アイテム -->
-                                    <ItemsPresenter x:Name="ItemsHost"
-                                                  Grid.Row="1"
-                                                  Grid.Column="0"
-                                                  Visibility="Collapsed"
-                                                  Margin="16,0,0,0"/>
-                                </Grid>
-                                <ControlTemplate.Triggers>
-                                    <!-- 選択時の背景色変更 -->
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#AA007ACC" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
-                                    </Trigger>
-                                    <!-- キーボードフォーカス時の背景色変更 -->
-                                    <MultiTrigger>
-                                        <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="True" />
-                                            <Condition Property="IsKeyboardFocused" Value="True" />
-                                        </MultiTrigger.Conditions>
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#FF007ACC" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
-                                    </MultiTrigger>
-                                    <!-- 選択状態かつマウスオーバー時の状態（選択状態の色を薄くする） -->
-                                    <MultiTrigger>
-                                        <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="True" />
-                                            <Condition Property="IsMouseOver" Value="True" />
-                                        </MultiTrigger.Conditions>
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#88007ACC" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
-                                    </MultiTrigger>
-
-                                    <!-- 非選択状態のマウスオーバー時の状態 -->
-                                    <MultiTrigger>
-                                        <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="False" />
-                                            <Condition Property="IsMouseOver" Value="True" />
-                                        </MultiTrigger.Conditions>
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#1F000000" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="Black" />
-                                    </MultiTrigger>
-                                    <!-- 展開時に子アイテムを表示 -->
-                                    <Trigger Property="IsExpanded" Value="True">
-                                        <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <!-- データトリガーでコンテキストメニューを制御 -->
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsFolder}" Value="False">
-                            <Setter Property="ContextMenu" Value="{x:Null}"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TreeView.ItemContainerStyle>
         </TreeView>
-
-        <!-- 読み込み中の表示 -->
-        <Border Background="#80000000"
-                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="読み込み中..." Foreground="White" HorizontalAlignment="Center"/>
-                <ProgressBar Width="100" Height="10" IsIndeterminate="True" Margin="0,5,0,0"/>
-            </StackPanel>
-        </Border>
     </Grid>
 </UserControl>
