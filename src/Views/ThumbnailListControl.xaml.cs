@@ -875,6 +875,10 @@ namespace Illustra.Views
 
                 case Key.Left:
                 case Key.Right:
+                case Key.Up:
+                case Key.Down:
+                    e.Handled = true; // すべての方向キーをハンドル
+
                     var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                     if (!filteredItems.Any())
                         break;
@@ -888,55 +892,29 @@ namespace Illustra.Views
                     if (currentIndex < 0)
                         break;
 
-                    // 次のインデックスを計算（境界処理を含む）
+                    // パネルを取得して1行あたりのアイテム数を計算
+                    var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+                    if (panel == null)
+                        break;
+
+                    var itemsPerRow = GetItemsPerRow(panel);
+                    if (itemsPerRow <= 0)
+                        break;
+
                     int targetIndex;
-                    if (e.Key == Key.Left)
+                    if (e.Key == Key.Left || e.Key == Key.Right)
                     {
-                        targetIndex = currentIndex > 0 ? currentIndex - 1 : filteredItems.Count - 1;
+                        targetIndex = GetHorizontalNavigationIndex(currentIndex, e.Key == Key.Right, filteredItems.Count);
                     }
                     else
                     {
-                        targetIndex = currentIndex < filteredItems.Count - 1 ? currentIndex + 1 : 0;
+                        targetIndex = GetVerticalNavigationIndex(currentIndex, e.Key == Key.Down, itemsPerRow, filteredItems.Count);
                     }
 
-                    // 行の変更を検出するために必要なコンテナを安全に取得
-                    var currentContainer = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(currentIndex) as ListViewItem;
-                    var targetContainer = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(targetIndex) as ListViewItem;
-
-                    if (currentContainer != null && targetContainer != null)
+                    // 範囲チェックと移動
+                    if (targetIndex >= 0 && targetIndex < filteredItems.Count)
                     {
-                        var currentPos = currentContainer.TransformToAncestor(ThumbnailItemsControl).Transform(new Point(0, 0));
-                        var targetPos = targetContainer.TransformToAncestor(ThumbnailItemsControl).Transform(new Point(0, 0));
-
-                        // 異なる行への移動を検出
-                        if (Math.Abs(targetPos.Y - currentPos.Y) > 1)
-                        {
-                            // この時点でGetItemsPerRowを呼び出し
-                            var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                            if (panel != null)
-                            {
-                                var itemsPerRow = GetItemsPerRow(panel);
-                                if (itemsPerRow > 0)
-                                {
-                                    // 行端での移動を処理
-                                    if (e.Key == Key.Left && currentIndex % itemsPerRow == 0)
-                                    {
-                                        targetIndex = Math.Max(0, currentIndex - 1);
-                                    }
-                                    else if (e.Key == Key.Right && (currentIndex + 1) % itemsPerRow == 0)
-                                    {
-                                        targetIndex = Math.Min(filteredItems.Count - 1, currentIndex + 1);
-                                    }
-                                }
-                            }
-                        }
-
-                        // 最終的なインデックスチェックと移動
-                        if (targetIndex >= 0 && targetIndex < filteredItems.Count)
-                        {
-                            targetItem = filteredItems[targetIndex];
-                            e.Handled = true;
-                        }
+                        targetItem = filteredItems[targetIndex];
                     }
                     break;
             }
@@ -1193,6 +1171,68 @@ namespace Illustra.Views
         public MainViewModel GetViewModel()
         {
             return _viewModel;
+        }
+
+        /// <summary>
+        /// 左右キー入力時の移動先インデックスを取得します
+        /// </summary>
+        private int GetHorizontalNavigationIndex(int currentIndex, bool isRight, int itemCount)
+        {
+            if (isRight)
+            {
+                // 右移動：次のインデックス（最後なら先頭へ）
+                return currentIndex < itemCount - 1 ? currentIndex + 1 : 0;
+            }
+            else
+            {
+                // 左移動：前のインデックス（先頭なら最後へ）
+                return currentIndex > 0 ? currentIndex - 1 : itemCount - 1;
+            }
+        }
+
+        /// <summary>
+        /// 上下キー入力時の移動先インデックスを取得します
+        /// </summary>
+        private int GetVerticalNavigationIndex(int currentIndex, bool isDown, int itemsPerRow, int itemCount)
+        {
+            int currentRow = currentIndex / itemsPerRow;
+            int currentCol = currentIndex % itemsPerRow;
+            int totalRows = (itemCount + itemsPerRow - 1) / itemsPerRow;
+
+            if (isDown)
+            {
+                // 下移動
+                int targetIndex = currentIndex + itemsPerRow;
+                if (targetIndex >= itemCount)
+                {
+                    if (currentRow < totalRows - 1)
+                    {
+                        // 最後の行に到達した場合、その行の最後のアイテムまでに制限
+                        return Math.Min(targetIndex, itemCount - 1);
+                    }
+                    else
+                    {
+                        // 最後の行なら最初の行の同じ列へ
+                        return currentCol;
+                    }
+                }
+                return targetIndex;
+            }
+            else
+            {
+                // 上移動
+                if (currentRow > 0)
+                {
+                    // 上の行の同じ列へ
+                    return currentIndex - itemsPerRow;
+                }
+                else
+                {
+                    // 最初の行なら最後の行の同じ列へ（ただし存在する場合のみ）
+                    int lastRowIndex = (totalRows - 1) * itemsPerRow + currentCol;
+                    return Math.Min(lastRowIndex, itemCount - 1);
+                }
+            }
         }
 
         /// <summary>
