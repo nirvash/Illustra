@@ -148,7 +148,7 @@ namespace Illustra.Views
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
 
             // キーボードイベントハンドラのバインド
-            ThumbnailItemsControl.KeyDown += ThumbnailItemsControl_KeyDown;
+            ThumbnailItemsControl.PreviewKeyDown += ThumbnailItemsControl_PreviewKeyDown;
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
@@ -824,7 +824,7 @@ namespace Illustra.Views
             }
         }
 
-        private void ThumbnailItemsControl_KeyDown(object sender, KeyEventArgs e)
+        private void ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             // ナビゲーションキーの処理
             var selectedIndex = ThumbnailItemsControl.SelectedIndex;
@@ -870,6 +870,73 @@ namespace Illustra.Views
                         DeleteSelectedItems();
                         e.Handled = true;
                         return null;
+                    }
+                    break;
+
+                case Key.Left:
+                case Key.Right:
+                    var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                    if (!filteredItems.Any())
+                        break;
+
+                    var currentIndex = -1;
+                    var selectedItem = _viewModel.SelectedItems.LastOrDefault();
+                    if (selectedItem != null)
+                    {
+                        currentIndex = filteredItems.IndexOf(selectedItem);
+                    }
+                    if (currentIndex < 0)
+                        break;
+
+                    // 次のインデックスを計算（境界処理を含む）
+                    int targetIndex;
+                    if (e.Key == Key.Left)
+                    {
+                        targetIndex = currentIndex > 0 ? currentIndex - 1 : filteredItems.Count - 1;
+                    }
+                    else
+                    {
+                        targetIndex = currentIndex < filteredItems.Count - 1 ? currentIndex + 1 : 0;
+                    }
+
+                    // 行の変更を検出するために必要なコンテナを安全に取得
+                    var currentContainer = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(currentIndex) as ListViewItem;
+                    var targetContainer = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(targetIndex) as ListViewItem;
+
+                    if (currentContainer != null && targetContainer != null)
+                    {
+                        var currentPos = currentContainer.TransformToAncestor(ThumbnailItemsControl).Transform(new Point(0, 0));
+                        var targetPos = targetContainer.TransformToAncestor(ThumbnailItemsControl).Transform(new Point(0, 0));
+
+                        // 異なる行への移動を検出
+                        if (Math.Abs(targetPos.Y - currentPos.Y) > 1)
+                        {
+                            // この時点でGetItemsPerRowを呼び出し
+                            var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+                            if (panel != null)
+                            {
+                                var itemsPerRow = GetItemsPerRow(panel);
+                                if (itemsPerRow > 0)
+                                {
+                                    // 行端での移動を処理
+                                    if (e.Key == Key.Left && currentIndex % itemsPerRow == 0)
+                                    {
+                                        targetIndex = Math.Max(0, currentIndex - 1);
+                                    }
+                                    else if (e.Key == Key.Right && (currentIndex + 1) % itemsPerRow == 0)
+                                    {
+                                        targetIndex = Math.Min(filteredItems.Count - 1, currentIndex + 1);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 最終的なインデックスチェックと移動
+                        if (targetIndex >= 0 && targetIndex < filteredItems.Count)
+                        {
+                            targetItem = filteredItems[targetIndex];
+                            e.Handled = true;
+                        }
                     }
                     break;
             }
