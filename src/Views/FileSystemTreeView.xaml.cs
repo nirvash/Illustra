@@ -9,6 +9,9 @@ using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.ViewModels;
 using GongSolutions.Wpf.DragDrop;
+using Illustra.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
 
 namespace Illustra.Views
 {
@@ -271,6 +274,68 @@ namespace Illustra.Views
             return FindVisualParent<T>(parentObject); // 再帰的に親を検索
         }
 
+
+        // 作成したすべてのAdornerを追跡
+        private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>();
+        private TreeViewItem _currentHighlightedItem = null;
+
+        private void TreeViewItem_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is TreeViewItem item)
+            {
+                // ヘッダー部分を見つける
+                var header = item.Template.FindName("PART_Header", item) as FrameworkElement;
+
+                if (header != null)
+                {
+                    // マウス位置がヘッダー上にあるか確認
+                    Point mousePos = e.GetPosition(header);
+                    bool isOverHeader = mousePos.X >= 0 && mousePos.Y >= 0 &&
+                                       mousePos.X < header.ActualWidth &&
+                                       mousePos.Y < header.ActualHeight;
+
+                    if (isOverHeader)
+                    {
+                        // 先に全てのAdornerを削除
+                        RemoveAllAdorners();
+
+                        // 新しいAdornerを追加
+                        var adornerLayer = AdornerLayer.GetAdornerLayer(item);
+                        if (adornerLayer != null)
+                        {
+                            var adorner = new TreeViewItemHighlightAdorner(item);
+                            adornerLayer.Add(adorner);
+                            _allAdorners.Add(adorner);
+                            _currentHighlightedItem = item;
+                        }
+
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+
+        private void RemoveAllAdorners()
+        {
+            // 全てのAdornerを削除
+            foreach (var adorner in _allAdorners)
+            {
+                var layer = AdornerLayer.GetAdornerLayer(adorner.AdornedElement);
+                if (layer != null)
+                {
+                    layer.Remove(adorner);
+                }
+            }
+
+            _allAdorners.Clear();
+            _currentHighlightedItem = null;
+        }
+
+        private void TreeViewItem_MouseLeave(object sender, MouseEventArgs e)
+        {
+            RemoveAllAdorners();
+        }
+
         /// <summary>
         /// ドロップ時の処理
         /// </summary>
@@ -301,6 +366,7 @@ namespace Illustra.Views
                 dropInfo.Effects = (dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
                     ? DragDropEffects.Copy
                     : DragDropEffects.Move;
+                dropInfo.DropTargetAdorner = DropTargetAdorners.Highlight;
             }
         }
 

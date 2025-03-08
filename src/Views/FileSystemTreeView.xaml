@@ -14,26 +14,28 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <!-- TreeViewItem の展開状態をバインド -->
-        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}">
+
+        <!-- TreeViewItem の状態をバインド -->
+        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}"
+            BasedOn="{StaticResource {x:Type TreeViewItem}}">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-            <Setter Property="Padding" Value="-22" />
+            <Setter Property="Padding" Value="0,0,0,0" />
 
-            <!-- フォーカスされていない時のスタイル変更 -->
-            <Style.Triggers>
-                <!-- IsSelected が True & フォーカスがない時の背景色を変更 -->
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="LightBlue" />
-                </Trigger>
-                <MultiTrigger>
-                    <MultiTrigger.Conditions>
-                        <Condition Property="IsSelected" Value="True"/>
-                        <Condition Property="IsKeyboardFocusWithin" Value="False"/>
-                    </MultiTrigger.Conditions>
-                    <Setter Property="Background" Value="LightBlue"/> <!-- フォーカスなし時の色 -->
-                </MultiTrigger>
-            </Style.Triggers>
+            <!-- イベントハンドラの関連付け -->
+            <EventSetter Event="MouseEnter" Handler="TreeViewItem_MouseEnter" />
+            <EventSetter Event="MouseLeave" Handler="TreeViewItem_MouseLeave" />
+
+            <!-- SystemColorブラシをオーバーライド -->
+            <Style.Resources>
+                <!-- 選択時の背景色（フォーカスあり） -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="LightBlue"/>
+                <!-- 選択時の背景色（フォーカスなし） -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="LightBlue"/>
+                <!-- 選択時のテキスト色 -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+            </Style.Resources>
+
         </Style>
     </UserControl.Resources>
 
@@ -54,7 +56,13 @@
                    dd:DragDrop.IsDropTarget="True">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <TextBlock Margin="2" Text="{Binding Name}" />
+                    <StackPanel Orientation="Horizontal">
+                        <!-- フォルダアイコン (テキストで表現) -->
+                        <TextBlock Text="📁" FontFamily="Segoe UI Emoji" Margin="0,0,5,0"
+                                Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <!-- 項目名 -->
+                        <TextBlock Text="{Binding Name}" />
+                    </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>
