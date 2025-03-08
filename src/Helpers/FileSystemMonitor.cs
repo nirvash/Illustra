@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Timers;
 using Timer = System.Timers.Timer;
@@ -44,9 +45,16 @@ namespace Illustra.Helpers
 
         public void StartMonitoring(string path)
         {
-            if (!Directory.Exists(path))
-                throw new DirectoryNotFoundException($"Directory not found: {path}");
-
+            try
+            {
+                if (!Directory.Exists(path))
+                    throw new DirectoryNotFoundException($"Directory not found: {path}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return;
+            }
             StopMonitoring();
 
             _watcher.Path = path;
