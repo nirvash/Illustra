@@ -1157,7 +1157,7 @@ namespace Illustra.Views
             ClearFilterButton.IsEnabled = selectedRating > 0;
         }
 
-        private void ApplyFilterling(int rating)
+        private async void ApplyFilterling(int rating)
         {
             try
             {

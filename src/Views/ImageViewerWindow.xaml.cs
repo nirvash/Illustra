@@ -450,8 +450,8 @@ namespace Illustra.Views
         {
             var _viewModel = Parent?.GetViewModel();
             if (_viewModel == null) return;
-            var fileNodes = _viewModel.Items;
-            var currentIndex = fileNodes.ToList().FindIndex(f => f.FullPath == filePath);
+            var fileNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+            var currentIndex = fileNodes.FindIndex(f => f.FullPath == filePath);
 
             // 前後の画像をプリロード
             for (int i = -CacheSize; i <= CacheSize; i++)
