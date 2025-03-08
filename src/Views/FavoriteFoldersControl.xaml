@@ -7,6 +7,30 @@
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <!-- TreeViewItem の状態をバインド -->
+        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}"
+               BasedOn="{StaticResource {x:Type TreeViewItem}}">
+            <Setter Property="Padding" Value="0,0,0,0" />
+
+            <!-- イベントハンドラの関連付け -->
+            <EventSetter Event="MouseEnter" Handler="TreeViewItem_MouseEnter" />
+            <EventSetter Event="MouseLeave" Handler="TreeViewItem_MouseLeave" />
+
+            <!-- SystemColorブラシをオーバーライド -->
+            <Style.Resources>
+                <!-- 選択時の背景色（フォーカスあり） -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="LightBlue"/>
+                <!-- 選択時の背景色（フォーカスなし） -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="LightBlue"/>
+                <!-- 選択時のテキスト色 -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+            </Style.Resources>
+        </Style>
+    </UserControl.Resources>
+
     <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FavoriteFoldersTreeView"
                   SelectedItemChanged="FavoriteFoldersTreeView_SelectedItemChanged"
@@ -17,72 +41,29 @@
                   IsTabStop="True" TabIndex="1"
                   dd:DragDrop.IsDragSource="True"
                   dd:DragDrop.IsDropTarget="True"
-                  AllowDrop="True">
-            <TreeView.Resources>
-                <!-- SystemColors.HighlightBrushKey と InactiveSelectionHighlightBrushKey を上書き -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#AA007ACC"/> <!-- 薄い青色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="White"/> <!-- テキスト色を白に -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="White"/> <!-- テキスト色を白に -->
-            </TreeView.Resources>
-            <TreeView.ItemContainerStyle>
-                <Style TargetType="TreeViewItem">
-                    <Setter Property="IsExpanded" Value="False" />
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="BorderThickness" Value="1"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                    <!-- より簡素なテンプレートを使用 -->
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="TreeViewItem">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <!-- 通常の選択状態用のBorder -->
-                                    <Border x:Name="ItemBorder"
-                                           Background="Transparent"
-                                           BorderThickness="1"
-                                           CornerRadius="8"
-                                           Margin="-2"
-                                           Padding="4,3"
-                                           Panel.ZIndex="0">
-                                        <ContentPresenter x:Name="PART_Header"
-                                                       ContentSource="Header" />
-                                    </Border>
-                                    <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Visibility="Collapsed" />
-                                </Grid>
-                                <ControlTemplate.Triggers>
-                                    <!-- フォーカスがないときの選択状態 -->
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#AA007ACC" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
-                                    </Trigger>
-                                    <!-- フォーカスがあるときの選択状態 -->
-                                    <MultiTrigger>
-                                        <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="True" />
-                                            <Condition Property="IsKeyboardFocused" Value="True" />
-                                        </MultiTrigger.Conditions>
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#FF007ACC" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="White" />
-                                    </MultiTrigger>
-                                    <!-- マウスオーバー時の状態 -->
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#1F000000" />
-                                        <Setter TargetName="PART_Header" Property="TextElement.Foreground" Value="Black" />
-                                    </Trigger>
-                                    <!-- 展開時の状態 -->
-                                    <Trigger Property="IsExpanded" Value="True">
-                                        <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </TreeView.ItemContainerStyle>
+                  VirtualizingStackPanel.IsVirtualizing="True"
+                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
+                  Padding="-15 5 0 0"
+                  ContextMenuOpening="FavoriteFoldersTreeView_ContextMenuOpening">
+            <TreeView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="RemoveFromFavoritesMenuItem"
+                             Header="お気に入りから削除"
+                             Click="RemoveFromFavorites_Click"/>
+                </ContextMenu>
+            </TreeView.ContextMenu>
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- フォルダアイコン (テキストで表現) -->
+                        <TextBlock Text="📁" FontFamily="Segoe UI Emoji" Margin="0,0,5,0"
+                                 Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <!-- フォルダパスを直接表示 -->
+                        <TextBlock Text="{Binding}" />
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
         </TreeView>
     </Grid>
 </UserControl>

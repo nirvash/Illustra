@@ -9,6 +9,8 @@ using Illustra.Events;
 using System.Diagnostics;
 using GongSolutions.Wpf.DragDrop;
 using Illustra.Models;
+using Illustra.Controls;
+using System.Windows.Documents;
 
 namespace Illustra.Views
 {
@@ -246,5 +248,107 @@ namespace Illustra.Views
             }
         }
 
+        // 作成したすべてのAdornerを追跡
+        private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>();
+        private TreeViewItem _currentHighlightedItem = null;
+
+        private void TreeViewItem_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is TreeViewItem item)
+            {
+                // ヘッダー部分を見つける
+                var header = item.Template.FindName("PART_Header", item) as FrameworkElement;
+
+                if (header != null)
+                {
+                    // マウス位置がヘッダー上にあるか確認
+                    Point mousePos = e.GetPosition(header);
+                    bool isOverHeader = mousePos.X >= 0 && mousePos.Y >= 0 &&
+                                       mousePos.X < header.ActualWidth &&
+                                       mousePos.Y < header.ActualHeight;
+
+                    if (isOverHeader)
+                    {
+                        // 先に全てのAdornerを削除
+                        RemoveAllAdorners();
+
+                        // 新しいAdornerを追加
+                        var adornerLayer = AdornerLayer.GetAdornerLayer(item);
+                        if (adornerLayer != null)
+                        {
+                            var adorner = new TreeViewItemHighlightAdorner(item);
+                            adornerLayer.Add(adorner);
+                            _allAdorners.Add(adorner);
+                            _currentHighlightedItem = item;
+                        }
+
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+
+        private void RemoveAllAdorners()
+        {
+            // 全てのAdornerを削除
+            foreach (var adorner in _allAdorners)
+            {
+                var layer = AdornerLayer.GetAdornerLayer(adorner.AdornedElement);
+                if (layer != null)
+                {
+                    layer.Remove(adorner);
+                }
+            }
+
+            _allAdorners.Clear();
+            _currentHighlightedItem = null;
+        }
+
+        private void TreeViewItem_MouseLeave(object sender, MouseEventArgs e)
+        {
+            RemoveAllAdorners();
+        }
+
+        private void FavoriteFoldersTreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            var treeView = sender as TreeView;
+            if (treeView == null) return;
+
+            // イベントの発生元を見つける
+            if (e.OriginalSource is DependencyObject source)
+            {
+                var treeViewItem = FindVisualParent<TreeViewItem>(source);
+                if (treeViewItem != null)
+                {
+                    var selectedPath = treeViewItem.DataContext as string;
+                    if (!string.IsNullOrEmpty(selectedPath))
+                    {
+                        var removeMenuItem = treeView.ContextMenu?.Items.OfType<MenuItem>()
+                            .FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
+
+                        if (removeMenuItem != null)
+                        {
+                            removeMenuItem.CommandParameter = selectedPath;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is string path)
+            {
+                RemoveFavoriteFolder(path);
+            }
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            var parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+            if (parentObject is T parent) return parent;
+            return FindVisualParent<T>(parentObject);
+        }
     }
 }

@@ -12,6 +12,7 @@ using GongSolutions.Wpf.DragDrop;
 using Illustra.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using Illustra.Events;
 
 namespace Illustra.Views
 {
@@ -25,6 +26,7 @@ namespace Illustra.Views
         private IEventAggregator? _eventAggregator;
         private AppSettings? _appSettings;
         private FileOperationHelper _fileOperationHelper;
+        private const string FAVORITES_CONTROL_ID = "FavoriteFolders";
 
         public class CustomDropHandler : IDropTarget
         {
@@ -72,6 +74,16 @@ namespace Illustra.Views
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
+
+            // 設定の更新を監視するためにお気に入り関連イベントを購読
+            _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(path =>
+            {
+                _appSettings = SettingsHelper.GetSettings();
+            });
+            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(path =>
+            {
+                _appSettings = SettingsHelper.GetSettings();
+            });
 
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
@@ -247,22 +259,40 @@ namespace Illustra.Views
             if (e.OriginalSource is DependencyObject source)
             {
                 var treeViewItem = FindVisualParent<TreeViewItem>(source);
-                if (treeViewItem?.ContextMenu != null)
+                if (treeViewItem != null)
                 {
                     // TreeView の DataContext (ViewModel) を取得
                     var viewModel = treeView.DataContext;
                     // TreeViewItem の DataContext (FileSystemItemModel) を取得
-                    var item = treeViewItem.DataContext;
+                    var item = treeViewItem.DataContext as FileSystemItemModel;
 
-                    // コンテキストメニューの DataContext を設定
-                    treeViewItem.ContextMenu.DataContext = viewModel;
-
-                    // コマンドパラメータを設定
-                    foreach (var menuItem in treeViewItem.ContextMenu.Items.OfType<MenuItem>())
+                    if (item != null)
                     {
-                        menuItem.CommandParameter = item;
+                        // お気に入り追加メニューの有効/無効を制御
+                        var addToFavoritesMenuItem = treeView.ContextMenu?.Items.OfType<MenuItem>()
+                            .FirstOrDefault(x => x.Name == "AddToFavoritesMenuItem");
+
+                        if (addToFavoritesMenuItem != null)
+                        {
+                            addToFavoritesMenuItem.IsEnabled = !IsFavorite(item.FullPath);
+                            addToFavoritesMenuItem.CommandParameter = item;
+                        }
                     }
                 }
+            }
+        }
+
+        private bool IsFavorite(string path)
+        {
+            if (_appSettings?.FavoriteFolders == null) return false;
+            return _appSettings.FavoriteFolders.Contains(path);
+        }
+
+        private void AddToFavorites_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FileSystemItemModel item)
+            {
+                _eventAggregator?.GetEvent<AddToFavoritesEvent>()?.Publish(item.FullPath);
             }
         }
 

@@ -54,6 +54,13 @@
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
                    dd:DragDrop.IsDragSource="False"
                    dd:DragDrop.IsDropTarget="True">
+            <TreeView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="AddToFavoritesMenuItem"
+                              Header="お気に入りに追加"
+                              Click="AddToFavorites_Click"/>
+                </ContextMenu>
+            </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">
