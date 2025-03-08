@@ -863,9 +863,58 @@ namespace Illustra.Views
                         return null;
                     }
                     break;
+
+                case Key.D:
+                    if (_viewModel.SelectedItems.Any())
+                    {
+                        DeleteSelectedItems();
+                        e.Handled = true;
+                        return null;
+                    }
+                    break;
             }
 
             return targetItem;
+        }
+
+        private async void DeleteSelectedItems()
+        {
+            try
+            {
+                var selectedItems = _viewModel.SelectedItems.ToList();
+                if (!selectedItems.Any()) return;
+
+                // 複数選択時は確認ダイアログを表示
+                if (selectedItems.Count > 1)
+                {
+                    var result = MessageBox.Show(
+                        $"選択された{selectedItems.Count}個のファイルを削除しますか？",
+                        "削除の確認",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result != MessageBoxResult.Yes) return;
+                }
+
+                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                var fileOp = new FileOperationHelper(db);
+
+                foreach (var item in selectedItems)
+                {
+                    if (File.Exists(item.FullPath))
+                    {
+                        await fileOp.DeleteFile(item.FullPath);
+                        _viewModel.Items.Remove(item);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ファイルの削除中にエラーが発生しました: {ex.Message}",
+                    "エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
 

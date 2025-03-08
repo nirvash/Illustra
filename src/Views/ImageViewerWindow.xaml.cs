@@ -340,6 +340,11 @@ namespace Illustra.Views
                 SetRating(5);
                 e.Handled = true;
             }
+            else if (e.Key == Key.D)
+            {
+                DeleteCurrentImage();
+                e.Handled = true;
+            }
         }
 
         // レーティングを設定する新しいメソッド
@@ -746,6 +751,59 @@ namespace Illustra.Views
         private void FullScreenButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleFullScreen();
+        }
+
+        /// <summary>
+        /// 現在表示中の画像を削除します
+        /// </summary>
+        private async void DeleteCurrentImage()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_currentFilePath) || !System.IO.File.Exists(_currentFilePath))
+                    return;
+
+                // 削除前に次の画像のパスを取得
+                string? nextFilePath = Parent?.GetNextImage(_currentFilePath);
+                if (nextFilePath == null)
+                {
+                    nextFilePath = Parent?.GetPreviousImage(_currentFilePath);
+                }
+
+                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                var fileOp = new FileOperationHelper(db);
+
+                // ファイルを削除
+                await fileOp.DeleteFile(_currentFilePath);
+
+                // 親のViewModelから削除
+                var viewModel = Parent?.GetViewModel();
+                if (viewModel != null)
+                {
+                    var fileNode = viewModel.Items.FirstOrDefault(x => x.FullPath == _currentFilePath);
+                    if (fileNode != null)
+                    {
+                        viewModel.Items.Remove(fileNode);
+                    }
+                }
+
+                // 次の画像があれば表示、なければビューアを閉じる
+                if (!string.IsNullOrEmpty(nextFilePath))
+                {
+                    LoadNewImage(nextFilePath);
+                }
+                else
+                {
+                    Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ファイルの削除中にエラーが発生しました: {ex.Message}",
+                    "エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
     }
 }
