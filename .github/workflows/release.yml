@@ -106,12 +106,3 @@ jobs:
 
             ### 🔍 既知の問題
             ${{ steps.issues.outputs.issues }}
-
-            ### 📄 詳細な変更履歴
-            <details>
-            <summary>すべてのコミット履歴を表示</summary>
-
-            ```
-            ${{ steps.read_release_notes.outputs.summary }}
-            ```
-            </details>
