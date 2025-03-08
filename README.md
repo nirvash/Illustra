@@ -125,9 +125,32 @@ dotnet run --project src/Illustra/Illustra.csproj
 
 ### Dependencies
 
+#### Image Processing & UI
 - [SkiaSharp](https://github.com/mono/SkiaSharp) - Fast image processing
+  - License: MIT
+  - Used for: 画像処理、サムネイル生成
+- [gong-wpf-dragdrop](https://github.com/punker76/gong-wpf-dragdrop) - Drag & Drop functionality
+  - License: BSD 3-Clause
+  - Used for: ファイルのドラッグ＆ドロップ操作
 - [VirtualizingWrapPanel](https://github.com/sbaeumlisberger/VirtualizingWrapPanel) - Virtualized thumbnail display
-- [Newtonsoft.Json](https://www.newtonsoft.com/json) - Settings serialization
+  - License: MIT
+  - Used for: サムネイル一覧の仮想化表示
+
+#### Application Framework
+- [Prism](https://github.com/PrismLibrary/Prism) - MVVM framework
+  - License: MIT
+  - Used for: アプリケーションのMVVMアーキテクチャ実装
+- [Microsoft.Extensions.DependencyInjection](https://github.com/dotnet/runtime) - DI container
+  - License: MIT
+  - Used for: 依存性注入
+
+#### Data Management
+- [Newtonsoft.Json](https://www.newtonsoft.com/json) - JSON framework
+  - License: MIT
+  - Used for: 設定ファイルのシリアライズ/デシリアライズ
+- [SQLite-net](https://github.com/praeclarum/sqlite-net) - SQLite ORM
+  - License: MIT
+  - Used for: レーティング情報の永続化
 
 ## License
 
