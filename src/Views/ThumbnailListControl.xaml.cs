@@ -19,7 +19,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GongSolutions.Wpf.DragDrop;
-
+using System.Collections;
+using System.Windows.Documents;
 namespace Illustra.Views
 {
     public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
@@ -108,6 +109,24 @@ namespace Illustra.Views
             }
         }
 
+        private class CustomPreviewItemSorter : IDragPreviewItemsSorter
+        {
+            public IEnumerable SortDragPreviewItems(IEnumerable items)
+            {
+                var itemList = items.Cast<object>().ToList(); // リストに変換
+                var count = Math.Min(itemList.Count, 4); // 最大4つ、でも要素数が4未満ならその数に調整
+                var allItems = itemList.GetRange(0, count); // 安全な範囲で取得
+                var compositeItem = new CompositeItem { Items = allItems };
+                return new[] { compositeItem };
+            }
+
+            // コンテナクラス
+            public class CompositeItem
+            {
+                public IEnumerable<object> Items { get; set; }
+            }
+        }
+
         // xaml でインスタンス化するためのデフォルトコンストラクタ
         public ThumbnailListControl()
         {
@@ -125,6 +144,8 @@ namespace Illustra.Views
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new DefaultDragHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, new CustomPreviewItemSorter());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
 
             // キーボードイベントハンドラのバインド
             ThumbnailItemsControl.KeyDown += ThumbnailItemsControl_KeyDown;
