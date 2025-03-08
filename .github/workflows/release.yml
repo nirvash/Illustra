@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-      issues: read # 既知の問題を取得するための権限を追加
+      issues: read # 既知の問題を取得するための権限
 
     steps:
       - uses: actions/checkout@v4
@@ -32,55 +32,55 @@ jobs:
         run: dotnet publish src/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
       - name: Create ZIP archive
+        shell: bash # WindowsでもBashで統一
         run: |
           cd publish
-          7z a -tzip "../Illustra-${{ github.ref_name }}.zip" *
+          7z a -tzip "../Illustra-${GITHUB_REF_NAME}.zip" *
 
       - name: Read Release Notes
         id: read_release_notes
+        shell: bash
         run: |
-          if (Test-Path ".github/workflows/summary.txt") {
-            $notes = Get-Content -Path ".github/workflows/summary.txt"
-            if ([string]::IsNullOrWhiteSpace($notes)) {
-              $notes = "- メンテナンスの改善とバグ修正"
-            }
-            $notesFormatted = $notes -join "%0A"
-            echo "summary=$notesFormatted" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "summary=- メンテナンスの改善とバグ修正%0A- アプリケーションのパフォーマンス向上" >> $env:GITHUB_OUTPUT
-          }
-        shell: pwsh
+          if [ -f ".github/workflows/summary.txt" ]; then
+            notes=$(cat .github/workflows/summary.txt | tr -d '\r') # Windowsの改行コード対策
+            if [ -z "$notes" ]; then
+              notes="- メンテナンスの改善とバグ修正"
+            fi
+          else
+            notes="- メンテナンスの改善とバグ修正\n- アプリケーションのパフォーマンス向上"
+          fi
+          # 複数行出力をEOFで設定
+          echo "summary<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$notes" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Get Known Issues
         id: issues
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          $token = "${{ github.token }}"
-          $repoUrl = "${{ github.repository }}"
-
           # GraphQLクエリを1行で作成
-          $query = '{ "query": "query { repository(owner: \"' + $repoUrl.Split('/')[0] + '\", name: \"' + $repoUrl.Split('/')[1] + '\") { issues(first: 5, states: OPEN, labels: [\"bug\"]) { nodes { title url } } } }" }'
+          repo_owner=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f1)
+          repo_name=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          query="query { repository(owner: \\\"$repo_owner\\\", name: \\\"$repo_name\\\") { issues(first: 5, states: OPEN, labels: [\\\"bug\\\"]) { nodes { title url } } } }"
 
-          $headers = @{
-            "Authorization" = "Bearer $token"
-            "Content-Type" = "application/json"
-          }
-
-          $response = Invoke-RestMethod -Uri "https://api.github.com/graphql" -Method Post -Headers $headers -Body $query
+          # GitHub APIにリクエスト
+          response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"query\": \"$query\"}" https://api.github.com/graphql)
 
           # 既知の問題リストを生成
-          $issues = $response.data.repository.issues.nodes | ForEach-Object { "- [$($_.title)]($($_.url))" }
+          issues=$(echo "$response" | jq -r '.data.repository.issues.nodes[] | "- [\(.title)](\(.url))"')
 
           # 既知の問題がない場合のデフォルトメッセージ
-          if ($issues.Count -eq 0) {
-            $issues = "- 現在、既知の問題はありません。"
-          }
+          if [ -z "$issues" ]; then
+            issues="- 現在、既知の問題はありません。"
+          fi
 
-          # 改行をGitHub Actionsの特殊構文に変換
-          $issuesList = $issues -join "%0A"
-
-          # 出力設定
-          echo "issues=$issuesList" >> $env:GITHUB_OUTPUT
-        shell: pwsh
+          # 複数行出力をEOFで設定
+          echo "issues<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$issues" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
