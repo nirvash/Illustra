@@ -10,49 +10,57 @@ namespace Illustra.Helpers
 {
     public class FileNodeDragHandler : DefaultDragHandler
     {
+        private static readonly string FileNodesFormat = typeof(FileNodeModel).Name;
+
         public override void StartDrag(IDragInfo dragInfo)
         {
             // 標準のドラッグハンドラ処理を実行（これによりAdornerが表示される）
             base.StartDrag(dragInfo);
 
-            // ドラッグデータを外部アプリケーション用に拡張
-            var dataObject = dragInfo.DataObject as DataObject;
-            if (dataObject == null) {
-                dataObject = new DataObject();
-                dragInfo.DataObject = dataObject;
-            }
-            if (dataObject != null)
+            // DataObjectを作成
+            var dataObject = new DataObject();
+            var filePaths = new StringCollection();
+            var filePathsText = string.Empty;
+
+            // ドラッグされている項目からファイルパスを取得
+            if (dragInfo.SourceItems != null && dragInfo.SourceItems.Cast<object>().Any())
             {
-                var filePaths = new StringCollection();
+                // アプリ内のドラッグ＆ドロップ用にSourceItemsを保持
+                dataObject.SetData(FileNodesFormat, dragInfo.SourceItems);
 
-                // ドラッグされている項目からファイルパスを取得
-                if (dragInfo.SourceItems != null && dragInfo.SourceItems.Cast<object>().Any())
-                {
-                    foreach (var item in dragInfo.SourceItems)
-                    {
-                        if (item is FileNodeModel file && System.IO.File.Exists(file.FullPath))
-                        {
-                            filePaths.Add(file.FullPath);
-                        }
-                    }
-                }
-                else if (dragInfo.SourceItem is FileNodeModel fileItem &&
-                         System.IO.File.Exists(fileItem.FullPath))
-                {
-                    filePaths.Add(fileItem.FullPath);
-                }
+                // ファイルパスを収集
+                var paths = dragInfo.SourceItems.Cast<object>()
+                    .OfType<FileNodeModel>()
+                    .Where(file => System.IO.File.Exists(file.FullPath))
+                    .Select(file => file.FullPath)
+                    .ToList();
 
-                // ファイルリストが空でなければ設定（存在するファイルのみ）
-                if (filePaths.Count > 0)
-                {
-                    dataObject.SetFileDropList(filePaths);
-                    dataObject.SetText(string.Join(Environment.NewLine, filePaths)); // こちらはテキスト形式なのでメモ帳などに張り付けるときに使われる
-                    dataObject.SetData("FileNodeModel", dragInfo.SourceItems);
+                // StringCollectionとテキストを設定
+                filePaths.AddRange(paths.ToArray());
+                filePathsText = string.Join(Environment.NewLine, paths);
+            }
+            else if (dragInfo.SourceItem is FileNodeModel fileItem &&
+                     System.IO.File.Exists(fileItem.FullPath))
+            {
+                filePaths.Add(fileItem.FullPath);
+                filePathsText = fileItem.FullPath;
+            }
 
-                    // DataObjectはリファレンス型なので、既存のオブジェクトの内容を
-                    // 変更することで更新される（再代入は不要）
+            // ファイルリストが空でなければ設定
+            if (filePaths.Count > 0)
+            {
+                // エクスプローラー用のファイルドロップ形式
+                dataObject.SetFileDropList(filePaths);
+
+                // メモ帳などのテキスト形式
+                if (!string.IsNullOrEmpty(filePathsText))
+                {
+                    dataObject.SetText(filePathsText);
                 }
             }
+
+            // 作成したDataObjectを設定
+            dragInfo.DataObject = dataObject;
         }
 
         public override bool CanStartDrag(IDragInfo dragInfo)
