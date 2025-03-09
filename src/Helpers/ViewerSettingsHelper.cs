@@ -59,6 +59,7 @@ namespace Illustra.Helpers
         public double Height { get; set; } = 600;
         public bool IsFullScreen { get; set; } = false;
         public bool VisiblePropertyPanel { get; set; } = true;
-        public double PropertyColumnWidth { get; set; } = 250; // プロパティパネル列のデフォルト幅
+        public double NormalPropertyColumnWidth { get; set; } = 250; // 通常ウィンドウ時のプロパティパネル幅
+        public double FullScreenPropertyColumnWidth { get; set; } = 250; // 全画面表示時のプロパティパネル幅
     }
 }

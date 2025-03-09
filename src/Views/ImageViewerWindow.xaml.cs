@@ -165,8 +165,10 @@ namespace Illustra.Views
             PropertyPanel.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
             PropertySplitter.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
 
-            // 保存されていた幅を読み込む
-            _lastPropertyPanelWidth = settings.PropertyColumnWidth;
+            // フルスクリーン状態に応じた幅を読み込む
+            _lastPropertyPanelWidth = settings.IsFullScreen
+                ? settings.FullScreenPropertyColumnWidth
+                : settings.NormalPropertyColumnWidth;
 
             // プロパティパネル列の幅を設定
             if (!settings.VisiblePropertyPanel)
@@ -174,10 +176,10 @@ namespace Illustra.Views
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
             }
-            else if (settings.PropertyColumnWidth > 0)
+            else if (_lastPropertyPanelWidth > 0)
             {
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(settings.PropertyColumnWidth);
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
             }
 
             // ウィンドウが表示された後に実行する処理
@@ -411,7 +413,9 @@ namespace Illustra.Views
                 if (panelWidth <= 0)
                 {
                     var settings = ViewerSettingsHelper.LoadSettings();
-                    panelWidth = settings.PropertyColumnWidth > 0 ? settings.PropertyColumnWidth : 250;
+                    panelWidth = _isFullScreen
+                        ? (settings.FullScreenPropertyColumnWidth > 0 ? settings.FullScreenPropertyColumnWidth : 250)
+                        : (settings.NormalPropertyColumnWidth > 0 ? settings.NormalPropertyColumnWidth : 250);
                 }
 
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(panelWidth);
@@ -560,7 +564,7 @@ namespace Illustra.Views
                 IsFullScreen = true; // プロパティ経由で設定
 
                 // 状態変更をすぐに保存
-                SaveCurrentSettings();
+                SaveCurrentSettings(true, false);
             }
             else
             {
@@ -578,31 +582,57 @@ namespace Illustra.Views
                 hideCursorTimer.Stop();
 
                 // 状態変更をすぐに保存
-                SaveCurrentSettings();
+                SaveCurrentSettings(true, true);
+
             }
 
+            // フルスクリーン状態に応じた幅を読み込む
+            var settings = ViewerSettingsHelper.LoadSettings();
+            _lastPropertyPanelWidth = _isFullScreen
+                ? settings.FullScreenPropertyColumnWidth
+                : settings.NormalPropertyColumnWidth;
+
+            // プロパティパネル列の幅を設定
+            if (!settings.VisiblePropertyPanel)
+            {
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+            }
+            else if (_lastPropertyPanelWidth > 0)
+            {
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
+                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
+            }
             // ボタンの表示状態を更新
             UpdateButtonVisibility();
         }
 
         // 現在のウィンドウ設定を保存する共通メソッド
-        private void SaveCurrentSettings()
+        private void SaveCurrentSettings(bool isSwitchgingFullScreen = false, bool wasFullScreen = false)
         {
             // プロパティパネルの幅を取得（非表示の場合は前回保存した値を使用）
             double propertyWidth = PropertyPanel.Visibility == Visibility.Visible
                 ? MainGrid.ColumnDefinitions[2].ActualWidth
                 : _lastPropertyPanelWidth;
 
-            var settings = new ViewerSettings
+            var settings = ViewerSettingsHelper.LoadSettings();
+            settings.Left = _isFullScreen ? double.NaN : Left;
+            settings.Top = _isFullScreen ? double.NaN : Top;
+            settings.Width = _isFullScreen ? 800 : Width;
+            settings.Height = _isFullScreen ? 600 : Height;
+            settings.IsFullScreen = _isFullScreen;
+            settings.VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible;
+
+            // フルスクリーン状態に応じて適切な幅を保存
+            var isFullScreenForSave = isSwitchgingFullScreen ? wasFullScreen : _isFullScreen;
+            if (isFullScreenForSave)
             {
-                Left = _isFullScreen ? double.NaN : Left,
-                Top = _isFullScreen ? double.NaN : Top,
-                Width = _isFullScreen ? 800 : Width,
-                Height = _isFullScreen ? 600 : Height,
-                IsFullScreen = _isFullScreen,
-                VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible,
-                PropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250 // 値が0以下の場合はデフォルト値を使用
-            };
+                settings.FullScreenPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
+            }
+            else
+            {
+                settings.NormalPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
+            }
             ViewerSettingsHelper.SaveSettings(settings);
         }
 
