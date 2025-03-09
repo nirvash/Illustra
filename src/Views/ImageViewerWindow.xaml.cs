@@ -105,7 +105,7 @@ namespace Illustra.Views
             _imageCache = new WindowBasedImageCache();
 
             // キャッシュから画像を読み込み（なければ新規作成）
-            LoadImageFromCache(filePath);
+            LoadAndDisplayImage(filePath);
 
             // プロパティの読み込み
             LoadImagePropertiesAsync(filePath);
@@ -248,7 +248,7 @@ namespace Illustra.Views
                 MainImage.Focus(); // 画像にフォーカス
             }));
 
-            // 初期キャッシュの設定
+            // 前後の画像をキャッシュ
             var viewModel = Parent?.GetViewModel();
             if (viewModel != null)
             {
@@ -433,7 +433,7 @@ namespace Illustra.Views
             string? previousFilePath = Parent.GetPreviousImage(_currentFilePath);
             if (!string.IsNullOrEmpty(previousFilePath))
             {
-                LoadNewImage(previousFilePath);
+                SwitchToImage(previousFilePath);
             }
         }
 
@@ -446,15 +446,15 @@ namespace Illustra.Views
             string? nextFilePath = Parent.GetNextImage(_currentFilePath);
             if (!string.IsNullOrEmpty(nextFilePath))
             {
-                LoadNewImage(nextFilePath);
+                SwitchToImage(nextFilePath);
             }
         }
 
-        private void LoadImageFromCache(string filePath)
+        private void LoadAndDisplayImage(string filePath)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"LoadImageFromCache: {filePath}");
+                System.Diagnostics.Debug.WriteLine($"LoadAndDisplayImage: {filePath}");
                 ImageSource = _imageCache.GetImage(filePath);
             }
             catch (Exception ex)
@@ -465,22 +465,22 @@ namespace Illustra.Views
         }
 
         // 新しい画像を読み込む
-        private void LoadNewImage(string filePath)
+        private void SwitchToImage(string filePath)
         {
             try
             {
                 System.Diagnostics.Debug.WriteLine($"LoadNewImage開始: {filePath}");
 
-                // 現在のファイルパスを更新
+                // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
 
-                // まずキャッシュから読み込みを試みる
-                LoadImageFromCache(filePath);
+                // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
+                LoadAndDisplayImage(filePath);
 
-                // プロパティの読み込みと設定
+                // 3. 画像のプロパティを読み込み
                 LoadImagePropertiesAsync(filePath);
 
-                // キャッシュの更新
+                // 4. 前後の画像をキャッシュ
                 var viewModel = Parent?.GetViewModel();
                 if (viewModel != null)
                 {
@@ -741,7 +741,7 @@ namespace Illustra.Views
                 // 次の画像があれば表示、なければビューアを閉じる
                 if (!string.IsNullOrEmpty(nextFilePath))
                 {
-                    LoadNewImage(nextFilePath);
+                    SwitchToImage(nextFilePath);
                 }
                 else
                 {
