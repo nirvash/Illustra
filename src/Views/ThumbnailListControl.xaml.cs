@@ -289,6 +289,13 @@ namespace Illustra.Views
             {
                 // 実際のScrollViewerにイベントハンドラを直接登録
                 scrollViewer.ScrollChanged += OnScrollChanged;
+
+                // ウィンドウのサイズ変更イベントを購読
+                var window = Window.GetWindow(this);
+                if (window != null)
+                {
+                    window.SizeChanged += async (s, args) => await OnWindowSizeChanged(scrollViewer);
+                }
             }
 
             // プロパティ変更通知の購読
@@ -1503,55 +1510,104 @@ namespace Illustra.Views
         /// <summary>
         /// VirtualizingWrapPanelの実際のレイアウトから列数を取得します
         /// </summary>
+        /// <summary>
+        /// ウィンドウサイズ変更時に表示範囲のサムネイルを再生成します
+        /// </summary>
+        private async Task OnWindowSizeChanged(ScrollViewer scrollViewer)
+        {
+            try
+            {
+                // レイアウトの更新を待機
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                // 表示範囲のサムネイルを再ロード
+                await LoadVisibleThumbnailsAsync(scrollViewer);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ウィンドウサイズ変更時のサムネイル再生成エラー: {ex.Message}");
+            }
+        }
+
         private int GetItemsPerRow(VirtualizingWrapPanel panel)
         {
-            if (ThumbnailItemsControl.Items.Count == 0 || panel == null)
-                return 1;
-
-            // パネルの幅から推定される列数を計算（フォールバック用）
-            double expectedItemWidth = ThumbnailSizeSlider.Value + 12; // マージンとパディングを考慮
-            int estimatedColumns = Math.Max(1, (int)(panel.ActualWidth / expectedItemWidth));
-
-            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-            if (scrollViewer == null)
-                return estimatedColumns;
-
-            // Viewportの範囲を取得
-            var viewport = new Rect(new Point(scrollViewer.HorizontalOffset, scrollViewer.VerticalOffset),
-                                  new Size(scrollViewer.ViewportWidth, scrollViewer.ViewportHeight));
-
-            double? firstRowY = null;
-            int itemsInFirstRow = 0;
-
-            // 表示範囲内の最初の行を見つけてカウント
-            for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+            try
             {
-                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                if (container != null)
+                if (ThumbnailItemsControl.Items.Count == 0 || panel == null)
+                    return 1;
+
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer == null)
+                    return 1;
+
+                double? firstRowY = null;
+                int itemsInFirstRow = 0;
+                double lastX = double.MinValue;
+                bool foundFirstRow = false;
+
+                // アイテムが表示されている範囲を計算
+                var panelToScrollViewer = panel.TransformToAncestor(scrollViewer);
+                var panelPoint = panelToScrollViewer.Transform(new Point(0, 0));
+                var panelRect = new Rect(panelPoint, panel.RenderSize);
+                var viewport = new Rect(new Point(0, 0), new Size(scrollViewer.ViewportWidth, scrollViewer.ViewportHeight));
+
+                // 表示範囲内のアイテムを探す
+                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
                 {
-                    var bounds = container.TransformToAncestor(scrollViewer).TransformBounds(new Rect(container.RenderSize));
-                    if (bounds.IntersectsWith(viewport))
+                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                    if (container != null)
                     {
-                        var pos = container.TransformToAncestor(panel).Transform(new Point(0, 0));
-                        if (!firstRowY.HasValue)
+                        // コンテナの位置をパネル座標系で取得
+                        var containerToPanelTransform = container.TransformToAncestor(panel);
+                        var containerPoint = containerToPanelTransform.Transform(new Point(0, 0));
+                        var containerRect = new Rect(containerPoint, container.RenderSize);
+
+                        // スクロールビューア座標系に変換
+                        var containerToScrollViewerTransform = container.TransformToAncestor(scrollViewer);
+                        var containerInScrollViewer = containerToScrollViewerTransform.Transform(new Point(0, 0));
+
+                        // スクロールビューアの表示範囲内かチェック
+                        if (containerInScrollViewer.Y >= -container.ActualHeight &&
+                            containerInScrollViewer.Y <= viewport.Height)
                         {
-                            firstRowY = pos.Y;
-                            itemsInFirstRow = 1;
-                        }
-                        else if (Math.Abs(pos.Y - firstRowY.Value) <= 1) // 1ピクセルの誤差を許容
-                        {
-                            itemsInFirstRow++;
-                        }
-                        else if (pos.Y > firstRowY.Value)
-                        {
-                            // 次の行に到達したら終了
-                            return itemsInFirstRow;
+                            if (!firstRowY.HasValue)
+                            {
+                                firstRowY = containerPoint.Y;
+                                itemsInFirstRow = 1;
+                                lastX = containerPoint.X;
+                            }
+                            else if (Math.Abs(containerPoint.Y - firstRowY.Value) <= 1)
+                            {
+                                if (containerPoint.X > lastX + 1)
+                                {
+                                    itemsInFirstRow++;
+                                    lastX = containerPoint.X;
+                                }
+                            }
+                            else if (!foundFirstRow)
+                            {
+                                foundFirstRow = true;
+                            }
                         }
                     }
                 }
-            }
 
-            return itemsInFirstRow > 0 ? itemsInFirstRow : estimatedColumns;
+                if (itemsInFirstRow > 0)
+                {
+                    return itemsInFirstRow;
+                }
+
+                // 見つからなかった場合は、実際のサイズから計算
+                var itemWidth = ThumbnailSizeSlider.Value + 20;
+                var columns = Math.Max(1, (int)(panel.ActualWidth / itemWidth));
+                Debug.WriteLine($"Using calculated columns: {columns} (Width={panel.ActualWidth:F2}, ItemWidth={itemWidth:F2})");
+                return columns;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetItemsPerRow: {ex.Message}");
+                return 1;
+            }
         }
     }
 }
