@@ -13,6 +13,8 @@ using Illustra.Events;
 using System.Windows.Media.Animation;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
+using Illustra.Helpers.Interfaces;
 
 namespace Illustra.Views
 {
@@ -90,6 +92,7 @@ namespace Illustra.Views
         }
 
         private DispatcherTimer hideCursorTimer;
+        private readonly IImageCache _imageCache;
 
         public ImageViewerWindow(string filePath)
         {
@@ -97,6 +100,9 @@ namespace Illustra.Views
             FileName = System.IO.Path.GetFileName(filePath);
             _currentFilePath = filePath;
             DataContext = this;
+
+            // キャッシュの初期化
+            _imageCache = new WindowBasedImageCache();
 
             // キャッシュから画像を読み込み（なければ新規作成）
             LoadImageFromCache(filePath);
@@ -193,15 +199,7 @@ namespace Illustra.Views
                     newProperties.Rating = fileNode.Rating;
                 }
 
-                // デバッグ出力
-                System.Diagnostics.Debug.WriteLine($"Loading properties for {filePath}");
-                System.Diagnostics.Debug.WriteLine($"Rating value from DB: {newProperties.Rating}");
-
                 Properties = newProperties;  // このセッターで PropertyChanged が発火する
-
-                // セット後の確認
-                System.Diagnostics.Debug.WriteLine($"Properties after set - Rating: {Properties.Rating}");
-
                 _currentFilePath = filePath;
                 FileName = System.IO.Path.GetFileName(filePath);
 
@@ -210,12 +208,11 @@ namespace Illustra.Views
                 {
                     PropertyPanelControl.ImageProperties = Properties;
                     PropertyPanelControl.DataContext = Properties;
-                    System.Diagnostics.Debug.WriteLine($"PropertyPanelControl updated with rating: {Properties.Rating}");
                 }
 
                 OnPropertyChanged(nameof(ImageSource));
                 OnPropertyChanged(nameof(FileName));
-                OnPropertyChanged(nameof(Properties));  // 明示的に Properties の変更を通知
+                OnPropertyChanged(nameof(Properties));
             }
             catch (Exception ex)
             {
@@ -250,6 +247,18 @@ namespace Illustra.Views
                 Focus();    // ウィンドウにフォーカスを設定
                 MainImage.Focus(); // 画像にフォーカス
             }));
+
+            // 初期キャッシュの設定
+            var viewModel = Parent?.GetViewModel();
+            if (viewModel != null)
+            {
+                var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                var currentIndex = files.FindIndex(f => f.FullPath == _currentFilePath);
+                if (currentIndex >= 0)
+                {
+                    _imageCache.UpdateCache(files, currentIndex);
+                }
+            }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -280,7 +289,6 @@ namespace Illustra.Views
             }
             return false;
         }
-
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
@@ -339,7 +347,6 @@ namespace Illustra.Views
             }
         }
 
-        // レーティングを設定する新しいメソッド
         private async void SetRating(int rating)
         {
             if (Properties == null || string.IsNullOrEmpty(_currentFilePath)) return;
@@ -443,151 +450,12 @@ namespace Illustra.Views
             }
         }
 
-        private const int CacheSize = 10; // キャッシュサイズを固定
-        private readonly LruCache<string, BitmapSource> _imageCache = new(CacheSize);
-
-        private void CacheImages(string filePath, string previousFilePath = null)
-        {
-            var _viewModel = Parent?.GetViewModel();
-            if (_viewModel == null) return;
-
-            var fileNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-            var currentIndex = fileNodes.FindIndex(f => f.FullPath == filePath);
-            if (currentIndex < 0) return; // 現在のファイルが見つからない場合は処理しない
-
-            System.Diagnostics.Debug.WriteLine($"CacheImages開始 - 現在の画像: {filePath}");
-            System.Diagnostics.Debug.WriteLine($"現在の画像インデックス: {currentIndex}, 全体: {fileNodes.Count}");
-
-            // 移動方向を判定
-            int direction = 0; // 0: 不明、1: 次へ、-1: 前へ
-            if (!string.IsNullOrEmpty(previousFilePath))
-            {
-                var previousIndex = fileNodes.FindIndex(f => f.FullPath == previousFilePath);
-                if (previousIndex >= 0)
-                {
-                    direction = currentIndex > previousIndex ? 1 : -1;
-                    System.Diagnostics.Debug.WriteLine($"移動方向: {(direction > 0 ? "次へ" : "前へ")}");
-                }
-            }
-
-            // キャッシュする範囲を計算
-            int startIndex = Math.Max(0, currentIndex - CacheSize / 2);
-            int endIndex = Math.Min(fileNodes.Count - 1, currentIndex + CacheSize / 2);
-
-            // キャッシュする画像のパスを収集
-            var pathsToCache = new List<string>();
-            for (int i = startIndex; i <= endIndex; i++)
-            {
-                if (i != currentIndex) // 現在の画像は既にキャッシュされているはず
-                {
-                    pathsToCache.Add(fileNodes[i].FullPath);
-                }
-            }
-
-            // 移動方向に基づいて優先順位を設定
-            if (direction != 0)
-            {
-                // 移動方向に応じてパスをソート
-                pathsToCache.Sort((a, b) =>
-                {
-                    int indexA = fileNodes.FindIndex(f => f.FullPath == a);
-                    int indexB = fileNodes.FindIndex(f => f.FullPath == b);
-
-                    // 現在位置からの距離を計算
-                    int distanceA = Math.Abs(indexA - currentIndex);
-                    int distanceB = Math.Abs(indexB - currentIndex);
-
-                    // 移動方向に合わせて優先順位を調整
-                    if (direction > 0) // 次へ移動
-                    {
-                        // 現在位置より後ろの画像を優先
-                        if (indexA > currentIndex && indexB <= currentIndex) return -1;
-                        if (indexA <= currentIndex && indexB > currentIndex) return 1;
-                    }
-                    else // 前へ移動
-                    {
-                        // 現在位置より前の画像を優先
-                        if (indexA < currentIndex && indexB >= currentIndex) return -1;
-                        if (indexA >= currentIndex && indexB < currentIndex) return 1;
-                    }
-
-                    // 同じ方向なら距離が近い方を優先
-                    return distanceA.CompareTo(distanceB);
-                });
-            }
-
-            // 画像をキャッシュ
-            foreach (var path in pathsToCache)
-            {
-                try
-                {
-                    // ContainsKeyを使用して存在確認（LRU順序を更新しない）
-                    if (!_imageCache.ContainsKey(path))
-                    {
-                        var image = new BitmapImage();
-                        image.BeginInit();
-                        image.CacheOption = BitmapCacheOption.OnLoad;
-                        image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-                        image.UriSource = new Uri(path);
-                        image.EndInit();
-                        image.Freeze();
-
-                        _imageCache.Add(path, image);
-                        System.Diagnostics.Debug.WriteLine($"プリロード完了: {path}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"画像のプリロード中にエラーが発生: {ex.Message}");
-                }
-            }
-
-            // デバッグ情報を出力
-            System.Diagnostics.Debug.WriteLine($"キャッシュ状態 - アイテム数: {_imageCache.Count}/{_imageCache.Capacity}");
-            System.Diagnostics.Debug.WriteLine("キャッシュ内容 (新→古):");
-            foreach (var path in _imageCache.GetKeys())
-            {
-                System.Diagnostics.Debug.WriteLine($"  - {path}");
-            }
-        }
-
-        private void ClearCache()
-        {
-            _imageCache.Clear();
-        }
-
         private void LoadImageFromCache(string filePath)
         {
             try
             {
                 System.Diagnostics.Debug.WriteLine($"LoadImageFromCache: {filePath}");
-
-                BitmapSource image;
-                if (_imageCache.TryGetValue(filePath, out var cachedImage))
-                {
-                    System.Diagnostics.Debug.WriteLine($"キャッシュヒット: {filePath}");
-                    image = cachedImage;
-
-                    // キャッシュヒットした場合でも、LRUキャッシュの順序を更新するために再追加
-                    // （これによりこの画像が最も新しく使用された画像として記録される）
-                    _imageCache.Add(filePath, cachedImage);
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"キャッシュミス: {filePath}");
-                    var newImage = new BitmapImage();
-                    newImage.BeginInit();
-                    newImage.CacheOption = BitmapCacheOption.OnLoad;
-                    newImage.UriSource = new Uri(filePath);
-                    newImage.EndInit();
-                    newImage.Freeze();
-
-                    image = newImage;
-                    _imageCache.Add(filePath, newImage);
-                }
-
-                // 画像ソースを設定
-                ImageSource = image;
+                ImageSource = _imageCache.GetImage(filePath);
             }
             catch (Exception ex)
             {
@@ -602,16 +470,9 @@ namespace Illustra.Views
             try
             {
                 System.Diagnostics.Debug.WriteLine($"LoadNewImage開始: {filePath}");
-                System.Diagnostics.Debug.WriteLine($"現在のファイルパス: {_currentFilePath}");
-
-                // 前のファイルパスを保存
-                string previousFilePath = _currentFilePath;
 
                 // 現在のファイルパスを更新
                 _currentFilePath = filePath;
-
-                // キャッシュの状態を出力（読み込み前）
-                System.Diagnostics.Debug.WriteLine($"読み込み前のキャッシュ状態 - アイテム数: {_imageCache.Count}/{_imageCache.Capacity}");
 
                 // まずキャッシュから読み込みを試みる
                 LoadImageFromCache(filePath);
@@ -619,10 +480,17 @@ namespace Illustra.Views
                 // プロパティの読み込みと設定
                 LoadImagePropertiesAsync(filePath);
 
-                // キャッシュの更新（前後の画像をプリロード）
-                // 非同期で実行して UI をブロックしないようにする
-                // 前のファイルパスを渡して移動方向を判定できるようにする
-                Task.Run(() => CacheImages(filePath, previousFilePath));
+                // キャッシュの更新
+                var viewModel = Parent?.GetViewModel();
+                if (viewModel != null)
+                {
+                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
+                    if (currentIndex >= 0)
+                    {
+                        _imageCache.UpdateCache(files, currentIndex);
+                    }
+                }
 
                 // 親ウィンドウのサムネイル選択を更新
                 Parent?.SyncThumbnailSelection(filePath);
@@ -642,9 +510,6 @@ namespace Illustra.Views
             CloseViewer();
         }
 
-        /// <summary>
-        /// ビューアを閉じる共通処理
-        /// </summary>
         private void CloseViewer()
         {
             // フルスクリーン中は状態を保存してから閉じる
@@ -755,7 +620,9 @@ namespace Illustra.Views
 
                 // 画像リソースの解放
                 ImageSource = null;
-                ClearCache();
+
+                // キャッシュをクリア
+                _imageCache.Clear();
 
                 // 明示的なGCを実行
                 GC.Collect();
@@ -840,9 +707,6 @@ namespace Illustra.Views
             ToggleFullScreen();
         }
 
-        /// <summary>
-        /// 現在表示中の画像を削除します
-        /// </summary>
         private async void DeleteCurrentImage()
         {
             try
