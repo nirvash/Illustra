@@ -21,8 +21,9 @@ namespace Illustra.Helpers
         private readonly ConcurrentQueue<FileSystemEventArgs> _eventQueue;
         private readonly Timer _processTimer;
         private bool _isMonitoring;
+        private string _monitoredPath = string.Empty;
 
-        public FileSystemMonitor(IFileSystemChangeHandler handler)
+        public FileSystemMonitor(IFileSystemChangeHandler handler, bool includeSubdirectories = false)
         {
             _handler = handler;
             _eventQueue = new ConcurrentQueue<FileSystemEventArgs>();
@@ -32,7 +33,7 @@ namespace Illustra.Helpers
             _watcher = new FileSystemWatcher
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite,
-                IncludeSubdirectories = false,
+                IncludeSubdirectories = includeSubdirectories,
                 EnableRaisingEvents = false
             };
 

@@ -1,21 +1,22 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Illustra.Events;
+using Illustra.Helpers;
 using Illustra.Models;
 using GongSolutions.Wpf.DragDrop;
 using System.Windows;
 
 namespace Illustra.ViewModels
 {
-    public class FileSystemTreeViewModel : INotifyPropertyChanged
+    public class FileSystemTreeViewModel : INotifyPropertyChanged, IFileSystemChangeHandler
     {
-
-
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
+        private readonly FileSystemMonitor _monitor;
         private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
@@ -23,6 +24,7 @@ namespace Illustra.ViewModels
 
         public FileSystemTreeViewModel(IEventAggregator eventAggregator, string? initialPath = null)
         {
+            // 基本的な初期化
             _eventAggregator = eventAggregator;
             _model = new FileSystemTreeModel();
 
@@ -71,8 +73,29 @@ namespace Illustra.ViewModels
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
+            // FileSystemMonitorの初期化
+            _monitor = new FileSystemMonitor(this);
+
             // 初期化
             Initialize(initialPath);
+        }
+
+        public void OnFileCreated(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                Debug.WriteLine($"フォルダ作成を検知: {path}");
+            }
+        }
+
+        public void OnFileDeleted(string path)
+        {
+            Debug.WriteLine($"フォルダ削除を検知: {path}");
+        }
+
+        public void OnFileRenamed(string oldPath, string newPath)
+        {
+            Debug.WriteLine($"フォルダ名変更を検知: {oldPath} -> {newPath}");
         }
 
         private void Initialize(string? initialPath)

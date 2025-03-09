@@ -394,7 +394,7 @@ namespace Illustra.Views
         #region IFileSystemChangeHandler Implementation
         public void OnFileCreated(string path)
         {
-            Debug.WriteLine($"File created: {path}");
+            Debug.WriteLine($"[サムネイル] ファイル作成: {path}");
             if (!FileHelper.IsImageFile(path)) return;
 
             Dispatcher.Invoke(async () =>
@@ -442,7 +442,7 @@ namespace Illustra.Views
 
         public void OnFileRenamed(string oldPath, string newPath)
         {
-            Debug.WriteLine($"File renamed: {oldPath} -> {newPath}");
+            Debug.WriteLine($"[サムネイル] ファイル名変更: {oldPath} -> {newPath}");
             if (!FileHelper.IsImageFile(newPath)) return;
 
             Dispatcher.Invoke(async () =>
