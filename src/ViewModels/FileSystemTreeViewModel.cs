@@ -16,7 +16,6 @@ namespace Illustra.ViewModels
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
-        private readonly FileSystemMonitor _monitor;
         private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
@@ -72,9 +71,6 @@ namespace Illustra.ViewModels
             // イベント購読
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-
-            // FileSystemMonitorの初期化
-            _monitor = new FileSystemMonitor(this);
 
             // 初期化
             Initialize(initialPath);
