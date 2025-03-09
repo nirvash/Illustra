@@ -213,11 +213,44 @@ namespace Illustra.Views
                 await Dispatcher.InvokeAsync(() =>
                 {
                     currentContainer.BringIntoView();
+                    // BringIntoViewは単にアイテムを表示範囲内に入れるだけなので、
+                    // さらに上部に持ってくるには追加の処理が必要
+                    ScrollViewer scrollViewer = FindScrollViewer(treeView);
+                    if (scrollViewer != null)
+                    {
+                        // アイテムの位置を取得
+                        Point relativePosition = currentContainer.TranslatePoint(new Point(0, 0), scrollViewer);
+
+                        // 上部に近いポジションになるようにスクロール位置を調整
+                        // 少し余白を残すためのオフセット（例: 10ピクセル）
+                        double offset = 10;
+                        scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + relativePosition.Y - offset);
+                    }
                     currentContainer.IsSelected = true;
                 }, DispatcherPriority.Render);
             }
         }
 
+        // TreeView内のScrollViewerを見つける補助メソッド
+        private ScrollViewer FindScrollViewer(DependencyObject depObj)
+        {
+            if (depObj == null)
+                return null;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+
+                if (child is ScrollViewer scrollViewer)
+                    return scrollViewer;
+
+                var result = FindScrollViewer(child);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
 
 
         private TreeViewItem GetTreeViewItemForItem(ItemsControl parent, object item)
