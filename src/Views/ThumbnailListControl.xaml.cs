@@ -84,9 +84,12 @@ namespace Illustra.Views
             {
                 base.DragOver(e);
                 // サムネイル一覧からサムネイル一覧へのドロップ無効
-                var dataObject = e.Data as DataObject;
-                if (e.Data is FileNodeModel || e.Data is IEnumerable<FileNodeModel>)
+
+                // カスタムデータフォーマットを確認
+                var dataObject = e.Data as IDataObject;
+                if (dataObject != null && dataObject.GetDataPresent(typeof(FileNodeModel).Name))
                 {
+                    e.DropTargetAdorner = null;
                     return;
                 }
 
@@ -1038,7 +1041,7 @@ namespace Illustra.Views
         {
             // サムネイル一覧からサムネイル一覧へのドロップ無効
             var dataObject = e.Data as DataObject;
-            if (e.Data is FileNodeModel || e.Data is IEnumerable<FileNodeModel>)
+            if (dataObject != null && dataObject.GetDataPresent(typeof(FileNodeModel).Name))
             {
                 return;
             }
