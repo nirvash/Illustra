@@ -62,7 +62,6 @@ namespace Illustra.Views
 
         private void OnFileSelected(string filePath)
         {
-            Debug.WriteLine($"PropertyPanelControl: OnFileSelected: {filePath}");
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath) && _currentFilePath != filePath)
             {
                 _currentFilePath = filePath;
@@ -253,6 +252,24 @@ namespace Illustra.Views
                     ImageProperties.Rating = args.Rating;
                 }
                 await UpdateRatingStars();
+            }
+        }
+
+        private void CopyOriginalText_Click(object sender, RoutedEventArgs e)
+        {
+            if (ImageProperties?.StableDiffusionResult != null)
+            {
+                try
+                {
+                    Clipboard.SetText(ImageProperties.UserComment);
+                    MessageBox.Show("コメントをクリップボードにコピーしました。", "コピー完了",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

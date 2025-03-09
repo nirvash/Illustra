@@ -53,6 +53,9 @@ namespace Illustra.Helpers
 
         // プロパティパネルの詳細情報の折りたたみ状態
         public bool DetailsExpanded { get; set; } = false;
+
+        // プロパティパネルのStable Diffusion情報の折りたたみ状態
+        public bool StableDiffusionExpanded { get; set; } = false;
     }
 
     public static class SettingsHelper

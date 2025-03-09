@@ -9,7 +9,8 @@
              xmlns:local="clr-namespace:Illustra.Controls"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300"
+             d:DesignWidth="300">
 
     <UserControl.Resources>
         <helpers:RatingToStarsConverter x:Key="RatingToStarsConverter"/>
@@ -20,10 +21,23 @@
         <helpers:IndexToXMultiConverter  x:Key="IndexToXMultiConverter"/>
         <helpers:IndexToYMultiConverter  x:Key="IndexToYMultiConverter"/>
         <helpers:IndexToZIndexConverter  x:Key="IndexToZIndexConverter"/>
+
+        <!-- レーティングスターボタンスタイル -->
+        <Style x:Key="RatingStarButton"
+               TargetType="Button">
+            <Setter Property="Margin"
+                    Value="2,0"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="0"/>
+        </Style>
     </UserControl.Resources>
 
     <UserControl.DataContext>
-        <viewmodels:MainViewModel />
+        <viewmodels:MainViewModel/>
     </UserControl.DataContext>
 
     <Grid>
@@ -33,16 +47,26 @@
         </Grid.RowDefinitions>
 
         <!-- サムネイルサイズ調整用のスライダー -->
-        <Grid Grid.Row="0" Margin="5" KeyboardNavigation.TabNavigation="None">
+        <Grid Grid.Row="0"
+              Margin="5"
+              KeyboardNavigation.TabNavigation="None">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/> <!-- サムネイルサイズ -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- サムネイルサイズ -->
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/> <!-- レーティングフィルター -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- レーティングフィルター -->
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal"  Grid.Column="0">
-                <TextBlock Text="サムネイルサイズ:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock x:Name="ThumbnailSizeText" Text="120" VerticalAlignment="Center" Margin="5,0,5,0"/>
+            <StackPanel Orientation="Horizontal"
+                        Grid.Column="0">
+                <TextBlock Text="サムネイルサイズ:"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,0"/>
+                <TextBlock x:Name="ThumbnailSizeText"
+                           Text="120"
+                           VerticalAlignment="Center"
+                           Margin="5,0,5,0"/>
                 <Slider x:Name="ThumbnailSizeSlider"
                         Width="150"
                         Minimum="60"
@@ -55,127 +79,202 @@
             </StackPanel>
 
             <!-- レーティングフィルター (新規追加) -->
-            <StackPanel Orientation="Horizontal" Grid.Column="2">
-                <TextBlock Text="レーティング:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,5,0">
-                    <Button Tag="1" Click="RatingFilter_Click" x:Name="Filter1" ToolTip="★1でフィルター"
-                            Style="{StaticResource RatingStarButton}" Padding="1">
-                        <local:RatingStarControl RatingValue="1" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+            <StackPanel Orientation="Horizontal"
+                        Grid.Column="2">
+                <TextBlock Text="レーティング:"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,0"/>
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,5,0">
+                    <Button Tag="1"
+                            Click="RatingFilter_Click"
+                            x:Name="Filter1"
+                            ToolTip="★1でフィルター"
+                            Style="{StaticResource RatingStarButton}"
+                            Padding="1">
+                        <local:RatingStarControl RatingValue="1"
+                                                 Height="18"
+                                                 Width="18"
+                                                 IsFilled="False"
+                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
-                    <Button Tag="2" Click="RatingFilter_Click" x:Name="Filter2" ToolTip="★2でフィルター"
-                            Style="{StaticResource RatingStarButton}" Padding="1">
-                        <local:RatingStarControl RatingValue="2" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <Button Tag="2"
+                            Click="RatingFilter_Click"
+                            x:Name="Filter2"
+                            ToolTip="★2でフィルター"
+                            Style="{StaticResource RatingStarButton}"
+                            Padding="1">
+                        <local:RatingStarControl RatingValue="2"
+                                                 Height="18"
+                                                 Width="18"
+                                                 IsFilled="False"
+                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
-                    <Button Tag="3" Click="RatingFilter_Click" x:Name="Filter3" ToolTip="★3でフィルター"
-                            Style="{StaticResource RatingStarButton}" Padding="1">
-                        <local:RatingStarControl RatingValue="3" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <Button Tag="3"
+                            Click="RatingFilter_Click"
+                            x:Name="Filter3"
+                            ToolTip="★3でフィルター"
+                            Style="{StaticResource RatingStarButton}"
+                            Padding="1">
+                        <local:RatingStarControl RatingValue="3"
+                                                 Height="18"
+                                                 Width="18"
+                                                 IsFilled="False"
+                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
-                    <Button Tag="4" Click="RatingFilter_Click" x:Name="Filter4" ToolTip="★4でフィルター"
-                            Style="{StaticResource RatingStarButton}" Padding="1">
-                        <local:RatingStarControl RatingValue="4" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <Button Tag="4"
+                            Click="RatingFilter_Click"
+                            x:Name="Filter4"
+                            ToolTip="★4でフィルター"
+                            Style="{StaticResource RatingStarButton}"
+                            Padding="1">
+                        <local:RatingStarControl RatingValue="4"
+                                                 Height="18"
+                                                 Width="18"
+                                                 IsFilled="False"
+                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
-                    <Button Tag="5" Click="RatingFilter_Click" x:Name="Filter5" ToolTip="★5でフィルター"
-                            Style="{StaticResource RatingStarButton}" Padding="1">
-                        <local:RatingStarControl RatingValue="5" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <Button Tag="5"
+                            Click="RatingFilter_Click"
+                            x:Name="Filter5"
+                            ToolTip="★5でフィルター"
+                            Style="{StaticResource RatingStarButton}"
+                            Padding="1">
+                        <local:RatingStarControl RatingValue="5"
+                                                 Height="18"
+                                                 Width="18"
+                                                 IsFilled="False"
+                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                 </StackPanel>
-                <Button Content="フィルター解除" Click="ClearFilter_Click" Margin="0,0,5,0"
-                        x:Name="ClearFilterButton" IsEnabled="False"/>
+                <Button Content="フィルター解除"
+                        Click="ClearFilter_Click"
+                        Margin="0,0,5,0"
+                        x:Name="ClearFilterButton"
+                        IsEnabled="False"/>
                 <!-- ソートボタン -->
-                <Button x:Name="SortToggleButton" Click="SortToggle_Click" Margin="0,0,5,0"
+                <Button x:Name="SortToggleButton"
+                        Click="SortToggle_Click"
+                        Margin="0,0,5,0"
                         ToolTip="昇順/降順の切り替え">
-                    <TextBlock Text="↑" x:Name="SortDirectionText"/>
+                    <TextBlock Text="↑"
+                               x:Name="SortDirectionText"/>
                 </Button>
-                <Button x:Name="SortTypeToggleButton" Click="SortTypeToggle_Click" Margin="0,0,5,0"
+                <Button x:Name="SortTypeToggleButton"
+                        Click="SortTypeToggle_Click"
+                        Margin="0,0,5,0"
                         ToolTip="日付/名前でソート">
-                    <TextBlock Text="日付" x:Name="SortTypeText"/>
+                    <TextBlock Text="日付"
+                               x:Name="SortTypeText"/>
                 </Button>
             </StackPanel>
         </Grid>
 
         <ListView x:Name="ThumbnailItemsControl"
-                           Grid.Row="1"
-                           ItemsSource="{Binding FilteredItems}"
-                           SelectionMode="Extended"
-                           IsSynchronizedWithCurrentItem="True"
-                           Loaded="ThumbnailItemsControl_Loaded"
-                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                           ScrollViewer.CanContentScroll="True"
-                           ScrollViewer.PanningMode="VerticalOnly"
-                           VirtualizingPanel.IsVirtualizing="True"
-                           VirtualizingPanel.VirtualizationMode="Recycling"
-                           BorderThickness="0"
-                           AllowDrop="True"
-                           dd:DragDrop.IsDragSource="True"
-                           dd:DragDrop.IsDropTarget="True"
-                           KeyboardNavigation.TabNavigation="None"
-                           IsTabStop="True" TabIndex="3"
-                           FocusVisualStyle="{x:Null}">
+                  Grid.Row="1"
+                  ItemsSource="{Binding FilteredItems}"
+                  SelectionMode="Extended"
+                  IsSynchronizedWithCurrentItem="True"
+                  Loaded="ThumbnailItemsControl_Loaded"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  ScrollViewer.CanContentScroll="True"
+                  ScrollViewer.PanningMode="VerticalOnly"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  BorderThickness="0"
+                  AllowDrop="True"
+                  dd:DragDrop.IsDragSource="True"
+                  dd:DragDrop.IsDropTarget="True"
+                  KeyboardNavigation.TabNavigation="None"
+                  IsTabStop="True"
+                  TabIndex="3"
+                  FocusVisualStyle="{x:Null}">
             <dd:DragDrop.DragAdornerTemplate>
                 <DataTemplate>
-                    <Border BorderBrush="#AA000000" BorderThickness="1" Width="120" Height="120" Margin="0 0 0 20">
-                        <Image Source="{Binding ThumbnailInfo.Thumbnail}" Width="120" Height="120" Stretch="UniformToFill"/>
+                    <Border BorderBrush="#AA000000"
+                            BorderThickness="1"
+                            Width="120"
+                            Height="120"
+                            Margin="0 0 0 20">
+                        <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                               Width="120"
+                               Height="120"
+                               Stretch="UniformToFill"/>
                     </Border>
                 </DataTemplate>
             </dd:DragDrop.DragAdornerTemplate>
 
             <dd:DragDrop.DragAdornerMultiItemTemplate>
                 <DataTemplate>
-                    <ItemsControl ItemsSource="{Binding Items}" AlternationCount="100">
+                    <ItemsControl ItemsSource="{Binding Items}"
+                                  AlternationCount="100">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <Canvas Width="130" Height="130" Margin="0 10 0 0"/>
+                                <Canvas Width="130"
+                                        Height="130"
+                                        Margin="0 10 0 0"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
 
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderBrush="#AA000000" BorderThickness="1" Width="100" Height="100">
-                                    <Image Source="{Binding ThumbnailInfo.Thumbnail}" Width="100" Height="100" Stretch="UniformToFill"/>
+                                <Border BorderBrush="#AA000000"
+                                        BorderThickness="1"
+                                        Width="100"
+                                        Height="100">
+                                    <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                                           Width="100"
+                                           Height="100"
+                                           Stretch="UniformToFill"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
 
                         <ItemsControl.ItemContainerStyle>
                             <Style TargetType="ContentPresenter">
-                                    <Setter Property="Canvas.Left">
-                                        <Setter.Value>
-                                            <MultiBinding Converter="{StaticResource IndexToXMultiConverter}">
-                                                <Binding Path="(ItemsControl.AlternationIndex)"
-                                                        RelativeSource="{RelativeSource Self}"/>
-                                                <Binding Source="0"/> <!-- X方向のオフセット値 -->
-                                                <Binding Source="5"/>  <!-- 倍率（スケール） -->
-                                            </MultiBinding>
-                                        </Setter.Value>
-                                    </Setter>
-
-                                    <Setter Property="Canvas.Top">
-                                        <Setter.Value>
-                                            <MultiBinding Converter="{StaticResource IndexToYMultiConverter}">
-                                                <Binding Path="(ItemsControl.AlternationIndex)"
-                                                        RelativeSource="{RelativeSource Self}"/>
-                                                <Binding Source="0"/> <!-- Y方向のオフセット値 -->
-                                                <Binding Source="5"/> <!-- 倍率（スケール） -->
-                                            </MultiBinding>
-                                        </Setter.Value>
-                                    </Setter>
-
-                                    <!-- ZIndexの設定を追加 -->
-                                    <Setter Property="Panel.ZIndex">
-                                        <Setter.Value>
+                                <Setter Property="Canvas.Left">
+                                    <Setter.Value>
+                                        <MultiBinding Converter="{StaticResource IndexToXMultiConverter}">
                                             <Binding Path="(ItemsControl.AlternationIndex)"
-                                                    RelativeSource="{RelativeSource Self}"
-                                                    Converter="{StaticResource IndexToZIndexConverter}"/>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ItemsControl.ItemContainerStyle>
+                                                     RelativeSource="{RelativeSource Self}"/>
+                                            <Binding Source="0"/>
+                                            <!-- X方向のオフセット値 -->
+                                            <Binding Source="5"/>
+                                            <!-- 倍率（スケール） -->
+                                        </MultiBinding>
+                                    </Setter.Value>
+                                </Setter>
+
+                                <Setter Property="Canvas.Top">
+                                    <Setter.Value>
+                                        <MultiBinding Converter="{StaticResource IndexToYMultiConverter}">
+                                            <Binding Path="(ItemsControl.AlternationIndex)"
+                                                     RelativeSource="{RelativeSource Self}"/>
+                                            <Binding Source="0"/>
+                                            <!-- Y方向のオフセット値 -->
+                                            <Binding Source="5"/>
+                                            <!-- 倍率（スケール） -->
+                                        </MultiBinding>
+                                    </Setter.Value>
+                                </Setter>
+
+                                <!-- ZIndexの設定を追加 -->
+                                <Setter Property="Panel.ZIndex">
+                                    <Setter.Value>
+                                        <Binding Path="(ItemsControl.AlternationIndex)"
+                                                 RelativeSource="{RelativeSource Self}"
+                                                 Converter="{StaticResource IndexToZIndexConverter}"/>
+                                    </Setter.Value>
+                                </Setter>
+
+                                <!-- コンテンツアライメント設定を追加 -->
+                                <Setter Property="HorizontalAlignment"
+                                        Value="Center"/>
+                                <Setter Property="VerticalAlignment"
+                                        Value="Center"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
                     </ItemsControl>
                 </DataTemplate>
             </dd:DragDrop.DragAdornerMultiItemTemplate>
@@ -192,17 +291,28 @@
             </ListView.ItemsPanel>
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
-                    <Setter Property="Padding" Value="0" />
-                    <Setter Property="Margin" Value="3" />
-                    <Setter Property="BorderThickness" Value="1" />
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                    <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
-                    <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
-                    <Setter Property="VerticalContentAlignment" Value="Center" />
-                    <Setter Property="HorizontalContentAlignment" Value="Center" />
-                    <EventSetter Event="MouseDoubleClick" Handler="Thumbnail_MouseDoubleClick"/>
+                    <Setter Property="Padding"
+                            Value="0"/>
+                    <Setter Property="Margin"
+                            Value="3"/>
+                    <Setter Property="BorderThickness"
+                            Value="1"/>
+                    <Setter Property="Background"
+                            Value="Transparent"/>
+                    <Setter Property="KeyboardNavigation.TabNavigation"
+                            Value="None"/>
+                    <Setter Property="FocusVisualStyle"
+                            Value="{x:Null}"/>
+                    <Setter Property="VirtualizingPanel.IsVirtualizing"
+                            Value="True"/>
+                    <Setter Property="VirtualizingPanel.VirtualizationMode"
+                            Value="Recycling"/>
+                    <Setter Property="VerticalContentAlignment"
+                            Value="Center"/>
+                    <Setter Property="HorizontalContentAlignment"
+                            Value="Center"/>
+                    <EventSetter Event="MouseDoubleClick"
+                                 Handler="Thumbnail_MouseDoubleClick"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListViewItem">
@@ -214,7 +324,7 @@
                                             BorderThickness="1"
                                             SnapsToDevicePixels="True">
                                         <ContentPresenter HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center" />
+                                                          VerticalAlignment="Center"/>
                                     </Border>
                                     <!-- 選択時のハイライト境界線（オーバーレイ） -->
                                     <Border x:Name="SelectionBorder"
@@ -230,14 +340,22 @@
                                     </Border>
                                 </Grid>
                                 <ControlTemplate.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="SelectionBorder" Property="Opacity" Value="1" />
+                                    <Trigger Property="IsSelected"
+                                             Value="True">
+                                        <Setter TargetName="SelectionBorder"
+                                                Property="Opacity"
+                                                Value="1"/>
                                     </Trigger>
-                                    <DataTrigger Binding="{Binding IsLastSelected}" Value="True">
-                                        <Setter TargetName="LastSelectedBorder" Property="Opacity" Value="1" />
+                                    <DataTrigger Binding="{Binding IsLastSelected}"
+                                                 Value="True">
+                                        <Setter TargetName="LastSelectedBorder"
+                                                Property="Opacity"
+                                                Value="1"/>
                                     </DataTrigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#0F000000"/>
+                                    <Trigger Property="IsMouseOver"
+                                             Value="True">
+                                        <Setter Property="Background"
+                                                Value="#0F000000"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -252,21 +370,22 @@
                             BorderThickness="0">
                         <Grid>
                             <Image Source="{Binding ThumbnailInfo.Thumbnail}"
-                                    Stretch="Uniform"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Margin="2"/>
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="2"/>
                             <TextBlock Text="{Binding FileName}"
-                                        VerticalAlignment="Bottom"
-                                        HorizontalAlignment="Center"
-                                        Margin="2"
-                                        Background="#80FFFFFF"
-                                        Padding="2"
-                                        Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
-                                        TextAlignment="Center"
-                                        TextTrimming="CharacterEllipsis"/>
+                                       VerticalAlignment="Bottom"
+                                       HorizontalAlignment="Center"
+                                       Margin="2"
+                                       Background="#80FFFFFF"
+                                       Padding="2"
+                                       Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
+                                       TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
                             <!-- レーティング表示部分のみを更新 -->
-                            <Grid HorizontalAlignment="Right" VerticalAlignment="Top"
+                            <Grid HorizontalAlignment="Right"
+                                  VerticalAlignment="Top"
                                   Margin="0,2,2,0"
                                   Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                                 <!-- SVG星マーク -->
@@ -277,11 +396,15 @@
                                     StarFill="{Binding Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
                                     StrokeColor="White"
                                     TextColor="{Binding Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"
-                                    Width="22" Height="22"
+                                    Width="22"
+                                    Height="22"
                                     Margin="2">
                                     <local:RatingStarControl.Effect>
-                                        <DropShadowEffect Color="Black" Direction="315"
-                                                        ShadowDepth="1" BlurRadius="2" Opacity="0.7"/>
+                                        <DropShadowEffect Color="Black"
+                                                          Direction="315"
+                                                          ShadowDepth="1"
+                                                          BlurRadius="2"
+                                                          Opacity="0.7"/>
                                     </local:RatingStarControl.Effect>
                                 </local:RatingStarControl>
                             </Grid>

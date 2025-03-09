@@ -10,6 +10,35 @@
     <UserControl.Resources>
         <helpers:DateTimeToVisibilityConverter x:Key="DateTimeToVisibilityConverter"/>
         <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <helpers:NumberToVisibilityConverter x:Key="NumberToVisibilityConverter"/>
+        <Style x:Key="NormalTagTextBoxStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="SelectionBrush" Value="#666666"/>
+        </Style>
+        <Style x:Key="LoRATagTextBoxStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="SelectionBrush" Value="#90C49A"/>
+        </Style>
+        <Style x:Key="NegativeTagTextBoxStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="SelectionBrush" Value="#E4B5B9"/>
+        </Style>
         <Style x:Key="RatingStarButton" TargetType="Button">
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -28,6 +57,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid x:Name="PropertiesGrid" Margin="10">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -202,8 +232,105 @@
                 </Grid>
             </Expander>
 
+            <!-- Stable Diffusion情報 -->
+            <Expander Grid.Row="3"
+                      Header="Stable Diffusion"
+                      Margin="0,0,0,10"
+                      IsExpanded="{Binding StableDiffusionExpanded}"
+                      Visibility="{Binding HasStableDiffusionData, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <!-- モデル情報 -->
+                    <Grid Margin="0,5,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                 Text="モデル: "
+                                 Margin="0,0,10,5"/>
+                        <TextBox Grid.Column="1"
+                                Text="{Binding StableDiffusionResult.Model, Mode=OneWay}"
+                                Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                    </Grid>
+
+                    <!-- プロンプトタグ -->
+                    <TextBlock Text="プロンプト:"
+                             Margin="0,5,0,5"/>
+                    <ItemsControl ItemsSource="{Binding StableDiffusionResult.Tags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#E8E8E8"
+                                        Padding="5,2"
+                                        Margin="0,0,5,5"
+                                        CornerRadius="3">
+                                    <TextBlock Text="{Binding}"
+                                             TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- LoRAタグ -->
+                    <TextBlock Text="LoRA:"
+                             Margin="0,10,0,5"
+                             Visibility="{Binding StableDiffusionResult.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
+                    <ItemsControl ItemsSource="{Binding StableDiffusionResult.Loras}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#D4EDDA"
+                                        Padding="5,2"
+                                        Margin="0,0,5,5"
+                                        CornerRadius="3">
+                                    <TextBlock Text="{Binding}"
+                                             TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Negative Prompt -->
+                    <TextBlock Text="Negative Prompt:"
+                             Margin="0,10,0,5"/>
+                    <ItemsControl ItemsSource="{Binding StableDiffusionResult.NegativeTags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#F8D7DA"
+                                        Padding="5,2"
+                                        Margin="0,0,5,5"
+                                        CornerRadius="3">
+                                    <TextBlock Text="{Binding}"
+                                             TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- コピーボタン -->
+                    <Button Content="元のテキストをコピー"
+                            Margin="0,10,0,0"
+                            Padding="10,5"
+                            HorizontalAlignment="Left"
+                            Click="CopyOriginalText_Click"/>
+                </StackPanel>
+            </Expander>
+
             <!-- コメント -->
-            <Grid Grid.Row="3" Margin="0,0,0,5">
+            <Grid Grid.Row="4" Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>

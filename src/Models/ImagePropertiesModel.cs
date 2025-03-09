@@ -9,6 +9,7 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using SkiaSharp;
 using Illustra.Helpers;
+using StableDiffusionTools;
 
 namespace Illustra.Models
 {
@@ -38,6 +39,8 @@ namespace Illustra.Models
         private string _cameraModel = string.Empty;
         private bool _folderPathExpanded = false;
         private string _folderPathShort = string.Empty;
+        private StableDiffusionParser.ParseResult? _stableDiffusionResult;
+        private bool _stableDiffusionExpanded = false;
 
         public string FilePath
         {
@@ -244,6 +247,20 @@ namespace Illustra.Models
             }
         }
 
+        public bool StableDiffusionExpanded
+        {
+            get => _stableDiffusionExpanded;
+            set
+            {
+                if (_stableDiffusionExpanded != value)
+                {
+                    _stableDiffusionExpanded = value;
+                    OnPropertyChanged(nameof(StableDiffusionExpanded));
+                    SaveExpandedState();
+                }
+            }
+        }
+
         // 追加プロパティ
         public int Width
         {
@@ -306,9 +323,42 @@ namespace Illustra.Models
                 {
                     _userComment = value;
                     OnPropertyChanged(nameof(UserComment));
+
+                    // UserCommentが更新されたらStable Diffusion解析を試みる
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        try
+                        {
+                            StableDiffusionResult = StableDiffusionParser.Parse(value);
+                        }
+                        catch
+                        {
+                            StableDiffusionResult = null;
+                        }
+                    }
+                    else
+                    {
+                        StableDiffusionResult = null;
+                    }
                 }
             }
         }
+
+        public StableDiffusionParser.ParseResult? StableDiffusionResult
+        {
+            get => _stableDiffusionResult;
+            private set
+            {
+                if (_stableDiffusionResult != value)
+                {
+                    _stableDiffusionResult = value;
+                    OnPropertyChanged(nameof(StableDiffusionResult));
+                    OnPropertyChanged(nameof(HasStableDiffusionData));
+                }
+            }
+        }
+
+        public bool HasStableDiffusionData => StableDiffusionResult != null;
 
         public DateTime DateTaken
         {
@@ -609,6 +659,7 @@ namespace Illustra.Models
         {
             var settings = SettingsHelper.GetSettings();
             settings.FolderPathExpanded = _folderPathExpanded;
+            settings.StableDiffusionExpanded = _stableDiffusionExpanded;
             SettingsHelper.SaveSettings(settings);
         }
 
@@ -616,7 +667,9 @@ namespace Illustra.Models
         {
             var settings = SettingsHelper.GetSettings();
             _folderPathExpanded = settings.FolderPathExpanded;
+            _stableDiffusionExpanded = settings.StableDiffusionExpanded;
             OnPropertyChanged(nameof(FolderPathExpanded));
+            OnPropertyChanged(nameof(StableDiffusionExpanded));
         }
     }
 }
