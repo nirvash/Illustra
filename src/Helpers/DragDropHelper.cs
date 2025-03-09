@@ -15,19 +15,26 @@ namespace Illustra.Helpers
         {
             // ドロップされたファイルのパスを取得
             var files = new List<string>();
-            if (dropInfo.Data is FileNodeModel droppedItem)
+
+            // カスタムデータフォーマットを確認
+            var dataObject = dropInfo.Data as IDataObject;
+            if (dataObject != null && dataObject.GetDataPresent(typeof(FileNodeModel).Name))
             {
-                files.Add(droppedItem.FullPath);
-            }
-            else if (dropInfo.Data != null)
-            {
-                var objArray = dropInfo.Data as IEnumerable<object>;
-                var nodeArray = objArray.OfType<FileNodeModel>().ToArray();
-                foreach (var node in nodeArray)
+                // カスタムデータを取得
+                var customData = dataObject.GetData(typeof(FileNodeModel).Name);
+
+                if (customData is IEnumerable<object> droppedObjects)
                 {
-                    files.Add(node.FullPath);
+                    // object[] から FileNodeModel の要素だけを抽出して処理
+                    var fileModels = droppedObjects.OfType<FileNodeModel>();
+                    foreach (var item in fileModels)
+                    {
+                        files.Add(item.FullPath);
+                    }
                 }
             }
+            // TODO: ここに FileDrop 形式の処理を追加
+
             return files;
         }
 
