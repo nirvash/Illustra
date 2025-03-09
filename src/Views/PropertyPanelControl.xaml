@@ -143,56 +143,56 @@
                                Text="フォルダ: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="0" Grid.Column="1"
-                            Text="{Binding FolderPath, Mode=OneWay}"
-                            Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding FolderPath, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- ファイルサイズ -->
                     <TextBlock Grid.Row="1" Grid.Column="0"
                                Text="サイズ: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="1" Grid.Column="1"
-                         Text="{Binding FileSizeFormatted, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding FileSizeFormatted, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 作成日時 -->
                     <TextBlock Grid.Row="2" Grid.Column="0"
                                Text="作成日時: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="2" Grid.Column="1"
-                         Text="{Binding CreatedDate, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding CreatedDate, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 更新日時 -->
                     <TextBlock Grid.Row="3" Grid.Column="0"
                                Text="更新日時: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="3" Grid.Column="1"
-                         Text="{Binding ModifiedDate, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding ModifiedDate, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 解像度 -->
                     <TextBlock Grid.Row="4" Grid.Column="0"
                                Text="解像度: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="4" Grid.Column="1"
-                         Text="{Binding Resolution, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding Resolution, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 画像形式 -->
                     <TextBlock Grid.Row="5" Grid.Column="0"
                                Text="画像形式: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="5" Grid.Column="1"
-                         Text="{Binding ImageFormat, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding ImageFormat, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 色深度 -->
                     <TextBlock Grid.Row="6" Grid.Column="0"
                                Text="色深度: "
                                Margin="0,0,10,5"/>
                     <TextBox Grid.Row="6" Grid.Column="1"
-                         Text="{Binding ColorDepth, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                             Text="{Binding ColorDepth, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 撮影日時 -->
                     <TextBlock Grid.Row="7" Grid.Column="0"
@@ -200,9 +200,9 @@
                                Margin="0,0,10,5"
                                Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
                     <TextBox Grid.Row="7" Grid.Column="1"
-                         Text="{Binding DateTaken, StringFormat=yyyy/MM/dd HH:mm:ss, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"
-                         Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
+                             Text="{Binding DateTaken, StringFormat=yyyy/MM/dd HH:mm:ss, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"
+                             Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
 
                     <!-- カメラ情報 -->
                     <TextBlock Grid.Row="8" Grid.Column="0"
@@ -210,9 +210,9 @@
                                Margin="0,0,10,5"
                                Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
                     <TextBox Grid.Row="8" Grid.Column="1"
-                         Text="{Binding CameraModel, Mode=OneWay}"
-                         Style="{StaticResource ReadOnlyTextBoxStyle}"
-                         Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
+                             Text="{Binding CameraModel, Mode=OneWay}"
+                             Style="{StaticResource ReadOnlyTextBoxStyle}"
+                             Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                     <!-- 撮影情報 -->
                     <TextBlock Grid.Row="9" Grid.Column="0"
@@ -220,14 +220,14 @@
                                Margin="0,0,10,5"
                                Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}"/>
                     <StackPanel Grid.Row="9" Grid.Column="1"
-                           Margin="0,0,0,5"
-                           Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}">
+                                Margin="0,0,0,5"
+                                Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}">
                         <TextBox Text="{Binding ExposureTime, Mode=OneWay}"
-                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                 Style="{StaticResource ReadOnlyTextBoxStyle}"/>
                         <TextBox Text="{Binding FNumber, Mode=OneWay}"
-                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                 Style="{StaticResource ReadOnlyTextBoxStyle}"/>
                         <TextBox Text="{Binding ISOSpeed, Mode=OneWay}"
-                             Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                 Style="{StaticResource ReadOnlyTextBoxStyle}"/>
                     </StackPanel>
                 </Grid>
             </Expander>
@@ -246,16 +246,16 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
-                                 Text="モデル: "
-                                 Margin="0,0,10,5"/>
+                                   Text="モデル: "
+                                   Margin="0,0,10,5"/>
                         <TextBox Grid.Column="1"
-                                Text="{Binding StableDiffusionResult.Model, Mode=OneWay}"
-                                Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                 Text="{Binding StableDiffusionResult.Model, Mode=OneWay}"
+                                 Style="{StaticResource ReadOnlyTextBoxStyle}"/>
                     </Grid>
 
                     <!-- プロンプトタグ -->
                     <TextBlock Text="プロンプト:"
-                             Margin="0,5,0,5"/>
+                               Margin="0,5,0,5"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.Tags}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -268,8 +268,11 @@
                                         Padding="5,2"
                                         Margin="0,0,5,5"
                                         CornerRadius="3">
-                                    <TextBlock Text="{Binding}"
-                                             TextWrapping="Wrap"/>
+                                    <TextBox Text="{Binding Path=.}"
+                                             Style="{StaticResource NormalTagTextBoxStyle}"
+                                             IsReadOnlyCaretVisible="True"
+                                             VerticalAlignment="Center"
+                                             MinWidth="20"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -277,8 +280,8 @@
 
                     <!-- LoRAタグ -->
                     <TextBlock Text="LoRA:"
-                             Margin="0,10,0,5"
-                             Visibility="{Binding StableDiffusionResult.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
+                               Margin="0,10,0,5"
+                               Visibility="{Binding StableDiffusionResult.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.Loras}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -291,8 +294,11 @@
                                         Padding="5,2"
                                         Margin="0,0,5,5"
                                         CornerRadius="3">
-                                    <TextBlock Text="{Binding}"
-                                             TextWrapping="Wrap"/>
+                                    <TextBox Text="{Binding Path=.}"
+                                             Style="{StaticResource LoRATagTextBoxStyle}"
+                                             IsReadOnlyCaretVisible="True"
+                                             VerticalAlignment="Center"
+                                             MinWidth="20"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -300,7 +306,7 @@
 
                     <!-- Negative Prompt -->
                     <TextBlock Text="Negative Prompt:"
-                             Margin="0,10,0,5"/>
+                               Margin="0,10,0,5"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.NegativeTags}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -313,15 +319,18 @@
                                         Padding="5,2"
                                         Margin="0,0,5,5"
                                         CornerRadius="3">
-                                    <TextBlock Text="{Binding}"
-                                             TextWrapping="Wrap"/>
+                                    <TextBox Text="{Binding Path=.}"
+                                             Style="{StaticResource NegativeTagTextBoxStyle}"
+                                             IsReadOnlyCaretVisible="True"
+                                             VerticalAlignment="Center"
+                                             MinWidth="20"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
                     <!-- コピーボタン -->
-                    <Button Content="元のテキストをコピー"
+                    <Button Content="元のプロンプトをコピー"
                             Margin="0,10,0,0"
                             Padding="10,5"
                             HorizontalAlignment="Left"
@@ -340,9 +349,9 @@
                            Margin="0,0,10,0"
                            Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
                 <TextBox Grid.Column="1"
-                     Text="{Binding UserComment, Mode=OneWay}"
-                     Style="{StaticResource ReadOnlyTextBoxStyle}"
-                     Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
+                         Text="{Binding UserComment, Mode=OneWay}"
+                         Style="{StaticResource ReadOnlyTextBoxStyle}"
+                         Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
             </Grid>
         </Grid>
     </ScrollViewer>
