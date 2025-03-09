@@ -2,7 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Documents;
+using System.Windows.Media;
 using GongSolutions.Wpf.DragDrop;
 using Illustra.Models;
 
@@ -67,6 +71,35 @@ namespace Illustra.Helpers
         {
             // FileNodeModelのアイテムのみドラッグを許可
             return dragInfo.SourceItems.Cast<object>().All(item => item is FileNodeModel);
+        }
+
+        public override void DragDropOperationFinished(DragDropEffects operationResult, IDragInfo dragInfo)
+        {
+            base.DragDropOperationFinished(operationResult, dragInfo);
+
+            // リフレクションを使用してDragDropPreviewを取得し、クリーンアップ
+            var dragDropType = typeof(GongSolutions.Wpf.DragDrop.DragDrop);
+            var dragDropPreviewField = dragDropType.GetField("dragDropPreview", BindingFlags.NonPublic | BindingFlags.Static);
+
+            if (dragDropPreviewField != null)
+            {
+                var preview = dragDropPreviewField.GetValue(null);
+                if (preview != null)
+                {
+                    // Popupとして処理
+                    var popupType = preview.GetType();
+                    var isOpenProperty = popupType.GetProperty("IsOpen");
+
+                    if (isOpenProperty != null)
+                    {
+                        // IsOpenをfalseに設定
+                        isOpenProperty.SetValue(preview, false);
+                    }
+
+                    // フィールドをnullに設定
+                    dragDropPreviewField.SetValue(null, null);
+                }
+            }
         }
     }
 }
