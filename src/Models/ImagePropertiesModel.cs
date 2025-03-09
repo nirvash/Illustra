@@ -382,6 +382,11 @@ namespace Illustra.Models
             set => FileSize = value;
         }
 
+        public ImagePropertiesModel()
+        {
+            LoadExpandedState();
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string? propertyName)
