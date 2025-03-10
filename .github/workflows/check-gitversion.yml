@@ -35,15 +35,15 @@ jobs:
 
     - name: Display GitVersion Variables
       run: |
-        echo "MajorMinorPatch: $(dotnet gitversion /showvariable MajorMinorPatch)"
-        echo "SemVer: $(dotnet gitversion /showvariable SemVer)"
-        echo "FullSemVer: $(dotnet gitversion /showvariable FullSemVer)"
-        echo "AssemblySemVer: $(dotnet gitversion /showvariable AssemblySemVer)"
-        echo "AssemblySemFileVer: $(dotnet gitversion /showvariable AssemblySemFileVer)"
-        echo "InformationalVersion: $(dotnet gitversion /showvariable InformationalVersion)"
-        echo "BranchName: $(dotnet gitversion /showvariable BranchName)"
-        echo "Sha: $(dotnet gitversion /showvariable Sha)"
-        echo "CommitsSinceVersionSource: $(dotnet gitversion /showvariable CommitsSinceVersionSource)"
+        echo "MajorMinorPatch: $(dotnet gitversion /config src/GitVersion.yml /showvariable MajorMinorPatch)"
+        echo "SemVer: $(dotnet gitversion /config src/GitVersion.yml /showvariable SemVer)"
+        echo "FullSemVer: $(dotnet gitversion /config src/GitVersion.yml /showvariable FullSemVer)"
+        echo "AssemblySemVer: $(dotnet gitversion /config src/GitVersion.yml /showvariable AssemblySemVer)"
+        echo "AssemblySemFileVer: $(dotnet gitversion /config src/GitVersion.yml /showvariable AssemblySemFileVer)"
+        echo "InformationalVersion: $(dotnet gitversion /config src/GitVersion.yml /showvariable InformationalVersion)"
+        echo "BranchName: $(dotnet gitversion /config src/GitVersion.yml /showvariable BranchName)"
+        echo "Sha: $(dotnet gitversion /config src/GitVersion.yml /showvariable Sha)"
+        echo "CommitsSinceVersionSource: $(dotnet gitversion /config src/GitVersion.yml /showvariable CommitsSinceVersionSource)"
 
     - name: Check Available Branches
       run: git branch -a
