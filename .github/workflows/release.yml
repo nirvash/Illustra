@@ -25,17 +25,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore src/Illustra.csproj
 
-      - name: Set environment variables
-        run: echo "GITVERSION_CONFIG=${{ github.workspace }\src\GitVersion.yml" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Display environment variables
-        run: |
-          echo "GITVERSION_CONFIG: $env:GITVERSION_CONFIG"
-          echo "GitHub Workspace: ${{ github.workspace }}"
-          echo "Full config path: $env:GITVERSION_CONFIG"
-
       - name: Build with GitVersion config
-        run: dotnet build src/Illustra.csproj --configuration Release /p:GitVersion_ToolArguments="-config $env:GITVERSION_CONFIG"
+        run: dotnet build src/Illustra.csproj --configuration Release
 
       - name: Publish
         run: dotnet publish src/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
