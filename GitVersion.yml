@@ -1,0 +1,35 @@
+mode: Mainline
+tag-prefix: 'v'
+major-version-bump-message: '\+semver:\s?(breaking|major)'
+minor-version-bump-message: '\+semver:\s?(feature|minor)'
+patch-version-bump-message: '\+semver:\s?(fix|patch)'
+no-bump-message: '\+semver:\s?(none|skip)'
+assembly-versioning-scheme: MajorMinorPatch
+assembly-file-versioning-scheme: MajorMinorPatch
+assembly-informational-format: '{MajorMinorPatch}+{CommitsSinceVersionSource}.{BranchName}.{ShortSha}'
+branches:
+  master:  # mainからmasterに変更
+    regex: ^master$
+    mode: ContinuousDelivery
+    tag: ''
+    increment: None
+    prevent-increment-of-merged-branch-version: true
+    track-merge-target: false
+    is-release-branch: true
+    source-branches: []
+  develop:
+    regex: ^dev(elop)?(ment)?$
+    mode: ContinuousDeployment
+    tag: beta
+    increment: Minor
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: true
+    source-branches: ['master']  # mainからmasterに変更
+  feature:
+    regex: ^features?[/-]
+    mode: ContinuousDeployment
+    tag: alpha.{BranchName}
+    increment: Inherit
+    source-branches: ['develop']
+ignore:
+  sha: []
