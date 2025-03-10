@@ -26,25 +26,16 @@ jobs:
         run: dotnet restore src/Illustra.csproj
 
       - name: Setup GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.7
+        uses: gittools/actions/gitversion/setup@v3.1.11
         with:
           versionSpec: '5.x'
 
-      - name: Check file existence
-        shell: pwsh
-        run: |
-          if (Test-Path ./src/GitVersion.yml) {
-            Write-Host "File exists."
-          } else {
-            Write-Host "File does not exist."
-          }
-
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.7
+        uses: gittools/actions/gitversion/setup@v3.1.11
         with:
           useConfigFile: true
-          configFilePath: ./src/GitVersion.yml
+          configFilePath: ${{ github.workspace }}/src/GitVersion.yml
           additionalArguments: '/showconfig'  # デバッグ用
 
       - name: Display GitVersion outputs
