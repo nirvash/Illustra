@@ -31,7 +31,13 @@ jobs:
           versionSpec: '5.x'
 
       - name: Check file existence
-        run: ls -la ./src/GitVersion.yml  # ファイルの存在を確認
+        shell: pwsh
+        run: |
+          if (Test-Path ./src/GitVersion.yml) {
+            Write-Host "File exists."
+          } else {
+            Write-Host "File does not exist."
+          }
 
       - name: Determine Version
         id: gitversion
