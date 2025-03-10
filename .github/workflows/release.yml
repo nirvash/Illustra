@@ -23,7 +23,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore src/Illustra.csproj
 
       - name: Build
         run: dotnet build src/Illustra.csproj --no-restore --configuration Release
