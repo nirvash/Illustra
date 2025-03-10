@@ -19,7 +19,16 @@ jobs:
         dotnet-version: '9.0.x'  # 使用する.NETバージョン
 
     - name: Install GitVersion Tool
-      run: dotnet tool install --global GitVersion.Tool
+      run: |
+        # まずローカルツールマニフェストの存在を確認
+        if (Test-Path -Path ".config/dotnet-tools.json") {
+          dotnet tool restore
+        } else {
+          # マニフェストが存在しない場合はグローバルにインストール
+          dotnet tool install --global GitVersion.Tool
+        }
+        # インストールの確認
+        dotnet tool list
 
     - name: Display GitVersion Info (JSON)
       run: dotnet gitversion /output json
