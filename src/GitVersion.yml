@@ -17,7 +17,7 @@ branches:
     track-merge-target: false
     is-release-branch: true
     source-branches: []
-  tag:
+  tag: # Github Actions のリリースビルドでは tag が参照される
     regex: ^tags/v[0-9]+\.[0-9]+\.[0-9]+$
     mode: ContinuousDelivery
     tag: ''          # プレリリースタグを付与しない
