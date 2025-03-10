@@ -26,7 +26,7 @@ jobs:
         run: dotnet restore src/Illustra.csproj
 
       - name: Set environment variables
-        run: echo "GITVERSION_CONFIG=${{ github.workspace }}/src/GitVersion.yml" | Out-File -FilePath $env:GITHUB_ENV -Append
+        run: echo "GITVERSION_CONFIG=${{ github.workspace }\src\GitVersion.yml" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Display environment variables
         run: |
