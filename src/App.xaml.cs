@@ -25,6 +25,9 @@ namespace Illustra
 
         protected override Window CreateShell()
         {
+            // 初期言語設定を適用
+            UpdateResourceDictionaries();
+
             // DIコンテナからメインウィンドウを解決して返す
             return Container.Resolve<MainWindow>();
         }
@@ -61,8 +64,6 @@ namespace Illustra
                 UpdateResourceDictionaries();
             });
 
-            // 初期言語設定を適用
-            UpdateResourceDictionaries();
         }
 
         protected override void OnStartup(StartupEventArgs e)
