@@ -26,7 +26,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release --exclude tests/Illustra.Tests.csproj
+        run: dotnet build src/Illustra.csproj --no-restore --configuration Release
 
       - name: Publish
         run: dotnet publish src/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
