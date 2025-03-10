@@ -8,26 +8,17 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <!-- アプリケーションのスタイルリソース -->
+                <ResourceDictionary Source="Resources/Strings.xaml"/>
                 <!-- 言語リソースは動的に読み込まれます -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- アプリアイコンの設定 -->
+
             <BitmapImage x:Key="AppIcon"
                          UriSource="pack://application:,,,/assets/illustra.ico"/>
-
-            <!-- コンバーター -->
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-
-            <!-- 文字列が空でない場合に表示するコンバーター -->
             <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
-
-            <!-- null以外の場合に表示するコンバーター -->
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-
-            <!-- レーティング用コンバーター (新規追加) -->
             <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
             <helpers:RatingToBooleanConverter x:Key="RatingToBooleanConverter"/>
-
-            <!-- レーティング用スター表示ボタンのスタイル -->
             <Style x:Key="RatingStarButton"
                    TargetType="Button">
                 <Setter Property="Background"
@@ -63,7 +54,6 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
             <!-- グローバルなListViewItemスタイル -->
             <Style TargetType="ListViewItem">
                 <Setter Property="HorizontalContentAlignment"

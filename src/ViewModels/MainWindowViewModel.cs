@@ -21,6 +21,9 @@ namespace Illustra.ViewModels
 
         public MainWindowViewModel()
         {
+            // リソースディクショナリを再度更新
+            ((App)Application.Current).UpdateResourceDictionaries();
+
             NavigateToSettingsCommand = new DelegateCommand(ExecuteNavigateToSettings);
             OpenSettingsCommand = new DelegateCommand(ExecuteOpenSettings);
 

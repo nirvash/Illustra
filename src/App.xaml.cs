@@ -65,7 +65,16 @@ namespace Illustra
             UpdateResourceDictionaries();
         }
 
-        private void UpdateResourceDictionaries()
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            // データベースの初期化
+            InitializeDatabase();
+
+            base.OnStartup(e);
+        }
+
+
+        public void UpdateResourceDictionaries()
         {
             // 現在のカルチャに基づいてリソースディクショナリを更新
             var currentCulture = Thread.CurrentThread.CurrentUICulture;
@@ -106,11 +115,6 @@ namespace Illustra
                 // リソースディクショナリを追加
                 Resources.MergedDictionaries.Add(resourceDictionary);
 
-                // デバッグ情報：読み込まれたリソースキーを表示
-                foreach (var key in resourceDictionary.Keys)
-                {
-                    System.Diagnostics.Debug.WriteLine($"リソースキー: {key}, 値: {resourceDictionary[key]}");
-                }
             }
             catch (Exception ex)
             {
@@ -120,12 +124,6 @@ namespace Illustra
             }
         }
 
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            // データベースの初期化
-            InitializeDatabase();
-            base.OnStartup(e);
-        }
 
         private void InitializeDatabase()
         {

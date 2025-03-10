@@ -3,7 +3,7 @@
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
 
     <!-- Common -->
-    <system:String x:Key="String_AppName">イラストラ</system:String>
+    <system:String x:Key="String_AppName">Illustra</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">ファイル</system:String>
