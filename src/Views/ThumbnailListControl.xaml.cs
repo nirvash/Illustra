@@ -500,7 +500,6 @@ namespace Illustra.Views
 
         private void OnFileNodesLoaded(object? sender, EventArgs e)
         {
-            Debug.WriteLine("OnFileNodesLoaded");
             try
             {
                 if (_viewModel.Items.Count == 0)
@@ -597,7 +596,6 @@ namespace Illustra.Views
 
         private void OnSelectFileRequest(string filePath)
         {
-            Debug.WriteLine($"OnSelectFileRequest: {filePath}");
             if (_viewModel.Items.Count == 0)
             {
                 _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish("");
@@ -634,7 +632,7 @@ namespace Illustra.Views
                 return;
             }
 
-            DisplayGeneratedItemsInfo(ThumbnailItemsControl);
+            // DisplayGeneratedItemsInfo(ThumbnailItemsControl);
 
             // まずフィルター適用後のアイテムリストから検索
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
