@@ -30,12 +30,16 @@ jobs:
         with:
           versionSpec: '5.x'
 
+      - name: Check file existence
+        run: ls -la ./src/GitVersion.yml  # ファイルの存在を確認
+
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
         with:
           useConfigFile: true
           configFilePath: ./src/GitVersion.yml
+          additionalArguments: '/showconfig'  # デバッグ用
 
       - name: Display GitVersion outputs
         run: |
