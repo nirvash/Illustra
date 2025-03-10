@@ -20,12 +20,19 @@
     <system:String x:Key="String_Menu_View_SortByName">Sort by Name</system:String>
     <system:String x:Key="String_Menu_View_SortAscending">Ascending</system:String>
     <system:String x:Key="String_Menu_View_SortDescending">Descending</system:String>
-    <system:String x:Key="String_Menu_Settings_Open">Settings</system:String>
+    <system:String x:Key="String_Menu_Settings_Language">Language Settings</system:String>
+    <system:String x:Key="String_Menu_Settings_Shortcuts">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_Menu_About">About</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">Settings</system:String>
     <system:String x:Key="String_Settings_Language">Language</system:String>
+    <system:String x:Key="String_Settings_Language_Title">Language Settings</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_Title">Keyboard Shortcuts</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_MainKey">Main Key:</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_AlternateKey">Alternate Key:</system:String>
+    <system:String x:Key="String_Settings_SavedMessage_Language">Language settings have been saved.</system:String>
+    <system:String x:Key="String_Settings_SavedMessage_Shortcuts">Keyboard shortcuts have been saved.</system:String>
     <system:String x:Key="String_Lang_English">English</system:String>
     <system:String x:Key="String_Lang_Japanese">Japanese (日本語)</system:String>
     <system:String x:Key="String_Settings_Save">Save</system:String>

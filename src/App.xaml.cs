@@ -25,6 +25,19 @@ namespace Illustra
 
         protected override Window CreateShell()
         {
+            // 言語サービスを初期化
+            var languageService = Container.Resolve<LanguageService>();
+
+            // イベントアグリゲーターを取得
+            var eventAggregator = Container.Resolve<IEventAggregator>();
+
+            // 言語変更イベントを購読
+            eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(() =>
+            {
+                // 言語が変更されたときにリソースを更新
+                UpdateResourceDictionaries();
+            });
+
             // 初期言語設定を適用
             UpdateResourceDictionaries();
 
@@ -39,7 +52,8 @@ namespace Illustra
             containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
 
             // ビューの登録
-            containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
+            containerRegistry.Register<LanguageSettingsViewModel>();
+            containerRegistry.Register<KeyboardShortcutSettingsViewModel>();
 
             // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
             containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
@@ -50,20 +64,6 @@ namespace Illustra
         protected override void OnInitialized()
         {
             base.OnInitialized();
-
-            // 言語サービスを初期化
-            var languageService = Container.Resolve<LanguageService>();
-
-            // イベントアグリゲーターを取得
-            var eventAggregator = Container.Resolve<IEventAggregator>();
-
-            // 言語変更イベントを購読
-            eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(() =>
-            {
-                // 言語が変更されたときにリソースを更新
-                UpdateResourceDictionaries();
-            });
-
         }
 
         protected override void OnStartup(StartupEventArgs e)

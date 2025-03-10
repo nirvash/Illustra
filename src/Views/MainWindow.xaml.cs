@@ -81,6 +81,18 @@ namespace Illustra.Views
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
             Title += $" {versionString}";
+
+            // メニュー項目のクリックイベントハンドラを設定
+            var languageMenuItem = FindName("LanguageMenuItem") as MenuItem;
+            var shortcutMenuItem = FindName("ShortcutMenuItem") as MenuItem;
+            if (languageMenuItem != null)
+            {
+                languageMenuItem.Click += (s, e) => _viewModel.OpenLanguageSettingsCommand.Execute();
+            }
+            if (shortcutMenuItem != null)
+            {
+                shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
+            }
         }
 
         private void InitializeSortMenuItems()

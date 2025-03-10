@@ -8,11 +8,10 @@ using System.Diagnostics;
 
 namespace Illustra.ViewModels
 {
-    public class SettingsViewModel : BindableBase
+    public class LanguageSettingsViewModel : BindableBase
     {
         private readonly LanguageService _languageService;
         private readonly IEventAggregator _eventAggregator;
-
         private int _selectedLanguageIndex;
 
         public int SelectedLanguageIndex
@@ -24,20 +23,15 @@ namespace Illustra.ViewModels
         public DelegateCommand SaveCommand { get; private set; }
         public DelegateCommand CancelCommand { get; private set; }
 
-        public SettingsViewModel(LanguageService languageService, IEventAggregator eventAggregator)
+        public LanguageSettingsViewModel(LanguageService languageService, IEventAggregator eventAggregator)
         {
             _languageService = languageService ?? throw new ArgumentNullException(nameof(languageService));
             _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator));
 
-            // コマンドの初期化
             SaveCommand = new DelegateCommand(ExecuteSave);
             CancelCommand = new DelegateCommand(ExecuteCancel);
 
-            // 現在の言語設定に基づいてコンボボックスの選択インデックスを設定
             InitializeLanguageSelection();
-
-            // デバッグ情報
-            Debug.WriteLine($"SettingsViewModel initialized. Current language: {_languageService.GetCurrentLanguage()}, SelectedIndex: {SelectedLanguageIndex}");
         }
 
         private void InitializeLanguageSelection()
@@ -78,7 +72,7 @@ namespace Illustra.ViewModels
                 // 言語を設定
                 _languageService.SetLanguage(languageCode);
 
-                // ダイアログは表示しない
+                MessageBox.Show("言語設定を保存しました。", "設定の保存", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -89,7 +83,7 @@ namespace Illustra.ViewModels
 
         private void ExecuteCancel()
         {
-            // 設定画面を閉じる処理
+            // 設定をキャンセル
             Debug.WriteLine("Cancel button clicked");
         }
     }

@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using Prism.Commands;
 using Prism.Mvvm;
@@ -16,30 +15,37 @@ namespace Illustra.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public DelegateCommand NavigateToSettingsCommand { get; }
-        public DelegateCommand OpenSettingsCommand { get; }
+        public DelegateCommand OpenLanguageSettingsCommand { get; }
+        public DelegateCommand OpenShortcutSettingsCommand { get; }
 
         public MainWindowViewModel()
         {
-            NavigateToSettingsCommand = new DelegateCommand(ExecuteNavigateToSettings);
-            OpenSettingsCommand = new DelegateCommand(ExecuteOpenSettings);
+            OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
+            OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
 
             // ステータスメッセージの初期化
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
         }
 
-        private void ExecuteNavigateToSettings()
+        private void ExecuteOpenLanguageSettings()
         {
-            // 設定画面を表示する
-            ExecuteOpenSettings();
+            // 言語設定画面をダイアログとして表示
+            var languageSettingsWindow = new LanguageSettingsWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            languageSettingsWindow.ShowDialog();
+            StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
         }
 
-        private void ExecuteOpenSettings()
+        private void ExecuteOpenShortcutSettings()
         {
-            // 設定画面をダイアログとして表示
-            var settingsWindow = new SettingsWindow();
-            settingsWindow.Owner = Application.Current.MainWindow;
-            settingsWindow.ShowDialog();
+            // キーボードショートカット設定画面をダイアログとして表示
+            var shortcutSettingsWindow = new KeyboardShortcutSettingsWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            shortcutSettingsWindow.ShowDialog();
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
         }
     }

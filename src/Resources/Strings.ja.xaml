@@ -20,12 +20,19 @@
     <system:String x:Key="String_Menu_View_SortByName">ファイル名順</system:String>
     <system:String x:Key="String_Menu_View_SortAscending">昇順</system:String>
     <system:String x:Key="String_Menu_View_SortDescending">降順</system:String>
-    <system:String x:Key="String_Menu_Settings_Open">設定</system:String>
+    <system:String x:Key="String_Menu_Settings_Language">言語設定</system:String>
+    <system:String x:Key="String_Menu_Settings_Shortcuts">キーボードショートカット設定</system:String>
     <system:String x:Key="String_Menu_About">バージョン情報</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>
     <system:String x:Key="String_Settings_Language">言語</system:String>
+    <system:String x:Key="String_Settings_Language_Title">言語設定</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_Title">キーボードショートカット設定</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_MainKey">メインキー:</system:String>
+    <system:String x:Key="String_Settings_Shortcuts_AlternateKey">代替キー:</system:String>
+    <system:String x:Key="String_Settings_SavedMessage_Language">言語設定を保存しました。</system:String>
+    <system:String x:Key="String_Settings_SavedMessage_Shortcuts">キーボードショートカット設定を保存しました。</system:String>
     <system:String x:Key="String_Lang_English">英語 (English)</system:String>
     <system:String x:Key="String_Lang_Japanese">日本語</system:String>
     <system:String x:Key="String_Settings_Save">保存</system:String>
