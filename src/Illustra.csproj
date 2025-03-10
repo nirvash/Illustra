@@ -26,8 +26,11 @@
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
   </PropertyGroup>  <!-- リソースファイルの設定 -->
-  <PropertyGroup>
+  <PropertyGroup>    <!-- アセンブリの情報バージョンにGitリビジョン（コミットハッシュ）を含めるかどうか -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+  <PropertyGroup>    <!-- GitVersion.yml の場所指定 -->
+    <GitVersion_ConfigFilePath>$(MSBuildProjectDirectory)\GitVersion.yml</GitVersion_ConfigFilePath>
   </PropertyGroup>
 
   <ItemGroup>

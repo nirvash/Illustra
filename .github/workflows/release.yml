@@ -25,6 +25,14 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore src/Illustra.csproj
 
+      - name: Display GitVersion Info
+        run: |
+          dotnet tool install --global GitVersion.Tool
+          dotnet gitversion /config src/GitVersion.yml /output json
+          echo "Assembly Version used for build: $env:GitVersion_AssemblySemVer"
+          echo "File Version used for build: $env:GitVersion_AssemblySemFileVer"
+          echo "Informational Version used for build: $env:GitVersion_InformationalVersion"
+
       - name: Build
         run: dotnet build src/Illustra.csproj --no-restore --configuration Release
 
