@@ -81,7 +81,6 @@
                 BorderBrush="#CCCCCC"
                 BorderThickness="1,0,0,0">
             <StackPanel Margin="10" Width="Auto">
-                <TextBlock Text="画像情報" FontWeight="Bold" Margin="0,0,0,10"/>
                 <local:PropertyPanelControl x:Name="PropertyPanelControl" ImageProperties="{Binding Properties}"/>
             </StackPanel>
         </Border>

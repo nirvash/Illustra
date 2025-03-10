@@ -1,0 +1,96 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Common -->
+    <system:String x:Key="String_AppName">Illustra</system:String>
+
+    <!-- Menu -->
+    <system:String x:Key="String_Menu_File">File</system:String>
+    <system:String x:Key="String_Menu_Edit">Edit</system:String>
+    <system:String x:Key="String_Menu_View">View</system:String>
+    <system:String x:Key="String_Menu_Settings">Settings</system:String>
+    <system:String x:Key="String_Menu_Help">Help</system:String>
+
+    <!-- Menu Items -->
+    <system:String x:Key="String_Menu_Exit">Exit</system:String>
+    <system:String x:Key="String_Menu_View_Display">Display</system:String>
+    <system:String x:Key="String_Menu_View_SortOrder">Sort Order</system:String>
+    <system:String x:Key="String_Menu_View_SortByDate">Sort by Date</system:String>
+    <system:String x:Key="String_Menu_View_SortByName">Sort by Name</system:String>
+    <system:String x:Key="String_Menu_View_SortAscending">Ascending</system:String>
+    <system:String x:Key="String_Menu_View_SortDescending">Descending</system:String>
+    <system:String x:Key="String_Menu_Settings_Open">Settings</system:String>
+
+    <!-- Settings -->
+    <system:String x:Key="String_Settings_Title">Settings</system:String>
+    <system:String x:Key="String_Settings_Language">Language</system:String>
+    <system:String x:Key="String_Lang_English">English</system:String>
+    <system:String x:Key="String_Lang_Japanese">Japanese (日本語)</system:String>
+    <system:String x:Key="String_Settings_Save">Save</system:String>
+    <system:String x:Key="String_Settings_Cancel">Cancel</system:String>
+    <system:String x:Key="String_Settings_SavedMessage">Settings have been saved. Some changes may require restarting the application.</system:String>
+    <system:String x:Key="String_Settings_LanguageDescription">Changing the language setting will change the display language of the application.</system:String>
+
+    <!-- Property Panel -->
+    <system:String x:Key="String_Property_Title">Properties</system:String>
+    <system:String x:Key="String_Property_Filename">Filename</system:String>
+    <system:String x:Key="String_Property_Path">Path</system:String>
+    <system:String x:Key="String_Property_Size">Size</system:String>
+    <system:String x:Key="String_Property_Dimensions">Dimensions</system:String>
+    <system:String x:Key="String_Property_Created">Created</system:String>
+    <system:String x:Key="String_Property_Modified">Modified</system:String>
+    <system:String x:Key="String_Property_Type">Type</system:String>
+    <system:String x:Key="String_Property_Rating">Rating</system:String>
+    <system:String x:Key="String_Property_Tags">Tags</system:String>
+    <system:String x:Key="String_Property_NoSelection">No item selected</system:String>
+    <system:String x:Key="String_Property_MultipleSelection">Multiple items selected</system:String>
+
+    <!-- Property Panel Details -->
+    <system:String x:Key="String_Property_DetailInfo">Detail Information</system:String>
+    <system:String x:Key="String_Property_Folder">Folder</system:String>
+    <system:String x:Key="String_Property_Resolution">Resolution</system:String>
+    <system:String x:Key="String_Property_ImageFormat">Image Format</system:String>
+    <system:String x:Key="String_Property_ColorDepth">Color Depth</system:String>
+    <system:String x:Key="String_Property_DateTaken">Date Taken</system:String>
+    <system:String x:Key="String_Property_Camera">Camera</system:String>
+    <system:String x:Key="String_Property_ExposureInfo">Exposure Info</system:String>
+    <system:String x:Key="String_Property_StableDiffusion">Stable Diffusion</system:String>
+    <system:String x:Key="String_Property_Model">Model</system:String>
+    <system:String x:Key="String_Property_Prompt">Prompt</system:String>
+    <system:String x:Key="String_Property_LoRA">LoRA</system:String>
+    <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
+    <system:String x:Key="String_Property_CopyOriginalPrompt">Copy Original Prompt</system:String>
+    <system:String x:Key="String_Property_Comment">Comment</system:String>
+
+    <!-- Thumbnail List -->
+    <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String>
+    <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Open">Open</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">Open with</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_CopyPath">Copy path</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">Delete</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Rename">Rename</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Properties">Properties</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">Set rating</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_AddTags">Add tags</system:String>
+
+    <!-- Thumbnail List Controls -->
+    <system:String x:Key="String_Thumbnail_Size">Thumbnail Size</system:String>
+    <system:String x:Key="String_Thumbnail_Rating">Rating</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilter">Filter by Rating</system:String>
+    <system:String x:Key="String_Thumbnail_ClearFilter">Clear Filter</system:String>
+    <system:String x:Key="String_Thumbnail_SortAscending">↑</system:String>
+    <system:String x:Key="String_Thumbnail_SortDescending">↓</system:String>
+    <system:String x:Key="String_Thumbnail_SortByDate">Date</system:String>
+    <system:String x:Key="String_Thumbnail_SortByName">Name</system:String>
+    <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
+    <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
+
+    <!-- Status Messages -->
+    <system:String x:Key="String_Status_Ready">Ready</system:String>
+    <system:String x:Key="String_Status_Loading">Loading...</system:String>
+    <system:String x:Key="String_Status_ItemsSelected">{0} items selected</system:String>
+    <system:String x:Key="String_Status_Error">Error: {0}</system:String>
+
+</ResourceDictionary>

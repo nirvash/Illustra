@@ -12,50 +12,86 @@
         <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <helpers:NumberToVisibilityConverter x:Key="NumberToVisibilityConverter"/>
-        <Style x:Key="NormalTagTextBoxStyle" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="SelectionBrush" Value="#666666"/>
+        <Style x:Key="NormalTagTextBoxStyle"
+               TargetType="TextBox">
+            <Setter Property="IsReadOnly"
+                    Value="True"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
+            <Setter Property="Margin"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="0"/>
+            <Setter Property="SelectionBrush"
+                    Value="#666666"/>
         </Style>
-        <Style x:Key="LoRATagTextBoxStyle" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="SelectionBrush" Value="#90C49A"/>
+        <Style x:Key="LoRATagTextBoxStyle"
+               TargetType="TextBox">
+            <Setter Property="IsReadOnly"
+                    Value="True"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
+            <Setter Property="Margin"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="0"/>
+            <Setter Property="SelectionBrush"
+                    Value="#90C49A"/>
         </Style>
-        <Style x:Key="NegativeTagTextBoxStyle" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="SelectionBrush" Value="#E4B5B9"/>
+        <Style x:Key="NegativeTagTextBoxStyle"
+               TargetType="TextBox">
+            <Setter Property="IsReadOnly"
+                    Value="True"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
+            <Setter Property="Margin"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="0"/>
+            <Setter Property="SelectionBrush"
+                    Value="#E4B5B9"/>
         </Style>
-        <Style x:Key="RatingStarButton" TargetType="Button">
-            <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
+        <Style x:Key="RatingStarButton"
+               TargetType="Button">
+            <Setter Property="Margin"
+                    Value="2,0"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="0"/>
         </Style>
         <!-- 読み取り専用のテキストボックススタイル -->
-        <Style x:Key="ReadOnlyTextBoxStyle" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+        <Style x:Key="ReadOnlyTextBoxStyle"
+               TargetType="TextBox">
+            <Setter Property="IsReadOnly"
+                    Value="True"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
+            <Setter Property="Margin"
+                    Value="0,0,0,5"/>
         </Style>
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid x:Name="PropertiesGrid" Margin="10">
+        <Grid x:Name="PropertiesGrid"
+              Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -76,49 +112,64 @@
             <StackPanel Grid.Row="1"
                         Orientation="Horizontal"
                         Margin="0,0,0,10">
-                <TextBlock Text="レーティング: "
+                <TextBlock Text="{DynamicResource String_Property_Rating}"
                            VerticalAlignment="Center"/>
                 <Button x:Name="RatingStar1"
                         Style="{StaticResource RatingStarButton}"
                         Tag="1"
                         Click="RatingStar_Click">
-                    <controls:RatingStarControl RatingValue="1" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <controls:RatingStarControl RatingValue="1"
+                                                Height="18"
+                                                Width="18"
+                                                IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                 </Button>
                 <Button x:Name="RatingStar2"
                         Style="{StaticResource RatingStarButton}"
                         Tag="2"
                         Click="RatingStar_Click">
-                    <controls:RatingStarControl RatingValue="2" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <controls:RatingStarControl RatingValue="2"
+                                                Height="18"
+                                                Width="18"
+                                                IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                 </Button>
                 <Button x:Name="RatingStar3"
                         Style="{StaticResource RatingStarButton}"
                         Tag="3"
                         Click="RatingStar_Click">
-                    <controls:RatingStarControl RatingValue="3" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <controls:RatingStarControl RatingValue="3"
+                                                Height="18"
+                                                Width="18"
+                                                IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                 </Button>
                 <Button x:Name="RatingStar4"
                         Style="{StaticResource RatingStarButton}"
                         Tag="4"
                         Click="RatingStar_Click">
-                    <controls:RatingStarControl RatingValue="4" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <controls:RatingStarControl RatingValue="4"
+                                                Height="18"
+                                                Width="18"
+                                                IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                 </Button>
                 <Button x:Name="RatingStar5"
                         Style="{StaticResource RatingStarButton}"
                         Tag="5"
                         Click="RatingStar_Click">
-                    <controls:RatingStarControl RatingValue="5" Height="18" Width="18" IsFilled="False"
-                                                TextColor="{x:Static helpers:RatingHelper.TextColor}" />
+                    <controls:RatingStarControl RatingValue="5"
+                                                Height="18"
+                                                Width="18"
+                                                IsFilled="False"
+                                                TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                 </Button>
             </StackPanel>
 
             <!-- 詳細情報（折りたたみ可能） -->
             <Expander Grid.Row="2"
                       IsExpanded="{Binding FolderPathExpanded, Mode=TwoWay}"
-                      Header="詳細情報"
+                      Header="{DynamicResource String_Property_DetailInfo}"
                       Margin="0,0,0,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -139,87 +190,107 @@
                     </Grid.RowDefinitions>
 
                     <!-- フォルダパス -->
-                    <TextBlock Grid.Row="0" Grid.Column="0"
-                               Text="フォルダ: "
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Folder}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="0" Grid.Column="1"
+                    <TextBox Grid.Row="0"
+                             Grid.Column="1"
                              Text="{Binding FolderPath, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- ファイルサイズ -->
-                    <TextBlock Grid.Row="1" Grid.Column="0"
-                               Text="サイズ: "
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Size}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="1" Grid.Column="1"
+                    <TextBox Grid.Row="1"
+                             Grid.Column="1"
                              Text="{Binding FileSizeFormatted, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 作成日時 -->
-                    <TextBlock Grid.Row="2" Grid.Column="0"
-                               Text="作成日時: "
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Created}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="2" Grid.Column="1"
+                    <TextBox Grid.Row="2"
+                             Grid.Column="1"
                              Text="{Binding CreatedDate, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 更新日時 -->
-                    <TextBlock Grid.Row="3" Grid.Column="0"
-                               Text="更新日時: "
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Modified}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="3" Grid.Column="1"
+                    <TextBox Grid.Row="3"
+                             Grid.Column="1"
                              Text="{Binding ModifiedDate, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 解像度 -->
-                    <TextBlock Grid.Row="4" Grid.Column="0"
-                               Text="解像度: "
+                    <TextBlock Grid.Row="4"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Resolution}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="4" Grid.Column="1"
+                    <TextBox Grid.Row="4"
+                             Grid.Column="1"
                              Text="{Binding Resolution, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 画像形式 -->
-                    <TextBlock Grid.Row="5" Grid.Column="0"
-                               Text="画像形式: "
+                    <TextBlock Grid.Row="5"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_ImageFormat}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="5" Grid.Column="1"
+                    <TextBox Grid.Row="5"
+                             Grid.Column="1"
                              Text="{Binding ImageFormat, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 色深度 -->
-                    <TextBlock Grid.Row="6" Grid.Column="0"
-                               Text="色深度: "
+                    <TextBlock Grid.Row="6"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_ColorDepth}"
                                Margin="0,0,10,5"/>
-                    <TextBox Grid.Row="6" Grid.Column="1"
+                    <TextBox Grid.Row="6"
+                             Grid.Column="1"
                              Text="{Binding ColorDepth, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
                     <!-- 撮影日時 -->
-                    <TextBlock Grid.Row="7" Grid.Column="0"
-                               Text="撮影日時: "
+                    <TextBlock Grid.Row="7"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_DateTaken}"
                                Margin="0,0,10,5"
                                Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
-                    <TextBox Grid.Row="7" Grid.Column="1"
+                    <TextBox Grid.Row="7"
+                             Grid.Column="1"
                              Text="{Binding DateTaken, StringFormat=yyyy/MM/dd HH:mm:ss, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"
                              Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
 
                     <!-- カメラ情報 -->
-                    <TextBlock Grid.Row="8" Grid.Column="0"
-                               Text="カメラ: "
+                    <TextBlock Grid.Row="8"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_Camera}"
                                Margin="0,0,10,5"
                                Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
-                    <TextBox Grid.Row="8" Grid.Column="1"
+                    <TextBox Grid.Row="8"
+                             Grid.Column="1"
                              Text="{Binding CameraModel, Mode=OneWay}"
                              Style="{StaticResource ReadOnlyTextBoxStyle}"
                              Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                     <!-- 撮影情報 -->
-                    <TextBlock Grid.Row="9" Grid.Column="0"
-                               Text="撮影情報: "
+                    <TextBlock Grid.Row="9"
+                               Grid.Column="0"
+                               Text="{DynamicResource String_Property_ExposureInfo}"
                                Margin="0,0,10,5"
                                Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}"/>
-                    <StackPanel Grid.Row="9" Grid.Column="1"
+                    <StackPanel Grid.Row="9"
+                                Grid.Column="1"
                                 Margin="0,0,0,5"
                                 Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}">
                         <TextBox Text="{Binding ExposureTime, Mode=OneWay}"
@@ -234,7 +305,7 @@
 
             <!-- Stable Diffusion情報 -->
             <Expander Grid.Row="3"
-                      Header="Stable Diffusion"
+                      Header="{DynamicResource String_Property_StableDiffusion}"
                       Margin="0,0,0,10"
                       IsExpanded="{Binding StableDiffusionExpanded}"
                       Visibility="{Binding HasStableDiffusionData, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -246,7 +317,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
-                                   Text="モデル: "
+                                   Text="{DynamicResource String_Property_Model}"
                                    Margin="0,0,10,5"/>
                         <TextBox Grid.Column="1"
                                  Text="{Binding StableDiffusionResult.Model, Mode=OneWay}"
@@ -254,7 +325,7 @@
                     </Grid>
 
                     <!-- プロンプトタグ -->
-                    <TextBlock Text="プロンプト:"
+                    <TextBlock Text="{DynamicResource String_Property_Prompt}"
                                Margin="0,5,0,5"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.Tags}">
                         <ItemsControl.ItemsPanel>
@@ -279,7 +350,7 @@
                     </ItemsControl>
 
                     <!-- LoRAタグ -->
-                    <TextBlock Text="LoRA:"
+                    <TextBlock Text="{DynamicResource String_Property_LoRA}"
                                Margin="0,10,0,5"
                                Visibility="{Binding StableDiffusionResult.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.Loras}">
@@ -305,7 +376,7 @@
                     </ItemsControl>
 
                     <!-- Negative Prompt -->
-                    <TextBlock Text="Negative Prompt:"
+                    <TextBlock Text="{DynamicResource String_Property_NegativePrompt}"
                                Margin="0,10,0,5"/>
                     <ItemsControl ItemsSource="{Binding StableDiffusionResult.NegativeTags}">
                         <ItemsControl.ItemsPanel>
@@ -330,7 +401,7 @@
                     </ItemsControl>
 
                     <!-- コピーボタン -->
-                    <Button Content="元のプロンプトをコピー"
+                    <Button Content="{DynamicResource String_Property_CopyOriginalPrompt}"
                             Margin="0,10,0,0"
                             Padding="10,5"
                             HorizontalAlignment="Left"
@@ -339,13 +410,14 @@
             </Expander>
 
             <!-- コメント -->
-            <Grid Grid.Row="4" Margin="0,0,0,5">
+            <Grid Grid.Row="4"
+                  Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
-                           Text="コメント: "
+                           Text="{DynamicResource String_Property_Comment}"
                            Margin="0,0,10,0"
                            Visibility="{Binding UserComment, Converter={StaticResource StringToVisibilityConverter}}"/>
                 <TextBox Grid.Column="1"

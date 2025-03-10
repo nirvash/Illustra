@@ -1,0 +1,96 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Common -->
+    <system:String x:Key="String_AppName">イラストラ</system:String>
+
+    <!-- Menu -->
+    <system:String x:Key="String_Menu_File">ファイル</system:String>
+    <system:String x:Key="String_Menu_Edit">編集</system:String>
+    <system:String x:Key="String_Menu_View">表示</system:String>
+    <system:String x:Key="String_Menu_Settings">設定</system:String>
+    <system:String x:Key="String_Menu_Help">ヘルプ</system:String>
+
+    <!-- Menu Items -->
+    <system:String x:Key="String_Menu_Exit">終了</system:String>
+    <system:String x:Key="String_Menu_View_Display">表示</system:String>
+    <system:String x:Key="String_Menu_View_SortOrder">並び順</system:String>
+    <system:String x:Key="String_Menu_View_SortByDate">作成日時順</system:String>
+    <system:String x:Key="String_Menu_View_SortByName">ファイル名順</system:String>
+    <system:String x:Key="String_Menu_View_SortAscending">昇順</system:String>
+    <system:String x:Key="String_Menu_View_SortDescending">降順</system:String>
+    <system:String x:Key="String_Menu_Settings_Open">設定</system:String>
+
+    <!-- Settings -->
+    <system:String x:Key="String_Settings_Title">設定</system:String>
+    <system:String x:Key="String_Settings_Language">言語</system:String>
+    <system:String x:Key="String_Lang_English">英語 (English)</system:String>
+    <system:String x:Key="String_Lang_Japanese">日本語</system:String>
+    <system:String x:Key="String_Settings_Save">保存</system:String>
+    <system:String x:Key="String_Settings_Cancel">キャンセル</system:String>
+    <system:String x:Key="String_Settings_SavedMessage">設定が保存されました。一部の変更は、アプリケーションの再起動が必要な場合があります。</system:String>
+    <system:String x:Key="String_Settings_LanguageDescription">言語設定を変更すると、アプリケーションの表示言語が変更されます。</system:String>
+
+    <!-- Property Panel -->
+    <system:String x:Key="String_Property_Title">プロパティ</system:String>
+    <system:String x:Key="String_Property_Filename">ファイル名</system:String>
+    <system:String x:Key="String_Property_Path">パス</system:String>
+    <system:String x:Key="String_Property_Size">サイズ</system:String>
+    <system:String x:Key="String_Property_Dimensions">寸法</system:String>
+    <system:String x:Key="String_Property_Created">作成日時</system:String>
+    <system:String x:Key="String_Property_Modified">更新日時</system:String>
+    <system:String x:Key="String_Property_Type">種類</system:String>
+    <system:String x:Key="String_Property_Rating">評価</system:String>
+    <system:String x:Key="String_Property_Tags">タグ</system:String>
+    <system:String x:Key="String_Property_NoSelection">項目が選択されていません</system:String>
+    <system:String x:Key="String_Property_MultipleSelection">複数の項目が選択されています</system:String>
+
+    <!-- Property Panel Details -->
+    <system:String x:Key="String_Property_DetailInfo">詳細情報</system:String>
+    <system:String x:Key="String_Property_Folder">フォルダ</system:String>
+    <system:String x:Key="String_Property_Resolution">解像度</system:String>
+    <system:String x:Key="String_Property_ImageFormat">画像形式</system:String>
+    <system:String x:Key="String_Property_ColorDepth">色深度</system:String>
+    <system:String x:Key="String_Property_DateTaken">撮影日時</system:String>
+    <system:String x:Key="String_Property_Camera">カメラ</system:String>
+    <system:String x:Key="String_Property_ExposureInfo">撮影情報</system:String>
+    <system:String x:Key="String_Property_StableDiffusion">Stable Diffusion</system:String>
+    <system:String x:Key="String_Property_Model">モデル</system:String>
+    <system:String x:Key="String_Property_Prompt">プロンプト</system:String>
+    <system:String x:Key="String_Property_LoRA">LoRA</system:String>
+    <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
+    <system:String x:Key="String_Property_CopyOriginalPrompt">元のプロンプトをコピー</system:String>
+    <system:String x:Key="String_Property_Comment">コメント</system:String>
+
+    <!-- Thumbnail List -->
+    <system:String x:Key="String_Thumbnail_NoItems">表示する項目がありません</system:String>
+    <system:String x:Key="String_Thumbnail_Loading">読み込み中...</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Open">開く</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">プログラムから開く</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_CopyPath">パスをコピー</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">削除</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Rename">名前の変更</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Properties">プロパティ</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">評価を設定</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_AddTags">タグを追加</system:String>
+
+    <!-- Thumbnail List Controls -->
+    <system:String x:Key="String_Thumbnail_Size">サムネイルサイズ</system:String>
+    <system:String x:Key="String_Thumbnail_Rating">レーティング</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilter">レーティングでフィルター</system:String>
+    <system:String x:Key="String_Thumbnail_ClearFilter">フィルター解除</system:String>
+    <system:String x:Key="String_Thumbnail_SortAscending">↑</system:String>
+    <system:String x:Key="String_Thumbnail_SortDescending">↓</system:String>
+    <system:String x:Key="String_Thumbnail_SortByDate">日付</system:String>
+    <system:String x:Key="String_Thumbnail_SortByName">名前</system:String>
+    <system:String x:Key="String_Thumbnail_SortToggleTooltip">昇順/降順の切り替え</system:String>
+    <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">日付/名前でソート</system:String>
+
+    <!-- Status Messages -->
+    <system:String x:Key="String_Status_Ready">準備完了</system:String>
+    <system:String x:Key="String_Status_Loading">読み込み中...</system:String>
+    <system:String x:Key="String_Status_ItemsSelected">{0}個の項目が選択されています</system:String>
+    <system:String x:Key="String_Status_Error">エラー: {0}</system:String>
+
+</ResourceDictionary>

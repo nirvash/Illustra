@@ -6,6 +6,10 @@
                         xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- アプリケーションのスタイルリソース -->
+                <!-- 言語リソースは動的に読み込まれます -->
+            </ResourceDictionary.MergedDictionaries>
             <!-- アプリアイコンの設定 -->
             <BitmapImage x:Key="AppIcon"
                          UriSource="pack://application:,,,/assets/illustra.ico"/>

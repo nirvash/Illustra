@@ -60,7 +60,7 @@
 
             <StackPanel Orientation="Horizontal"
                         Grid.Column="0">
-                <TextBlock Text="サムネイルサイズ:"
+                <TextBlock Text="{DynamicResource String_Thumbnail_Size}"
                            VerticalAlignment="Center"
                            Margin="0,0,5,0"/>
                 <TextBlock x:Name="ThumbnailSizeText"
@@ -81,7 +81,7 @@
             <!-- レーティングフィルター (新規追加) -->
             <StackPanel Orientation="Horizontal"
                         Grid.Column="2">
-                <TextBlock Text="レーティング:"
+                <TextBlock Text="{DynamicResource String_Thumbnail_Rating}"
                            VerticalAlignment="Center"
                            Margin="0,0,5,0"/>
                 <StackPanel Orientation="Horizontal"
@@ -89,7 +89,7 @@
                     <Button Tag="1"
                             Click="RatingFilter_Click"
                             x:Name="Filter1"
-                            ToolTip="★1でフィルター"
+                            ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
                             Style="{StaticResource RatingStarButton}"
                             Padding="1">
                         <local:RatingStarControl RatingValue="1"
@@ -101,7 +101,7 @@
                     <Button Tag="2"
                             Click="RatingFilter_Click"
                             x:Name="Filter2"
-                            ToolTip="★2でフィルター"
+                            ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
                             Style="{StaticResource RatingStarButton}"
                             Padding="1">
                         <local:RatingStarControl RatingValue="2"
@@ -113,7 +113,7 @@
                     <Button Tag="3"
                             Click="RatingFilter_Click"
                             x:Name="Filter3"
-                            ToolTip="★3でフィルター"
+                            ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
                             Style="{StaticResource RatingStarButton}"
                             Padding="1">
                         <local:RatingStarControl RatingValue="3"
@@ -125,7 +125,7 @@
                     <Button Tag="4"
                             Click="RatingFilter_Click"
                             x:Name="Filter4"
-                            ToolTip="★4でフィルター"
+                            ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
                             Style="{StaticResource RatingStarButton}"
                             Padding="1">
                         <local:RatingStarControl RatingValue="4"
@@ -137,7 +137,7 @@
                     <Button Tag="5"
                             Click="RatingFilter_Click"
                             x:Name="Filter5"
-                            ToolTip="★5でフィルター"
+                            ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
                             Style="{StaticResource RatingStarButton}"
                             Padding="1">
                         <local:RatingStarControl RatingValue="5"
@@ -147,7 +147,7 @@
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                 </StackPanel>
-                <Button Content="フィルター解除"
+                <Button Content="{DynamicResource String_Thumbnail_ClearFilter}"
                         Click="ClearFilter_Click"
                         Margin="0,0,5,0"
                         x:Name="ClearFilterButton"
@@ -156,15 +156,15 @@
                 <Button x:Name="SortToggleButton"
                         Click="SortToggle_Click"
                         Margin="0,0,5,0"
-                        ToolTip="昇順/降順の切り替え">
-                    <TextBlock Text="↑"
+                        ToolTip="{DynamicResource String_Thumbnail_SortToggleTooltip}">
+                    <TextBlock Text="{DynamicResource String_Thumbnail_SortAscending}"
                                x:Name="SortDirectionText"/>
                 </Button>
                 <Button x:Name="SortTypeToggleButton"
                         Click="SortTypeToggle_Click"
                         Margin="0,0,5,0"
-                        ToolTip="日付/名前でソート">
-                    <TextBlock Text="日付"
+                        ToolTip="{DynamicResource String_Thumbnail_SortTypeToggleTooltip}">
+                    <TextBlock Text="{DynamicResource String_Thumbnail_SortByDate}"
                                x:Name="SortTypeText"/>
                 </Button>
             </StackPanel>

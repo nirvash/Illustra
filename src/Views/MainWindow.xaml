@@ -5,9 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
+        xmlns:prism="http://prismlibrary.com/"
         mc:Ignorable="d"
         Icon="{StaticResource AppIcon}"
-        Title="Illustra - 画像ビューア"
+        Title="{DynamicResource String_AppName}"
         Height="600"
         Width="900">
 
@@ -15,30 +16,46 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- メニューバー -->
-        <Menu Grid.Row="0" KeyboardNavigation.TabNavigation="None">
-            <MenuItem Header="ファイル(_F)">
-                <MenuItem Header="終了(_X)" Click="ExitMenuItem_Click" />
+        <Menu Grid.Row="0"
+              KeyboardNavigation.TabNavigation="None">
+            <MenuItem Header="{DynamicResource String_Menu_File}">
+                <MenuItem Header="{DynamicResource String_Menu_Exit}"
+                          Click="ExitMenuItem_Click"/>
             </MenuItem>
-            <MenuItem Header="表示(_V)">
-                <MenuItem Header="並び順(_O)">
-                    <MenuItem x:Name="SortByDateMenuItem" Header="作成日時順(_D)" IsCheckable="True" IsChecked="True" Click="SortByDateMenuItem_Click"/>
-                    <MenuItem x:Name="SortByNameMenuItem" Header="ファイル名順(_N)" IsCheckable="True" Click="SortByNameMenuItem_Click"/>
-                    <Separator/>
-                    <MenuItem x:Name="SortAscendingMenuItem" Header="昇順(_A)" IsCheckable="True" IsChecked="True" Click="SortOrderMenuItem_Click"/>
-                    <MenuItem x:Name="SortDescendingMenuItem" Header="降順(_D)" IsCheckable="True" Click="SortOrderMenuItem_Click"/>
-                </MenuItem>
-                <Separator />
+            <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">
+                <MenuItem x:Name="SortByDateMenuItem"
+                            Header="{DynamicResource String_Menu_View_SortByDate}"
+                            IsCheckable="True"
+                            IsChecked="True"
+                            Click="SortByDateMenuItem_Click"/>
+                <MenuItem x:Name="SortByNameMenuItem"
+                            Header="{DynamicResource String_Menu_View_SortByName}"
+                            IsCheckable="True"
+                            Click="SortByNameMenuItem_Click"/>
+                <Separator/>
+                <MenuItem x:Name="SortAscendingMenuItem"
+                            Header="{DynamicResource String_Menu_View_SortAscending}"
+                            IsCheckable="True"
+                            IsChecked="True"
+                            Click="SortOrderMenuItem_Click"/>
+                <MenuItem x:Name="SortDescendingMenuItem"
+                            Header="{DynamicResource String_Menu_View_SortDescending}"
+                            IsCheckable="True"
+                            Click="SortOrderMenuItem_Click"/>
             </MenuItem>
-            <MenuItem Header="ツール(_T)">
-                <MenuItem Header="設定(_S)" Click="SettingsMenuItem_Click" />
+            <MenuItem Header="{DynamicResource String_Menu_Settings}">
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Open}"
+                          Command="{Binding OpenSettingsCommand}"/>
             </MenuItem>
         </Menu>
 
         <!-- メインコンテンツ -->
-        <Grid Grid.Row="1" x:Name="MainContentGrid">
+        <Grid Grid.Row="1"
+              x:Name="MainContentGrid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -46,24 +63,35 @@
 
             <!-- メインコンテンツの左右グリッド -->
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200" MinWidth="150"/> <!-- フォルダツリービュー -->
-                <ColumnDefinition Width="Auto"/> <!-- グリッドスプリッター -->
-                <ColumnDefinition Width="*"/> <!-- サムネイルビュー -->
+                <ColumnDefinition Width="200"
+                                  MinWidth="150"/>
+                <!-- フォルダツリービュー -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- グリッドスプリッター -->
+                <ColumnDefinition Width="*"/>
+                <!-- サムネイルビュー -->
             </Grid.ColumnDefinitions>
 
             <!-- 左側：フォルダツリービュー -->
-            <Grid Grid.Column="0" Grid.Row="0" x:Name="LeftPanelGrid">
+            <Grid Grid.Column="0"
+                  Grid.Row="0"
+                  x:Name="LeftPanelGrid">
                 <!-- フォルダツリーの上下グリッド -->
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="200" MinHeight="50"/> <!-- お気に入りツリービュー -->
-                    <RowDefinition Height="Auto"/> <!-- グリッドスプリッター -->
-                    <RowDefinition Height="*" MinHeight="50"/> <!-- フォルダツリービュー -->
+                    <RowDefinition Height="200"
+                                   MinHeight="50"/>
+                    <!-- お気に入りツリービュー -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- グリッドスプリッター -->
+                    <RowDefinition Height="*"
+                                   MinHeight="50"/>
+                    <!-- フォルダツリービュー -->
                 </Grid.RowDefinitions>
 
                 <!-- お気に入りフォルダコントロール -->
                 <local:FavoriteFoldersControl Grid.Row="0"
-                    TabIndex="1"
-                    x:Name="FavoriteFolders"/>
+                                              TabIndex="1"
+                                              x:Name="FavoriteFolders"/>
 
                 <!-- フォルダツリーのグリッドスプリッター（水平分割） -->
                 <GridSplitter Grid.Row="1"
@@ -76,22 +104,24 @@
 
                 <!-- フォルダツリーコントロール -->
                 <local:FolderTreeControl Grid.Row="2"
-                    TabIndex="2"
-                    x:Name="FolderTree" />
+                                         TabIndex="2"
+                                         x:Name="FolderTree"/>
             </Grid>
 
             <!-- 左右のペイン間のグリッドスプリッター（垂直分割） -->
-            <GridSplitter Grid.Column="1" Grid.Row="0"
-                        x:Name="MainSplitter"
-                        Width="3"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Stretch"
-                        Background="#FFCCCCCC"
-                        Focusable="False"
-                        KeyboardNavigation.TabNavigation="None"/>
+            <GridSplitter Grid.Column="1"
+                          Grid.Row="0"
+                          x:Name="MainSplitter"
+                          Width="3"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Background="#FFCCCCCC"
+                          Focusable="False"
+                          KeyboardNavigation.TabNavigation="None"/>
 
             <!-- 右側：メインコンテンツエリア -->
-            <Grid Grid.Column="2" x:Name="RightPanelGrid">
+            <Grid Grid.Column="2"
+                  x:Name="RightPanelGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
@@ -100,8 +130,8 @@
 
                 <!-- サムネイル表示エリア -->
                 <local:ThumbnailListControl Grid.Row="0"
-                    TabIndex="3"
-                    x:Name="ThumbnailList" />
+                                            TabIndex="3"
+                                            x:Name="ThumbnailList"/>
 
                 <!-- プロパティパネルとのグリッドスプリッター -->
                 <GridSplitter Grid.Row="1"
@@ -110,10 +140,12 @@
                               HorizontalAlignment="Stretch"
                               Background="#FFCCCCCC"
                               Focusable="False"
-                              KeyboardNavigation.TabNavigation="None" />
+                              KeyboardNavigation.TabNavigation="None"/>
 
                 <!-- プロパティペイン -->
-                <Grid Grid.Row="2" Margin="5" KeyboardNavigation.TabNavigation="None">
+                <Grid Grid.Row="2"
+                      Margin="5"
+                      KeyboardNavigation.TabNavigation="None">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -121,21 +153,27 @@
 
                     <!-- ヘッダー -->
                     <TextBlock Grid.Row="0"
-                               Text="プロパティ"
+                               Text="{DynamicResource String_Property_Title}"
                                FontWeight="Bold"
                                Margin="0,0,0,5"/>
 
                     <!-- プロパティ表示 -->
-                    <local:PropertyPanelControl x:Name="PropertyPanel" Grid.Row="1"/>
+                    <local:PropertyPanelControl x:Name="PropertyPanel"
+                                                Grid.Row="1"/>
                 </Grid>
             </Grid>
 
             <!-- ステータスバー -->
-            <TextBlock x:Name="StatusBar"
-                       Grid.Row="1"
-                       Margin="5,2"
-                       Text="準備完了"
-                       Background="#F0F0F0"/>
+            <Border Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    Background="#F0F0F0"
+                    BorderBrush="LightGray"
+                    BorderThickness="0,1,0,0">
+                <TextBlock x:Name="StatusBar"
+                           Margin="5,2"
+                           Padding="2"
+                           Text="{Binding StatusMessage}"/>
+            </Border>
         </Grid>
     </Grid>
 </Window>

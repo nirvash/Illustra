@@ -4,88 +4,41 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Illustra.Views"
+        xmlns:vm="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
-        Title="設定"
+        Title="{DynamicResource String_Settings_Title}"
         Height="350"
-        Width="500"
+        Width="600"
         WindowStartupLocation="CenterOwner"
-        Icon="{StaticResource AppIcon}">
+        ResizeMode="CanResize">
+
     <Window.Resources>
-        <Style x:Key="SettingsGroupStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Padding" Value="10"/>
-        </Style>
-
-        <Style x:Key="SettingsLabelStyle" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style x:Key="SettingsSliderStyle" TargetType="Slider">
-            <Setter Property="Margin" Value="0,5,0,5"/>
-            <Setter Property="Width" Value="200"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="IsSnapToTickEnabled" Value="True"/>
-        </Style>
-
-        <Style x:Key="SettingsValueTextStyle" TargetType="TextBlock">
-            <Setter Property="Margin" Value="10,0,0,0"/>
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
+        <vm:SettingsViewModel x:Key="SettingsViewModel"/>
     </Window.Resources>
 
-    <Grid Margin="15">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        <local:SettingsView x:Name="SettingsViewControl"
+                            DataContext="{Binding}"/>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!-- サムネイル表示設定 -->
-                <GroupBox Header="サムネイル表示" Style="{StaticResource SettingsGroupStyle}">
-                    <StackPanel>
-                        <DockPanel Margin="0,5">
-                            <TextBlock Text="デフォルトサイズ:" Style="{StaticResource SettingsLabelStyle}"/>
-                            <TextBlock Text="{Binding ElementName=DefaultThumbnailSizeSlider, Path=Value, StringFormat={}{0:N0}}" DockPanel.Dock="Right" Style="{StaticResource SettingsValueTextStyle}"/>
-                            <Slider x:Name="DefaultThumbnailSizeSlider"
-                                    Minimum="60" Maximum="480"
-                                    TickFrequency="20"
-                                    Style="{StaticResource SettingsSliderStyle}"/>
-                        </DockPanel>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- スクロール設定 -->
-                <GroupBox Header="スクロール設定" Style="{StaticResource SettingsGroupStyle}">
-                    <StackPanel>
-                        <DockPanel Margin="0,5">
-                            <TextBlock Text="マウスホイール倍率:" Style="{StaticResource SettingsLabelStyle}"/>
-                            <TextBlock Text="{Binding ElementName=MouseWheelMultiplierSlider, Path=Value, StringFormat={}{0:N1}x}" DockPanel.Dock="Right" Style="{StaticResource SettingsValueTextStyle}"/>
-                            <Slider x:Name="MouseWheelMultiplierSlider"
-                                    Minimum="0.5" Maximum="5.0"
-                                    TickFrequency="0.5"
-                                    Style="{StaticResource SettingsSliderStyle}"/>
-                        </DockPanel>
-                        <TextBlock Text="高い値に設定するとスクロール量が大きくなります" Margin="0,0,0,10" Foreground="Gray" FontSize="12"/>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- ビューア設定 -->
-                <GroupBox Header="ビューア設定" Style="{StaticResource SettingsGroupStyle}">
-                    <StackPanel>
-                        <CheckBox x:Name="SaveViewerStateCheckBox" Content="ビューアの表示状態を記憶する" Margin="0,5" IsChecked="True"/>
-                        <TextBlock Text="ウィンドウサイズや位置、フルスクリーン状態を記憶します" Margin="20,0,0,5" Foreground="Gray" FontSize="12"/>
-                    </StackPanel>
-                </GroupBox>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- ボタン -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="OkButton" Content="OK" Width="80" Height="30" Margin="0,0,10,0" Click="OkButton_Click"/>
-            <Button x:Name="CancelButton" Content="キャンセル" Width="80" Height="30" Click="CancelButton_Click"/>
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <Button x:Name="CancelButton"
+                    Content="{DynamicResource String_Settings_Cancel}"
+                    Width="100"
+                    Margin="0,0,10,0"
+                    Command="{Binding CancelCommand, Mode=OneWay}"
+                    Click="CancelButton_Click"/>
+            <Button x:Name="SaveButton"
+                    Content="{DynamicResource String_Settings_Save}"
+                    Width="100"
+                    Command="{Binding SaveCommand, Mode=OneWay}"
+                    Click="SaveButton_Click"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -7,9 +7,14 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using Illustra.Events;
 using System.Threading.Tasks;
+using System;
+using Illustra.ViewModels;
 
 namespace Illustra.Views
 {
+    /// <summary>
+    /// MainWindow.xaml の相互作用ロジック
+    /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly IEventAggregator _eventAggregator;
@@ -29,10 +34,13 @@ namespace Illustra.Views
         private MenuItem? _sortByNameAscendingMenuItem;
         private MenuItem? _sortByNameDescendingMenuItem;
 
-        public MainWindow(IEventAggregator eventAggregator)
+        private readonly MainWindowViewModel _viewModel;
+
+        public MainWindow(IEventAggregator eventAggregator, MainWindowViewModel viewModel)
         {
             InitializeComponent();
             _eventAggregator = eventAggregator;
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
             // メニューアイテムの初期化
             InitializeSortMenuItems();
@@ -66,6 +74,8 @@ namespace Illustra.Views
 
             // プロパティ領域を初期化
             ClearPropertiesDisplay();
+
+            DataContext = _viewModel;
         }
 
         private void InitializeSortMenuItems()
@@ -153,20 +163,15 @@ namespace Illustra.Views
         // メニュー関連のメソッド
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Application.Current.Shutdown();
         }
 
         private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // 設定ウィンドウを表示
+            // 設定画面を表示
             var settingsWindow = new SettingsWindow();
             settingsWindow.Owner = this;
-
-            if (settingsWindow.ShowDialog() == true)
-            {
-                // 設定が変更された場合は反映
-                ApplySettings();
-            }
+            settingsWindow.ShowDialog();
         }
 
         /// <summary>

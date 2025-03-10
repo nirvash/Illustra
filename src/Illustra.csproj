@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -7,51 +6,63 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>assets/illustra.ico</ApplicationIcon>
-    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
-    <!-- 警告をエラーとして扱わない設定 -->
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>    <!-- 警告をエラーとして扱わない設定 -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>
-    <!-- ビルドログの詳細設定 -->
-    <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>
-    <!-- インメモリビルドログを有効化 -->
-    <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>
-    <!-- ビルド時のログ出力を詳細に -->
-    <BuildLogVerbosity>detailed</BuildLogVerbosity>
-    <!-- Null参照警告を無効化 -->
+    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>    <!-- ビルドログの詳細設定 -->
+    <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>    <!-- インメモリビルドログを有効化 -->
+    <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>    <!-- ビルド時のログ出力を詳細に -->
+    <BuildLogVerbosity>detailed</BuildLogVerbosity>    <!-- Null参照警告を無効化 -->
     <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059</NoWarn>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
-  </PropertyGroup>
-
-  <!-- デバッグビルド設定 -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>  <!-- デバッグビルド設定 -->
+  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Debug|AnyCPU&apos;">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>
-
-  <!-- リリースビルド設定 -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  </PropertyGroup>  <!-- リリースビルド設定 -->
+  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Release|AnyCPU&apos;">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
-  </PropertyGroup>
-
+  </PropertyGroup>  <!-- リソースファイルの設定 -->
   <ItemGroup>
-    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
-    <PackageReference Include="linq2db" Version="5.4.1" />
-    <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
-    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
-    <PackageReference Include="Prism.Wpf" Version="9.0.537" />
-    <PackageReference Include="SkiaSharp" Version="2.88.6" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
-    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="5.2.8" />
-    <PackageReference Include="Prism.Core" Version="9.0.537" />
-    <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
-    <Resource Include="assets/illustra.ico" />
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Strings.ja.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Resources\Strings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0"/>
+    <PackageReference Include="linq2db" Version="5.4.1"/>
+    <PackageReference Include="linq2db.SQLite" Version="5.4.1"/>
+    <PackageReference Include="MetadataExtractor" Version="2.8.1"/>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2"/>
+    <PackageReference Include="Prism.Wpf" Version="9.0.537"/>
+    <PackageReference Include="Prism.DryIoc" Version="9.0.537"/>
+    <PackageReference Include="Prism.Core" Version="9.0.537"/>
+    <PackageReference Include="SkiaSharp" Version="2.88.6"/>
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7"/>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119"/>
+    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8"/>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+    <PackageReference Include="NLog" Version="5.2.8"/>
+    <PackageReference Include="System.Drawing.Common" Version="9.0.2"/>
+    <Resource Include="assets/illustra.ico"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Strings.xaml"/>
+    <Resource Include="Resources\Strings.ja.xaml"/>
   </ItemGroup>
 </Project>
