@@ -52,12 +52,10 @@ namespace Illustra.Helpers
 
             // スキーマバージョンを確認
             int schemaVersion = GetSchemaVersion(db);
-            Debug.WriteLine($"Current schema version: {schemaVersion}");
             if (schemaVersion != CurrentSchemaVersion)
             {
                 // テーブルを削除して再作成
                 db.DropTable<FileNodeModel>(throwExceptionIfNotExists: false);
-                Debug.WriteLine("Dropped existing FileNodeModel table");
 
                 db.CreateTable<FileNodeModel>();
 
@@ -72,7 +70,6 @@ namespace Illustra.Helpers
 
                 // スキーマバージョンを更新
                 SetSchemaVersion(db, CurrentSchemaVersion);
-                Debug.WriteLine($"Updated schema version to {CurrentSchemaVersion}");
             }
         }
 
@@ -102,7 +99,6 @@ namespace Illustra.Helpers
             using var db = new DataConnection(_dataProvider, _connectionString);
             var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
             sw.Stop();
-            Debug.WriteLine($"GetFileNodesAsync executed in {sw.ElapsedMilliseconds} ms");
             return result;
         }
 
@@ -113,7 +109,6 @@ namespace Illustra.Helpers
             using var db = new DataConnection(_dataProvider, _connectionString);
             var result = await db.GetTable<FileNodeModel>().FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
             sw.Stop();
-            Debug.WriteLine($"GetFileNodeAsync executed in {sw.ElapsedMilliseconds} ms");
             return result;
         }
 
@@ -135,7 +130,6 @@ namespace Illustra.Helpers
 
             var result = await query.ToListAsync();
             sw.Stop();
-            Debug.WriteLine($"GetSortedFileNodesAsync executed in {sw.ElapsedMilliseconds} ms");
             return result;
         }
 
@@ -169,16 +163,11 @@ namespace Illustra.Helpers
             var sw = new Stopwatch();
             sw.Start();
 
-            Debug.WriteLine("Start GetOrCreateFileNodesAsync");
-
             try
             {
                 // 既存のファイルノードを取得
                 var existingNodes = await GetFileNodesAsync(folderPath);
                 var existingNodeDict = existingNodes.ToDictionary(n => n.FullPath, n => n);
-
-                Debug.WriteLine($"既存ノード取得: {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"既存ノード数: {existingNodes.Count}");
 
                 // ディレクトリからファイルパスを列挙
                 var filePaths = Directory.EnumerateFiles(folderPath).Where(FileHelper.IsImageFile).ToList();
@@ -198,8 +187,6 @@ namespace Illustra.Helpers
                     }
                 }
 
-                Debug.WriteLine($"最新ノード作成: {sw.ElapsedMilliseconds}ms");
-
                 // DB上から該当フォルダのレコードを削除
                 await ExecuteWithRetryAsync(async () =>
                 {
@@ -207,7 +194,6 @@ namespace Illustra.Helpers
                     await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).DeleteAsync();
                 });
 
-                Debug.WriteLine($"既存ノード削除: {sw.ElapsedMilliseconds}ms");
                 // 既存ノードのレーティングを維持
                 foreach (var node in newNodes)
                 {
@@ -226,11 +212,7 @@ namespace Illustra.Helpers
                     await SaveFileNodesBatchAsync(newNodes);
                 }
 
-                Debug.WriteLine($"新規ノードバッチ保存: {sw.ElapsedMilliseconds}ms");
-
-
                 sw.Stop();
-                Debug.WriteLine($"GetOrCreateFileNodes処理時間: {sw.ElapsedMilliseconds}ms");
 
                 return newNodes;
             }
@@ -352,7 +334,6 @@ namespace Illustra.Helpers
                     sw.Start();
                     await operation();
                     sw.Stop();
-                    Debug.WriteLine($"Query executed in {sw.ElapsedMilliseconds} ms");
                     break;
                 }
                 catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: 'database is locked'

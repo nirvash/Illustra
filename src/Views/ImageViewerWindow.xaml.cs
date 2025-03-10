@@ -458,7 +458,6 @@ namespace Illustra.Views
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"LoadAndDisplayImage: {filePath}");
                 ImageSource = _imageCache.GetImage(filePath);
             }
             catch (Exception ex)
@@ -473,8 +472,6 @@ namespace Illustra.Views
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"LoadNewImage開始: {filePath}");
-
                 // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
 
@@ -498,8 +495,6 @@ namespace Illustra.Views
 
                 // 親ウィンドウのサムネイル選択を更新
                 Parent?.SyncThumbnailSelection(filePath);
-
-                System.Diagnostics.Debug.WriteLine($"LoadNewImage完了: {filePath}");
             }
             catch (Exception ex)
             {

@@ -124,8 +124,6 @@ public class ThumbnailLoaderHelper
 
         try
         {
-            Debug.WriteLine("Start loading file nodes");
-
             CancelAllLoading();
             _cancellationTokenSource = new CancellationTokenSource();
             _currentFolderPath = folderPath;
@@ -140,12 +138,8 @@ public class ThumbnailLoaderHelper
             // 既存ノードの取得と新規ノードの作成を一括で行う
             var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile);
 
-            Debug.WriteLine($"ノード取得完了: {sw.ElapsedMilliseconds}ms");
-
             // ソート条件に従ってノードを並び替え
             fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending);
-
-            Debug.WriteLine($"ソート完了: {sw.ElapsedMilliseconds}ms");
 
             var dummyImage = GetDummyImage();
 
@@ -155,8 +149,6 @@ public class ThumbnailLoaderHelper
                 node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
             }
 
-            Debug.WriteLine($"サムネイル情報設定: {sw.ElapsedMilliseconds}ms");
-
             // モデルにノードを設定
             _viewModel.Items.ReplaceAll(fileNodes);
             _viewModel.SelectedItems.Clear();
@@ -164,13 +156,8 @@ public class ThumbnailLoaderHelper
             // 初期選択を実行する前にUIを更新させる
             FileNodesLoaded?.Invoke(this, EventArgs.Empty);
 
-            Debug.WriteLine($"UIへのデータセット: {sw.ElapsedMilliseconds}ms");
-
             await Task.Delay(100);
             await LoadInitialThumbnailsAsync();
-
-            Debug.WriteLine($"初期サムネイルロード: {sw.ElapsedMilliseconds}ms");
-            Debug.WriteLine($"全体の処理時間: {sw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
