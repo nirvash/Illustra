@@ -28,25 +28,20 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.11
         with:
-          versionSpec: '5.x'
+          versionSpec: '5.12.0'  # 厳密に5.12.0を指定
 
-      - name: Determine Version
+      - name: Execute GitVersion
         id: gitversion
-        uses: gittools/actions/gitversion/setup@v3.1.11
+        uses: gittools/actions/gitversion/execute@v3.1.11
         with:
           useConfigFile: true
           configFilePath: ${{ github.workspace }}/src/GitVersion.yml
-          additionalArguments: '/showconfig'  # デバッグ用
+          additionalArguments: '/showconfig'
 
       - name: Display GitVersion outputs
         run: |
-          echo "Major: ${{ steps.gitversion.outputs.major }}"
-          echo "Minor: ${{ steps.gitversion.outputs.minor }}"
-          echo "Patch: ${{ steps.gitversion.outputs.patch }}"
           echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
           echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
-          echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
-
       - name: Build
         run: dotnet build src/Illustra.csproj --configuration Release
 
