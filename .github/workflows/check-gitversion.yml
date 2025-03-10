@@ -1,0 +1,46 @@
+name: Check GitVersion Info
+
+on:
+  workflow_dispatch:  # 手動でトリガーできるようにする
+
+jobs:
+  check-gitversion:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # 完全な履歴を取得（GitVersionに必要）
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x'  # 使用する.NETバージョン
+
+    - name: Install GitVersion Tool
+      run: dotnet tool install --global GitVersion.Tool
+
+    - name: Display GitVersion Info (JSON)
+      run: dotnet gitversion /output json
+
+    - name: Display GitVersion Variables
+      run: |
+        echo "MajorMinorPatch: $(dotnet gitversion /showvariable MajorMinorPatch)"
+        echo "SemVer: $(dotnet gitversion /showvariable SemVer)"
+        echo "FullSemVer: $(dotnet gitversion /showvariable FullSemVer)"
+        echo "AssemblySemVer: $(dotnet gitversion /showvariable AssemblySemVer)"
+        echo "AssemblySemFileVer: $(dotnet gitversion /showvariable AssemblySemFileVer)"
+        echo "InformationalVersion: $(dotnet gitversion /showvariable InformationalVersion)"
+        echo "BranchName: $(dotnet gitversion /showvariable BranchName)"
+        echo "Sha: $(dotnet gitversion /showvariable Sha)"
+        echo "CommitsSinceVersionSource: $(dotnet gitversion /showvariable CommitsSinceVersionSource)"
+
+    - name: Check Available Branches
+      run: git branch -a
+
+    - name: Check Available Tags
+      run: git tag -l
+
+    - name: Check Current Commit
+      run: git log -1 --oneline
