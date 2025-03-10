@@ -69,7 +69,10 @@
 
     <!-- GitVersionからバージョン情報を取得 -->
     <Message Text="GitVersionからバージョン情報を取得中..." Importance="normal" />
-    <Exec Command="dotnet gitversion /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+    <PropertyGroup>
+      <GitVersionOverrideConfig>increment=Patch</GitVersionOverrideConfig>
+    </PropertyGroup>
+    <Exec Command="dotnet gitversion /overrideconfig $(GitVersionOverrideConfig) /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitVersionMajorMinorPatch" />
       <Output TaskParameter="ExitCode" PropertyName="GitVersionExitCode" />
     </Exec>
