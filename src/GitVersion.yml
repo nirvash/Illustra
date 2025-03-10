@@ -6,7 +6,7 @@ patch-version-bump-message: '\+semver:\s?(fix|patch)'
 no-bump-message: '\+semver:\s?(none|skip)'
 assembly-versioning-scheme: MajorMinorPatch
 assembly-file-versioning-scheme: MajorMinorPatch
-assembly-informational-format: '{MajorMinorPatch}+{CommitsSinceVersionSource}.{BranchName}.{ShortSha}'
+assembly-informational-format: '{MajorMinorPatch}+{CommitsSinceVersionSource}.{ShortSha}'
 branches:
   master:  # mainからmasterに変更
     regex: ^master$
@@ -26,7 +26,6 @@ branches:
     track-merge-target: false
     is-release-branch: true
     source-branches: []
-    assembly-informational-format: '{MajorMinorPatch}+{CommitsSinceVersionSource}.{ShortSha}'
   develop:
     regex: ^dev(elop)?(ment)?$
     mode: ContinuousDeployment
