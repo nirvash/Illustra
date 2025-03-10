@@ -80,5 +80,23 @@
         "isDefault": false
       }
     },
+    {
+      "label": "Create Git Version Tag",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "msbuild",
+        "${workspaceFolder}/src/Illustra.csproj",
+        "-t:CreateGitVersionTag",
+        "-v:detailed",
+        "-p:VerboseGitVersionTagging=true"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
   ]
 }

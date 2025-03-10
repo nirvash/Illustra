@@ -107,9 +107,6 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
-# Visual Studio Code
-.vscode/
-
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

@@ -56,4 +56,78 @@
     <Resource Include="Resources\Strings.xaml" />
     <Resource Include="Resources\Strings.ja.xaml" />
   </ItemGroup>
+
+  <Target Name="CreateGitVersionTag">
+    <Message Text="開始: GitVersionタグの作成プロセス" Importance="high" />
+
+    <!-- ツールの確認 -->
+    <Message Text="Gitversion Toolを復元中..." Importance="normal" />
+    <Exec Command="dotnet tool restore" Condition="Exists('$(MSBuildProjectDirectory)\.config\dotnet-tools.json')" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="DotnetToolRestoreExitCode" />
+    </Exec>
+    <Message Text="ツール復元結果: $(DotnetToolRestoreExitCode)" Importance="normal" Condition="'$(VerboseGitVersionTagging)' == 'true'" />
+
+    <!-- GitVersionからバージョン情報を取得 -->
+    <Message Text="GitVersionからバージョン情報を取得中..." Importance="normal" />
+    <Exec Command="dotnet gitversion /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitVersionMajorMinorPatch" />
+      <Output TaskParameter="ExitCode" PropertyName="GitVersionExitCode" />
+    </Exec>
+
+    <Message Text="GitVersionの実行結果: ExitCode=$(GitVersionExitCode), Version=$(GitVersionMajorMinorPatch)" Importance="high" />
+    <Error Text="GitVersionの実行に失敗しました。ExitCode: $(GitVersionExitCode)" Condition="'$(GitVersionExitCode)' != '0'" />
+
+    <!-- 使用するタグの形式を決定 -->
+    <PropertyGroup>
+      <GitVersionTag>v$(GitVersionMajorMinorPatch)</GitVersionTag>
+    </PropertyGroup>
+
+    <Message Text="使用するタグ: $(GitVersionTag)" Importance="high" />
+
+    <!-- ユーザー情報を取得 -->
+    <Message Text="Gitユーザー情報を取得中..." Importance="normal" />
+    <Exec Command="git config --get user.name" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserName" />
+      <Output TaskParameter="ExitCode" PropertyName="GitUserNameExitCode" />
+    </Exec>
+
+    <Exec Command="git config --get user.email" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserEmail" />
+      <Output TaskParameter="ExitCode" PropertyName="GitUserEmailExitCode" />
+    </Exec>
+
+    <Message Text="Git user.name取得結果: ExitCode=$(GitUserNameExitCode), Name=$(GitUserName)" Importance="normal" />
+    <Message Text="Git user.email取得結果: ExitCode=$(GitUserEmailExitCode), Email=$(GitUserEmail)" Importance="normal" />
+
+    <Error Text="Git user.nameが設定されていません。" Condition="'$(GitUserName)' == ''" />
+    <Error Text="Git user.emailが設定されていません。" Condition="'$(GitUserEmail)' == ''" />
+
+    <!-- タグが既に存在するか確認 -->
+    <Message Text="既存のタグを確認中..." Importance="normal" />
+    <Exec Command="git tag -l $(GitVersionTag)" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="ExistingTag" />
+      <Output TaskParameter="ExitCode" PropertyName="GitTagCheckExitCode" />
+    </Exec>
+
+    <Message Text="タグ確認結果: ExitCode=$(GitTagCheckExitCode), ExistingTag='$(ExistingTag)'" Importance="normal" />
+
+    <!-- タグが存在しない場合は作成してプッシュ -->
+    <Message Text="タグ $(GitVersionTag) はまだ存在しません。作成します..." Importance="high" Condition="'$(ExistingTag)' == ''" />
+    <Message Text="タグ $(GitVersionTag) は既に存在します。スキップします。" Importance="high" Condition="'$(ExistingTag)' != ''" />
+
+    <Exec Command="git tag -a $(GitVersionTag) -m &quot;Release $(GitVersionTag) created by $(GitUserName)&quot;" Condition="'$(ExistingTag)' == ''" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="GitTagCreateExitCode" />
+    </Exec>
+    <Message Text="タグ作成結果: ExitCode=$(GitTagCreateExitCode)" Importance="normal" Condition="'$(ExistingTag)' == ''" />
+    <Error Text="タグの作成に失敗しました。ExitCode: $(GitTagCreateExitCode)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' != '0'" />
+
+    <Exec Command="git push origin $(GitVersionTag)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0'" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="GitPushExitCode" />
+    </Exec>
+    <Message Text="タグのプッシュ結果: ExitCode=$(GitPushExitCode)" Importance="normal" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0'" />
+    <Error Text="タグのプッシュに失敗しました。ExitCode: $(GitPushExitCode)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0' And '$(GitPushExitCode)' != '0'" />
+
+    <Message Text="タグ $(GitVersionTag) が正常に作成・プッシュされました。" Importance="high" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0' And '$(GitPushExitCode)' == '0'" />
+    <Message Text="完了: GitVersionタグの作成プロセス" Importance="high" />
+  </Target>
 </Project>
