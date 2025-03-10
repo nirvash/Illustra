@@ -175,8 +175,15 @@ namespace Illustra.Views
         {
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
-            var productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location).ProductVersion;
-
+            var productVersion = "";
+            try
+            {
+                productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly()?.Location)?.ProductVersion;
+            }
+            catch
+            {
+                productVersion = versionString;
+            }
             var versionInfo = $"バージョン: \n{versionString}\n\n製品バージョン: \n{productVersion}";
             Clipboard.SetText(versionInfo);
             MessageBox.Show(versionInfo, "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);

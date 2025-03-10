@@ -30,9 +30,8 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <PropertyGroup>    <!-- GitVersion.yml の場所指定 -->
-    <GitVersion_ConfigFilePath>$(MSBuildProjectDirectory)\GitVersion.yml</GitVersion_ConfigFilePath>
+    <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\GitVersion.yml"</GitVersion_ToolArguments>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="5.5.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
