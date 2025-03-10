@@ -72,7 +72,7 @@
     <PropertyGroup>
       <GitVersionOverrideConfig>increment=Patch</GitVersionOverrideConfig>
     </PropertyGroup>
-    <Exec Command="dotnet gitversion /overrideconfig $(GitVersionOverrideConfig) /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
+    <Exec Command="dotnet gitversion /config GitVersion.local.yml /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitVersionMajorMinorPatch" />
       <Output TaskParameter="ExitCode" PropertyName="GitVersionExitCode" />
     </Exec>
