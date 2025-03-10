@@ -9,6 +9,7 @@ using Illustra.Events;
 using System.Threading.Tasks;
 using System;
 using Illustra.ViewModels;
+using System.Reflection;
 
 namespace Illustra.Views
 {
@@ -178,7 +179,8 @@ namespace Illustra.Views
             var productVersion = "";
             try
             {
-                productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly()?.Location)?.ProductVersion;
+                productVersion = System.Reflection.Assembly.GetEntryAssembly().GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute)).OfType<AssemblyInformationalVersionAttribute>().Select(x => x.InformationalVersion).SingleOrDefault();
+                // productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly()?.Location)?.ProductVersion;
             }
             catch
             {

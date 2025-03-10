@@ -45,6 +45,10 @@
                        Foreground="Gray"
                        TextWrapping="Wrap"
                        Margin="0,0,0,20"/>
+
+            <!-- 新しい設定項目 -->
+            <TextBlock Text="Web UI URL" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+            <TextBox Text="{Binding WebUIUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="400" HorizontalAlignment="Left" Margin="0,0,0,20"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="2"

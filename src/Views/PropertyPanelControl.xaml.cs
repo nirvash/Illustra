@@ -12,6 +12,11 @@ using Illustra.Events;
 using Illustra.Helpers;
 using System.Diagnostics;
 using Illustra.Controls;
+using Illustra.ViewModels;
+using Illustra.Services;
+using System.Net.Http;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace Illustra.Views
 {
@@ -281,6 +286,39 @@ namespace Illustra.Views
                 if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
                 {
                     _ = LoadFileNodeAsync(ImageProperties.FilePath);
+                }
+            }
+        }
+
+        private async void SendToWebUI_Click(object sender, RoutedEventArgs e)
+        {
+            if (ImageProperties?.StableDiffusionResult != null)
+            {
+                var prompt = ImageProperties.StableDiffusionResult.Tags;
+                if (prompt != null)
+                {
+                    var payload = new
+                    {
+                        prompt = string.Join(",", prompt),
+                    };
+
+                    var jsonPayload = JsonConvert.SerializeObject(payload);
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                    using (var client = new HttpClient())
+                    {
+                        var settingsViewModel = new SettingsViewModel(new LanguageService(_eventAggregator), _eventAggregator);
+                        var url = settingsViewModel.WebUIUrl; // 設定画面で変更されたURLを使用
+                        var response = await client.PostAsync(url, content);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            // MessageBox.Show("プロンプトが送信されました。", "送信成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("プロンプトの送信に失敗しました。", "送信失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
                 }
             }
         }

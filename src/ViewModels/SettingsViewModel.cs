@@ -14,11 +14,18 @@ namespace Illustra.ViewModels
         private readonly IEventAggregator _eventAggregator;
 
         private int _selectedLanguageIndex;
+        private string _webUIUrl = "http://127.0.0.1:7860/sdapi/v1/txt2img"; // デフォルトURL
 
         public int SelectedLanguageIndex
         {
             get => _selectedLanguageIndex;
             set => SetProperty(ref _selectedLanguageIndex, value);
+        }
+
+        public string WebUIUrl
+        {
+            get => _webUIUrl;
+            set => SetProperty(ref _webUIUrl, value);
         }
 
         public DelegateCommand SaveCommand { get; private set; }
