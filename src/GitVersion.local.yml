@@ -19,7 +19,7 @@ branches:
     source-branches: []
   tag:
     regex: ^tags/v[0-9]+\.[0-9]+\.[0-9]+$
-    increment: None  # タグ付きではインクリメントしない
+    mode: ContinuousDelivery
     tag: ''         # プレリリースタグを付与しない
     increment: Patch # ローカルでタグを打つときは自動インクリメント
     prevent-increment-of-merged-branch-version: true
