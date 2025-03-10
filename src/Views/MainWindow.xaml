@@ -23,6 +23,8 @@
         <Menu Grid.Row="0"
               KeyboardNavigation.TabNavigation="None">
             <MenuItem Header="{DynamicResource String_Menu_File}">
+                <MenuItem Header="{DynamicResource String_Menu_About}"
+                          Click="ShowAboutDialog"/>
                 <MenuItem Header="{DynamicResource String_Menu_Exit}"
                           Click="ExitMenuItem_Click"/>
             </MenuItem>

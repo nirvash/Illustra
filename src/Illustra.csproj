@@ -16,16 +16,19 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>  <!-- デバッグビルド設定 -->
-  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Debug|AnyCPU&apos;">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>  <!-- リリースビルド設定 -->
-  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Release|AnyCPU&apos;">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
   </PropertyGroup>  <!-- リソースファイルの設定 -->
+  <PropertyGroup>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Update="Resources\Strings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
@@ -44,25 +47,29 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0"/>
-    <PackageReference Include="linq2db" Version="5.4.1"/>
-    <PackageReference Include="linq2db.SQLite" Version="5.4.1"/>
-    <PackageReference Include="MetadataExtractor" Version="2.8.1"/>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2"/>
-    <PackageReference Include="Prism.Wpf" Version="9.0.537"/>
-    <PackageReference Include="Prism.DryIoc" Version="9.0.537"/>
-    <PackageReference Include="Prism.Core" Version="9.0.537"/>
-    <PackageReference Include="SkiaSharp" Version="2.88.6"/>
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7"/>
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119"/>
-    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8"/>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
-    <PackageReference Include="NLog" Version="5.2.8"/>
-    <PackageReference Include="System.Drawing.Common" Version="9.0.2"/>
-    <Resource Include="assets/illustra.ico"/>
+    <PackageReference Include="GitVersionTask" Version="5.5.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
+    <PackageReference Include="linq2db" Version="5.4.1" />
+    <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
+    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
+    <PackageReference Include="Prism.Wpf" Version="9.0.537" />
+    <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
+    <PackageReference Include="Prism.Core" Version="9.0.537" />
+    <PackageReference Include="SkiaSharp" Version="2.88.6" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
+    <Resource Include="assets/illustra.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Strings.xaml"/>
-    <Resource Include="Resources\Strings.ja.xaml"/>
+    <Resource Include="Resources\Strings.xaml" />
+    <Resource Include="Resources\Strings.ja.xaml" />
   </ItemGroup>
 </Project>

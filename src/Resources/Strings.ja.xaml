@@ -21,6 +21,7 @@
     <system:String x:Key="String_Menu_View_SortAscending">昇順</system:String>
     <system:String x:Key="String_Menu_View_SortDescending">降順</system:String>
     <system:String x:Key="String_Menu_Settings_Open">設定</system:String>
+    <system:String x:Key="String_Menu_About">バージョン情報</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>

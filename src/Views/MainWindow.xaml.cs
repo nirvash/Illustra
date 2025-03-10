@@ -76,6 +76,11 @@ namespace Illustra.Views
             ClearPropertiesDisplay();
 
             DataContext = _viewModel;
+
+            // バージョン情報をタイトルに追加
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
+            Title += $" {versionString}";
         }
 
         private void InitializeSortMenuItems()
@@ -166,12 +171,15 @@ namespace Illustra.Views
             Application.Current.Shutdown();
         }
 
-        private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        private void ShowAboutDialog(object sender, RoutedEventArgs e)
         {
-            // 設定画面を表示
-            var settingsWindow = new SettingsWindow();
-            settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
+            var productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location).ProductVersion;
+
+            var versionInfo = $"バージョン: \n{versionString}\n\n製品バージョン: \n{productVersion}";
+            Clipboard.SetText(versionInfo);
+            MessageBox.Show(versionInfo, "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>
