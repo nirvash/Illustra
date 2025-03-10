@@ -31,7 +31,7 @@ jobs:
         dotnet tool list
 
     - name: Display GitVersion Info (JSON)
-      run: dotnet gitversion /output json
+      run: dotnet gitversion /config src/GitVersion.yml /output json
 
     - name: Display GitVersion Variables
       run: |
