@@ -16,7 +16,7 @@ namespace Illustra.Views
 {
     public partial class FavoriteFoldersControl : UserControl, IActiveAware
     {
-        private ObservableCollection<string> _favoriteFolders;
+        private ObservableCollection<string> _favoriteFolders = [];
         private AppSettings _appSettings;
         private IEventAggregator? _eventAggregator;
         private bool ignoreSelectedChangedOnce;
@@ -143,7 +143,7 @@ namespace Illustra.Views
 
             // お気に入りフォルダの初期化
             _favoriteFolders = _appSettings.FavoriteFolders;
-            FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
+            FavoriteFoldersTreeView.ItemsSource = _favoriteFolders; // TODO: string ではなく ItemSource で必要なプロパティを持った型を使う (バインドエラーになる)
             DataContext = this;
         }
 

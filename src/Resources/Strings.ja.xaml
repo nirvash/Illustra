@@ -95,6 +95,21 @@
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">昇順/降順の切り替え</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">日付/名前でソート</system:String>
 
+    <!-- Keyboard Shortcuts -->
+    <system:String x:Key="String_Function_NavigateUp">上に移動</system:String>
+    <system:String x:Key="String_Function_NavigateDown">下に移動</system:String>
+    <system:String x:Key="String_Function_NavigateLeft">左に移動</system:String>
+    <system:String x:Key="String_Function_NavigateRight">右に移動</system:String>
+    <system:String x:Key="String_Function_Rating0">レーティング解除</system:String>
+    <system:String x:Key="String_Function_Rating1">レーティング1</system:String>
+    <system:String x:Key="String_Function_Rating2">レーティング2</system:String>
+    <system:String x:Key="String_Function_Rating3">レーティング3</system:String>
+    <system:String x:Key="String_Function_Rating4">レーティング4</system:String>
+    <system:String x:Key="String_Function_Rating5">レーティング5</system:String>
+    <system:String x:Key="String_Function_Delete">削除</system:String>
+    <system:String x:Key="String_Function_ToggleViewer">単独表示切替</system:String>
+    <system:String x:Key="String_Function_SelectAll">全選択</system:String>
+
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">準備完了</system:String>
     <system:String x:Key="String_Status_Loading">読み込み中...</system:String>

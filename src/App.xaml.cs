@@ -64,6 +64,9 @@ namespace Illustra
         protected override void OnInitialized()
         {
             base.OnInitialized();
+
+            // キーボードショートカットハンドラーを初期化
+            KeyboardShortcutHandler.Instance.ReloadShortcuts();
         }
 
         protected override void OnStartup(StartupEventArgs e)

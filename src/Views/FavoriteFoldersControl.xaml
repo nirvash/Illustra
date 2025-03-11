@@ -33,6 +33,7 @@
 
     <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FavoriteFoldersTreeView"
+                  DataContext="{x:Null}"
                   SelectedItemChanged="FavoriteFoldersTreeView_SelectedItemChanged"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"

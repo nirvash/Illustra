@@ -41,7 +41,7 @@
 
     <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FolderTreeView"
-                   ItemsSource="{Binding RootItems}"
+                   DataContext="{x:Null}"
                    ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
                    SelectedItemChanged="TreeView_SelectedItemChanged"
                    ContextMenuOpening="TreeView_ContextMenuOpening"

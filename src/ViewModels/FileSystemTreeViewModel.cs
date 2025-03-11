@@ -16,7 +16,7 @@ namespace Illustra.ViewModels
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
-        private FileSystemItemModel _selectedItem = new FileSystemItemModel("", false, false);
+        private FileSystemItemModel _selectedItem = new("", false, false);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
         private bool _isExpandingPath = false;

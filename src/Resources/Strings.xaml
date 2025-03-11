@@ -95,6 +95,21 @@
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
 
+    <!-- Keyboard Shortcuts -->
+    <system:String x:Key="String_Function_NavigateUp">Navigate Up</system:String>
+    <system:String x:Key="String_Function_NavigateDown">Navigate Down</system:String>
+    <system:String x:Key="String_Function_NavigateLeft">Navigate Left</system:String>
+    <system:String x:Key="String_Function_NavigateRight">Navigate Right</system:String>
+    <system:String x:Key="String_Function_Rating0">Clear Rating</system:String>
+    <system:String x:Key="String_Function_Rating1">Rating 1</system:String>
+    <system:String x:Key="String_Function_Rating2">Rating 2</system:String>
+    <system:String x:Key="String_Function_Rating3">Rating 3</system:String>
+    <system:String x:Key="String_Function_Rating4">Rating 4</system:String>
+    <system:String x:Key="String_Function_Rating5">Rating 5</system:String>
+    <system:String x:Key="String_Function_Delete">Delete</system:String>
+    <system:String x:Key="String_Function_ToggleViewer">Toggle Viewer</system:String>
+    <system:String x:Key="String_Function_SelectAll">Select All</system:String>
+
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">Ready</system:String>
     <system:String x:Key="String_Status_Loading">Loading...</system:String>

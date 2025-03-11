@@ -13,11 +13,11 @@ namespace Illustra.Models
     /// </summary>
     public class FileSystemTreeModel : INotifyPropertyChanged
     {
-        private ObservableCollection<FileSystemItemModel> _rootItems;
+        private ObservableCollection<FileSystemItemModel> _rootItems = new ObservableCollection<FileSystemItemModel>();
         private bool _isLoading;
         public FileSystemTreeModel(string? initialPath = null)
         {
-            _rootItems = new ObservableCollection<FileSystemItemModel>();
+            _rootItems = [];
         }
 
 

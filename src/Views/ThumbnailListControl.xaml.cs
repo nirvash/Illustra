@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,18 +8,14 @@ using Illustra.Events;
 using Illustra.Models;
 using Illustra.ViewModels;
 using System.Diagnostics;
-using System.Collections.Specialized;
 using System.Windows.Threading;
 using WpfToolkit.Controls;
-using System.Windows.Controls.Primitives;
 using Illustra.Controls;
 using System.ComponentModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using GongSolutions.Wpf.DragDrop;
 using System.Collections;
-using System.Windows.Documents;
+using Illustra.Functions;
+
 namespace Illustra.Views
 {
     public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
@@ -834,7 +829,50 @@ namespace Illustra.Views
 
         private void ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // ナビゲーションキーの処理
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+
+            // 修飾キーの場合はデフォルト動作を許可
+            if (shortcutHandler.IsModifierKey(e.Key))
+            {
+                e.Handled = false;
+                return;
+            }
+
+            // 全選択のショートカットの場合は、ListViewのSelectAllメソッドを呼び出す
+            if (shortcutHandler.IsShortcutMatch(FuncId.SelectAll, e.Key))
+            {
+                ThumbnailItemsControl.SelectAll();
+                e.Handled = true;
+                return;
+            }
+
+            // その他のキーの場合は、ListViewのデフォルト動作を無効化
+            e.Handled = true;
+
+            // リストの先頭に移動
+            if (shortcutHandler.IsShortcutMatch(FuncId.MoveToStart, e.Key))
+            {
+                if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    ThumbnailItemsControl.SelectedIndex = 0;
+                    ThumbnailItemsControl.ScrollIntoView(ThumbnailItemsControl.SelectedItem);
+                }
+                e.Handled = true;
+                return;
+            }
+
+            // リストの末尾に移動
+            if (shortcutHandler.IsShortcutMatch(FuncId.MoveToEnd, e.Key))
+            {
+                if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    ThumbnailItemsControl.SelectedIndex = ThumbnailItemsControl.Items.Count - 1;
+                    ThumbnailItemsControl.ScrollIntoView(ThumbnailItemsControl.SelectedItem);
+                }
+                e.Handled = true;
+                return;
+            }
+
             var selectedIndex = ThumbnailItemsControl.SelectedIndex;
             var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
             if (panel != null)
@@ -848,10 +886,7 @@ namespace Illustra.Views
             }
 
             // レーティングキーの処理
-            if (HandleRatingKey(e))
-            {
-                e.Handled = true;
-            }
+            HandleRatingKey(e);
         }
 
         /// <summary>
@@ -861,70 +896,74 @@ namespace Illustra.Views
         {
             FileNodeModel? targetItem = null;
 
-            switch (e.Key)
+            if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.ToggleViewer, e.Key))
             {
-                case Key.Return:
-                    if (_viewModel.SelectedItems.Any())
-                    {
-                        ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
-                        e.Handled = true;
-                        return null;
-                    }
-                    break;
+                if (_viewModel.SelectedItems.Any())
+                {
+                    ShowImageViewer(_viewModel.SelectedItems.Last().FullPath);
+                    e.Handled = true;
+                    return null;
+                }
+            }
 
-                case Key.D:
-                    if (_viewModel.SelectedItems.Any())
-                    {
-                        DeleteSelectedItems();
-                        e.Handled = true;
-                        return null;
-                    }
-                    break;
+            if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Delete, e.Key))
+            {
+                if (_viewModel.SelectedItems.Any())
+                {
+                    DeleteSelectedItems();
+                    e.Handled = true;
+                    return null;
+                }
+            }
 
-                case Key.Left:
-                case Key.Right:
-                case Key.Up:
-                case Key.Down:
-                    e.Handled = true; // すべての方向キーをハンドル
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
 
-                    var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-                    if (!filteredItems.Any())
-                        break;
+            // まず、方向キーの判定を行う
+            bool isLeft = shortcutHandler.IsShortcutMatch(FuncId.NavigateLeft, e.Key);
+            bool isRight = shortcutHandler.IsShortcutMatch(FuncId.NavigateRight, e.Key);
+            bool isUp = shortcutHandler.IsShortcutMatch(FuncId.NavigateUp, e.Key);
+            bool isDown = shortcutHandler.IsShortcutMatch(FuncId.NavigateDown, e.Key);
 
-                    var currentIndex = -1;
-                    var selectedItem = _viewModel.SelectedItems.LastOrDefault();
-                    if (selectedItem != null)
-                    {
-                        currentIndex = filteredItems.IndexOf(selectedItem);
-                    }
-                    if (currentIndex < 0)
-                        break;
+            // いずれかの方向キーが押された場合
+            if (isLeft || isRight || isUp || isDown)
+            {
+                e.Handled = true;
 
-                    // パネルを取得して1行あたりのアイテム数を計算
-                    var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                    if (panel == null)
-                        break;
+                var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                if (!filteredItems.Any())
+                    return null;
 
-                    var itemsPerRow = GetItemsPerRow(panel);
-                    if (itemsPerRow <= 0)
-                        break;
+                var currentIndex = -1;
+                var selectedItem = _viewModel.SelectedItems.LastOrDefault();
+                if (selectedItem != null)
+                {
+                    currentIndex = filteredItems.IndexOf(selectedItem);
+                }
+                if (currentIndex < 0)
+                    return null;
 
-                    int targetIndex;
-                    if (e.Key == Key.Left || e.Key == Key.Right)
-                    {
-                        targetIndex = GetHorizontalNavigationIndex(currentIndex, e.Key == Key.Right, filteredItems.Count);
-                    }
-                    else
-                    {
-                        targetIndex = GetVerticalNavigationIndex(currentIndex, e.Key == Key.Down, itemsPerRow, filteredItems.Count);
-                    }
+                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+                if (panel == null)
+                    return null;
 
-                    // 範囲チェックと移動
-                    if (targetIndex >= 0 && targetIndex < filteredItems.Count)
-                    {
-                        targetItem = filteredItems[targetIndex];
-                    }
-                    break;
+                var itemsPerRow = GetItemsPerRow(panel);
+                if (itemsPerRow <= 0)
+                    return null;
+
+                int targetIndex;
+                if (isLeft || isRight)
+                {
+                    targetIndex = GetHorizontalNavigationIndex(currentIndex, isRight, filteredItems.Count);
+                }
+                else
+                {
+                    targetIndex = GetVerticalNavigationIndex(currentIndex, isDown, itemsPerRow, filteredItems.Count);
+                }
+
+                if (targetIndex >= 0 && targetIndex < filteredItems.Count)
+                {
+                    targetItem = filteredItems[targetIndex];
+                }
             }
 
             return targetItem;
@@ -976,30 +1015,30 @@ namespace Illustra.Views
         /// </summary>
         private bool HandleRatingKey(KeyEventArgs e)
         {
-            if (e.Key >= Key.D1 && e.Key <= Key.D5)
+            for (int i = 1; i <= 5; i++)
             {
-                SetRating(e.Key - Key.D1 + 1);
-                e.Handled = true;
-                return true;
+                if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Ratings[i], e.Key))
+                {
+                    SetRating(i);
+                    e.Handled = true;
+                    return true;
+                }
             }
-            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad5)
-            {
-                SetRating(e.Key - Key.NumPad1 + 1);
-                e.Handled = true;
-                return true;
-            }
-            else if (e.Key == Key.D0 || e.Key == Key.NumPad0 || e.Key == Key.X)
+
+            if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Rating0, e.Key))
             {
                 SetRating(0);
                 e.Handled = true;
                 return true;
             }
-            else if (e.Key == Key.Z)
+
+            if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Rating5, e.Key))
             {
                 SetRating(5);
                 e.Handled = true;
                 return true;
             }
+
             return false;
         }
 

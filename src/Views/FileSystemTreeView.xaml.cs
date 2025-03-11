@@ -73,6 +73,8 @@ namespace Illustra.Views
             }
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
             DataContext = _viewModel;
+            FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
+
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
 
             // 設定の更新を監視するためにお気に入り関連イベントを購読

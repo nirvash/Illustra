@@ -21,7 +21,7 @@ namespace Illustra.Models
         private bool _isSelected;
         private bool _isFolder;
         private bool _isLoading;
-        private ObservableCollection<FileSystemItemModel> _children;
+        private ObservableCollection<FileSystemItemModel> _children = [];
         private FileSystemTreeModel _treeModel;
         private FileSystemMonitor? _monitor;
 
@@ -34,7 +34,7 @@ namespace Illustra.Models
                 _name = fullPath; // ドライブ名をそのまま使用
             }
             _isFolder = isFolder;
-            _children = new ObservableCollection<FileSystemItemModel>();
+            _children = [];
             IsDummy = isDummy;
             _treeModel = treeModel;
 

@@ -56,6 +56,9 @@ namespace Illustra.Helpers
 
         // プロパティパネルのStable Diffusion情報の折りたたみ状態
         public bool StableDiffusionExpanded { get; set; } = false;
+
+        // キーボードショートカット設定
+        public string KeyboardShortcuts { get; set; } = string.Empty;
     }
 
     public static class SettingsHelper
