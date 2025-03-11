@@ -30,18 +30,13 @@ namespace Illustra.Services
 
             // 初期化時に保存された言語設定を読み込む
             LoadLanguageSetting();
-
-            Debug.WriteLine($"LanguageService initialized. Current language: {GetCurrentLanguage()}");
         }
 
         public void SetLanguage(string languageCode)
         {
-            Debug.WriteLine($"SetLanguage called with: {languageCode}");
-
             // 言語コードを検証
             if (languageCode != "en" && languageCode != "ja")
             {
-                Debug.WriteLine($"Invalid language code: {languageCode}, defaulting to 'en'");
                 languageCode = "en"; // デフォルトは英語
             }
 
@@ -55,15 +50,11 @@ namespace Illustra.Services
                 // 現在の言語を保存
                 _currentLanguage = languageCode;
 
-                Debug.WriteLine($"Culture set to: {Thread.CurrentThread.CurrentUICulture.Name}");
-
                 // 設定を保存
                 SaveLanguageSetting(languageCode);
 
                 // 言語変更イベントを発行
                 _eventAggregator.GetEvent<LanguageChangedEvent>().Publish();
-
-                Debug.WriteLine("Language change event published");
             }
             catch (Exception ex)
             {
@@ -82,7 +73,6 @@ namespace Illustra.Services
 
             // 保存された設定がない場合はスレッドのカルチャから取得
             var language = Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName;
-            Debug.WriteLine($"GetCurrentLanguage returning: {language}");
             return language;
         }
 
@@ -92,12 +82,10 @@ namespace Illustra.Services
             {
                 if (File.Exists(_configPath))
                 {
-                    Debug.WriteLine($"Loading language settings from: {_configPath}");
                     var json = File.ReadAllText(_configPath);
                     var config = JsonConvert.DeserializeObject<AppConfig>(json);
 
                     string languageCode = config?.Language ?? "en";
-                    Debug.WriteLine($"Loaded language code: {languageCode}");
 
                     // 現在の言語を保存
                     _currentLanguage = languageCode;
@@ -133,11 +121,9 @@ namespace Illustra.Services
         {
             try
             {
-                Debug.WriteLine($"Saving language setting: {languageCode} to {_configPath}");
                 var config = new AppConfig { Language = languageCode };
                 var json = JsonConvert.SerializeObject(config, Formatting.Indented);
                 File.WriteAllText(_configPath, json);
-                Debug.WriteLine("Language setting saved successfully");
             }
             catch (Exception ex)
             {
