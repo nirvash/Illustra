@@ -186,7 +186,7 @@ namespace Illustra.Views
         // メニュー関連のメソッド
         private void ToggleCyclicNavigation_Click(object sender, RoutedEventArgs e)
         {
-            App.Instance.EnableCyclicNavigation = ToggleCyclicNavigation.IsChecked ?? false;
+            App.Instance.EnableCyclicNavigation = ToggleCyclicNavigation.IsChecked;
             _appSettings.EnableCyclicNavigation = App.Instance.EnableCyclicNavigation;
             SettingsHelper.SaveSettings(_appSettings);
         }
@@ -223,17 +223,17 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             ThumbnailList.ApplySettings();
-// ソート順の設定を適用
-_sortByDate = _appSettings.SortByDate;
-_sortAscending = _appSettings.SortAscending;
-SortByDateMenuItem.IsChecked = _sortByDate;
-SortByNameMenuItem.IsChecked = !_sortByDate;
-SortAscendingMenuItem.IsChecked = _sortAscending;
-SortDescendingMenuItem.IsChecked = !_sortAscending;
+            // ソート順の設定を適用
+            _sortByDate = _appSettings.SortByDate;
+            _sortAscending = _appSettings.SortAscending;
+            SortByDateMenuItem.IsChecked = _sortByDate;
+            SortByNameMenuItem.IsChecked = !_sortByDate;
+            SortAscendingMenuItem.IsChecked = _sortAscending;
+            SortDescendingMenuItem.IsChecked = !_sortAscending;
 
-// 循環移動の設定を適用
-App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
-ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
+            // 循環移動の設定を適用
+            App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
+            ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
             SortDescendingMenuItem.IsChecked = !_sortAscending;
         }
 
