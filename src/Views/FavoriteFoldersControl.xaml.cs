@@ -16,11 +16,31 @@ namespace Illustra.Views
 {
     public partial class FavoriteFoldersControl : UserControl, IActiveAware
     {
-        private ObservableCollection<string> _favoriteFolders = [];
+        private ObservableCollection<FavoriteFolderModel> _favoriteFolders = [];
         private AppSettings _appSettings;
         private IEventAggregator? _eventAggregator;
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FavoriteFolders";
+
+        private ObservableCollection<FavoriteFolderModel> ConvertToModels(ObservableCollection<string> paths)
+        {
+            var models = new ObservableCollection<FavoriteFolderModel>();
+            foreach (var path in paths)
+            {
+                models.Add(new FavoriteFolderModel(path));
+            }
+            return models;
+        }
+
+        private ObservableCollection<string> ConvertToPaths(ObservableCollection<FavoriteFolderModel> models)
+        {
+            var paths = new ObservableCollection<string>();
+            foreach (var model in models)
+            {
+                paths.Add(model.Path);
+            }
+            return paths;
+        }
 
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
@@ -44,7 +64,7 @@ namespace Illustra.Views
                 try
                 {
                     // お気に入りリスト並び替え
-                    if (e.Data is string)
+                    if (e.Data is FavoriteFolderModel)
                     {
                         var isTreeViewItem = e.InsertPosition.HasFlag(RelativeInsertPosition.TargetItemCenter) && e.VisualTargetItem is TreeViewItem;
                         if (isTreeViewItem)
@@ -60,15 +80,15 @@ namespace Illustra.Views
                     if (files.Count == 0) return;
 
                     // ドロップ先を取得
-                    var targetFolder = e.TargetItem as string;
-                    if (targetFolder == null || !Directory.Exists(targetFolder))
+                    var targetModel = e.TargetItem as FavoriteFolderModel;
+                    if (targetModel?.Path == null || !Directory.Exists(targetModel.Path))
                     {
                         e.Effects = DragDropEffects.None;
                         return;
                     }
 
                     // 同じフォルダへのドロップは禁止
-                    if (DragDropHelper.IsSameDirectory(files, targetFolder))
+                    if (DragDropHelper.IsSameDirectory(files, targetModel.Path))
                     {
                         e.Effects = DragDropEffects.None;
                         return;
@@ -91,7 +111,7 @@ namespace Illustra.Views
                 try
                 {
                     // お気に入りリスト並び替え
-                    if (e.Data is string)
+                    if (e.Data is FavoriteFolderModel)
                     {
                         var isTreeViewItem = e.InsertPosition.HasFlag(RelativeInsertPosition.TargetItemCenter) && e.VisualTargetItem is TreeViewItem;
                         if (isTreeViewItem)
@@ -106,14 +126,14 @@ namespace Illustra.Views
                     if (files.Count == 0) return;
 
                     // ドロップ先を取得
-                    var targetFolder = e.TargetItem as string;
-                    if (targetFolder == null || !Directory.Exists(targetFolder))
+                    var targetModel = e.TargetItem as FavoriteFolderModel;
+                    if (targetModel?.Path == null || !Directory.Exists(targetModel.Path))
                     {
                         e.Effects = DragDropEffects.None;
                         return;
                     }
 
-                    if (DragDropHelper.IsSameDirectory(files, targetFolder))
+                    if (DragDropHelper.IsSameDirectory(files, targetModel.Path))
                     {
                         // 同じフォルダへのドロップは禁止
                         e.Effects = DragDropEffects.None;
@@ -123,7 +143,7 @@ namespace Illustra.Views
                     bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
                     var db = ContainerLocator.Container.Resolve<DatabaseManager>();
                     var fileOperationHelper = new FileOperationHelper(db);
-                    await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolder, isCopy);
+                    await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetModel.Path, isCopy);
                 }
                 catch (Exception ex)
                 {
@@ -142,8 +162,8 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // お気に入りフォルダの初期化
-            _favoriteFolders = _appSettings.FavoriteFolders;
-            FavoriteFoldersTreeView.ItemsSource = _favoriteFolders; // TODO: string ではなく ItemSource で必要なプロパティを持った型を使う (バインドエラーになる)
+            _favoriteFolders = ConvertToModels(_appSettings.FavoriteFolders);
+            FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
             DataContext = this;
         }
 
@@ -165,10 +185,13 @@ namespace Illustra.Views
 
         private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (args.Path == (string)FavoriteFoldersTreeView.SelectedItem) return;
-            if (_favoriteFolders.Contains(args.Path))
+            var selectedModel = FavoriteFoldersTreeView.SelectedItem as FavoriteFolderModel;
+            if (args.Path == selectedModel?.Path) return;
+            if (_favoriteFolders.Any(f => f.Path == args.Path))
             {
-                var item = FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(args.Path) as TreeViewItem;
+                var targetModel = _favoriteFolders.FirstOrDefault(f => f.Path == args.Path);
+                var item = targetModel != null ?
+                    FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(targetModel) as TreeViewItem : null;
                 if (item != null)
                 {
                     ignoreSelectedChangedOnce = true;
@@ -190,7 +213,7 @@ namespace Illustra.Views
         public void SaveAllData()
         {
             // お気に入りフォルダの設定を保存
-            _appSettings.FavoriteFolders = _favoriteFolders;
+            _appSettings.FavoriteFolders = ConvertToPaths(_favoriteFolders);
             SettingsHelper.SaveSettings(_appSettings);
         }
 
@@ -203,20 +226,20 @@ namespace Illustra.Views
             }
 
             ignoreSelectedChangedOnce = false;
-            if (e.NewValue is string path && !string.IsNullOrEmpty(path))
+            if (e.NewValue is FavoriteFolderModel folder && !string.IsNullOrEmpty(folder.Path))
             {
-                if (Directory.Exists(path))
+                if (Directory.Exists(folder.Path))
                 {
                     // フォルダ選択イベントを発行
-                    Debug.WriteLine($"FavoriteFoldersTreeView: SelectedItemChanged: Publish Events: {path}");
+                    Debug.WriteLine($"FavoriteFoldersTreeView: SelectedItemChanged: Publish Events: {folder.Path}");
                     _eventAggregator?.GetEvent<FolderSelectedEvent>().Publish(
-                        new FolderSelectedEventArgs(path, CONTROL_ID));
+                        new FolderSelectedEventArgs(folder.Path, CONTROL_ID));
                     _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");
                 }
             }
         }
 
-        public ObservableCollection<string> FavoriteFoldersList
+        public ObservableCollection<FavoriteFolderModel> FavoriteFoldersList
         {
             get => _favoriteFolders;
             set
@@ -232,19 +255,18 @@ namespace Illustra.Views
         /// <param name="folderPath">The path of the folder to add to the favorites list.</param>
         public void AddFavoriteFolder(string folderPath)
         {
-            if (!_favoriteFolders.Contains(folderPath))
+            if (!_favoriteFolders.Any(f => f.Path == folderPath))
             {
-                _favoriteFolders.Add(folderPath);
-                FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
+                _favoriteFolders.Add(new FavoriteFolderModel(folderPath));
             }
         }
 
         public void RemoveFavoriteFolder(string folderPath)
         {
-            if (_favoriteFolders.Contains(folderPath))
+            var folder = _favoriteFolders.FirstOrDefault(f => f.Path == folderPath);
+            if (folder != null)
             {
-                _favoriteFolders.Remove(folderPath);
-                FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
+                _favoriteFolders.Remove(folder);
             }
         }
 
@@ -320,15 +342,15 @@ namespace Illustra.Views
                 var treeViewItem = FindVisualParent<TreeViewItem>(source);
                 if (treeViewItem != null)
                 {
-                    var selectedPath = treeViewItem.DataContext as string;
-                    if (!string.IsNullOrEmpty(selectedPath))
+                    var selectedFolder = treeViewItem.DataContext as FavoriteFolderModel;
+                    if (selectedFolder != null && !string.IsNullOrEmpty(selectedFolder.Path))
                     {
                         var removeMenuItem = treeView.ContextMenu?.Items.OfType<MenuItem>()
                             .FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
 
                         if (removeMenuItem != null)
                         {
-                            removeMenuItem.CommandParameter = selectedPath;
+                            removeMenuItem.CommandParameter = selectedFolder.Path;
                         }
                     }
                 }

@@ -69,10 +69,9 @@
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
                                    FontFamily="Segoe UI Emoji"
-                                   Margin="0,0,5,0"
-                                   Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <!-- フォルダパスを直接表示 -->
-                        <TextBlock Text="{Binding}"/>
+                                   Margin="0,0,5,0"/>
+                        <!-- フォルダ名を表示 -->
+                        <TextBlock Text="{Binding DisplayName}"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
