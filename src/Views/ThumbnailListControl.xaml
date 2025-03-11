@@ -294,7 +294,7 @@
                     <Setter Property="Padding"
                             Value="0"/>
                     <Setter Property="Margin"
-                            Value="3"/>
+                            Value="3,3,3,20"/>
                     <Setter Property="BorderThickness"
                             Value="1"/>
                     <Setter Property="Background"
@@ -322,6 +322,7 @@
                                             Background="{TemplateBinding Background}"
                                             BorderBrush="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
                                             BorderThickness="1"
+                                            CornerRadius="5"
                                             SnapsToDevicePixels="True">
                                         <ContentPresenter HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"/>
@@ -330,12 +331,14 @@
                                     <Border x:Name="SelectionBorder"
                                             BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
                                             BorderThickness="2"
+                                            CornerRadius="5"
                                             Opacity="0">
                                     </Border>
                                     <!-- 最後に選択されたアイテムの追加ハイライト -->
                                     <Border x:Name="LastSelectedBorder"
-                                            BorderBrush="#FFE2A500"
+                                            BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
                                             BorderThickness="3"
+                                            CornerRadius="5"
                                             Opacity="0">
                                     </Border>
                                 </Grid>
@@ -377,7 +380,7 @@
                             <TextBlock Text="{Binding FileName}"
                                        VerticalAlignment="Bottom"
                                        HorizontalAlignment="Center"
-                                       Margin="2"
+                                       Margin="2,0,2,-20"
                                        Background="#80FFFFFF"
                                        Padding="2"
                                        Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
