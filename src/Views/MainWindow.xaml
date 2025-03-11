@@ -54,6 +54,10 @@
                           Command="{Binding OpenLanguageSettingsCommand}"/>
                 <MenuItem Header="{DynamicResource String_Menu_Settings_Shortcuts}"
                           Command="{Binding OpenShortcutSettingsCommand}"/>
+                <MenuItem x:Name="ToggleCyclicNavigation"
+                          Header="{DynamicResource String_Menu_Settings_CyclicNavigation}"
+                          IsCheckable="True"
+                          Click="ToggleCyclicNavigation_Click"/>
             </MenuItem>
         </Menu>
 

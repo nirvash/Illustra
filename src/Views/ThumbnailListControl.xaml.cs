@@ -356,6 +356,8 @@ namespace Illustra.Views
         /// <returns>前の画像のファイルパス、存在しない場合はnull</returns>
         public string? GetPreviousImage(string currentFilePath)
         {
+            bool enableCyclicNavigation = IsCyclicNavigationEnabled();
+
             // フィルタリングされたアイテムのリストを取得
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
             if (filteredItems.Count <= 1)
@@ -366,9 +368,18 @@ namespace Illustra.Views
             if (currentIndex < 0)
                 return null;
 
-            // 前のインデックスを計算（リストの最初の場合は最後に循環）
-            var prevIndex = (currentIndex > 0) ? currentIndex - 1 : filteredItems.Count - 1;
-            return filteredItems[prevIndex].FullPath;
+            // 前のインデックスを計算
+            if (currentIndex > 0)
+            {
+                // 通常の移動
+                return filteredItems[currentIndex - 1].FullPath;
+            }
+            else if (IsCyclicNavigationEnabled())
+            {
+                // 循環移動が有効な場合は最後に移動
+                return filteredItems[filteredItems.Count - 1].FullPath;
+            }
+            return null;
         }
 
         /// <summary>
@@ -378,6 +389,8 @@ namespace Illustra.Views
         /// <returns>次の画像のファイルパス、存在しない場合はnull</returns>
         public string? GetNextImage(string currentFilePath)
         {
+            bool enableCyclicNavigation = IsCyclicNavigationEnabled();
+
             // フィルタリングされたアイテムのリストを取得
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
             if (filteredItems.Count <= 1)
@@ -388,9 +401,18 @@ namespace Illustra.Views
             if (currentIndex < 0)
                 return null;
 
-            // 次のインデックスを計算（リストの最後の場合は最初に循環）
-            var nextIndex = (currentIndex < filteredItems.Count - 1) ? currentIndex + 1 : 0;
-            return filteredItems[nextIndex].FullPath;
+            // 次のインデックスを計算
+            if (currentIndex < filteredItems.Count - 1)
+            {
+                // 通常の移動
+                return filteredItems[currentIndex + 1].FullPath;
+            }
+            else if (IsCyclicNavigationEnabled())
+            {
+                // 循環移動が有効な場合は先頭に移動
+                return filteredItems[0].FullPath;
+            }
+            return null;
         }
 
         /// <summary>
@@ -918,7 +940,11 @@ namespace Illustra.Views
 
             var shortcutHandler = KeyboardShortcutHandler.Instance;
 
-            // まず、方向キーの判定を行う
+            // 循環移動の設定を取得
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            bool enableCyclicNavigation = mainWindow?.EnableCyclicNavigation ?? false;
+
+            // 方向キーの判定を行う
             bool isLeft = shortcutHandler.IsShortcutMatch(FuncId.NavigateLeft, e.Key);
             bool isRight = shortcutHandler.IsShortcutMatch(FuncId.NavigateRight, e.Key);
             bool isUp = shortcutHandler.IsShortcutMatch(FuncId.NavigateUp, e.Key);
@@ -1197,6 +1223,11 @@ namespace Illustra.Views
             }
         }
 
+        private bool IsCyclicNavigationEnabled()
+        {
+            return App.Instance.EnableCyclicNavigation;
+        }
+
         private void OnFileOperationProgress(object? sender, FileOperationProgressEventArgs e)
         {
             Dispatcher.InvokeAsync(() =>
@@ -1233,15 +1264,35 @@ namespace Illustra.Views
         /// </summary>
         private int GetHorizontalNavigationIndex(int currentIndex, bool isRight, int itemCount)
         {
+            bool enableCyclicNavigation = IsCyclicNavigationEnabled();
+
             if (isRight)
             {
-                // 右移動：次のインデックス（最後なら先頭へ）
-                return currentIndex < itemCount - 1 ? currentIndex + 1 : 0;
+                if (currentIndex < itemCount - 1)
+                {
+                    // 右移動：次のインデックス
+                    return currentIndex + 1;
+                }
+                else if (enableCyclicNavigation)
+                {
+                    // 循環移動が有効な場合のみ先頭へ
+                    return 0;
+                }
+                return currentIndex;
             }
             else
             {
-                // 左移動：前のインデックス（先頭なら最後へ）
-                return currentIndex > 0 ? currentIndex - 1 : itemCount - 1;
+                if (currentIndex > 0)
+                {
+                    // 左移動：前のインデックス
+                    return currentIndex - 1;
+                }
+                else if (enableCyclicNavigation)
+                {
+                    // 循環移動が有効な場合のみ最後へ
+                    return itemCount - 1;
+                }
+                return currentIndex;
             }
         }
 
@@ -1250,6 +1301,8 @@ namespace Illustra.Views
         /// </summary>
         private int GetVerticalNavigationIndex(int currentIndex, bool isDown, int itemsPerRow, int itemCount)
         {
+            bool enableCyclicNavigation = IsCyclicNavigationEnabled();
+
             int currentRow = currentIndex / itemsPerRow;
             int currentCol = currentIndex % itemsPerRow;
             int totalRows = (itemCount + itemsPerRow - 1) / itemsPerRow;
@@ -1265,11 +1318,12 @@ namespace Illustra.Views
                         // 最後の行に到達した場合、その行の最後のアイテムまでに制限
                         return Math.Min(targetIndex, itemCount - 1);
                     }
-                    else
+                    else if (enableCyclicNavigation)
                     {
-                        // 最後の行なら最初の行の同じ列へ
+                        // 循環移動が有効な場合は最初の行の同じ列へ
                         return currentCol;
                     }
+                    return currentIndex;
                 }
                 return targetIndex;
             }
@@ -1281,12 +1335,13 @@ namespace Illustra.Views
                     // 上の行の同じ列へ
                     return currentIndex - itemsPerRow;
                 }
-                else
+                else if (enableCyclicNavigation)
                 {
-                    // 最初の行なら最後の行の同じ列へ（ただし存在する場合のみ）
+                    // 循環移動が有効な場合は最後の行の同じ列へ（存在する場合のみ）
                     int lastRowIndex = (totalRows - 1) * itemsPerRow + currentCol;
                     return Math.Min(lastRowIndex, itemCount - 1);
                 }
+                return currentIndex;
             }
         }
 

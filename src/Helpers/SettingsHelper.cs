@@ -59,6 +59,9 @@ namespace Illustra.Helpers
 
         // キーボードショートカット設定
         public string KeyboardShortcuts { get; set; } = string.Empty;
+
+        // リストの循環移動設定
+        public bool EnableCyclicNavigation { get; set; } = false;
     }
 
     public static class SettingsHelper

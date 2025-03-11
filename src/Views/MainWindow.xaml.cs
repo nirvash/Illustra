@@ -27,6 +27,7 @@ namespace Illustra.Views
         private FolderTreeControl? _folderTreeControl;
         private string? _currentFolderPath = null;
         private const string CONTROL_ID = "MainWindow";
+        public bool EnableCyclicNavigation => App.Instance.EnableCyclicNavigation;
 
         // ソートメニューアイテム
         private MenuItem? _sortByDateAscendingMenuItem;
@@ -61,12 +62,16 @@ namespace Illustra.Views
             // ウィンドウが閉じられるときに設定を保存
             Closing += MainWindow_Closing;
 
-            // 設定を適用（ウィンドウ設定のみ）
+            // 設定を適用
             Width = _appSettings.WindowWidth;
             Height = _appSettings.WindowHeight;
             Left = _appSettings.WindowLeft;
             Top = _appSettings.WindowTop;
             WindowState = _appSettings.WindowState;
+
+            // 循環移動の設定を適用
+            App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
+            ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
 
             // スプリッター位置を復元
             _mainSplitterPosition = _appSettings.MainSplitterPosition;
@@ -156,6 +161,7 @@ namespace Illustra.Views
             // ソート順の設定を保存
             _appSettings.SortByDate = _sortByDate;
             _appSettings.SortAscending = _sortAscending;
+            _appSettings.EnableCyclicNavigation = App.Instance.EnableCyclicNavigation;
 
             try
             {
@@ -178,6 +184,13 @@ namespace Illustra.Views
         }
 
         // メニュー関連のメソッド
+        private void ToggleCyclicNavigation_Click(object sender, RoutedEventArgs e)
+        {
+            App.Instance.EnableCyclicNavigation = ToggleCyclicNavigation.IsChecked ?? false;
+            _appSettings.EnableCyclicNavigation = App.Instance.EnableCyclicNavigation;
+            SettingsHelper.SaveSettings(_appSettings);
+        }
+
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
@@ -210,13 +223,17 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             ThumbnailList.ApplySettings();
+// ソート順の設定を適用
+_sortByDate = _appSettings.SortByDate;
+_sortAscending = _appSettings.SortAscending;
+SortByDateMenuItem.IsChecked = _sortByDate;
+SortByNameMenuItem.IsChecked = !_sortByDate;
+SortAscendingMenuItem.IsChecked = _sortAscending;
+SortDescendingMenuItem.IsChecked = !_sortAscending;
 
-            // ソート順の設定を適用
-            _sortByDate = _appSettings.SortByDate;
-            _sortAscending = _appSettings.SortAscending;
-            SortByDateMenuItem.IsChecked = _sortByDate;
-            SortByNameMenuItem.IsChecked = !_sortByDate;
-            SortAscendingMenuItem.IsChecked = _sortAscending;
+// 循環移動の設定を適用
+App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
+ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
             SortDescendingMenuItem.IsChecked = !_sortAscending;
         }
 

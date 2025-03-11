@@ -22,6 +22,9 @@ namespace Illustra
     public partial class App : PrismApplication
     {
         private readonly DatabaseManager _db = new();
+        public bool EnableCyclicNavigation { get; set; }
+
+        public static App Instance => (App)Current;
 
         protected override Window CreateShell()
         {
@@ -73,6 +76,10 @@ namespace Illustra
         {
             // データベースの初期化
             InitializeDatabase();
+
+            // AppSettingsから循環移動の設定を読み込む
+            var settings = SettingsHelper.GetSettings();
+            EnableCyclicNavigation = settings.EnableCyclicNavigation;
 
             base.OnStartup(e);
         }
