@@ -9,31 +9,41 @@
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300"
+             d:DesignHeight="300"
+             d:DesignWidth="300"
              x:Name="FileSystemTreeViewControl">
 
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- TreeViewItem の状態をバインド -->
-        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}"
-            BasedOn="{StaticResource {x:Type TreeViewItem}}">
-            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-            <Setter Property="Padding" Value="0,0,0,0" />
+        <Style x:Key="BoundTreeViewItemStyle"
+               TargetType="{x:Type TreeViewItem}"
+               BasedOn="{StaticResource {x:Type TreeViewItem}}">
+            <Setter Property="IsExpanded"
+                    Value="{Binding IsExpanded, Mode=TwoWay}"/>
+            <Setter Property="IsSelected"
+                    Value="{Binding IsSelected, Mode=TwoWay}"/>
+            <Setter Property="Padding"
+                    Value="0,0,0,0"/>
 
             <!-- イベントハンドラの関連付け -->
-            <EventSetter Event="MouseEnter" Handler="TreeViewItem_MouseEnter" />
-            <EventSetter Event="MouseLeave" Handler="TreeViewItem_MouseLeave" />
+            <EventSetter Event="MouseEnter"
+                         Handler="TreeViewItem_MouseEnter"/>
+            <EventSetter Event="MouseLeave"
+                         Handler="TreeViewItem_MouseLeave"/>
 
             <!-- SystemColorブラシをオーバーライド -->
             <Style.Resources>
                 <!-- 選択時の背景色（フォーカスあり） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="LightBlue"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"
+                                 Color="LightBlue"/>
                 <!-- 選択時の背景色（フォーカスなし） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="LightBlue"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
+                                 Color="LightBlue"/>
                 <!-- 選択時のテキスト色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"
+                                 Color="Black"/>
             </Style.Resources>
 
         </Style>
@@ -41,23 +51,24 @@
 
     <Grid KeyboardNavigation.TabNavigation="Local">
         <TreeView x:Name="FolderTreeView"
-                   DataContext="{x:Null}"
-                   ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
-                   SelectedItemChanged="TreeView_SelectedItemChanged"
-                   ContextMenuOpening="TreeView_ContextMenuOpening"
-                   VirtualizingStackPanel.IsVirtualizing="True"
-                   VirtualizingStackPanel.VirtualizationMode="Recycling"
-                   HorizontalAlignment="Stretch"
-                   VerticalAlignment="Stretch"
-                   IsTabStop="True" TabIndex="2"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                   dd:DragDrop.IsDragSource="False"
-                   dd:DragDrop.IsDropTarget="True">
+                  DataContext="{x:Null}"
+                  ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
+                  SelectedItemChanged="TreeView_SelectedItemChanged"
+                  ContextMenuOpening="TreeView_ContextMenuOpening"
+                  VirtualizingStackPanel.IsVirtualizing="True"
+                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  IsTabStop="True"
+                  TabIndex="2"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  dd:DragDrop.IsDragSource="False"
+                  dd:DragDrop.IsDropTarget="True">
             <TreeView.ContextMenu>
                 <ContextMenu>
                     <MenuItem x:Name="AddToFavoritesMenuItem"
-                              Header="お気に入りに追加"
+                              Header="{DynamicResource String_FileSystemTreeView_AddToFavorites}"
                               Click="AddToFavorites_Click"/>
                 </ContextMenu>
             </TreeView.ContextMenu>
@@ -65,10 +76,12 @@
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">
                         <!-- フォルダアイコン (テキストで表現) -->
-                        <TextBlock Text="📁" FontFamily="Segoe UI Emoji" Margin="0,0,5,0"
-                                Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="📁"
+                                   FontFamily="Segoe UI Emoji"
+                                   Margin="0,0,5,0"
+                                   Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         <!-- 項目名 -->
-                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding Name}"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>

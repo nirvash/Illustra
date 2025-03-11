@@ -40,8 +40,15 @@ namespace Illustra.ViewModels
         }
     }
 
-    public class KeyboardShortcutSettingsViewModel : BindableBase
+    public interface IRequestClose
     {
+        event EventHandler CloseRequested;
+    }
+
+    public class KeyboardShortcutSettingsViewModel : BindableBase, IRequestClose
+    {
+        public event EventHandler CloseRequested;
+
         public ObservableCollection<KeyboardShortcutModel> Shortcuts { get; private set; }
 
         public DelegateCommand<object> SaveCommand { get; private set; }
@@ -67,8 +74,8 @@ namespace Illustra.ViewModels
         private void ExecuteResetToDefault()
         {
             var result = MessageBox.Show(
-                "キーボードショートカットの設定をデフォルトに戻しますか？\nこの操作は元に戻せません。",
-                "デフォルト設定に戻す",
+                (string)Application.Current.FindResource("String_Settings_ResetConfirm"),
+                (string)Application.Current.FindResource("String_Settings_ResetConfirmTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -182,11 +189,13 @@ namespace Illustra.ViewModels
         private void ExecuteSave()
         {
             SaveShortcutsToSettings();
+            CloseRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void ExecuteCancel()
         {
             LoadShortcutsFromSettings();
+            CloseRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 }

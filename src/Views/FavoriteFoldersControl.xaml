@@ -5,28 +5,36 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300"
+             d:DesignWidth="300">
 
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- TreeViewItem の状態をバインド -->
-        <Style x:Key="BoundTreeViewItemStyle" TargetType="{x:Type TreeViewItem}"
+        <Style x:Key="BoundTreeViewItemStyle"
+               TargetType="{x:Type TreeViewItem}"
                BasedOn="{StaticResource {x:Type TreeViewItem}}">
-            <Setter Property="Padding" Value="0,0,0,0" />
+            <Setter Property="Padding"
+                    Value="0,0,0,0"/>
 
             <!-- イベントハンドラの関連付け -->
-            <EventSetter Event="MouseEnter" Handler="TreeViewItem_MouseEnter" />
-            <EventSetter Event="MouseLeave" Handler="TreeViewItem_MouseLeave" />
+            <EventSetter Event="MouseEnter"
+                         Handler="TreeViewItem_MouseEnter"/>
+            <EventSetter Event="MouseLeave"
+                         Handler="TreeViewItem_MouseLeave"/>
 
             <!-- SystemColorブラシをオーバーライド -->
             <Style.Resources>
                 <!-- 選択時の背景色（フォーカスあり） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="LightBlue"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"
+                                 Color="LightBlue"/>
                 <!-- 選択時の背景色（フォーカスなし） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="LightBlue"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
+                                 Color="LightBlue"/>
                 <!-- 選択時のテキスト色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"
+                                 Color="Black"/>
             </Style.Resources>
         </Style>
     </UserControl.Resources>
@@ -39,7 +47,8 @@
                   VerticalAlignment="Stretch"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                  IsTabStop="True" TabIndex="1"
+                  IsTabStop="True"
+                  TabIndex="1"
                   dd:DragDrop.IsDragSource="True"
                   dd:DragDrop.IsDropTarget="True"
                   VirtualizingStackPanel.IsVirtualizing="True"
@@ -50,18 +59,20 @@
             <TreeView.ContextMenu>
                 <ContextMenu>
                     <MenuItem x:Name="RemoveFromFavoritesMenuItem"
-                             Header="お気に入りから削除"
-                             Click="RemoveFromFavorites_Click"/>
+                              Header="{DynamicResource String_FavoriteFolders_RemoveFromFavorites}"
+                              Click="RemoveFromFavorites_Click"/>
                 </ContextMenu>
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">
                         <!-- フォルダアイコン (テキストで表現) -->
-                        <TextBlock Text="📁" FontFamily="Segoe UI Emoji" Margin="0,0,5,0"
-                                 Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="📁"
+                                   FontFamily="Segoe UI Emoji"
+                                   Margin="0,0,5,0"
+                                   Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         <!-- フォルダパスを直接表示 -->
-                        <TextBlock Text="{Binding}" />
+                        <TextBlock Text="{Binding}"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>

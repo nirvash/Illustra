@@ -5,6 +5,7 @@ using Illustra.Functions;
 using System.Text.Json;
 using Illustra.Helpers;
 using Prism.Mvvm;
+using System.Windows;
 
 namespace Illustra.Models
 {
@@ -20,6 +21,23 @@ namespace Illustra.Models
             .Where(f => f.FieldType == typeof(FuncId))
             .ToDictionary(f => ((FuncId)(f.GetValue(null) ?? throw new InvalidOperationException())).Value,
                          f => (FuncId)(f.GetValue(null) ?? throw new InvalidOperationException()));
+
+        public string FunctionName
+        {
+            get => Application.Current.FindResource(ResourceKey) as string ?? ResourceKey;
+        }
+
+        public string DisplayName
+        {
+            get => $"{FunctionName} ({FunctionId.Value})";
+        }
+
+        private string _resourceKey;
+        public string ResourceKey
+        {
+            get => _resourceKey;
+            set => SetProperty(ref _resourceKey, value);
+        }
 
         public FuncId FunctionId
         {
@@ -71,6 +89,11 @@ namespace Illustra.Models
         public KeyboardShortcutModel(FuncId functionId)
         {
             FunctionId = functionId;
+            var metadata = KeyboardShortcutDefinitions.AllShortcuts.FirstOrDefault(m => m.FunctionId == functionId.Value);
+            if (metadata != null)
+            {
+                ResourceKey = metadata.ResourceKey;
+            }
         }
 
         private void OnKeysCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

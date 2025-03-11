@@ -15,16 +15,9 @@ namespace Illustra.Views
             // ViewModelをDIコンテナから取得
             _viewModel = ((App)Application.Current).Container.Resolve<KeyboardShortcutSettingsViewModel>();
             DataContext = _viewModel;
-        }
 
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
+            // CloseRequestedイベントを購読
+            _viewModel.CloseRequested += (s, e) => Close();
         }
     }
 }

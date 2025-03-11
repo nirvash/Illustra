@@ -72,12 +72,20 @@ namespace Illustra.ViewModels
                 // 言語を設定
                 _languageService.SetLanguage(languageCode);
 
-                MessageBox.Show("言語設定を保存しました。", "設定の保存", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    (string)Application.Current.FindResource("String_Settings_Language_SavedMessage"),
+                    (string)Application.Current.FindResource("String_Settings_Language_SavedTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in ExecuteSave: {ex.Message}");
-                MessageBox.Show($"設定の保存中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(
+                    string.Format((string)Application.Current.FindResource("String_Settings_Error_SaveFailed"), ex.Message),
+                    (string)Application.Current.FindResource("String_Settings_Error_Title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 

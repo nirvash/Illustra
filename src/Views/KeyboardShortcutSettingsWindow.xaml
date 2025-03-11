@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:vm="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
-        Title="キーボードショートカット設定"
+        Title="{DynamicResource String_KeyboardShortcutSettingsWindow_Title}"
         Height="450"
         Width="400"
         MinWidth="350"

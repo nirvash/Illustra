@@ -196,9 +196,9 @@ namespace Illustra.Views
             {
                 productVersion = versionString;
             }
-            var versionInfo = $"バージョン: \n{versionString}\n\n製品バージョン: \n{productVersion}";
+            var versionInfo = $"{(string)FindResource("String_About_Version")} \n{versionString}\n\n{(string)FindResource("String_About_ProductVersion")} \n{productVersion}";
             Clipboard.SetText(versionInfo);
-            MessageBox.Show(versionInfo, "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(versionInfo, (string)FindResource("String_About_Title"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>

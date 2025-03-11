@@ -6,9 +6,9 @@
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:vm="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
-        Title="言語設定"
-        Height="350"
-        Width="600"
+        Title="{DynamicResource String_LanguageSettingsWindow_Title}"
+        Height="250"
+        Width="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
 
@@ -24,13 +24,13 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="20">
-            <Button Content="{DynamicResource String_Settings_Cancel}"
+            <Button Content="{DynamicResource String_Common_Cancel}"
                     Command="{Binding CancelCommand}"
                     Click="CancelButton_Click"
                     Width="100"
                     Height="23"
                     Margin="0,0,10,0"/>
-            <Button Content="{DynamicResource String_Settings_Save}"
+            <Button Content="{DynamicResource String_Common_Ok}"
                     Command="{Binding SaveCommand}"
                     Click="SaveButton_Click"
                     Width="100"

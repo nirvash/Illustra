@@ -1,9 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- Common -->
     <system:String x:Key="String_AppName">Illustra</system:String>
+    <system:String x:Key="String_Common_Ok">OK</system:String>
+    <system:String x:Key="String_Common_Cancel">Cancel</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">File</system:String>
@@ -36,7 +39,6 @@
     <system:String x:Key="String_Lang_English">English</system:String>
     <system:String x:Key="String_Lang_Japanese">Japanese (日本語)</system:String>
     <system:String x:Key="String_Settings_Save">Save</system:String>
-    <system:String x:Key="String_Settings_Cancel">Cancel</system:String>
     <system:String x:Key="String_Settings_SavedMessage">Settings have been saved. Some changes may require restarting the application.</system:String>
     <system:String x:Key="String_Settings_LanguageDescription">Changing the language setting will change the display language of the application.</system:String>
 
@@ -95,6 +97,12 @@
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
 
+    <!-- Language Settings -->
+    <system:String x:Key="String_Settings_Language_SavedTitle">Settings Saved</system:String>
+    <system:String x:Key="String_Settings_Language_SavedMessage">Language settings have been saved.</system:String>
+    <system:String x:Key="String_Settings_Error_Title">Error</system:String>
+    <system:String x:Key="String_Settings_Error_SaveFailed">An error occurred while saving settings: {0}</system:String>
+
     <!-- Keyboard Shortcuts -->
     <system:String x:Key="String_Function_NavigateUp">Navigate Up</system:String>
     <system:String x:Key="String_Function_NavigateDown">Navigate Down</system:String>
@@ -110,10 +118,32 @@
     <system:String x:Key="String_Function_ToggleViewer">Toggle Viewer</system:String>
     <system:String x:Key="String_Function_SelectAll">Select All</system:String>
 
+    <!-- Keyboard Shortcuts -->
+    <system:String x:Key="String_Settings_ResetConfirm">Are you sure you want to reset keyboard shortcuts to default?\nThis action cannot be undone.</system:String>
+    <system:String x:Key="String_Settings_ResetConfirmTitle">Reset to Default</system:String>
+
+    <!-- About Dialog -->
+    <system:String x:Key="String_About_Title">About</system:String>
+    <system:String x:Key="String_About_Version">Version:</system:String>
+    <system:String x:Key="String_About_ProductVersion">Product Version:</system:String>
+
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">Ready</system:String>
     <system:String x:Key="String_Status_Loading">Loading...</system:String>
     <system:String x:Key="String_Status_ItemsSelected">{0} items selected</system:String>
     <system:String x:Key="String_Status_Error">Error: {0}</system:String>
+
+    <!-- Settings and Dialog -->
+    <system:String x:Key="String_Settings_ResetToDefault">Reset to Default</system:String>
+    <system:String x:Key="String_Settings_FunctionId">Function ID:</system:String>
+    <system:String x:Key="String_Settings_Edit">Edit</system:String>
+    <system:String x:Key="String_Settings_Remove">Remove</system:String>
+    <system:String x:Key="String_Settings_Add">Add</system:String>
+    <system:String x:Key="String_FavoriteFolders_RemoveFromFavorites">Remove from Favorites</system:String>
+    <system:String x:Key="String_FileSystemTreeView_AddToFavorites">Add to Favorites</system:String>
+    <system:String x:Key="String_KeyboardShortcutSettingDialog_Title">Keyboard Shortcut Setting</system:String>
+    <system:String x:Key="String_KeyboardShortcutSettingDialog_PressKey">Press a key</system:String>
+    <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">Keyboard Shortcuts</system:String>
+    <system:String x:Key="String_LanguageSettingsWindow_Title">Language Settings</system:String>
 
 </ResourceDictionary>
