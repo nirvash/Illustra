@@ -61,5 +61,6 @@ namespace Illustra.Helpers
         public bool VisiblePropertyPanel { get; set; } = true;
         public double NormalPropertyColumnWidth { get; set; } = 250; // 通常ウィンドウ時のプロパティパネル幅
         public double FullScreenPropertyColumnWidth { get; set; } = 250; // 全画面表示時のプロパティパネル幅
+        public double SlideshowIntervalSeconds { get; set; } = 2.0; // スライドショーの間隔（秒）
     }
 }

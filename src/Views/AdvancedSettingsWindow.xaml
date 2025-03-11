@@ -1,0 +1,52 @@
+<Window x:Class="Illustra.Views.AdvancedSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource String_Menu_Settings_Advanced}"
+        Height="300" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 設定項目 -->
+        <StackPanel Grid.Row="0">
+            <!-- スライドショー設定セクション -->
+            <GroupBox Header="{DynamicResource String_Settings_Slideshow_Section}">
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0"
+                           Content="{DynamicResource String_Settings_Slideshow_Interval}"
+                           VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1"
+                            x:Name="SlideshowIntervalTextBox"
+                            Text="{Binding SlideshowInterval, UpdateSourceTrigger=PropertyChanged}"
+                            VerticalAlignment="Center"
+                            Margin="5,0"/>
+                    <Label Grid.Column="2"
+                           Content="{DynamicResource String_Settings_Slideshow_Seconds}"
+                           VerticalAlignment="Center"/>
+                </Grid>
+            </GroupBox>
+        </StackPanel>
+
+        <!-- ボタン -->
+        <Grid Grid.Row="1" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1"
+                    Content="{DynamicResource String_Common_Ok}"
+                    Width="75"
+                    Height="23"
+                    Click="OKButton_Click"/>
+        </Grid>
+    </Grid>
+</Window>

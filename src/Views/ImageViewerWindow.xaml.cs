@@ -44,6 +44,8 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
+        private bool _isSlideshowActive = false;
+        private readonly DispatcherTimer _slideshowTimer;
         public new ThumbnailListControl? Parent { get; set; }
 
         private ImagePropertiesModel _properties = new();
@@ -105,6 +107,17 @@ namespace Illustra.Views
             // キャッシュの初期化
             _imageCache = new WindowBasedImageCache();
 
+            // スライドショータイマーの初期化
+            var viewerSettings = ViewerSettingsHelper.LoadSettings();
+            _slideshowTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(viewerSettings.SlideshowIntervalSeconds)
+            };
+            _slideshowTimer.Tick += (s, e) =>
+            {
+                NavigateToNextImage();
+            };
+
             // キャッシュから画像を読み込み（なければ新規作成）
             LoadAndDisplayImage(filePath);
 
@@ -125,7 +138,7 @@ namespace Illustra.Views
                 _titleBarTimer.Stop();
                 if (_isFullScreen)
                 {
-                    TitleBar.Visibility = Visibility.Collapsed;
+                    TitleBar.Visibility = System.Windows.Visibility.Collapsed;
                 }
             };
 
@@ -163,8 +176,8 @@ namespace Illustra.Views
             IsFullScreen = settings.IsFullScreen; // プロパティ経由で設定
 
             // プロパティパネルの表示状態を設定
-            PropertyPanel.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
-            PropertySplitter.Visibility = settings.VisiblePropertyPanel ? Visibility.Visible : Visibility.Collapsed;
+            PropertyPanel.Visibility = settings.VisiblePropertyPanel ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            PropertySplitter.Visibility = settings.VisiblePropertyPanel ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
 
             // フルスクリーン状態に応じた幅を読み込む
             _lastPropertyPanelWidth = settings.IsFullScreen
@@ -314,6 +327,21 @@ namespace Illustra.Views
                 ToggleFullScreen();
                 e.Handled = true;
             }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.ToggleSlideshow, e.Key))
+            {
+                ToggleSlideshow();
+                e.Handled = true;
+            }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.IncreaseSlideshowInterval, e.Key))
+            {
+                AdjustSlideshowInterval(0.1);
+                e.Handled = true;
+            }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.DecreaseSlideshowInterval, e.Key))
+            {
+                AdjustSlideshowInterval(-0.1);
+                e.Handled = true;
+            }
             else if (shortcutHandler.IsShortcutMatch(FuncId.PreviousImage, e.Key))
             {
                 NavigateToPreviousImage();
@@ -374,9 +402,50 @@ namespace Illustra.Views
             }
         }
 
+        private void ShowSlideshowNotification(string message)
+        {
+            SlideshowIcon.Text = message;
+            var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
+            storyboard.Begin(SlideshowNotification);
+        }
+
+        private void AdjustSlideshowInterval(double adjustment)
+        {
+            var settings = ViewerSettingsHelper.LoadSettings();
+            // 0.1秒単位に丸める
+            var rawInterval = settings.SlideshowIntervalSeconds + adjustment;
+            var newInterval = Math.Max(0.1, Math.Round(rawInterval * 10) / 10);
+            settings.SlideshowIntervalSeconds = newInterval;
+            ViewerSettingsHelper.SaveSettings(settings);
+
+            // タイマーの間隔を更新
+            _slideshowTimer.Interval = TimeSpan.FromSeconds(newInterval);
+
+            // 通知を表示
+            ShowSlideshowNotification(string.Format(
+                (string)FindResource("String_Slideshow_IntervalFormat"),
+                newInterval));
+        }
+
+        private void ToggleSlideshow()
+        {
+            if (_isSlideshowActive)
+            {
+                _slideshowTimer.Stop();
+                _isSlideshowActive = false;
+                ShowSlideshowNotification((string)FindResource("String_Slideshow_PauseIcon"));
+            }
+            else
+            {
+                _slideshowTimer.Start();
+                _isSlideshowActive = true;
+                ShowSlideshowNotification((string)FindResource("String_Slideshow_PlayIcon"));
+            }
+        }
+
         private void TogglePropertyPanel()
         {
-            if (PropertyPanel.Visibility == Visibility.Visible)
+            if (PropertyPanel.Visibility == System.Windows.Visibility.Visible)
             {
                 // プロパティパネル・スプリッターを非表示にする前に現在の幅を保存
                 _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
@@ -388,21 +457,21 @@ namespace Illustra.Views
                 }
 
                 // プロパティパネル・スプリッターを非表示にする
-                PropertyPanel.Visibility = Visibility.Collapsed;
-                PropertySplitter.Visibility = Visibility.Collapsed;
+                PropertyPanel.Visibility = System.Windows.Visibility.Collapsed;
+                PropertySplitter.Visibility = System.Windows.Visibility.Collapsed;
 
                 // カラムの幅を0に設定
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+                MainGrid.ColumnDefinitions[1].Width = new System.Windows.GridLength(0);
+                MainGrid.ColumnDefinitions[2].Width = new System.Windows.GridLength(0);
             }
             else
             {
                 // プロパティパネルを表示する
-                PropertyPanel.Visibility = Visibility.Visible;
-                PropertySplitter.Visibility = Visibility.Visible;
+                PropertyPanel.Visibility = System.Windows.Visibility.Visible;
+                PropertySplitter.Visibility = System.Windows.Visibility.Visible;
 
                 // カラムの幅を復元
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
+                MainGrid.ColumnDefinitions[1].Width = new System.Windows.GridLength(3);  // スプリッター
 
                 // 保存していた幅または設定から幅を取得
                 double panelWidth = _lastPropertyPanelWidth;
@@ -416,7 +485,7 @@ namespace Illustra.Views
                         : (settings.NormalPropertyColumnWidth > 0 ? settings.NormalPropertyColumnWidth : 250);
                 }
 
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(panelWidth);
+                MainGrid.ColumnDefinitions[2].Width = new System.Windows.GridLength(panelWidth);
             }
 
             // 設定を保存
@@ -449,6 +518,13 @@ namespace Illustra.Views
             if (!string.IsNullOrEmpty(nextFilePath))
             {
                 SwitchToImage(nextFilePath);
+            }
+            else if (_isSlideshowActive)
+            {
+                // 次の画像がない場合はスライドショーを停止
+                _slideshowTimer.Stop();
+                _isSlideshowActive = false;
+                ShowSlideshowNotification((string)FindResource("String_Slideshow_PauseIcon"));
             }
         }
 
@@ -540,7 +616,7 @@ namespace Illustra.Views
         private void UpdateButtonVisibility()
         {
             // フルスクリーンモードに応じてボタンの表示/非表示を切り替え
-            EnterFullScreenButton.Visibility = IsFullScreen ? Visibility.Collapsed : Visibility.Visible;
+            EnterFullScreenButton.Visibility = IsFullScreen ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
         }
 
         private void ToggleFullScreen()
@@ -633,6 +709,13 @@ namespace Illustra.Views
         {
             try
             {
+                // スライドショーが実行中なら停止
+                if (_isSlideshowActive)
+                {
+                    _slideshowTimer.Stop();
+                    _isSlideshowActive = false;
+                }
+
                 // 閉じる過程での最初の段階でフルスクリーン状態を保存
                 // 共通メソッドを使用して設定を保存
                 SaveCurrentSettings();

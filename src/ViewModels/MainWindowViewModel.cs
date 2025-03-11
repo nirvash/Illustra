@@ -17,11 +17,13 @@ namespace Illustra.ViewModels
 
         public DelegateCommand OpenLanguageSettingsCommand { get; }
         public DelegateCommand OpenShortcutSettingsCommand { get; }
+        public DelegateCommand OpenAdvancedSettingsCommand { get; }
 
         public MainWindowViewModel()
         {
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
             OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
+            OpenAdvancedSettingsCommand = new DelegateCommand(ExecuteOpenAdvancedSettings);
 
             // ステータスメッセージの初期化
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
@@ -46,6 +48,17 @@ namespace Illustra.ViewModels
                 Owner = Application.Current.MainWindow
             };
             shortcutSettingsWindow.ShowDialog();
+            StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
+        }
+
+        private void ExecuteOpenAdvancedSettings()
+        {
+            // 詳細設定画面をダイアログとして表示
+            var advancedSettingsWindow = new AdvancedSettingsWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            advancedSettingsWindow.ShowDialog();
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
         }
     }

@@ -27,9 +27,20 @@
     <system:String x:Key="String_Menu_Settings_CyclicNavigation">循環移動を有効にする</system:String>
     <system:String x:Key="String_Menu_About">バージョン情報</system:String>
 
+    <!-- スライドショー -->
+    <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
+    <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>
+    <system:String x:Key="String_Slideshow_IntervalFormat">{0:F1} 秒</system:String>
+
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>
     <system:String x:Key="String_Settings_Language">言語</system:String>
+    <system:String x:Key="String_Menu_Settings_Advanced">詳細設定</system:String>
+    <system:String x:Key="String_Settings_Slideshow_Section">スライドショー</system:String>
+    <system:String x:Key="String_Settings_Slideshow_Interval">再生間隔:</system:String>
+    <system:String x:Key="String_Settings_Slideshow_Seconds">秒</system:String>
+    <system:String x:Key="String_Settings_Slideshow_InvalidInterval">再生間隔は0より大きい値を入力してください。</system:String>
+    <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
     <system:String x:Key="String_Settings_Language_Title">言語設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">キーボードショートカット設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">メインキー:</system:String>
@@ -115,6 +126,9 @@
     <system:String x:Key="String_Function_MoveToEnd">末尾へ移動</system:String>
     <system:String x:Key="String_Function_ToggleFullScreen">全画面表示切替</system:String>
     <system:String x:Key="String_Function_TogglePropertyPanel">プロパティパネル表示切替</system:String>
+    <system:String x:Key="String_Function_ToggleSlideshow">スライドショー開始/停止</system:String>
+    <system:String x:Key="String_Function_IncreaseSlideshowInterval">スライドショー間隔を増やす</system:String>
+    <system:String x:Key="String_Function_DecreaseSlideshowInterval">スライドショー間隔を減らす</system:String>
     <system:String x:Key="String_Function_CloseViewer">ビューワーを閉じる</system:String>
     <system:String x:Key="String_Function_PreviousImage">前の画像</system:String>
     <system:String x:Key="String_Function_NextImage">次の画像</system:String>

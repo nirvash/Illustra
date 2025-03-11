@@ -24,6 +24,15 @@
         <helpers:RatingToTextColorConverter x:Key="RatingToTextColorConverter"/>
         <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- フェードイン/アウトアニメーション -->
+        <Storyboard x:Key="ShowNotificationStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                           From="0" To="1" Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                           From="1" To="0" Duration="0:0:0.3"
+                           BeginTime="0:0:1"/>
+        </Storyboard>
     </Window.Resources>
 
     <Grid x:Name="MainGrid" MouseMove="MainGrid_MouseMove">
@@ -125,5 +134,24 @@
                 VerticalAlignment="Top"
                 Margin="10"
                 Click="FullScreenButton_Click"/>
+
+        <!-- スライドショー状態通知オーバーレイ -->
+        <Border x:Name="SlideshowNotification"
+                Grid.ColumnSpan="3"
+                Width="150" Height="100"
+                Background="#80000000"
+                CornerRadius="10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Opacity="0">
+            <Grid>
+                <TextBlock x:Name="SlideshowIcon"
+                          Text="▶"
+                          FontSize="48"
+                          Foreground="White"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

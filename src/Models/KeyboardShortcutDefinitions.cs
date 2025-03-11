@@ -62,6 +62,9 @@ namespace Illustra.Functions
         public static readonly FuncId CloseViewer = new FuncId("close_viewer");
         public static readonly FuncId PreviousImage = new FuncId("previous_image");
         public static readonly FuncId NextImage = new FuncId("next_image");
+        public static readonly FuncId ToggleSlideshow = new FuncId("toggle_slideshow");
+        public static readonly FuncId IncreaseSlideshowInterval = new FuncId("increase_slideshow_interval");
+        public static readonly FuncId DecreaseSlideshowInterval = new FuncId("decrease_slideshow_interval");
 
         // 暗黙変換
         public static implicit operator string(FuncId id) => id.Value;
@@ -104,7 +107,10 @@ namespace Illustra.Models
 
             // ビューワー操作
             new() { FunctionId = FuncId.ToggleFullScreen.Value, ResourceKey = "String_Function_ToggleFullScreen", DefaultKeys = new List<Key> { Key.F11 } },
-            new() { FunctionId = FuncId.TogglePropertyPanel.Value, ResourceKey = "String_Function_TogglePropertyPanel", DefaultKeys = new List<Key> { Key.P } },
+            new() { FunctionId = FuncId.TogglePropertyPanel.Value, ResourceKey = "String_Function_TogglePropertyPanel", DefaultKeys = new List<Key> { Key.Tab } },
+            new() { FunctionId = FuncId.ToggleSlideshow.Value, ResourceKey = "String_Function_ToggleSlideshow", DefaultKeys = new List<Key> { Key.S } },
+            new() { FunctionId = FuncId.IncreaseSlideshowInterval.Value, ResourceKey = "String_Function_IncreaseSlideshowInterval", DefaultKeys = new List<Key> { Key.OemPlus, Key.Add } },
+            new() { FunctionId = FuncId.DecreaseSlideshowInterval.Value, ResourceKey = "String_Function_DecreaseSlideshowInterval", DefaultKeys = new List<Key> { Key.OemMinus, Key.Subtract } },
             new() { FunctionId = FuncId.CloseViewer.Value, ResourceKey = "String_Function_CloseViewer", DefaultKeys = new List<Key> { Key.Escape, Key.Return } },
             new() { FunctionId = FuncId.PreviousImage.Value, ResourceKey = "String_Function_PreviousImage", DefaultKeys = new List<Key> { Key.Left } },
             new() { FunctionId = FuncId.NextImage.Value, ResourceKey = "String_Function_NextImage", DefaultKeys = new List<Key> { Key.Right } },

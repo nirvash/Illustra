@@ -904,6 +904,7 @@ namespace Illustra.Views
                 {
                     ThumbnailItemsControl.SelectedItem = targetItem;
                     ThumbnailItemsControl.ScrollIntoView(targetItem);
+                    return;
                 }
             }
 
