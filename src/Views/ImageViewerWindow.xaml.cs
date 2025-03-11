@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Illustra.Helpers.Interfaces;
+using Illustra.Functions;
 
 namespace Illustra.Views
 {
@@ -294,58 +295,55 @@ namespace Illustra.Views
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+
             if (e.Key == Key.Tab)
             {
                 e.Handled = true; // `Tab` キーでのフォーカス移動を抑止
+                return;
             }
-            if (e.Key == Key.Enter || e.Key == Key.Escape)
+
+            // 各機能のショートカットをチェック
+            if (shortcutHandler.IsShortcutMatch(FuncId.CloseViewer, e.Key))
             {
-                // クローズ処理を共通メソッドに委託
                 CloseViewer();
+                e.Handled = true;
             }
-            else if (e.Key == Key.F11)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.ToggleFullScreen, e.Key))
             {
                 ToggleFullScreen();
+                e.Handled = true;
             }
-            else if (e.Key == Key.Left)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.PreviousImage, e.Key))
             {
                 NavigateToPreviousImage();
                 e.Handled = true;
             }
-            else if (e.Key == Key.Right)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.NextImage, e.Key))
             {
                 NavigateToNextImage();
                 e.Handled = true;
             }
-            else if (e.Key == Key.P)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.TogglePropertyPanel, e.Key))
             {
                 TogglePropertyPanel();
-            }
-            // レーティング設定のショートカットキー
-            else if (e.Key >= Key.D1 && e.Key <= Key.D5) // メインの数字キー
-            {
-                SetRating(e.Key - Key.D1 + 1);
                 e.Handled = true;
             }
-            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad5) // テンキー
-            {
-                SetRating(e.Key - Key.NumPad1 + 1);
-                e.Handled = true;
-            }
-            else if (e.Key == Key.D0 || e.Key == Key.NumPad0 || e.Key == Key.X) // レーティングをクリア
-            {
-                SetRating(0);
-                e.Handled = true;
-            }
-            else if (e.Key == Key.Z)
-            {
-                SetRating(5);
-                e.Handled = true;
-            }
-            else if (e.Key == Key.D)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.Delete, e.Key))
             {
                 DeleteCurrentImage();
                 e.Handled = true;
+            }
+
+            // レーティング設定
+            for (int i = 0; i <= 5; i++)
+            {
+                if (shortcutHandler.IsShortcutMatch(FuncId.Ratings[i], e.Key))
+                {
+                    SetRating(i);
+                    e.Handled = true;
+                    break;
+                }
             }
         }
 

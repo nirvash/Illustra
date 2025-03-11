@@ -6,70 +6,11 @@ using Illustra.ViewModels;
 using Illustra.Helpers;
 using System.Text.Json;
 using Illustra.Models;
+using Illustra.Functions;
 
 namespace Illustra
 {
-    namespace Functions
-    {
-        /// <summary>
-        /// 型安全なファンクションID
-        /// </summary>
-        public readonly struct FuncId : System.IEquatable<FuncId>
-        {
-            public string Value { get; }
-
-            public FuncId(string value) => Value = value;
-            public static readonly FuncId None = new FuncId(string.Empty);
-
-            // ナビゲーション
-            public static readonly FuncId NavigateUp = new FuncId("nav_up");
-            public static readonly FuncId NavigateDown = new FuncId("nav_down");
-            public static readonly FuncId NavigateLeft = new FuncId("nav_left");
-            public static readonly FuncId NavigateRight = new FuncId("nav_right");
-
-            // レーティング
-            public static readonly FuncId Rating0 = new FuncId("rating_0");
-            public static readonly FuncId Rating1 = new FuncId("rating_1");
-            public static readonly FuncId Rating2 = new FuncId("rating_2");
-            public static readonly FuncId Rating3 = new FuncId("rating_3");
-            public static readonly FuncId Rating4 = new FuncId("rating_4");
-            public static readonly FuncId Rating5 = new FuncId("rating_5");
-
-            // レーティングID一覧
-            public static readonly IReadOnlyDictionary<int, FuncId> Ratings = new Dictionary<int, FuncId>
-            {
-                { 0, Rating0 },
-                { 1, Rating1 },
-                { 2, Rating2 },
-                { 3, Rating3 },
-                { 4, Rating4 },
-                { 5, Rating5 }
-            };
-
-            // ファイル操作
-            public static readonly FuncId Delete = new FuncId("delete");
-
-            // 決定操作
-            public static readonly FuncId ToggleViewer = new FuncId("select");
-
-            // 選択操作
-            public static readonly FuncId SelectAll = new FuncId("select_all");
-
-            // リスト移動操作
-            public static readonly FuncId MoveToStart = new FuncId("move_to_start");
-            public static readonly FuncId MoveToEnd = new FuncId("move_to_end");
-
-            // 暗黙変換
-            public static implicit operator string(FuncId id) => id.Value;
-            public static explicit operator FuncId(string value) => new FuncId(value);
-
-            // Equals と HashCode
-            public bool Equals(FuncId other) => Value == other.Value;
-            public override bool Equals(object? obj) => obj is FuncId other && Equals(other);
-            public override int GetHashCode() => Value.GetHashCode();
-            public override string ToString() => Value;
-        }
-    }
+    using Illustra.Models;
 
     public class KeyboardShortcutHandler
     {

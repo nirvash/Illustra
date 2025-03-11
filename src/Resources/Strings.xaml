@@ -117,9 +117,16 @@
     <system:String x:Key="String_Function_Delete">Delete</system:String>
     <system:String x:Key="String_Function_ToggleViewer">Toggle Viewer</system:String>
     <system:String x:Key="String_Function_SelectAll">Select All</system:String>
+    <system:String x:Key="String_Function_MoveToStart">Move to Start</system:String>
+    <system:String x:Key="String_Function_MoveToEnd">Move to End</system:String>
+    <system:String x:Key="String_Function_ToggleFullScreen">Toggle Full Screen</system:String>
+    <system:String x:Key="String_Function_TogglePropertyPanel">Toggle Property Panel</system:String>
+    <system:String x:Key="String_Function_CloseViewer">Close Viewer</system:String>
+    <system:String x:Key="String_Function_PreviousImage">Previous Image</system:String>
+    <system:String x:Key="String_Function_NextImage">Next Image</system:String>
 
     <!-- Keyboard Shortcuts -->
-    <system:String x:Key="String_Settings_ResetConfirm">Are you sure you want to reset keyboard shortcuts to default?\nThis action cannot be undone.</system:String>
+    <system:String x:Key="String_Settings_ResetConfirm" xml:space="preserve">Are you sure you want to reset keyboard shortcuts to default?&#x0a;This action cannot be undone.</system:String>
     <system:String x:Key="String_Settings_ResetConfirmTitle">Reset to Default</system:String>
 
     <!-- About Dialog -->

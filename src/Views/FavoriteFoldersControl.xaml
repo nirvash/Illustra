@@ -49,6 +49,7 @@
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   IsTabStop="True"
                   TabIndex="1"
+                  VirtualizingPanel.ScrollUnit="Pixel"
                   dd:DragDrop.IsDragSource="True"
                   dd:DragDrop.IsDropTarget="True"
                   VirtualizingStackPanel.IsVirtualizing="True"

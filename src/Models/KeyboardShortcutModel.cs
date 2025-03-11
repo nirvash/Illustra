@@ -143,37 +143,57 @@ namespace Illustra.Models
         public static ObservableCollection<KeyboardShortcutModel> LoadShortcuts()
         {
             var settings = SettingsHelper.GetSettings();
-            if (string.IsNullOrEmpty(settings.KeyboardShortcuts))
-            {
-                return GetDefaultShortcuts();
-            }
+            var shortcuts = new ObservableCollection<KeyboardShortcutModel>();
 
-            try
+            // デフォルトのショートカット定義を保持
+            var defaultShortcuts = KeyboardShortcutDefinitions.AllShortcuts;
+
+            if (!string.IsNullOrEmpty(settings.KeyboardShortcuts))
             {
-                var serialized = JsonSerializer.Deserialize<List<KeyboardShortcutSetting>>(settings.KeyboardShortcuts);
-                if (serialized != null)
+                try
                 {
-                    var shortcuts = new ObservableCollection<KeyboardShortcutModel>();
-                    foreach (var s in serialized)
+                    var serialized = JsonSerializer.Deserialize<List<KeyboardShortcutSetting>>(settings.KeyboardShortcuts);
+                    if (serialized != null)
                     {
-                        if (!FuncIdMap.TryGetValue(s.FunctionId, out var funcId))
+                        // 保存されているショートカットを読み込む
+                        foreach (var s in serialized)
                         {
-                            funcId = FuncId.None;
+                            if (!FuncIdMap.TryGetValue(s.FunctionId, out var funcId))
+                            {
+                                funcId = FuncId.None;
+                            }
+
+                            var shortcut = new KeyboardShortcutModel(funcId)
+                            {
+                                Keys = new ObservableCollection<Key>(s.Keys),
+                                Modifiers = s.Modifiers ?? []
+                            };
+                            shortcuts.Add(shortcut);
                         }
 
-                        var shortcut = new KeyboardShortcutModel(funcId)
+                        // デフォルト定義にあって保存データにない機能を追加
+                        foreach (var def in defaultShortcuts)
                         {
-                            Keys = new ObservableCollection<Key>(s.Keys),
-                            Modifiers = s.Modifiers ?? []
-                        };
-                        shortcuts.Add(shortcut);
+                            if (!shortcuts.Any(s => s.FunctionId.Value == def.FunctionId))
+                            {
+                                if (FuncIdMap.TryGetValue(def.FunctionId, out var funcId))
+                                {
+                                    shortcuts.Add(new KeyboardShortcutModel(funcId)
+                                    {
+                                        Keys = new ObservableCollection<Key>(def.DefaultKeys),
+                                        Modifiers = def.DefaultModifiers ?? []
+                                    });
+                                }
+                            }
+                        }
+
+                        return shortcuts;
                     }
-                    return shortcuts;
                 }
-            }
-            catch
-            {
-                // デシリアライズに失敗した場合はデフォルト値を返す
+                catch
+                {
+                    // デシリアライズに失敗した場合はデフォルト値を返す
+                }
             }
 
             return GetDefaultShortcuts();

@@ -37,11 +37,6 @@
                         <GroupBox Header="{Binding DisplayName}"
                                   Margin="0,0,10,10">
                             <StackPanel Margin="5">
-                                <DockPanel>
-                                    <TextBlock Name="FunctionIdTextBlock"
-                                               Text="{Binding FunctionId, Converter={StaticResource FuncIdToStringConverter}}"
-                                               VerticalAlignment="Center"/>
-                                </DockPanel>
                                 <ItemsControl Name="KeysItemControl"
                                               ItemsSource="{Binding WrappedKeys}"
                                               Margin="0,10,0,0">

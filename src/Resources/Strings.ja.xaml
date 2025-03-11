@@ -110,6 +110,13 @@
     <system:String x:Key="String_Function_Delete">削除</system:String>
     <system:String x:Key="String_Function_ToggleViewer">単独表示切替</system:String>
     <system:String x:Key="String_Function_SelectAll">全選択</system:String>
+    <system:String x:Key="String_Function_MoveToStart">先頭へ移動</system:String>
+    <system:String x:Key="String_Function_MoveToEnd">末尾へ移動</system:String>
+    <system:String x:Key="String_Function_ToggleFullScreen">全画面表示切替</system:String>
+    <system:String x:Key="String_Function_TogglePropertyPanel">プロパティパネル表示切替</system:String>
+    <system:String x:Key="String_Function_CloseViewer">ビューワーを閉じる</system:String>
+    <system:String x:Key="String_Function_PreviousImage">前の画像</system:String>
+    <system:String x:Key="String_Function_NextImage">次の画像</system:String>
 
     <!-- Language Settings -->
     <system:String x:Key="String_Settings_Language_SavedTitle">設定の保存</system:String>
@@ -118,7 +125,7 @@
     <system:String x:Key="String_Settings_Error_SaveFailed">設定の保存中にエラーが発生しました: {0}</system:String>
 
     <!-- Keyboard Shortcuts -->
-    <system:String x:Key="String_Settings_ResetConfirm">キーボードショートカットの設定をデフォルトに戻しますか？\nこの操作は元に戻せません。</system:String>
+    <system:String x:Key="String_Settings_ResetConfirm" xml:space="preserve">キーボードショートカットの設定をデフォルトに戻しますか？&#x0a;この操作は元に戻せません。</system:String>
     <system:String x:Key="String_Settings_ResetConfirmTitle">デフォルト設定に戻す</system:String>
 
     <!-- About Dialog -->
