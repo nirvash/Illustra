@@ -1043,7 +1043,7 @@ namespace Illustra.Views
         }
 
 
-        // スライダーの値が変更されたときの処理
+        // スライダーの値が変更されたときの処理（表示の更新のみ）
         private void ThumbnailSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             // 初期化が完了していない場合は何もしない
@@ -1055,8 +1055,16 @@ namespace Illustra.Views
             // サイズ表示を更新（TextBlockがnullでないことを確認）
             if (ThumbnailSizeText != null)
                 ThumbnailSizeText.Text = newSize.ToString();
+        }
 
-            // サムネイルローダーにサイズを設定（nullチェック）
+        // スライダーのドラッグが完了したときの処理（サムネイルの再生成）
+        private void ThumbnailSizeSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            if (!_isInitialized) return;
+
+            int newSize = (int)ThumbnailSizeSlider.Value;
+
+            // サムネイルローダーにサイズを設定
             if (_thumbnailLoader != null)
             {
                 _thumbnailLoader.ThumbnailSize = newSize;
