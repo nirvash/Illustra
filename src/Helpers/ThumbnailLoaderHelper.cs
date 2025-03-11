@@ -183,10 +183,15 @@ public class ThumbnailLoaderHelper
             var scrollViewer = FindVisualChild<ScrollViewer>(_thumbnailListBox);
             if (scrollViewer != null)
             {
-                // 最初の画面に表示される項目のみロード（仮想化されている場合は20個程度）
-                var startIndex = 0;
-                var endIndex = Math.Min(20, filteredItems.Count() - 1);
+                // 最初の画面に表示される項目数を計算
+                var itemsPerRow = CalculateItemsPerRow(scrollViewer.ViewportWidth);
+                var visibleRows = (int)(scrollViewer.ViewportHeight / (_thumbnailSize + 4)); // マージンを考慮
+                var visibleItems = itemsPerRow * (visibleRows + 1); // 余裕を持って1行分多めにロード
 
+                var startIndex = 0;
+                var endIndex = Math.Min(visibleItems - 1, filteredItems.Count() - 1);
+
+                // Debug.WriteLine($"Initial load: {visibleItems} items ({itemsPerRow} per row, {visibleRows} rows)");
                 await LoadMoreThumbnailsAsync(startIndex, endIndex);
             }
         }
@@ -416,6 +421,12 @@ public class ThumbnailLoaderHelper
         renderTargetBitmap.Render(drawingVisual);
         renderTargetBitmap.Freeze();
         return renderTargetBitmap;
+    }
+
+    private int CalculateItemsPerRow(double viewportWidth)
+    {
+        // サムネイルサイズとマージンを考慮して1行あたりの表示可能数を計算
+        return Math.Max(1, (int)(viewportWidth / (_thumbnailSize + 4)));
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
