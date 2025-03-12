@@ -122,6 +122,12 @@
     <system:String x:Key="String_Function_Rating3">レーティング3</system:String>
     <system:String x:Key="String_Function_Rating4">レーティング4</system:String>
     <system:String x:Key="String_Function_Rating5">レーティング5</system:String>
+    <system:String x:Key="String_Function_FilterRating0">フィルター解除</system:String>
+    <system:String x:Key="String_Function_FilterRating1">★1でフィルター</system:String>
+    <system:String x:Key="String_Function_FilterRating2">★2でフィルター</system:String>
+    <system:String x:Key="String_Function_FilterRating3">★3でフィルター</system:String>
+    <system:String x:Key="String_Function_FilterRating4">★4でフィルター</system:String>
+    <system:String x:Key="String_Function_FilterRating5">★5でフィルター</system:String>
     <system:String x:Key="String_Function_Delete">削除</system:String>
     <system:String x:Key="String_Function_ToggleViewer">単独表示切替</system:String>
     <system:String x:Key="String_Function_SelectAll">全選択</system:String>

@@ -32,6 +32,14 @@ namespace Illustra.Functions
         public static readonly FuncId Rating4 = new FuncId("rating_4");
         public static readonly FuncId Rating5 = new FuncId("rating_5");
 
+        // レーティングフィルタ
+        public static readonly FuncId FilterRating0 = new FuncId("filter_rating_0");
+        public static readonly FuncId FilterRating1 = new FuncId("filter_rating_1");
+        public static readonly FuncId FilterRating2 = new FuncId("filter_rating_2");
+        public static readonly FuncId FilterRating3 = new FuncId("filter_rating_3");
+        public static readonly FuncId FilterRating4 = new FuncId("filter_rating_4");
+        public static readonly FuncId FilterRating5 = new FuncId("filter_rating_5");
+
         // レーティングID一覧
         public static readonly IReadOnlyDictionary<int, FuncId> Ratings = new Dictionary<int, FuncId>
         {
@@ -98,6 +106,14 @@ namespace Illustra.Models
             new() { FunctionId = FuncId.Rating4.Value, ResourceKey = "String_Function_Rating4", DefaultKeys = new List<Key> { Key.D4, Key.NumPad4 } },
             new() { FunctionId = FuncId.Rating5.Value, ResourceKey = "String_Function_Rating5", DefaultKeys = new List<Key> { Key.D5, Key.NumPad5, Key.Z } },
 
+            // レーティングフィルタ
+            new() { FunctionId = FuncId.FilterRating0.Value, ResourceKey = "String_Function_FilterRating0", DefaultKeys = new List<Key>() },
+            new() { FunctionId = FuncId.FilterRating1.Value, ResourceKey = "String_Function_FilterRating1", DefaultKeys = new List<Key>() },
+            new() { FunctionId = FuncId.FilterRating2.Value, ResourceKey = "String_Function_FilterRating2", DefaultKeys = new List<Key>() },
+            new() { FunctionId = FuncId.FilterRating3.Value, ResourceKey = "String_Function_FilterRating3", DefaultKeys = new List<Key>() },
+            new() { FunctionId = FuncId.FilterRating4.Value, ResourceKey = "String_Function_FilterRating4", DefaultKeys = new List<Key>() },
+            new() { FunctionId = FuncId.FilterRating5.Value, ResourceKey = "String_Function_FilterRating5", DefaultKeys = new List<Key>() },
+
             // ファイル操作
             new() { FunctionId = FuncId.Delete.Value, ResourceKey = "String_Function_Delete", DefaultKeys = new List<Key> { Key.Delete } },
 
@@ -107,7 +123,7 @@ namespace Illustra.Models
 
             // ビューワー操作
             new() { FunctionId = FuncId.ToggleFullScreen.Value, ResourceKey = "String_Function_ToggleFullScreen", DefaultKeys = new List<Key> { Key.F11 } },
-            new() { FunctionId = FuncId.TogglePropertyPanel.Value, ResourceKey = "String_Function_TogglePropertyPanel", DefaultKeys = new List<Key> { Key.Tab } },
+            new() { FunctionId = FuncId.TogglePropertyPanel.Value, ResourceKey = "String_Function_TogglePropertyPanel", DefaultKeys = new List<Key> { Key.P } },
             new() { FunctionId = FuncId.ToggleSlideshow.Value, ResourceKey = "String_Function_ToggleSlideshow", DefaultKeys = new List<Key> { Key.S } },
             new() { FunctionId = FuncId.IncreaseSlideshowInterval.Value, ResourceKey = "String_Function_IncreaseSlideshowInterval", DefaultKeys = new List<Key> { Key.OemPlus, Key.Add } },
             new() { FunctionId = FuncId.DecreaseSlideshowInterval.Value, ResourceKey = "String_Function_DecreaseSlideshowInterval", DefaultKeys = new List<Key> { Key.OemMinus, Key.Subtract } },

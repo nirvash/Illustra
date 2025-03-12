@@ -1053,14 +1053,25 @@ namespace Illustra.Views
         {
             for (int i = 1; i <= 5; i++)
             {
+                // レーティング設定
                 if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Ratings[i], e.Key))
                 {
                     SetRating(i);
                     e.Handled = true;
                     return true;
                 }
+
+                // レーティングフィルター
+                var filterId = new FuncId($"filter_rating_{i}");
+                if (KeyboardShortcutHandler.Instance.IsShortcutMatch(filterId, e.Key))
+                {
+                    ApplyFilterling(i);
+                    e.Handled = true;
+                    return true;
+                }
             }
 
+            // レーティング解除
             if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Rating0, e.Key))
             {
                 SetRating(0);
@@ -1068,9 +1079,18 @@ namespace Illustra.Views
                 return true;
             }
 
+            // レーティング5の代替キー
             if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.Rating5, e.Key))
             {
                 SetRating(5);
+                e.Handled = true;
+                return true;
+            }
+
+            // フィルター解除
+            if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.FilterRating0, e.Key))
+            {
+                ApplyFilterling(0);
                 e.Handled = true;
                 return true;
             }
@@ -1535,7 +1555,7 @@ namespace Illustra.Views
                 if (itemToSelect != null)
                 {
                     _viewModel.SelectedItems.Add(itemToSelect);
-                    await Dispatcher.InvokeAsync(() =>
+                    await Dispatcher.InvokeAsync(async () =>
                     {
                         ThumbnailItemsControl.ScrollIntoView(itemToSelect);
                         // ウィンドウがアクティブな場合のみフォーカス処理を実行
@@ -1543,6 +1563,13 @@ namespace Illustra.Views
                         {
                             var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(itemToSelect) as ListViewItem;
                             container?.Focus();
+                        }
+
+                        // サムネイルの再生成
+                        var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                        if (scrollViewer != null)
+                        {
+                            await LoadVisibleThumbnailsAsync(scrollViewer);
                         }
                     });
                 }
