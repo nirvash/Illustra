@@ -8,7 +8,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 
 ### スクリーンショット
 
-![Screenshot](docs/screenshot.png)
+![Screenshot](docs/screenshot.jpg)
 
 ### 主な機能
 
@@ -104,7 +104,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 
 ### Screenshot
 
-![Screenshot](docs/screenshot.png)
+![Screenshot](docs/screenshot.jpg)
 
 ### Key Features
 
