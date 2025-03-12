@@ -69,6 +69,16 @@ namespace Illustra.Helpers
         // 画像生成設定
         public string ImageGenerationServerUrl { get; set; } = "http://127.0.0.1:7860/";
         public string ImageGenerationReforgePath { get; set; } = string.Empty;
+
+        // 起動時フォルダ設定
+        public enum StartupFolderMode
+        {
+            None,           // フォルダを開かない
+            LastOpened,     // 前回開いたフォルダ
+            Specified      // 指定したフォルダ
+        }
+        public StartupFolderMode StartupMode { get; set; } = StartupFolderMode.LastOpened;
+        public string StartupFolderPath { get; set; } = string.Empty;
     }
 
     public static class SettingsHelper

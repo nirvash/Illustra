@@ -66,7 +66,24 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
 
             _appSettings = SettingsHelper.GetSettings();
-            string? folderPath = _appSettings.LastFolderPath;
+            string? folderPath = null;
+
+            // 起動時フォルダ設定に応じてパスを設定
+            switch (_appSettings.StartupMode)
+            {
+                case AppSettings.StartupFolderMode.LastOpened:
+                    folderPath = _appSettings.LastFolderPath;
+                    break;
+                case AppSettings.StartupFolderMode.Specified:
+                    folderPath = _appSettings.StartupFolderPath;
+                    break;
+                case AppSettings.StartupFolderMode.None:
+                default:
+                    folderPath = null;
+                    break;
+            }
+
+            // パスの存在確認
             if (!string.IsNullOrEmpty(folderPath) && !Directory.Exists(folderPath))
             {
                 folderPath = null;

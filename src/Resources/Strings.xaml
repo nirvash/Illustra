@@ -55,6 +55,13 @@
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
+
+    <!-- Startup Settings -->
+    <system:String x:Key="String_Settings_Startup_Section">Startup</system:String>
+    <system:String x:Key="String_Settings_Startup_None">Don't open any folder</system:String>
+    <system:String x:Key="String_Settings_Startup_LastOpened">Open last used folder</system:String>
+    <system:String x:Key="String_Settings_Startup_Specified">Open specified folder:</system:String>
+    <system:String x:Key="String_Settings_Startup_Browse">Browse...</system:String>
     <system:String x:Key="String_Settings_Language_Title">Language Settings</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">Main Key:</system:String>

@@ -54,6 +54,13 @@
     <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
     <system:String x:Key="String_Settings_Developer_Section">開発者オプション</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
+
+    <!-- Startup Settings -->
+    <system:String x:Key="String_Settings_Startup_Section">スタートアップ</system:String>
+    <system:String x:Key="String_Settings_Startup_None">フォルダを開かない</system:String>
+    <system:String x:Key="String_Settings_Startup_LastOpened">前回開いたフォルダを開く</system:String>
+    <system:String x:Key="String_Settings_Startup_Specified">指定したフォルダを開く：</system:String>
+    <system:String x:Key="String_Settings_Startup_Browse">参照...</system:String>
     <system:String x:Key="String_Settings_Language_Title">言語設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">キーボードショートカット設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">メインキー:</system:String>
