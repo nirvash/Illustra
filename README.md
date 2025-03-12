@@ -19,7 +19,6 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - ⌨️ キーボードによる快適な操作
 - 🔄 スムーズな画像切り替え
 - ⭐ 画像レーティングシステム（1-5 星）とフィルタリング機能
-- 🔍 レーティングによる画像検索
 - 🔄 日付/ファイル名によるソート機能
 - 🎯 設定の永続化対応
 - 📝 Stable Diffusion のプロンプト表示対応
@@ -116,7 +115,6 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - ⌨️ Comfortable keyboard operation
 - 🔄 Smooth image switching
 - ⭐ Image rating system (1-5 stars) with filtering capabilities
-- 🔍 Image search by rating
 - 🔄 Sorting by date or filename
 - 🎯 Persistent settings support
 - 📝 Stable Diffusion prompt display support
