@@ -54,21 +54,49 @@ jobs:
           cd publish
           7z a -tzip "../Illustra-${GITHUB_REF_NAME}.zip" *
 
-      - name: Read Release Notes
+      - name: Generate Release Notes
         id: read_release_notes
         shell: bash
         run: |
-          if [ -f ".github/workflows/summary.txt" ]; then
-            notes=$(cat .github/workflows/summary.txt | tr -d '\r') # Windowsの改行コード対策
-            if [ -z "$notes" ]; then
-              notes="- メンテナンスの改善とバグ修正"
-            fi
+          # 最新のタグを取得（現在のタグ）
+          current_tag=${GITHUB_REF_NAME}
+
+          # 1つ前のタグを取得
+          previous_tag=$(git describe --tags --abbrev=0 ${current_tag}^ 2>/dev/null || echo "")
+
+          if [ -z "$previous_tag" ]; then
+            # 前回のタグがない場合は、全てのコミットを対象とする
+            commits=$(git log --pretty=format:"- %s" --reverse)
           else
-            notes="- メンテナンスの改善とバグ修正\n- アプリケーションのパフォーマンス向上"
+            # 前回のタグから現在のタグまでのコミットを取得
+            commits=$(git log --pretty=format:"- %s" --reverse ${previous_tag}..${current_tag})
           fi
+
+          # コミットメッセージをカテゴリごとに整理
+          features=$(echo "$commits" | grep -i "^- feat:" || echo "")
+          fixes=$(echo "$commits" | grep -i "^- fix:" || echo "")
+          other=$(echo "$commits" | grep -v "^- feat:" | grep -v "^- fix:" || echo "")
+
+          # 出力を整形
+          output=""
+          if [ ! -z "$features" ]; then
+            output+="✨ 新機能:\n$features\n\n"
+          fi
+          if [ ! -z "$fixes" ]; then
+            output+="🐛 バグ修正:\n$fixes\n\n"
+          fi
+          if [ ! -z "$other" ]; then
+            output+="🔧 その他の変更:\n$other\n"
+          fi
+
+          # 出力が空の場合のデフォルトメッセージ
+          if [ -z "$output" ]; then
+            output="- メンテナンスの改善とバグ修正"
+          fi
+
           # 複数行出力をEOFで設定
           echo "summary<<EOF" >> "$GITHUB_OUTPUT"
-          echo -e "$notes" >> "$GITHUB_OUTPUT"
+          echo -e "$output" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Get Known Issues
