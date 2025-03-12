@@ -51,6 +51,14 @@ namespace Illustra.Views
             DataContext = ImageProperties;
 
             Loaded += PropertyPanelControl_Loaded;
+            PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
+        }
+
+        private void PropertyPanelControl_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // プロパティパネル上でのダブルクリックイベントを処理済みとしてマークし、
+            // 親コントロールへの伝播を停止
+            e.Handled = true;
         }
 
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)

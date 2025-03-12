@@ -100,57 +100,76 @@ namespace StableDiffusionTools
                     }
                 }
 
+                // パラメータ行のインデックスを見つける
+                int parametersIndex = -1;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var line = lines[i].Trim();
+                    if (line.StartsWith("Steps:", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase) ||
+                        (line.Contains(",") && line.Contains(":") &&
+                         (line.Contains("Sampler:") || line.Contains("CFG scale:"))))
+                    {
+                        parametersIndex = i;
+                        break;
+                    }
+                }
+
                 // プロンプトの解析
                 try
                 {
-                    // Negative promptより前の行を取得（プロンプトとタグ情報）
-                    if (negativePromptIndex > 0)
+                    // プロンプト部分を取得（パラメータ行またはNegative Promptまで）
+                    var endIndex = parametersIndex != -1 ? parametersIndex :
+                                 negativePromptIndex != -1 ? negativePromptIndex :
+                                 lines.Length;
+
+                    var promptBuilder = new StringBuilder();
+                    for (int i = 0; i < endIndex; i++)
                     {
-                        var promptBuilder = new StringBuilder();
-                        for (int i = 0; i < negativePromptIndex; i++)
-                        {
-                            try
-                            {
-                                promptBuilder.AppendLine(lines[i]);
-                            }
-                            catch (Exception)
-                            {
-                                // 個別の行の追加でエラーが発生しても続行
-                                continue;
-                            }
-                        }
-
-                        // プロンプト全体を保存
-                        result.Prompt = promptBuilder.ToString().Trim();
-
                         try
                         {
-                            // LoRAタグを正規表現で抽出
-                            var loraRegex = new Regex(@"<lora:[^>]+>");
-                            var loraMatches = loraRegex.Matches(result.Prompt);
-                            foreach (Match match in loraMatches)
+                            var line = lines[i].Trim();
+                            if (!string.IsNullOrWhiteSpace(line))
                             {
-                                if (!string.IsNullOrWhiteSpace(match.Value))
-                                {
-                                    result.Loras.Add(match.Value);
-                                }
+                                promptBuilder.AppendLine(line);
                             }
-
-                            // LoRAタグを除いたテキストからタグを抽出
-                            string textWithoutLoras = loraRegex.Replace(result.Prompt, "");
-                            var tags = textWithoutLoras.Split(',')
-                                .Select(tag => tag.Trim())
-                                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                                .ToList();
-
-                            result.Tags = tags;
                         }
                         catch (Exception)
                         {
-                            // タグ抽出に失敗した場合は空のリストを維持
-                            result.Tags = new List<string>();
-                            result.Loras = new List<string>();
+                            continue;
                         }
+                    }
+
+                    // プロンプト全体を保存
+                    result.Prompt = promptBuilder.ToString().Trim();
+
+                    try
+                    {
+                        // LoRAタグを正規表現で抽出
+                        var loraRegex = new Regex(@"<lora:[^>]+>");
+                        var loraMatches = loraRegex.Matches(result.Prompt);
+                        foreach (Match match in loraMatches)
+                        {
+                            if (!string.IsNullOrWhiteSpace(match.Value))
+                            {
+                                result.Loras.Add(match.Value);
+                            }
+                        }
+
+                        // LoRAタグを除いたテキストからタグを抽出
+                        string textWithoutLoras = loraRegex.Replace(result.Prompt, "");
+                        var tags = textWithoutLoras.Split(',')
+                            .Select(tag => tag.Trim())
+                            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                            .ToList();
+
+                        result.Tags = tags;
+                    }
+                    catch (Exception)
+                    {
+                        // タグ抽出に失敗した場合は空のリストを維持
+                        result.Tags = new List<string>();
+                        result.Loras = new List<string>();
                     }
                 }
                 catch (Exception)
@@ -169,27 +188,32 @@ namespace StableDiffusionTools
                         // "Negative prompt:" の部分を削除
                         string negativePromptText = negativePromptLine.Replace("Negative prompt:", "").Trim();
 
-                        // Negative promptの次の行がモデル情報などを含む行かチェック
-                        int nextLineIndex = negativePromptIndex + 1;
-                        bool isNextLineParameter = nextLineIndex < lines.Length &&
-                                                (lines[nextLineIndex].Contains(":") &&
-                                                !lines[nextLineIndex].StartsWith("Negative prompt:", StringComparison.OrdinalIgnoreCase));
+                        // Negative Promptからパラメータ行までを取得
+                        var negativeBuilder = new StringBuilder(negativePromptText);
+                        int currentIndex = negativePromptIndex + 1;
 
-                        // Negative prompt全体を取得
-                        string fullNegativePrompt = negativePromptText;
-
-                        // もし次の行がパラメータ行でない場合は、Negative promptの一部と見なす
-                        if (!isNextLineParameter && nextLineIndex < lines.Length)
+                        while (currentIndex < lines.Length)
                         {
-                            try
+                            var line = lines[currentIndex].Trim();
+
+                            // パラメータ行かどうかをチェック
+                            if (line.StartsWith("Steps:", StringComparison.OrdinalIgnoreCase) ||
+                                line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase) ||
+                                (line.Contains(",") && line.Contains(":") &&
+                                 (line.Contains("Sampler:") || line.Contains("CFG scale:"))))
                             {
-                                fullNegativePrompt += Environment.NewLine + lines[nextLineIndex];
+                                break;
                             }
-                            catch (Exception)
+
+                            if (!string.IsNullOrWhiteSpace(line))
                             {
-                                // 次の行の追加に失敗した場合は無視
+                                negativeBuilder.AppendLine();
+                                negativeBuilder.Append(line);
                             }
+                            currentIndex++;
                         }
+
+                        string fullNegativePrompt = negativeBuilder.ToString().Trim();
 
                         result.NegativePrompt = fullNegativePrompt;
 
@@ -222,17 +246,26 @@ namespace StableDiffusionTools
                     {
                         try
                         {
-                            if (line.Contains("Model:"))
+                            if (line.Contains("Model:", StringComparison.OrdinalIgnoreCase))
                             {
-                                var match = Regex.Match(line, @"Model:\s*([^,]+)");
+                                var match = Regex.Match(line, @"Model:\s*([^,]+)", RegexOptions.IgnoreCase);
                                 if (match.Success && match.Groups.Count > 1)
                                 {
                                     result.Model = match.Groups[1].Value.Trim();
                                 }
+                                else
+                                {
+                                    // より緩やかなパターンでマッチを試みる
+                                    match = Regex.Match(line, @"Model:\s*(.+)", RegexOptions.IgnoreCase);
+                                    if (match.Success && match.Groups.Count > 1)
+                                    {
+                                        result.Model = match.Groups[1].Value.Trim();
+                                    }
+                                }
                             }
-                            else if (line.Contains("Model hash:"))
+                            else if (line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
                             {
-                                var match = Regex.Match(line, @"Model hash:\s*([^,]+)");
+                                var match = Regex.Match(line, @"Model hash:\s*(.+)", RegexOptions.IgnoreCase);
                                 if (match.Success && match.Groups.Count > 1)
                                 {
                                     result.ModelHash = match.Groups[1].Value.Trim();

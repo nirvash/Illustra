@@ -16,8 +16,7 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         PreviewMouseDown="Window_PreviewMouseDown"
         MouseDoubleClick="Window_MouseDoubleClick"
-        MouseMove="Window_MouseMove"
-        PreviewMouseWheel="Window_PreviewMouseWheel">
+        MouseMove="Window_MouseMove">
 
     <Window.Resources>
         <helpers:RatingToColorConverter x:Key="RatingToColorConverter"/>
@@ -48,7 +47,8 @@
             <Image x:Name="MainImage"
                    Source="{Binding ImageSource}"
                    Stretch="Uniform"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                   RenderOptions.BitmapScalingMode="HighQuality"
+                   PreviewMouseWheel="MainImage_PreviewMouseWheel"/>
         </Grid>
 
         <!-- レーティング表示（全体の右上に配置） -->

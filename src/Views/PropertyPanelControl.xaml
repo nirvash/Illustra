@@ -6,7 +6,8 @@
              xmlns:local="clr-namespace:Illustra.Views"
              xmlns:controls="clr-namespace:Illustra.Controls"
              xmlns:helpers="clr-namespace:Illustra.Helpers"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             MaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Window}}">
     <UserControl.Resources>
         <helpers:DateTimeToVisibilityConverter x:Key="DateTimeToVisibilityConverter"/>
         <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
@@ -89,9 +90,13 @@
                     Value="0,0,0,5"/>
         </Style>
     </UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="PropertiesScrollViewer"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Disabled"
+                 CanContentScroll="False"
+                 PanningMode="VerticalOnly">
         <Grid x:Name="PropertiesGrid"
-              Margin="10">
+              Margin="10,10,5,10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>

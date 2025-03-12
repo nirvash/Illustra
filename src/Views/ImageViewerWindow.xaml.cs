@@ -762,7 +762,7 @@ namespace Illustra.Views
             Parent?.FocusSelectedThumbnail();
         }
 
-        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        private void MainImage_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (e.Delta > 0)
             {

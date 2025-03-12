@@ -529,6 +529,18 @@ namespace Illustra.Models
         {
             try
             {
+                // PNGファイルの場合は、Parametersチャンクを確認
+                if (Path.GetExtension(filePath).Equals(".png", StringComparison.OrdinalIgnoreCase))
+                {
+                    var pngParameters = PngMetadataReader.ReadTextChunk(filePath, "parameters");
+                    if (!string.IsNullOrEmpty(pngParameters))
+                    {
+                        properties.UserComment = pngParameters;
+                        return; // PNG形式でプロンプト情報が見つかった場合は、Exif情報は不要
+                    }
+                }
+
+                // Exif情報を読み取る
                 var directories = ImageMetadataReader.ReadMetadata(filePath);
                 var exif = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
                 var exifIfd0 = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
