@@ -362,6 +362,16 @@ namespace Illustra.Views
                 DeleteCurrentImage();
                 e.Handled = true;
             }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToStart, e.Key))
+            {
+                NavigateToFirstImage();
+                e.Handled = true;
+            }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToEnd, e.Key))
+            {
+                NavigateToLastImage();
+                e.Handled = true;
+            }
 
             // レーティング設定
             for (int i = 0; i <= 5; i++)
@@ -864,6 +874,40 @@ namespace Illustra.Views
                     "エラー",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        // 先頭の画像に移動
+        private void NavigateToFirstImage()
+        {
+            if (Parent == null) return;
+
+            var viewModel = Parent.GetViewModel();
+            if (viewModel != null)
+            {
+                var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                if (files.Any())
+                {
+                    // 先頭の画像に切り替え
+                    SwitchToImage(files.First().FullPath);
+                }
+            }
+        }
+
+        // 末尾の画像に移動
+        private void NavigateToLastImage()
+        {
+            if (Parent == null) return;
+
+            var viewModel = Parent.GetViewModel();
+            if (viewModel != null)
+            {
+                var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                if (files.Any())
+                {
+                    // 末尾の画像に切り替え
+                    SwitchToImage(files.Last().FullPath);
+                }
             }
         }
 
