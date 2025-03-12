@@ -75,6 +75,7 @@
                         TickFrequency="20"
                         IsSnapToTickEnabled="True"
                         VerticalAlignment="Center"
+                        Focusable="False"
                         ValueChanged="ThumbnailSizeSlider_ValueChanged"
                         Thumb.DragCompleted="ThumbnailSizeSlider_DragCompleted"/>
             </StackPanel>

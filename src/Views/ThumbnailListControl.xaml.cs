@@ -268,12 +268,20 @@ namespace Illustra.Views
             SelectThumbnail(filePath);
 
             // UIスレッドで実行することを確保
-            Dispatcher.InvokeAsync(() =>
+            Dispatcher.InvokeAsync(async () =>
             {
                 // 選択したアイテムをビューに表示
                 if (_viewModel.SelectedItems.Any())
                 {
-                    ThumbnailItemsControl.ScrollIntoView(_viewModel.SelectedItems.First());
+                    var selectedItem = _viewModel.SelectedItems.First();
+                    ThumbnailItemsControl.ScrollIntoView(selectedItem);
+
+                    // レイアウトの更新を待機
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                    // コンテナを取得して画面内に表示
+                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                    container?.BringIntoView();
                 }
             }, DispatcherPriority.Render);
         }
@@ -1071,6 +1079,40 @@ namespace Illustra.Views
 
 
         // スライダーの値が変更されたときの処理（表示の更新のみ）
+        /// <summary>
+        /// 選択中のサムネイルを画面内に表示します
+        /// </summary>
+        private async Task EnsureSelectedThumbnailVisibleAsync()
+        {
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null && _viewModel.SelectedItems.Any())
+            {
+                var selectedItem = _viewModel.SelectedItems.First();
+
+                // レイアウトの更新を待機（複数回待機して確実に完了を待つ）
+                for (int i = 0; i < 3; i++)
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                }
+
+                // 選択中のアイテムを画面内に表示
+                ThumbnailItemsControl.ScrollIntoView(selectedItem);
+
+                // レイアウトの更新を待機（複数回待機して確実に完了を待つ）
+                for (int i = 0; i < 3; i++)
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                }
+
+                // コンテナを取得して画面内に表示
+                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                container?.BringIntoView();
+
+                // 最終的なレイアウトの更新を待機
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            }
+        }
+
         private void ThumbnailSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             // 初期化が完了していない場合は何もしない
@@ -1082,6 +1124,12 @@ namespace Illustra.Views
             // サイズ表示を更新（TextBlockがnullでないことを確認）
             if (ThumbnailSizeText != null)
                 ThumbnailSizeText.Text = newSize.ToString();
+
+            // 選択中のサムネイルを画面内に表示
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                await EnsureSelectedThumbnailVisibleAsync();
+            }, DispatcherPriority.Render);
         }
 
         // スライダーのドラッグが完了したときの処理（サムネイルの再生成）
@@ -1110,6 +1158,7 @@ namespace Illustra.Views
                     // 現在表示されているサムネイルを再ロード
                     Dispatcher.InvokeAsync(async () =>
                     {
+                        await EnsureSelectedThumbnailVisibleAsync();
                         await LoadVisibleThumbnailsAsync(scrollViewer);
                     }, DispatcherPriority.Background);
                 }
@@ -1623,6 +1672,12 @@ namespace Illustra.Views
 
                 // 表示範囲のサムネイルを再ロード
                 await LoadVisibleThumbnailsAsync(scrollViewer);
+
+                // 選択中のサムネイルを画面内に表示
+                _ = Dispatcher.InvokeAsync(async () =>
+                {
+                    await EnsureSelectedThumbnailVisibleAsync();
+                }, DispatcherPriority.Render);
             }
             catch (Exception ex)
             {
