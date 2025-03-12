@@ -151,6 +151,7 @@
 
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">Ready</system:String>
+    <system:String x:Key="String_Status_FileDeleted">🗑️ File deleted</system:String>
     <system:String x:Key="String_Status_Loading">Loading...</system:String>
     <system:String x:Key="String_Status_ItemsSelected">{0} items selected</system:String>
     <system:String x:Key="String_Status_Error">Error: {0}</system:String>

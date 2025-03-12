@@ -135,22 +135,26 @@
                 Margin="10"
                 Click="FullScreenButton_Click"/>
 
-        <!-- スライドショー状態通知オーバーレイ -->
-        <Border x:Name="SlideshowNotification"
+        <!-- 状態通知オーバーレイ -->
+        <Border x:Name="Notification"
                 Grid.ColumnSpan="3"
-                Width="150" Height="100"
+                MinWidth="150" Height="100"
+                MaxWidth="400"
                 Background="#80000000"
                 CornerRadius="10"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Opacity="0">
+                Opacity="0"
+                Padding="16,8">
             <Grid>
-                <TextBlock x:Name="SlideshowIcon"
+                <TextBlock x:Name="NotificationText"
                           Text="▶"
                           FontSize="48"
                           Foreground="White"
                           HorizontalAlignment="Center"
-                          VerticalAlignment="Center"/>
+                          VerticalAlignment="Center"
+                          MaxWidth="380"
+                          TextWrapping="Wrap"/>
             </Grid>
         </Border>
     </Grid>

@@ -402,11 +402,12 @@ namespace Illustra.Views
             }
         }
 
-        private void ShowSlideshowNotification(string message)
+        private void ShowNotification(string message, int fontSize = 24)
         {
-            SlideshowIcon.Text = message;
+            NotificationText.Text = message;
+            NotificationText.FontSize = fontSize;
             var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
-            storyboard.Begin(SlideshowNotification);
+            storyboard.Begin(Notification);
         }
 
         private void AdjustSlideshowInterval(double adjustment)
@@ -422,9 +423,9 @@ namespace Illustra.Views
             _slideshowTimer.Interval = TimeSpan.FromSeconds(newInterval);
 
             // 通知を表示
-            ShowSlideshowNotification(string.Format(
+            ShowNotification(string.Format(
                 (string)FindResource("String_Slideshow_IntervalFormat"),
-                newInterval));
+                newInterval), 32);
         }
 
         private void ToggleSlideshow()
@@ -433,13 +434,13 @@ namespace Illustra.Views
             {
                 _slideshowTimer.Stop();
                 _isSlideshowActive = false;
-                ShowSlideshowNotification((string)FindResource("String_Slideshow_PauseIcon"));
+                ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
             }
             else
             {
                 _slideshowTimer.Start();
                 _isSlideshowActive = true;
-                ShowSlideshowNotification((string)FindResource("String_Slideshow_PlayIcon"));
+                ShowNotification((string)FindResource("String_Slideshow_PlayIcon"), 48);
             }
         }
 
@@ -524,7 +525,7 @@ namespace Illustra.Views
                 // 次の画像がない場合はスライドショーを停止
                 _slideshowTimer.Stop();
                 _isSlideshowActive = false;
-                ShowSlideshowNotification((string)FindResource("String_Slideshow_PauseIcon"));
+                ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
             }
         }
 
@@ -832,6 +833,9 @@ namespace Illustra.Views
 
                 // ファイルを削除
                 await fileOp.DeleteFile(_currentFilePath);
+
+                // 削除通知を表示
+                ShowNotification((string)FindResource("String_Status_FileDeleted"), 24);
 
                 // 親のViewModelから削除
                 var viewModel = Parent?.GetViewModel();
