@@ -36,7 +36,6 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: ${{ github.workspace }}/src/GitVersion.yml
-          additionalArguments: '/showconfig'
 
       - name: Display GitVersion outputs
         run: |

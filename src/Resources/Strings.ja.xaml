@@ -6,6 +6,9 @@
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>
     <system:String x:Key="String_Common_Cancel">キャンセル</system:String>
+    <system:String x:Key="String_Common_Copy">コピー</system:String>
+    <system:String x:Key="String_Common_Information">情報</system:String>
+    <system:String x:Key="String_Common_CopyCompleted">バージョン情報をクリップボードにコピーしました。</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">ファイル</system:String>

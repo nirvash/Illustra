@@ -203,15 +203,19 @@ namespace Illustra.Views
             var productVersion = "";
             try
             {
-                productVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly()?.Location)?.ProductVersion;
+                string path = Environment.GetCommandLineArgs()[0];
+                var ver = FileVersionInfo.GetVersionInfo(path);
+                productVersion = ver.ProductVersion;
             }
             catch
             {
                 productVersion = versionString;
             }
             var versionInfo = $"{(string)FindResource("String_About_Version")} \n{versionString}\n\n{(string)FindResource("String_About_ProductVersion")} \n{productVersion}";
-            Clipboard.SetText(versionInfo);
-            MessageBox.Show(versionInfo, (string)FindResource("String_About_Title"), MessageBoxButton.OK, MessageBoxImage.Information);
+
+            var dialog = new VersionInfoDialog(versionInfo);
+            dialog.Owner = this;
+            dialog.ShowDialog();
         }
 
         /// <summary>

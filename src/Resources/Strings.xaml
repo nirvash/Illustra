@@ -7,6 +7,9 @@
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
+    <system:String x:Key="String_Common_Copy">Copy</system:String>
+    <system:String x:Key="String_Common_Information">Information</system:String>
+    <system:String x:Key="String_Common_CopyCompleted">The version information has been copied to the clipboard.</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">File</system:String>
