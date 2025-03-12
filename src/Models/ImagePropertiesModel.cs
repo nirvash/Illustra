@@ -543,24 +543,38 @@ namespace Illustra.Models
                     properties.DateTaken = dateTime;
 
                     // ISO感度
-                    exif.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out int iso);
-                    properties.ISOSpeed = $"ISO {iso}";
+                    if (exif.TryGetInt32(ExifDirectoryBase.TagIsoEquivalent, out int iso) && iso > 0)
+                    {
+                        properties.ISOSpeed = $"ISO {iso}";
+                    }
 
                     // 露出時間
-                    exif.TryGetRational(ExifDirectoryBase.TagExposureTime, out Rational exposure);
-                    // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
-                    if (exposure.ToDouble() >= 1.0)
+                    if (exif.TryGetRational(ExifDirectoryBase.TagExposureTime, out Rational exposure))
                     {
-                        properties.ExposureTime = $"{exposure.ToDouble():0.#}秒";
-                    }
-                    else
-                    {
-                        properties.ExposureTime = $"1/{(1.0 / exposure.ToDouble()):0}秒";
+                        double exposureValue = exposure.ToDouble();
+                        if (exposureValue > 0 && !double.IsInfinity(exposureValue))
+                        {
+                            // 1秒以上の場合は小数点形式、1秒未満の場合は分数形式で表示
+                            if (exposureValue >= 1.0)
+                            {
+                                properties.ExposureTime = $"{exposureValue:0.#}秒";
+                            }
+                            else
+                            {
+                                properties.ExposureTime = $"1/{(1.0 / exposureValue):0}秒";
+                            }
+                        }
                     }
 
                     // F値
-                    exif.TryGetRational(ExifDirectoryBase.TagFNumber, out Rational fNumber);
-                    properties.FNumber = $"F{fNumber.ToDouble():0.#}";
+                    if (exif.TryGetRational(ExifDirectoryBase.TagFNumber, out Rational fNumber))
+                    {
+                        double fValue = fNumber.ToDouble();
+                        if (fValue > 0 && !double.IsInfinity(fValue))
+                        {
+                            properties.FNumber = $"F{fValue:0.#}";
+                        }
+                    }
                 }
 
                 if (exifIfd0 != null)
