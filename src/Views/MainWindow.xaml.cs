@@ -127,6 +127,12 @@ namespace Illustra.Views
             PropertyPanel.ImageProperties = null;
         }
 
+        public void UpdateToolsMenuVisibility()
+        {
+            var settings = SettingsHelper.GetSettings();
+            ToolsMenu.Visibility = settings.DeveloperMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // スプリッター位置の復元はUIスレッドで行う
@@ -134,6 +140,9 @@ namespace Illustra.Views
 
             // UIスレッドで設定を適用
             ApplySettings();
+
+            // ツールメニューの表示/非表示を設定
+            UpdateToolsMenuVisibility();
 
             // 非同期処理が必要な他の初期化はここで行う
             await Task.Run(() =>

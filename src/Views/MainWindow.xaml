@@ -61,6 +61,12 @@
                           IsCheckable="True"
                           Click="ToggleCyclicNavigation_Click"/>
             </MenuItem>
+            <MenuItem Header="{DynamicResource String_Menu_Tools}"
+                      x:Name="ToolsMenu"
+                      Visibility="Collapsed">
+                <MenuItem Header="{DynamicResource String_Menu_Tools_ImageGeneration}"
+                          Command="{Binding OpenImageGenerationWindowCommand}"/>
+            </MenuItem>
         </Menu>
 
         <!-- メインコンテンツ -->

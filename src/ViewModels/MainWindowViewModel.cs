@@ -18,12 +18,14 @@ namespace Illustra.ViewModels
         public DelegateCommand OpenLanguageSettingsCommand { get; }
         public DelegateCommand OpenShortcutSettingsCommand { get; }
         public DelegateCommand OpenAdvancedSettingsCommand { get; }
+        public DelegateCommand OpenImageGenerationWindowCommand { get; }
 
         public MainWindowViewModel()
         {
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
             OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
             OpenAdvancedSettingsCommand = new DelegateCommand(ExecuteOpenAdvancedSettings);
+            OpenImageGenerationWindowCommand = new DelegateCommand(ExecuteOpenImageGenerationWindow);
 
             // ステータスメッセージの初期化
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
@@ -60,6 +62,16 @@ namespace Illustra.ViewModels
             };
             advancedSettingsWindow.ShowDialog();
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
+        }
+
+        private void ExecuteOpenImageGenerationWindow()
+        {
+            // 画像生成画面をモードレスダイアログとして表示
+            var imageGenerationWindow = new ImageGenerationWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            imageGenerationWindow.Show();
         }
     }
 }

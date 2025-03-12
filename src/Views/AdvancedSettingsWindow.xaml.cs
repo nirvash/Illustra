@@ -21,6 +21,20 @@ namespace Illustra.Views
             }
         }
 
+        private bool _developerMode;
+        public bool DeveloperMode
+        {
+            get => _developerMode;
+            set
+            {
+                if (_developerMode != value)
+                {
+                    _developerMode = value;
+                    OnPropertyChanged(nameof(DeveloperMode));
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
         {
@@ -33,8 +47,9 @@ namespace Illustra.Views
             DataContext = this;
 
             // 現在の設定を読み込む
-            var settings = ViewerSettingsHelper.LoadSettings();
-            SlideshowInterval = settings.SlideshowIntervalSeconds;
+            var settings = SettingsHelper.GetSettings();
+            DeveloperMode = settings.DeveloperMode;
+            SlideshowInterval = ViewerSettingsHelper.LoadSettings().SlideshowIntervalSeconds;
         }
 
         private void OKButton_Click(object sender, RoutedEventArgs e)
@@ -53,9 +68,19 @@ namespace Illustra.Views
                 }
 
                 // 設定を保存
-                var settings = ViewerSettingsHelper.LoadSettings();
-                settings.SlideshowIntervalSeconds = SlideshowInterval;
-                ViewerSettingsHelper.SaveSettings(settings);
+                var viewerSettings = ViewerSettingsHelper.LoadSettings();
+                viewerSettings.SlideshowIntervalSeconds = SlideshowInterval;
+                ViewerSettingsHelper.SaveSettings(viewerSettings);
+
+                var settings = SettingsHelper.GetSettings();
+                settings.DeveloperMode = DeveloperMode;
+                SettingsHelper.SaveSettings(settings);
+
+                // メインウィンドウのメニュー表示を更新
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.UpdateToolsMenuVisibility();
+                }
 
                 DialogResult = true;
                 Close();

@@ -16,7 +16,15 @@
     <system:String x:Key="String_Menu_Edit">Edit</system:String>
     <system:String x:Key="String_Menu_View">View</system:String>
     <system:String x:Key="String_Menu_Settings">Settings</system:String>
+    <system:String x:Key="String_Menu_Tools">Tools</system:String>
     <system:String x:Key="String_Menu_Help">Help</system:String>
+
+    <!-- Tools Menu -->
+    <system:String x:Key="String_Menu_Tools_ImageGeneration">Image Generation</system:String>
+    <system:String x:Key="String_ImageGeneration_Title">Image Generation</system:String>
+    <system:String x:Key="String_ImageGeneration_ServerUrl">Server URL:</system:String>
+    <system:String x:Key="String_ImageGeneration_ReforgePath">Reforge Path:</system:String>
+    <system:String x:Key="String_ImageGeneration_Browse">Browse...</system:String>
 
     <!-- Menu Items -->
     <system:String x:Key="String_Menu_Exit">Exit</system:String>
@@ -45,6 +53,8 @@
     <system:String x:Key="String_Settings_Slideshow_Seconds">seconds</system:String>
     <system:String x:Key="String_Settings_Slideshow_InvalidInterval">Please enter a value greater than 0 for the interval.</system:String>
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
+    <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
+    <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
     <system:String x:Key="String_Settings_Language_Title">Language Settings</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">Main Key:</system:String>

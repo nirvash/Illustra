@@ -62,6 +62,13 @@ namespace Illustra.Helpers
 
         // リストの循環移動設定
         public bool EnableCyclicNavigation { get; set; } = false;
+
+        // 開発者モード設定
+        public bool DeveloperMode { get; set; } = false;
+
+        // 画像生成設定
+        public string ImageGenerationServerUrl { get; set; } = "http://127.0.0.1:7860/";
+        public string ImageGenerationReforgePath { get; set; } = string.Empty;
     }
 
     public static class SettingsHelper
