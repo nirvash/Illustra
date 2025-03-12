@@ -446,6 +446,7 @@ namespace Illustra.Views
                     var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
                     if (fileNode != null)
                     {
+                        // ソート順に従って適切な位置に挿入
                         _viewModel.AddItem(fileNode);
 
                         // サムネイル生成をトリガー

@@ -61,7 +61,48 @@ namespace Illustra.ViewModels
 
         public void AddItem(FileNodeModel item)
         {
-            Items.Add(item);
+            var index = FindSortedInsertIndex(item);
+            Items.Insert(index, item);
+        }
+
+        private int FindSortedInsertIndex(FileNodeModel newItem)
+        {
+            if (Items.Count == 0) return 0;
+
+            // 現在のソート条件を取得（ThumbnailListControl から）
+            var settings = SettingsHelper.GetSettings();
+            bool sortByDate = settings.SortByDate;
+            bool sortAscending = settings.SortAscending;
+
+            for (int i = 0; i < Items.Count; i++)
+            {
+                var currentItem = Items[i];
+                int comparison;
+
+                if (sortByDate)
+                {
+                    // 日付でソート
+                    comparison = newItem.CreationTime.CompareTo(currentItem.CreationTime);
+                }
+                else
+                {
+                    // ファイル名でソート
+                    comparison = string.Compare(newItem.FileName, currentItem.FileName, StringComparison.CurrentCultureIgnoreCase);
+                }
+
+                // 降順の場合は比較結果を反転
+                if (!sortAscending)
+                {
+                    comparison = -comparison;
+                }
+
+                if (comparison <= 0)
+                {
+                    return i;
+                }
+            }
+
+            return Items.Count;
         }
 
         public async Task SortItemsAsync(bool sortByDate, bool sortAscending)
