@@ -172,7 +172,7 @@ namespace Illustra.Views
 
             return null;
         }
-        private async void ScrollToSelectedItem()
+        private void ScrollToSelectedItem()
         {
             if (_viewModel?.SelectedItem == null)
                 return;
@@ -181,88 +181,28 @@ namespace Illustra.Views
             if (treeView == null)
                 return;
 
-            // 選択されたアイテムのパスを取得
-            var path = _viewModel.SelectedItem.FullPath;
-            var rootPath = Path.GetPathRoot(path);
-            if (string.IsNullOrEmpty(rootPath))
+            // 選択されたアイテムに対応するTreeViewItemを直接探す
+            var targetItem = GetTreeViewItemForItem(treeView, _viewModel.SelectedItem);
+            if (targetItem == null)
                 return;
 
-            // ルートドライブを探す
-            var rootItem = _viewModel.RootItems.FirstOrDefault(
-                item => item.FullPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase));
-            if (rootItem == null)
+            // ScrollViewerを取得
+            ScrollViewer scrollViewer = FindScrollViewer(treeView);
+            if (scrollViewer == null)
                 return;
 
-            // ルートから目的のアイテムまでのパスを分解
-            var pathParts = path.Substring(rootPath.Length)
-                .Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+            // アイテムの位置を取得
+            Point relativePosition = targetItem.TranslatePoint(new Point(0, 0), scrollViewer);
 
-            var currentPath = rootPath;
-            var currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
-            if (currentContainer == null)
+            // アイテムが表示範囲内にあるか確認
+            bool isVisible = relativePosition.Y >= 0 &&
+                           relativePosition.Y + targetItem.ActualHeight <= scrollViewer.ViewportHeight;
+
+            // 表示範囲外の場合のみスクロール
+            if (!isVisible)
             {
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-                currentContainer = treeView.ItemContainerGenerator.ContainerFromItem(rootItem) as TreeViewItem;
-                if (currentContainer == null) return;
-            }
-
-            // 各階層を展開しながら目的のアイテムまで移動
-            foreach (var part in pathParts)
-            {
-                currentPath = Path.Combine(currentPath, part);
-                currentContainer.IsExpanded = true;
-
-                // UIの更新を待つ
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                var nextItem = currentContainer.Items.OfType<FileSystemItemModel>()
-                    .FirstOrDefault(item => item.FullPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase));
-
-                if (nextItem == null)
-                    break;
-
-                var nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
-                if (nextContainer == null)
-                {
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-                    nextContainer = currentContainer.ItemContainerGenerator.ContainerFromItem(nextItem) as TreeViewItem;
-                    if (nextContainer == null) break;
-                }
-
-                currentContainer = nextContainer;
-            }
-
-            // 最終的な目的のアイテムまでスクロール
-            if (currentContainer != null)
-            {
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    currentContainer.BringIntoView();
-                }, DispatcherPriority.Render);
-
-                // UIの更新を待つ
-                await Task.Delay(50);
-
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    // BringIntoViewは単にアイテムを表示範囲内に入れるだけなので、
-                    // さらに上部に持ってくるには追加の処理が必要
-                    ScrollViewer scrollViewer = FindScrollViewer(treeView);
-                    if (scrollViewer != null)
-                    {
-                        // アイテムの位置を取得
-                        Point relativePosition = currentContainer.TranslatePoint(new Point(0, 0), scrollViewer);
-
-                        // 上部に近いポジションになるようにスクロール位置を調整
-                        // 少し余白を残すためのオフセット（例: 10ピクセル）
-                        double offset = 10;
-                        scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + relativePosition.Y - offset);
-                    }
-                    currentContainer.IsSelected = true;
-                }, DispatcherPriority.Render);
-
-                // スクロール完了を待つ
-                await Task.Delay(50);
+                // スクロールして選択アイテムを表示
+                targetItem.BringIntoView();
             }
         }
 
@@ -316,14 +256,6 @@ namespace Illustra.Views
             }
 
             return null;
-        }
-
-        private void OnFolderSelected(FolderSelectedEventArgs args)
-        {
-            if (!string.IsNullOrEmpty(args.Path))
-            {
-                ScrollToSelectedItem();
-            }
         }
 
         private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
