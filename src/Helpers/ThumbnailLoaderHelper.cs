@@ -22,7 +22,6 @@ public class ThumbnailLoaderHelper
     private static BitmapSource? _commonErrorImage;
     private static readonly object _staticLock = new object();
 
-    private CancellationTokenSource? _cancellationTokenSource;
     private string _currentFolderPath = string.Empty;
     private readonly ItemsControl _thumbnailListBox;
     private int _thumbnailSize = 120;

@@ -91,6 +91,8 @@ namespace Illustra.Events
         }
     }
 
+    public class LanguageChangedEvent : PubSubEvent { }
+
     /// <summary>
     /// フィルタ変更イベントの引数
     /// </summary>

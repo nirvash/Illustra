@@ -14,6 +14,7 @@ using LinqToDB.DataProvider.SQLite;
 using LinqToDB.Data;
 using LinqToDB.DataProvider;
 using System.Diagnostics;
+using Illustra.Events;
 
 namespace Illustra
 {

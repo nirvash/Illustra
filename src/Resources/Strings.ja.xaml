@@ -187,6 +187,17 @@
     <system:String x:Key="String_Status_ItemsSelected">{0}個の項目が選択されています</system:String>
     <system:String x:Key="String_Status_Error">エラー: {0}</system:String>
 
+    <!-- Thumbnail List Messages -->
+    <system:String x:Key="String_Thumbnail_RatingFilterMessage">選択したファイルは現在のレーティングフィルターで表示されていません。フィルターを解除しますか？</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilterTitle">フィルター解除の確認</system:String>
+    <system:String x:Key="String_Thumbnail_DeleteConfirmMessage">選択された{0}個のファイルを削除しますか？</system:String>
+    <system:String x:Key="String_Thumbnail_DeleteConfirmTitle">削除の確認</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationError">ファイルの{0}中にエラーが発生しました: {1}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">エラー</system:String>
+    <system:String x:Key="String_Thumbnail_ImageDisplayError">画像の表示中にエラーが発生しました: {0}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Copy">コピー</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Move">移動</system:String>
+
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">デフォルト設定に戻す</system:String>
     <system:String x:Key="String_Settings_FunctionId">機能ID:</system:String>

@@ -189,8 +189,12 @@ namespace Illustra.Views
             // ソート設定を復元
             _isSortByDate = _appSettings.SortByDate;
             _isSortAscending = _appSettings.SortAscending;
-            SortTypeText.Text = _isSortByDate ? "日付" : "名前";
-            SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
+            SortTypeText.Text = _isSortByDate ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+            SortDirectionText.Text = _isSortAscending ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
 
             _isInitialized = true;
         }
@@ -204,6 +208,7 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
         }
 
 
@@ -719,8 +724,8 @@ namespace Illustra.Views
                     {
                         // ユーザーにフィルターが適用されていて見つからない旨を通知
                         MessageBoxResult result = MessageBox.Show(
-                            "選択したファイルは現在のレーティングフィルターで表示されていません。フィルターを解除しますか？",
-                            "フィルター解除の確認",
+                            (string)Application.Current.FindResource("String_Thumbnail_RatingFilterMessage"),
+                            (string)Application.Current.FindResource("String_Thumbnail_RatingFilterTitle"),
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Question);
 
@@ -1038,9 +1043,12 @@ namespace Illustra.Views
                 // 複数選択時は確認ダイアログを表示
                 if (selectedItems.Count > 1)
                 {
+                    var message = string.Format(
+                        (string)Application.Current.FindResource("String_Thumbnail_DeleteConfirmMessage"),
+                        selectedItems.Count);
                     var result = MessageBox.Show(
-                        $"選択された{selectedItems.Count}個のファイルを削除しますか？",
-                        "削除の確認",
+                        message,
+                        (string)Application.Current.FindResource("String_Thumbnail_DeleteConfirmTitle"),
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question);
 
@@ -1061,8 +1069,12 @@ namespace Illustra.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ファイルの削除中にエラーが発生しました: {ex.Message}",
-                    "エラー",
+                var message = string.Format(
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
+                    (string)Application.Current.FindResource("String_Common_Delete"),
+                    ex.Message);
+                MessageBox.Show(message,
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -1293,8 +1305,17 @@ namespace Illustra.Views
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"ファイルの{(isCopy ? "コピー" : "移動")}中にエラーが発生しました: {ex.Message}",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var operationType = isCopy ?
+                        (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Copy") :
+                        (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Move");
+                    var message = string.Format(
+                        (string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
+                        operationType,
+                        ex.Message);
+                    MessageBox.Show(message,
+                        (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                     e.Effects = DragDropEffects.None;
                 }
             }
@@ -1366,7 +1387,13 @@ namespace Illustra.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"画像の表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                var message = string.Format(
+                    (string)Application.Current.FindResource("String_Thumbnail_ImageDisplayError"),
+                    ex.Message);
+                MessageBox.Show(message,
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
@@ -1630,6 +1657,25 @@ namespace Illustra.Views
             }
         }
 
+        private void OnLanguageChanged()
+        {
+            // 言語リソースの反映をまつ
+            Task.Run(() =>
+            {
+                // フィルターボタンのテキストを更新
+                Dispatcher.Invoke(() =>
+                {
+                    // ソート種類の文言を更新
+                    SortTypeText.Text = _isSortByDate ?
+                        (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                        (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+                    SortDirectionText.Text = _isSortAscending ?
+                        (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                        (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+                });
+            });
+        }
+
         private void OnRatingChanged(RatingChangedEventArgs args)
         {
             var fileNode = _viewModel.Items.FirstOrDefault(fn => fn.FullPath == args.FilePath);
@@ -1719,7 +1765,9 @@ namespace Illustra.Views
             _appSettings.SortAscending = _isSortAscending;
             _thumbnailLoader.SortAscending = _isSortAscending;
             SettingsHelper.SaveSettings(_appSettings);
-            SortDirectionText.Text = _isSortAscending ? "↑" : "↓";
+            SortDirectionText.Text = _isSortAscending ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
 
@@ -1729,7 +1777,9 @@ namespace Illustra.Views
             _appSettings.SortByDate = _isSortByDate;
             _thumbnailLoader.SortByDate = _isSortByDate;
             SettingsHelper.SaveSettings(_appSettings);
-            SortTypeText.Text = _isSortByDate ? "日付" : "名前";
+            SortTypeText.Text = _isSortByDate ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
         }
 

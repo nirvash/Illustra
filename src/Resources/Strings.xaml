@@ -188,6 +188,17 @@
     <system:String x:Key="String_Status_ItemsSelected">{0} items selected</system:String>
     <system:String x:Key="String_Status_Error">Error: {0}</system:String>
 
+    <!-- Thumbnail List Messages -->
+    <system:String x:Key="String_Thumbnail_RatingFilterMessage">The selected file is not displayed in the current rating filter. Do you want to clear the filter?</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilterTitle">Clear Filter Confirmation</system:String>
+    <system:String x:Key="String_Thumbnail_DeleteConfirmMessage">Are you sure you want to delete {0} selected files?</system:String>
+    <system:String x:Key="String_Thumbnail_DeleteConfirmTitle">Delete Confirmation</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationError">An error occurred while {0} the file: {1}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">Error</system:String>
+    <system:String x:Key="String_Thumbnail_ImageDisplayError">An error occurred while displaying the image: {0}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Copy">copying</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Move">moving</system:String>
+
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">Reset to Default</system:String>
     <system:String x:Key="String_Settings_FunctionId">Function ID:</system:String>

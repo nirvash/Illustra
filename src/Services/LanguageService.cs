@@ -6,11 +6,10 @@ using Prism.Events;
 using System.IO;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using Illustra.Events;
 
 namespace Illustra.Services
 {
-    public class LanguageChangedEvent : PubSubEvent { }
-
     public class LanguageService
     {
         private readonly IEventAggregator _eventAggregator;
