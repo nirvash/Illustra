@@ -16,6 +16,7 @@ using GongSolutions.Wpf.DragDrop;
 using System.Collections;
 using Illustra.Functions;
 using System.Windows.Documents;
+using System.Windows.Media.Animation;
 
 namespace Illustra.Views
 {
@@ -886,6 +887,75 @@ namespace Illustra.Views
             }
         }
 
+        private async void PasteFilesFromClipboard()
+        {
+            if (Clipboard.ContainsFileDropList())
+            {
+                var dataObject = Clipboard.GetDataObject();
+                var files = Clipboard.GetFileDropList().Cast<string>().ToList();
+                if (files.Any())
+                {
+                    // カット操作かどうかを判定
+                    bool isCut = false;
+
+                    // より信頼性の高いカット操作の判定方法
+                    if (dataObject.GetDataPresent(DataFormats.FileDrop) &&
+                        dataObject.GetDataPresent("Preferred DropEffect"))
+                    {
+                        var memoryStream = dataObject.GetData("Preferred DropEffect") as MemoryStream;
+                        if (memoryStream != null)
+                        {
+                            byte[] bytes = new byte[4];
+                            memoryStream.Position = 0;
+                            memoryStream.Read(bytes, 0, bytes.Length);
+                            // DragDropEffects.Move (2) の場合はカット操作
+                            isCut = BitConverter.ToInt32(bytes, 0) == 2;
+                        }
+                    }
+
+                    // ファイルを処理（isCut=trueの場合は移動、falseの場合はコピー）
+                    var processedFiles = await ProcessImageFiles(files, !isCut);
+
+                    if (processedFiles.Any())
+                    {
+                        if (isCut)
+                        {
+                            // カット操作の場合はクリップボードをクリア
+                            Clipboard.Clear();
+                            ShowNotification((string)Application.Current.FindResource("String_Thumbnail_FilesMoved"));
+                        }
+                        else
+                        {
+                            ShowNotification((string)Application.Current.FindResource("String_Thumbnail_FilesCopied"));
+                        }
+
+                    }
+                }
+            }
+        }
+
+        private void ShowNotification(string message, int fontSize = 24)
+        {
+            NotificationText.Text = message;
+            NotificationText.FontSize = fontSize;
+            var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
+            storyboard.Begin(Notification);
+        }
+
+        private void CopySelectedImagesToClipboard()
+        {
+            if (_viewModel.SelectedItems.Any())
+            {
+                var imagePaths = _viewModel.SelectedItems.Select(item => item.FullPath).ToArray();
+                var dataObject = new DataObject();
+                dataObject.SetData(DataFormats.FileDrop, imagePaths);
+                Clipboard.SetDataObject(dataObject, true);
+
+                // リソースから文言を取得して通知を表示
+                ShowNotification((string)Application.Current.FindResource("String_Thumbnail_ImageCopied"));
+            }
+        }
+
         private void ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             var shortcutHandler = KeyboardShortcutHandler.Instance;
@@ -901,6 +971,22 @@ namespace Illustra.Views
             if (shortcutHandler.IsShortcutMatch(FuncId.SelectAll, e.Key))
             {
                 ThumbnailItemsControl.SelectAll();
+                e.Handled = true;
+                return;
+            }
+
+            // 画像コピーのショートカットの場合は、画像をクリップボードにコピーする
+            if (shortcutHandler.IsShortcutMatch(FuncId.Copy, e.Key))
+            {
+                CopySelectedImagesToClipboard();
+                e.Handled = true;
+                return;
+            }
+
+            // 画像ペーストのショートカットの場合は、クリップボードから画像をペーストする
+            if (shortcutHandler.IsShortcutMatch(FuncId.Paste, e.Key))
+            {
+                PasteFilesFromClipboard();
                 e.Handled = true;
                 return;
             }
@@ -1069,14 +1155,7 @@ namespace Illustra.Views
             }
             catch (Exception ex)
             {
-                var message = string.Format(
-                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
-                    (string)Application.Current.FindResource("String_Common_Delete"),
-                    ex.Message);
-                MessageBox.Show(message,
-                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                Debug.WriteLine($"ファイルの削除中にエラーが発生しました: {ex.Message}");
             }
         }
 
@@ -1243,6 +1322,104 @@ namespace Illustra.Views
             }
         }
 
+        /// <summary>
+        /// 画像ファイルを指定されたフォルダにコピーまたは移動します
+        /// </summary>
+        private async Task<List<string>> ProcessImageFiles(List<string> files, bool isCopy)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_currentFolderPath))
+                    return new List<string>();
+
+                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                var fileOp = new FileOperationHelper(db);
+
+                // フォルダパスを取得
+                string targetFolder = _currentFolderPath ?? "";
+                var processedFiles = await fileOp.ExecuteFileOperation(files, targetFolder, isCopy);
+
+                foreach (var path in processedFiles)
+                {
+                    if (!FileHelper.IsImageFile(path)) continue;
+
+                    // 既存のファイルノードをチェック
+                    if (_viewModel.Items.Any(x => x.FullPath == path))
+                    {
+                        Debug.WriteLine($"File already exists in the list: {path}");
+                        continue;
+                    }
+
+                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
+                    if (fileNode != null)
+                    {
+                        // ソート順に従って適切な位置に挿入
+                        _viewModel.AddItem(fileNode);
+
+                        _ = Task.Run(async () =>
+                        {
+                            await _viewModel.UpdatePromptCacheAsync(path);
+
+                            // RefreshFiltering を await で完了を待ってから次の処理に進む
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                _viewModel.RefreshFiltering();
+                            }).Task;
+
+                            // サムネイル生成をトリガー
+                            var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
+                            if (index >= 0)
+                            {
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                            }
+                        });
+                    }
+                }
+
+                // ペーストされたファイルの最初のファイルを選択
+                try
+                {
+                    if (processedFiles.Count > 0)
+                    {
+                        string firstFile = processedFiles[0];
+                        string fileName = Path.GetFileName(firstFile);
+                        string destPath = Path.Combine(_currentFolderPath ?? "", fileName);
+
+                        // ファイルリストが更新されるのを少し待つ
+                        await Task.Delay(100);
+
+                        // ファイルを選択
+                        var fileNode = _viewModel.Items.FirstOrDefault(f => f.FullPath == destPath);
+                        if (fileNode != null)
+                        {
+                            SelectThumbnail(destPath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"ペーストされたファイルの選択中にエラーが発生しました: {ex.Message}");
+                }
+
+                return processedFiles;
+            }
+            catch (Exception ex)
+            {
+                string operation = isCopy ?
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Copy") :
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Move");
+
+                MessageBox.Show(
+                    string.Format((string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
+                    operation, ex.Message),
+                    (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                return new List<string>();
+            }
+        }
+
         public async void ThumbnailItemsControl_Drop(IDropInfo e)
         {
             // サムネイル一覧からサムネイル一覧へのドロップ無効
@@ -1259,65 +1436,9 @@ namespace Illustra.Views
                 if (files == null)
                     return;
 
-                var targetPath = _currentFolderPath;
-                if (string.IsNullOrEmpty(targetPath))
-                    return;
-
-                // 画像ファイルのみをフィルタリング
-                var imageFiles = files.Where(file => FileHelper.IsImageFile(file)).ToList();
-                if (!imageFiles.Any())
-                    return;
-
                 bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
-                var operation = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
-
-                try
-                {
-                    foreach (var file in imageFiles)
-                    {
-                        var fileName = Path.GetFileName(file);
-                        var destPath = Path.Combine(targetPath, fileName);
-
-                        if (isCopy)
-                        {
-                            // コピー処理
-                            await Task.Run(() => File.Copy(file, destPath, true));
-                        }
-                        else
-                        {
-                            // 移動処理（同じドライブ内ならFile.Move、異なるドライブ間ではコピー&削除）
-                            if (Path.GetPathRoot(file) == Path.GetPathRoot(destPath))
-                            {
-                                await Task.Run(() => File.Move(file, destPath, true));
-                            }
-                            else
-                            {
-                                await Task.Run(() =>
-                                {
-                                    File.Copy(file, destPath, true);
-                                    File.Delete(file);
-                                });
-                            }
-                        }
-                    }
-
-                    e.Effects = operation;
-                }
-                catch (Exception ex)
-                {
-                    var operationType = isCopy ?
-                        (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Copy") :
-                        (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Move");
-                    var message = string.Format(
-                        (string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
-                        operationType,
-                        ex.Message);
-                    MessageBox.Show(message,
-                        (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                    e.Effects = DragDropEffects.None;
-                }
+                var processedFiles = await ProcessImageFiles(files, isCopy);
+                e.Effects = processedFiles.Any() ? (isCopy ? DragDropEffects.Copy : DragDropEffects.Move) : DragDropEffects.None;
             }
         }
 
@@ -1365,14 +1486,7 @@ namespace Illustra.Views
             return App.Instance.EnableCyclicNavigation;
         }
 
-        private void OnFileOperationProgress(object? sender, FileOperationProgressEventArgs e)
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                // 進捗状況をステータスバーなどに表示
-                Debug.WriteLine($"File Operation Progress: {e.CurrentFile}/{e.TotalFiles} - {e.OperationType}");
-            });
-        }
+
         private void ShowImageViewer(string filePath)
         {
             try

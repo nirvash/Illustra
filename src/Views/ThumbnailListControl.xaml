@@ -34,6 +34,19 @@
             <Setter Property="Padding"
                     Value="0"/>
         </Style>
+
+        <!-- フェードイン/アウトアニメーション -->
+        <Storyboard x:Key="ShowNotificationStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                             From="0"
+                             To="1"
+                             Duration="0:0:0.15"/>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                             From="1"
+                             To="0"
+                             Duration="0:0:0.15"
+                             BeginTime="0:0:1"/>
+        </Storyboard>
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -427,5 +440,30 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <!-- 状態通知オーバーレイ -->
+        <Border x:Name="Notification"
+                Grid.Row="1"
+                MinWidth="150"
+                Height="100"
+                MaxWidth="400"
+                Background="#CC000000"
+                CornerRadius="10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Opacity="0"
+                Padding="16,8"
+                Panel.ZIndex="1000">
+            <Grid>
+                <TextBlock x:Name="NotificationText"
+                           Text=""
+                           FontSize="24"
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           MaxWidth="380"
+                           TextWrapping="Wrap"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

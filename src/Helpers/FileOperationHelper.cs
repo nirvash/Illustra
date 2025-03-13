@@ -22,7 +22,7 @@ namespace Illustra.Helpers
         /// <param name="targetFolder">コピー/移動先のフォルダパス</param>
         /// <param name="isCopy">trueの場合はコピー、falseの場合は移動</param>
         /// <returns>操作の完了を表すTask</returns>
-        public async Task ExecuteFileOperation(List<string> files, string targetFolder, bool isCopy)
+        public async Task<List<string>> ExecuteFileOperation(List<string> files, string targetFolder, bool isCopy)
         {
             if (files == null || files.Count == 0)
                 throw new ArgumentException("ファイルリストが空です", nameof(files));
@@ -32,6 +32,8 @@ namespace Illustra.Helpers
 
             if (!Directory.Exists(targetFolder))
                 throw new DirectoryNotFoundException($"ターゲットフォルダが見つかりません: {targetFolder}");
+
+            var processedFiles = new List<string>();
 
             foreach (var file in files)
             {
@@ -50,12 +52,15 @@ namespace Illustra.Helpers
                     {
                         await MoveFile(file, destPath);
                     }
+                    processedFiles.Add(destPath);
                 }
                 catch (Exception ex)
                 {
                     throw new FileOperationException($"ファイル操作中にエラーが発生しました: {ex.Message}", ex);
                 }
             }
+
+            return processedFiles;
         }
 
         /// <summary>

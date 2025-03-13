@@ -10,6 +10,8 @@
     <system:String x:Key="String_Common_Copy">Copy</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
     <system:String x:Key="String_Common_CopyCompleted">The version information has been copied to the clipboard.</system:String>
+    <system:String x:Key="String_Common_Delete">delete</system:String>
+    <system:String x:Key="String_Common_Move">move</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">File</system:String>
@@ -173,7 +175,8 @@
     <system:String x:Key="String_Function_NextImage">Next Image</system:String>
 
     <!-- Keyboard Shortcuts -->
-    <system:String x:Key="String_Settings_ResetConfirm" xml:space="preserve">Are you sure you want to reset keyboard shortcuts to default?&#x0a;This action cannot be undone.</system:String>
+    <system:String x:Key="String_Settings_ResetConfirm"
+                   xml:space="preserve">Are you sure you want to reset keyboard shortcuts to default?&#x0a;This action cannot be undone.</system:String>
     <system:String x:Key="String_Settings_ResetConfirmTitle">Reset to Default</system:String>
 
     <!-- About Dialog -->
@@ -189,15 +192,18 @@
     <system:String x:Key="String_Status_Error">Error: {0}</system:String>
 
     <!-- Thumbnail List Messages -->
-    <system:String x:Key="String_Thumbnail_RatingFilterMessage">The selected file is not displayed in the current rating filter. Do you want to clear the filter?</system:String>
-    <system:String x:Key="String_Thumbnail_RatingFilterTitle">Clear Filter Confirmation</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilterMessage">The selected file is not displayed due to the rating filter. Do you want to clear the filter?</system:String>
+    <system:String x:Key="String_Thumbnail_RatingFilterTitle">Rating Filter</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmMessage">Are you sure you want to delete {0} selected files?</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmTitle">Delete Confirmation</system:String>
-    <system:String x:Key="String_Thumbnail_FileOperationError">An error occurred while {0} the file: {1}</system:String>
-    <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">Error</system:String>
-    <system:String x:Key="String_Thumbnail_ImageDisplayError">An error occurred while displaying the image: {0}</system:String>
-    <system:String x:Key="String_Thumbnail_FileOperation_Copy">copying</system:String>
-    <system:String x:Key="String_Thumbnail_FileOperation_Move">moving</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationError">Failed to {0} file: {1}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">File Operation Error</system:String>
+    <system:String x:Key="String_Thumbnail_ImageDisplayError">Failed to display image: {0}</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Copy">copy</system:String>
+    <system:String x:Key="String_Thumbnail_FileOperation_Move">move</system:String>
+    <system:String x:Key="String_Thumbnail_ImageCopied">Image copied to clipboard</system:String>
+    <system:String x:Key="String_Thumbnail_FilesCopied">Files copied</system:String>
+    <system:String x:Key="String_Thumbnail_FilesMoved">Files moved</system:String>
 
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">Reset to Default</system:String>
