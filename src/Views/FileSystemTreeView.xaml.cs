@@ -174,36 +174,66 @@ namespace Illustra.Views
         }
         private void ScrollToSelectedItem()
         {
-            if (_viewModel?.SelectedItem == null)
-                return;
-
-            var treeView = FindDirectVisualChild<TreeView>(this);
-            if (treeView == null)
-                return;
-
-            // 選択されたアイテムに対応するTreeViewItemを直接探す
-            var targetItem = GetTreeViewItemForItem(treeView, _viewModel.SelectedItem);
-            if (targetItem == null)
-                return;
-
-            // ScrollViewerを取得
-            ScrollViewer scrollViewer = FindScrollViewer(treeView);
-            if (scrollViewer == null)
-                return;
-
-            // アイテムの位置を取得
-            Point relativePosition = targetItem.TranslatePoint(new Point(0, 0), scrollViewer);
-
-            // アイテムが表示範囲内にあるか確認
-            bool isVisible = relativePosition.Y >= 0 &&
-                           relativePosition.Y + targetItem.ActualHeight <= scrollViewer.ViewportHeight;
-
-            // 表示範囲外の場合のみスクロール
-            if (!isVisible)
+            // スクロールして選択アイテムを表示
+            Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                // スクロールして選択アイテムを表示
-                targetItem.BringIntoView();
+                if (_viewModel?.SelectedItem == null)
+                    return;
+
+                var treeView = FindDirectVisualChild<TreeView>(this);
+                if (treeView == null)
+                    return;
+
+                // 選択されたアイテムに対応するTreeViewItemを直接探す
+                var targetItem = GetTreeViewItemForItem(treeView, _viewModel.SelectedItem);
+                if (targetItem == null)
+                    return;
+
+                // コンテナ生成を非同期で待つ
+                await WaitForTreeViewItemToBeReady(targetItem);
+
+                // 以下のロジックは仮想化された TreeView には対応していない
+                // ItemsPresenter / ItemsHost を取得
+                ItemsPresenter itemsPresenter = UIHelper.FindVisualChild<ItemsPresenter>(treeView);
+                Panel itemsHost = VisualTreeHelper.GetChild(itemsPresenter, 0) as Panel;
+
+                // ItemsHost に対する TreeViewItem の位置
+                Point positionInHost = targetItem.TranslatePoint(new Point(0, 0), itemsHost);
+
+                // ScrollViewer を取得
+                ScrollViewer scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(treeView);
+
+                // 見えている範囲を計算
+                double itemTopInHost = positionInHost.Y;
+                double itemBottomInHost = itemTopInHost + targetItem.ActualHeight;
+
+                // 現在のスクロール範囲
+                double viewportHeight = scrollViewer.ViewportHeight;
+                double verticalOffset = scrollViewer.VerticalOffset;
+                double viewportBottom = verticalOffset + viewportHeight;
+
+                // スクロール必要なら実行
+                if (itemTopInHost < verticalOffset || itemBottomInHost > viewportBottom)
+                {
+                    // スクロールして選択アイテムを表示
+                    // targetItem.BringIntoView();
+
+                    scrollViewer.ScrollToVerticalOffset(itemTopInHost - 20); // Margin 20
+                }
+            }, DispatcherPriority.Background);
+        }
+
+        private async Task WaitForTreeViewItemToBeReady(TreeViewItem item)
+        {
+            // 視覚ツリー上に乗るまで待つ
+            while (!item.IsVisible)
+            {
+                await Task.Delay(50); // 少し待つ（調整可）
+                await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
             }
+
+            // レイアウトが落ち着くのも念のため待つ
+            await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
         }
 
         // TreeView内のScrollViewerを見つける補助メソッド
