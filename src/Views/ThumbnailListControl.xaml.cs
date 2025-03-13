@@ -34,6 +34,8 @@ namespace Illustra.Views
 
         private bool _isInitialized = false;
         private bool _isUpdatingSelection = false;  // 選択状態の更新中フラグ
+        private bool _isDragging = false;
+        private readonly DispatcherTimer _resizeTimer;
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -132,6 +134,14 @@ namespace Illustra.Views
             InitializeComponent();
             Loaded += ThumbnailListControl_Loaded;
 
+            // サムネイルサイズ変更用のタイマーを初期化
+            _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            _resizeTimer.Tick += async (s, e) =>
+            {
+                _resizeTimer.Stop();
+                await UpdateThumbnailSize();
+            };
+
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
 
@@ -151,6 +161,13 @@ namespace Illustra.Views
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
+
+            // スライダーのドラッグイベントを購読
+            ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
+            {
+                // スライダーのつまみを掴んだ場合のみドラッグモードにする
+                _isDragging = !(e.OriginalSource is System.Windows.Shapes.Rectangle);
+            };
             _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
 
             // ファイルシステム監視の初期化
@@ -1142,28 +1159,50 @@ namespace Illustra.Views
 
         private void ThumbnailSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            // 初期化が完了していない場合は何もしない
-            if (!_isInitialized) return;
-
-            // 整数値として取得
-            int newSize = (int)e.NewValue;
-
-            // サイズ表示を更新（TextBlockがnullでないことを確認）
-            if (ThumbnailSizeText != null)
-                ThumbnailSizeText.Text = newSize.ToString();
-
-            // 選択中のサムネイルを画面内に表示
-            _ = Dispatcher.InvokeAsync(async () =>
+            try
             {
-                await EnsureSelectedThumbnailVisibleAsync();
-            }, DispatcherPriority.Render);
+                // 初期化が完了していない場合は何もしない
+                if (!_isInitialized) return;
+
+                // 整数値として取得
+                int newSize = (int)e.NewValue;
+
+                // サイズ表示を更新（TextBlockがnullでないことを確認）
+                if (ThumbnailSizeText != null)
+                    ThumbnailSizeText.Text = newSize.ToString();
+
+                // ドラッグ中でない場合（クリックでの値変更）はリサイズタイマーを開始
+                if (!_isDragging)
+                {
+                    // 実行中のタイマーがあれば停止し、新しいタイマーを開始
+                    // 最後の値変更から300ms後に実行される
+                    _resizeTimer.Stop();
+                    _resizeTimer.Start();
+                }
+
+                // 選択中のサムネイルを画面内に表示
+                _ = Dispatcher.InvokeAsync(async () =>
+                {
+                    await EnsureSelectedThumbnailVisibleAsync();
+                }, DispatcherPriority.Render);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"サムネイルサイズ変更中にエラーが発生しました: {ex.Message}");
+            }
         }
 
         // スライダーのドラッグが完了したときの処理（サムネイルの再生成）
-        private void ThumbnailSizeSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        private async void ThumbnailSizeSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
         {
             if (!_isInitialized) return;
 
+            _isDragging = false;
+            await UpdateThumbnailSize();
+        }
+
+        private async Task UpdateThumbnailSize()
+        {
             int newSize = (int)ThumbnailSizeSlider.Value;
 
             // サムネイルローダーにサイズを設定
@@ -1183,7 +1222,7 @@ namespace Illustra.Views
                     scrollViewer.InvalidateVisual();
 
                     // 現在表示されているサムネイルを再ロード
-                    Dispatcher.InvokeAsync(async () =>
+                    await Dispatcher.InvokeAsync(async () =>
                     {
                         await EnsureSelectedThumbnailVisibleAsync();
                         await LoadVisibleThumbnailsAsync(scrollViewer);
