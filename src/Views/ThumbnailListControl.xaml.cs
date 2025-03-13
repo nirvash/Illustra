@@ -38,6 +38,11 @@ namespace Illustra.Views
         private bool _isDragging = false;
         private readonly DispatcherTimer _resizeTimer;
 
+        // クラスレベルの変数を追加
+        private bool _isFirstLoad = true;
+        private bool _pendingSelection = false;
+        private int _pendingSelectionIndex = -1;
+
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
         /// </summary>
@@ -214,6 +219,9 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
+
+            // ItemContainerGenerator.StatusChangedイベントを登録
+            ThumbnailItemsControl.ItemContainerGenerator.StatusChanged += ThumbnailItemsControl_StatusChanged;
         }
 
         private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)
@@ -281,7 +289,7 @@ namespace Illustra.Views
             _fileSystemMonitor.StartMonitoring(folderPath);
 
             // ソート条件を適用
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending, !_pendingSelection);
         }
 
         public void SaveAllData()
@@ -615,61 +623,8 @@ namespace Illustra.Views
                 }
 
                 // ソート条件を適用
-                _ = SortThumbnailAsync(_isSortByDate, _isSortAscending);
-
-                string? filePath = null;
-                bool needFocus = !_isFirstLoaded;
-
-                // 優先順位：
-                // 1. 指定された初期選択ファイル
-                // 2. 初回起動時の最後に選択されていたファイル
-                // 3. リストの最初のアイテム
-                if (_pendingInitialSelectedFilePath != null)
-                {
-                    filePath = _pendingInitialSelectedFilePath;
-                    _pendingInitialSelectedFilePath = null;
-                }
-                else if (!_isFirstLoaded)
-                {
-                    // 初回ロード時の処理
-                    if (File.Exists(_appSettings.LastSelectedFilePath))
-                    {
-                        filePath = _appSettings.LastSelectedFilePath;
-                    }
-                    _isFirstLoaded = true;
-                }
-                else
-                {
-                    // 最初のアイテムを選択
-                    var firstItem = _viewModel.Items.FirstOrDefault();
-                    if (firstItem != null)
-                    {
-                        filePath = firstItem.FullPath;
-                    }
-                }
-
-                SelectThumbnail(filePath);
-
-                // 初回起動時のみリストアイテムにフォーカスを設定させる
-                if (needFocus)
-                {
-                    // 選択中のサムネイルにフォーカスを設定
-                    // レイアウト更新後にフォーカスを設定するための処理
-                    EventHandler layoutUpdatedHandler = null;
-                    layoutUpdatedHandler = (s, e) =>
-                    {
-                        // イベントは一度だけ処理するため、ハンドラを削除
-                        ThumbnailItemsControl.LayoutUpdated -= layoutUpdatedHandler;
-
-                        _ = Dispatcher.InvokeAsync(() =>
-                        {
-                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(ThumbnailItemsControl.SelectedItem) as ListViewItem;
-                            container?.Focus();
-                        }, DispatcherPriority.Input); // InputはRenderの後に処理される
-                    };
-
-                    ThumbnailItemsControl.LayoutUpdated += layoutUpdatedHandler;
-                }
+                _ = SortThumbnailAsync(_isSortByDate, _isSortAscending, false);
+                _pendingSelection = true;
             }
             catch (Exception ex)
             {
@@ -678,9 +633,9 @@ namespace Illustra.Views
         }
 
 
-        public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending)
+        public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending, bool selectItem = false)
         {
-            var currentSelectedPath = _viewModel.SelectedItems.LastOrDefault()?.FullPath;
+            var currentSelectedPath = selectItem ? _viewModel.SelectedItems.LastOrDefault()?.FullPath : null;
             _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
             await _viewModel.SortItemsAsync(sortByDate, sortAscending);
 
@@ -1944,6 +1899,12 @@ namespace Illustra.Views
                 (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+            // サムネイルの再生成
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null)
+            {
+                await LoadVisibleThumbnailsAsync(scrollViewer);
+            }
         }
 
         private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
@@ -1956,6 +1917,12 @@ namespace Illustra.Views
                 (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortByName");
             await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+            // サムネイルの再生成
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null)
+            {
+                await LoadVisibleThumbnailsAsync(scrollViewer);
+            }
         }
 
         /// <summary>
@@ -2064,6 +2031,90 @@ namespace Illustra.Views
             {
                 Debug.WriteLine($"Error in GetItemsPerRow: {ex.Message}");
                 return 1;
+            }
+        }
+
+        private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
+        {
+            if (!_pendingSelection)
+                return;
+
+            if (ThumbnailItemsControl.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
+            {
+                _pendingSelection = false;  // 早めにフラグを解除して重複実行を防ぐ
+
+                await Task.Run(async () =>
+                {
+                    // UIスレッドでの遅延実行
+                    await Dispatcher.BeginInvoke(new Action(async () =>
+                    {
+                        // レイアウト更新を待機
+                        await Task.Delay(100);
+                        try
+                        {
+                            string? filePath = null;
+                            bool needFocus = !_isFirstLoaded;
+
+                            // 優先順位：
+                            // 1. 指定された初期選択ファイル
+                            // 2. 初回起動時の最後に選択されていたファイル
+                            // 3. リストの最初のアイテム
+                            if (_pendingInitialSelectedFilePath != null)
+                            {
+                                filePath = _pendingInitialSelectedFilePath;
+                                _pendingInitialSelectedFilePath = null;
+                            }
+                            else if (!_isFirstLoaded)
+                            {
+                                // 初回ロード時の処理
+                                if (File.Exists(_appSettings.LastSelectedFilePath))
+                                {
+                                    filePath = _appSettings.LastSelectedFilePath;
+                                }
+                                _isFirstLoaded = true;
+                            }
+
+                            // ファイルパスが無効な場合は最初のアイテムを選択
+                            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                            {
+                                var firstItem = _viewModel.Items.FirstOrDefault();
+                                if (firstItem != null)
+                                {
+                                    filePath = firstItem.FullPath;
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(filePath))
+                            {
+                                // レイアウト更新後に選択処理を実行
+                                await Dispatcher.InvokeAsync(() =>
+                                {
+                                    SelectThumbnail(filePath);
+                                }, DispatcherPriority.Loaded);
+
+                                // さらにレイアウト更新を待ってフォーカスを設定
+                                if (needFocus)
+                                {
+                                    await Dispatcher.InvokeAsync(() =>
+                                    {
+                                        var selectedItem = _viewModel.SelectedItems.LastOrDefault();
+                                        if (selectedItem != null)
+                                        {
+                                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                                            container?.Focus();
+                                        }
+                                    }, DispatcherPriority.Input);
+                                }
+                            }
+
+                            _isFirstLoad = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error in ThumbnailItemsControl_StatusChanged: {ex.Message}");
+                        }
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                });
             }
         }
     }
