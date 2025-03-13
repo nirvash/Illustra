@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Illustra.Events;
 
 namespace Illustra.Views
@@ -24,6 +25,9 @@ namespace Illustra.Views
         {
             InitializeComponent();
             Loaded += FolderTreeControl_Loaded;
+
+            // キーボードイベントハンドラを追加
+            PreviewKeyDown += FolderTreeControl_PreviewKeyDown;
         }
 
         private void FolderTreeControl_Loaded(object sender, RoutedEventArgs e)
@@ -32,6 +36,51 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+        }
+
+        private void FolderTreeControl_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrlキーが押されているかチェック
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                bool handled = false;
+
+                // Ctrl+C (コピー)
+                if (e.Key == Key.C)
+                {
+                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.C, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
+                    handled = true;
+                }
+                // Ctrl+V (貼り付け)
+                else if (e.Key == Key.V)
+                {
+                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.V, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
+                    handled = true;
+                }
+                // Ctrl+X (切り取り)
+                else if (e.Key == Key.X)
+                {
+                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.X, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
+                    handled = true;
+                }
+                // Ctrl+A (すべて選択)
+                else if (e.Key == Key.A)
+                {
+                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.A, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
+                    handled = true;
+                }
+
+                if (handled)
+                {
+                    e.Handled = true;
+                }
+            }
+            // Deleteキー
+            else if (e.Key == Key.Delete)
+            {
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.Delete, SourceId = CONTROL_ID });
+                e.Handled = true;
+            }
         }
 
         private void OnFolderSelected(FolderSelectedEventArgs args)

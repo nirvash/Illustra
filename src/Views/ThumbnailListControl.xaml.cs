@@ -204,6 +204,10 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            // ショートカットキーイベントを購読
+            _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
+
+            // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
@@ -212,6 +216,39 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
         }
 
+        private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)
+        {
+            // 自分自身から発行されたイベントは無視
+            if (args.SourceId == CONTROL_ID)
+                return;
+
+            // Ctrl+C (コピー)
+            if (args.Key == Key.C && args.Modifiers == ModifierKeys.Control)
+            {
+                CopySelectedImagesToClipboard();
+            }
+            // Ctrl+V (貼り付け)
+            else if (args.Key == Key.V && args.Modifiers == ModifierKeys.Control)
+            {
+                PasteFilesFromClipboard();
+            }
+            // Ctrl+X (切り取り)
+            else if (args.Key == Key.X && args.Modifiers == ModifierKeys.Control)
+            {
+                // 切り取り処理を実装（必要に応じて）
+                // 現在は未実装
+            }
+            // Ctrl+A (すべて選択)
+            else if (args.Key == Key.A && args.Modifiers == ModifierKeys.Control)
+            {
+                ThumbnailItemsControl.SelectAll();
+            }
+            // Delete (削除)
+            else if (args.Key == Key.Delete && args.Modifiers == ModifierKeys.None)
+            {
+                DeleteSelectedItems();
+            }
+        }
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
@@ -929,6 +966,30 @@ namespace Illustra.Views
                             ShowNotification((string)Application.Current.FindResource("String_Thumbnail_FilesCopied"));
                         }
 
+                        // ペーストされたファイルの最初のファイルを選択
+                        try
+                        {
+                            if (files.Count > 0)
+                            {
+                                string firstFile = files[0];
+                                string fileName = Path.GetFileName(firstFile);
+                                string destPath = Path.Combine(_currentFolderPath ?? "", fileName);
+
+                                // ファイルリストが更新されるのを少し待つ
+                                await Task.Delay(100);
+
+                                // ファイルを選択
+                                var fileNode = _viewModel.Items.FirstOrDefault(f => f.FullPath == destPath);
+                                if (fileNode != null)
+                                {
+                                    SelectThumbnail(destPath);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"ペーストされたファイルの選択中にエラーが発生しました: {ex.Message}");
+                        }
                     }
                 }
             }

@@ -1,4 +1,5 @@
 using Prism.Events;
+using System.Windows.Input;
 
 namespace Illustra.Events
 {
@@ -124,4 +125,30 @@ namespace Illustra.Events
     /// ツリービュー内の特定のアイテムを画面内に表示するためのイベント
     /// </summary>
     public class BringTreeItemIntoViewEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// ショートカットキーイベント引数
+    /// </summary>
+    public class ShortcutKeyEventArgs
+    {
+        /// <summary>
+        /// キー
+        /// </summary>
+        public Key Key { get; set; }
+
+        /// <summary>
+        /// 修飾キー（Ctrl, Shift, Alt）
+        /// </summary>
+        public ModifierKeys Modifiers { get; set; }
+
+        /// <summary>
+        /// イベント発生元のID
+        /// </summary>
+        public string? SourceId { get; set; }
+    }
+
+    /// <summary>
+    /// ショートカットキーイベント
+    /// </summary>
+    public class ShortcutKeyEvent : PubSubEvent<ShortcutKeyEventArgs> { }
 }
