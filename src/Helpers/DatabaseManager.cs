@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Illustra.Models;
 using System.Diagnostics;
-using System.Linq;
 using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.Configuration;
@@ -19,8 +15,7 @@ namespace Illustra.Helpers
         private readonly string _connectionString;
         private readonly IDataProvider _dataProvider;
         private readonly string _dbPath;
-        private const int MaxRetryCount = 5;
-        private const int RetryDelayMilliseconds = 200;
+        private readonly DatabaseAccess _dbAccess;
         private const int CurrentSchemaVersion = 8; // スキーマバージョンを定義
 
         public DatabaseManager()
@@ -38,6 +33,7 @@ namespace Illustra.Helpers
             _dbPath = Path.Combine(appDataPath, "illustra.db");
             _connectionString = $"Data Source={_dbPath};Version=3;";
             _dataProvider = SQLiteTools.GetDataProvider("SQLite");
+            _dbAccess = new DatabaseAccess(_dataProvider, _connectionString);
 
             // LinqToDBの設定を追加
             DataConnection.DefaultSettings = new MySettings(_connectionString);
@@ -85,9 +81,8 @@ namespace Illustra.Helpers
 
         public async Task SaveFileNodeAsync(FileNodeModel fileNode)
         {
-            await ExecuteWithRetryAsync(async () =>
+            await _dbAccess.WriteAsync(async db =>
             {
-                using var db = new DataConnection(_dataProvider, _connectionString);
                 await db.InsertOrReplaceAsync(fileNode);
             });
         }
@@ -96,8 +91,12 @@ namespace Illustra.Helpers
         {
             var sw = new Stopwatch();
             sw.Start();
-            using var db = new DataConnection(_dataProvider, _connectionString);
-            var result = await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).ToListAsync();
+            var result = await _dbAccess.ReadAsync(async db =>
+            {
+                return await db.GetTable<FileNodeModel>()
+                             .Where(fn => fn.FolderPath == folderPath)
+                             .ToListAsync();
+            });
             sw.Stop();
             return result;
         }
@@ -106,8 +105,11 @@ namespace Illustra.Helpers
         {
             var sw = new Stopwatch();
             sw.Start();
-            using var db = new DataConnection(_dataProvider, _connectionString);
-            var result = await db.GetTable<FileNodeModel>().FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
+            var result = await _dbAccess.ReadAsync(async db =>
+            {
+                return await db.GetTable<FileNodeModel>()
+                             .FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
+            });
             sw.Stop();
             return result;
         }
@@ -116,44 +118,48 @@ namespace Illustra.Helpers
         {
             var sw = new Stopwatch();
             sw.Start();
-            using var db = new DataConnection(_dataProvider, _connectionString);
-            var query = db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath);
-
-            if (sortByDate)
+            var result = await _dbAccess.ReadAsync(async db =>
             {
-                query = sortAscending ? query.OrderBy(fn => fn.CreationTime) : query.OrderByDescending(fn => fn.CreationTime);
-            }
-            else
-            {
-                query = sortAscending ? query.OrderBy(fn => fn.FileName) : query.OrderByDescending(fn => fn.FileName);
-            }
+                var query = db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath);
 
-            var result = await query.ToListAsync();
+                if (sortByDate)
+                {
+                    query = sortAscending ? query.OrderBy(fn => fn.CreationTime) : query.OrderByDescending(fn => fn.CreationTime);
+                }
+                else
+                {
+                    query = sortAscending ? query.OrderBy(fn => fn.FileName) : query.OrderByDescending(fn => fn.FileName);
+                }
+
+                return await query.ToListAsync();
+            });
             sw.Stop();
             return result;
         }
 
         public async Task UpdateRatingAsync(string fullPath, int rating)
         {
-            await ExecuteWithRetryAsync(async () =>
+            await _dbAccess.WriteAsync(async db =>
             {
-                using var db = new DataConnection(_dataProvider, _connectionString);
-                await db.GetTable<FileNodeModel>().Where(fn => fn.FullPath == fullPath).Set(fn => fn.Rating, rating).UpdateAsync();
+                await db.GetTable<FileNodeModel>()
+                        .Where(fn => fn.FullPath == fullPath)
+                        .Set(fn => fn.Rating, rating)
+                        .UpdateAsync();
             });
         }
 
         public async Task SaveFileNodesBatchAsync(IEnumerable<FileNodeModel> fileNodes)
         {
-            await ExecuteWithRetryAsync(async () =>
+            await _dbAccess.WriteAsync(async db =>
             {
                 try
                 {
-                    using var db = new DataConnection(_dataProvider, _connectionString);
                     await db.BulkCopyAsync(fileNodes);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"SaveFileNodesBatchAsync中にエラーが発生しました: {ex.Message}");
+                    throw;
                 }
             });
         }
@@ -172,6 +178,7 @@ namespace Illustra.Helpers
                 // ディレクトリからファイルパスを列挙
                 var filePaths = Directory.EnumerateFiles(folderPath).Where(FileHelper.IsImageFile).ToList();
                 var newNodes = new List<FileNodeModel>(filePaths.Count);
+                Debug.WriteLine($"ファイル '{folderPath}: ファイル列挙 {sw.ElapsedMilliseconds} ms");
 
                 // 最新のファイルノードを作成
                 foreach (var filePath in filePaths)
@@ -186,32 +193,35 @@ namespace Illustra.Helpers
                         Debug.WriteLine($"ファイル '{filePath}' のノード作成中にエラー: {ex.Message}");
                     }
                 }
+                Debug.WriteLine($"ファイル '{folderPath}: ファイルノードを作成 {sw.ElapsedMilliseconds} ms");
 
-                // DB上から該当フォルダのレコードを削除
-                await ExecuteWithRetryAsync(async () =>
+                await _dbAccess.WriteWithTransactionAsync(async db =>
                 {
-                    using var db = new DataConnection(_dataProvider, _connectionString);
-                    await db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath).DeleteAsync();
-                });
+                    // DB上から該当フォルダのレコードを削除
+                    await db.GetTable<FileNodeModel>()
+                           .Where(fn => fn.FolderPath == folderPath)
+                           .DeleteAsync();
 
-                // 既存ノードのレーティングを維持
-                foreach (var node in newNodes)
-                {
-                    if (existingNodeDict.TryGetValue(node.FullPath, out var existingNode))
+                    // 既存ノードのレーティングを維持
+                    foreach (var node in newNodes)
                     {
-                        if (node.Rating != existingNode.Rating)
+                        if (existingNodeDict.TryGetValue(node.FullPath, out var existingNode))
                         {
-                            node.Rating = existingNode.Rating;
+                            if (node.Rating != existingNode.Rating)
+                            {
+                                node.Rating = existingNode.Rating;
+                            }
                         }
                     }
-                }
 
-                // 新規ノードをバッチ保存
-                if (newNodes.Count > 0)
-                {
-                    await SaveFileNodesBatchAsync(newNodes);
-                }
+                    // 新規ノードをバッチ保存
+                    if (newNodes.Count > 0)
+                    {
+                        await db.BulkCopyAsync(newNodes);
+                    }
+                });
 
+                Debug.WriteLine($"ファイル '{folderPath}: バッチ保存 {sw.ElapsedMilliseconds} ms");
                 sw.Stop();
 
                 return newNodes;
@@ -305,53 +315,20 @@ namespace Illustra.Helpers
 
         public async Task UpdateFileNode(FileNodeModel fileNode)
         {
-            await ExecuteWithRetryAsync(async () =>
+            await _dbAccess.WriteAsync(async db =>
             {
-                using var db = new DataConnection(_dataProvider, _connectionString);
                 await db.UpdateAsync(fileNode);
             });
         }
 
         public async Task DeleteFileNodeAsync(string fullPath)
         {
-            await ExecuteWithRetryAsync(async () =>
+            await _dbAccess.WriteAsync(async db =>
             {
-                using var db = new DataConnection(_dataProvider, _connectionString);
                 await db.GetTable<FileNodeModel>()
-                    .Where(fn => fn.FullPath == fullPath)
-                    .DeleteAsync();
+                        .Where(fn => fn.FullPath == fullPath)
+                        .DeleteAsync();
             });
-        }
-
-        private async Task ExecuteWithRetryAsync(Func<Task> operation)
-        {
-            int retryCount = 0;
-            var sw = new Stopwatch();
-            while (true)
-            {
-                try
-                {
-                    sw.Start();
-                    await operation();
-                    sw.Stop();
-                    break;
-                }
-                catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: 'database is locked'
-                {
-                    retryCount++;
-                    if (retryCount > MaxRetryCount)
-                    {
-                        throw;
-                    }
-                    int delay = RetryDelayMilliseconds * (int)Math.Pow(2, retryCount - 1); // Exponential backoff
-                    Debug.WriteLine($"Database is locked, retrying in {delay} ms");
-                    await Task.Delay(delay);
-                }
-                finally
-                {
-                    sw.Reset();
-                }
-            }
         }
     }
 

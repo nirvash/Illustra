@@ -114,7 +114,7 @@ public class ThumbnailLoaderHelper
     /// 指定されたフォルダのサムネイルを読み込みます（最適化版）
     /// </summary>
     /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
-    public async void LoadFileNodes(string folderPath)
+    public async Task LoadFileNodes(string folderPath)
     {
         if (_isLoading) return;
         _isLoading = true;
@@ -124,44 +124,56 @@ public class ThumbnailLoaderHelper
 
         try
         {
-            CancelAllLoading();
-            _cancellationTokenSource = new CancellationTokenSource();
-            _currentFolderPath = folderPath;
-
-            if (!HasFolderAccess(folderPath))
+            await Task.Run(async () =>
             {
-                _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
-                FileNodesLoaded?.Invoke(this, EventArgs.Empty);
-                return;
-            }
+                try
+                {
+                    CancelAllLoading();
+                    _cancellationTokenSource = new CancellationTokenSource();
+                    _currentFolderPath = folderPath;
 
-            // 既存ノードの取得と新規ノードの作成を一括で行う
-            var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile);
+                    if (!HasFolderAccess(folderPath))
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
+                            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                        });
+                        return;
+                    }
 
-            // ソート条件に従ってノードを並び替え
-            fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending);
+                    // 既存ノードの取得と新規ノードの作成を一括で行う
+                    var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile);
+                    Debug.WriteLine($"フォルダ ノード生成まで　'{folderPath}' : {sw.ElapsedMilliseconds} ms");
 
-            var dummyImage = GetDummyImage();
+                    // ソート条件に従ってノードを並び替え
+                    fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending);
 
-            // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
-            foreach (var node in fileNodes)
-            {
-                node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
-            }
+                    var dummyImage = GetDummyImage();
 
-            // モデルにノードを設定
-            _viewModel.Items.ReplaceAll(fileNodes);
-            _viewModel.SelectedItems.Clear();
+                    // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
+                    foreach (var node in fileNodes)
+                    {
+                        node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
+                    }
 
-            // 初期選択を実行する前にUIを更新させる
-            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        // モデルにノードを設定
+                        _viewModel.Items.ReplaceAll(fileNodes);
+                        _viewModel.SelectedItems.Clear();
 
-            await Task.Delay(100);
-            await LoadInitialThumbnailsAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"フォルダ '{folderPath}' の処理中にエラーが発生しました: {ex.Message}");
+                        // 初期選択を実行する前にUIを更新させる
+                        FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                        Debug.WriteLine($"フォルダ ロード時間'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+                        _ = LoadInitialThumbnailsAsync();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"フォルダ '{folderPath}' の処理中にエラーが発生しました: {ex.Message}");
+                }
+            });
         }
         finally
         {
