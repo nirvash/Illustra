@@ -15,9 +15,15 @@
     <system:String x:Key="String_Menu_File">File</system:String>
     <system:String x:Key="String_Menu_Edit">Edit</system:String>
     <system:String x:Key="String_Menu_View">View</system:String>
+    <system:String x:Key="String_Menu_Filter">Filter</system:String>
     <system:String x:Key="String_Menu_Settings">Settings</system:String>
     <system:String x:Key="String_Menu_Tools">Tools</system:String>
     <system:String x:Key="String_Menu_Help">Help</system:String>
+
+    <!-- Filter Menu -->
+    <system:String x:Key="String_Menu_Filter_Prompt">Has Prompt</system:String>
+    <system:String x:Key="String_Menu_Filter_Rating">Filter by Rating</system:String>
+    <system:String x:Key="String_Menu_Filter_Clear">Clear All Filters</system:String>
 
     <!-- Tools Menu -->
     <system:String x:Key="String_Menu_Tools_ImageGeneration">Image Generation</system:String>

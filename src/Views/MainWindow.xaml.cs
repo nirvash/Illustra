@@ -52,6 +52,8 @@ namespace Illustra.Views
             // イベントを購読（コンストラクタで設定）
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             // コントロールのインスタンスを取得（ここに移動）
             _favoriteFoldersControl = FavoriteFolders;
@@ -98,6 +100,8 @@ namespace Illustra.Views
             {
                 shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
             }
+
+            InitializeEventHandlers();
         }
 
         private void InitializeSortMenuItems()
@@ -119,6 +123,68 @@ namespace Illustra.Views
                 _sortByNameDescendingMenuItem.Click += OnNameSortChanged;
         }
 
+        private void InitializeEventHandlers()
+        {
+            // ViewModelのプロパティ変更イベントを購読
+            var viewModel = ThumbnailList.GetViewModel();
+            viewModel.PropertyChanged += ViewModel_PropertyChanged;
+
+            // 初期状態でメニューの状態を更新
+            UpdateRatingFilterMenuState(viewModel.CurrentRatingFilter);
+            FilterPromptMenuItem.IsChecked = viewModel.IsPromptFilterEnabled;
+        }
+
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is MainViewModel viewModel)
+            {
+                // レーティングフィルタの状態が変更された場合
+                if (e.PropertyName == nameof(MainViewModel.CurrentRatingFilter) ||
+                    e.PropertyName == nameof(MainViewModel.IsRatingFilterActive))
+                {
+                    UpdateRatingFilterMenuState(viewModel.CurrentRatingFilter);
+                }
+                // プロンプトフィルタの状態が変更された場合
+                else if (e.PropertyName == nameof(MainViewModel.IsPromptFilterEnabled))
+                {
+                    FilterPromptMenuItem.IsChecked = viewModel.IsPromptFilterEnabled;
+
+                    // フィルタクリアメニューの有効/無効を更新
+                    FilterClearMenuItem.IsEnabled = viewModel.IsRatingFilterActive || viewModel.IsPromptFilterEnabled;
+                }
+            }
+        }
+
+        /// <summary>
+        /// レーティングフィルタメニューの状態を更新します
+        /// </summary>
+        /// <param name="rating">現在のレーティングフィルタ値</param>
+        public void UpdateRatingFilterMenuState(int rating)
+        {
+            // 親メニューの状態を更新
+            FilterRatingMenuItem.IsChecked = rating > 0;
+
+            // サブメニューの状態を更新
+            FilterRating1MenuItem.IsChecked = rating == 1;
+            FilterRating2MenuItem.IsChecked = rating == 2;
+            FilterRating3MenuItem.IsChecked = rating == 3;
+            FilterRating4MenuItem.IsChecked = rating == 4;
+            FilterRating5MenuItem.IsChecked = rating == 5;
+
+            // フィルタクリアメニューの有効/無効を設定
+            var viewModel = ThumbnailList.GetViewModel();
+            FilterClearMenuItem.IsEnabled = rating > 0 || (viewModel != null && viewModel.IsPromptFilterEnabled);
+        }
+
+        /// <summary>
+        /// レーティングフィルタメニューの状態を更新します（UpdateRatingFilterMenuStateのエイリアス）
+        /// </summary>
+        /// <param name="rating">現在のレーティングフィルタ値</param>
+        public void UpdateRatingFilterMenuItems(int rating)
+        {
+            UpdateRatingFilterMenuState(rating);
+        }
+
         /// <summary>
         /// プロパティ表示をクリアするメソッド
         /// </summary>
@@ -131,6 +197,14 @@ namespace Illustra.Views
         {
             var settings = SettingsHelper.GetSettings();
             ToolsMenu.Visibility = settings.DeveloperMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void ClearAllFilters(object sender, RoutedEventArgs e)
+        {
+            var viewModel = ThumbnailList.GetViewModel();
+            viewModel.ClearAllFilters();
+
+            // ThumbnailListControlのフィルタUIの更新は Model に任せる
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -198,6 +272,49 @@ namespace Illustra.Views
             App.Instance.EnableCyclicNavigation = ToggleCyclicNavigation.IsChecked;
             _appSettings.EnableCyclicNavigation = App.Instance.EnableCyclicNavigation;
             SettingsHelper.SaveSettings(_appSettings);
+        }
+
+        private void FilterPromptMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            IsPromptFilterEnabled = !IsPromptFilterEnabled;
+        }
+
+        private void FilterRating1MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyRatingFilter(1);
+        }
+
+        private void FilterRating2MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyRatingFilter(2);
+        }
+
+        private void FilterRating3MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyRatingFilter(3);
+        }
+
+        private void FilterRating4MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyRatingFilter(4);
+        }
+
+        private void FilterRating5MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyRatingFilter(5);
+        }
+
+        /// <summary>
+        /// レーティングフィルタを適用します
+        /// </summary>
+        private void ApplyRatingFilter(int rating)
+        {
+            var viewModel = ThumbnailList.GetViewModel();
+            viewModel.ApplyRatingFilter(rating);
+            _eventAggregator?.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgs(IsPromptFilterEnabled, rating, CONTROL_ID));
+
+            // ThumbnailListControlのフィルタUIの更新は Model に任せる
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
@@ -361,6 +478,14 @@ namespace Illustra.Views
             }
         }
 
+        private void OnFilterChanged(FilterChangedEventArgs args)
+        {
+            // メニューアイテムの状態を更新
+            FilterPromptMenuItem.IsChecked = args.IsPromptFilterEnabled;
+            FilterRatingMenuItem.IsChecked = args.RatingFilter > 0;
+            UpdateRatingFilterMenuItems(args.RatingFilter);
+        }
+
         private void OnFolderSelected(FolderSelectedEventArgs args)
         {
             if (args.Path == _currentFolderPath) return;
@@ -368,6 +493,12 @@ namespace Illustra.Views
             {
                 _currentFolderPath = args.Path;
                 ClearPropertiesDisplay();
+
+                // フィルタをリセット
+                FilterPromptMenuItem.IsChecked = false;
+                IsPromptFilterEnabled = false;
+                UpdateRatingFilterMenuItems(0);
+                ApplyRatingFilter(0);
 
             }
         }

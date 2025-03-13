@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Data;
 using Illustra.Models;
 using Illustra.Helpers;
+using System.Collections.Specialized;
 
 namespace Illustra.ViewModels
 {
@@ -119,19 +120,131 @@ namespace Illustra.ViewModels
         }
 
         private int _currentRatingFilter = 0;
+        private bool _isPromptFilterEnabled = false;
+        private readonly Dictionary<string, bool> _promptCache = new();
+
+        /// <summary>
+        /// 現在適用されているレーティングフィルタの値を取得します
+        /// </summary>
+        public int CurrentRatingFilter
+        {
+            get => _currentRatingFilter;
+            private set
+            {
+                if (_currentRatingFilter != value)
+                {
+                    _currentRatingFilter = value;
+                    OnPropertyChanged(nameof(CurrentRatingFilter));
+                    OnPropertyChanged(nameof(IsRatingFilterActive));
+                }
+            }
+        }
+
+        /// <summary>
+        /// レーティングフィルタが有効かどうかを示す値を取得します
+        /// </summary>
+        public bool IsRatingFilterActive => _currentRatingFilter > 0;
+
+        /// <summary>
+        /// プロンプトフィルタが有効かどうかを示す値を取得します
+        /// </summary>
+        public bool IsPromptFilterEnabled
+        {
+            get => _isPromptFilterEnabled;
+            private set
+            {
+                if (_isPromptFilterEnabled != value)
+                {
+                    _isPromptFilterEnabled = value;
+                    _promptCache.Clear();
+                    OnPropertyChanged(nameof(IsPromptFilterEnabled));
+                }
+            }
+        }
 
         private bool FilterItems(object item)
         {
             if (item is FileNodeModel fileNode)
             {
-                // レーティングフィルターが適用されていない場合は全て表示
-                if (_currentRatingFilter <= 0)
-                    return true;
+                bool passesRatingFilter = _currentRatingFilter <= 0 || fileNode.Rating == _currentRatingFilter;
 
-                // 単一レーティングのみを表示
-                return fileNode.Rating == _currentRatingFilter;
+                // レーティングフィルタを通過しない場合は早期リターン
+                if (!passesRatingFilter)
+                    return false;
+
+                if (_isPromptFilterEnabled)
+                {
+                    return _promptCache.TryGetValue(fileNode.FullPath, out bool hasPrompt) && hasPrompt;
+                }
+
+                return true; // レーティングフィルタのみが適用されている場合
             }
             return false;
+        }
+
+        //
+        public void RefreshFiltering()
+        {
+            ApplyFilterAndUpdateSelection();
+        }
+
+        /// <summary>
+        /// フィルタ処理を適用し、結果に基づいて選択状態を更新します
+        /// </summary>
+        private void ApplyFilterAndUpdateSelection()
+        {
+            // フィルタ適用前の選択状態を保持 (Refresh でクリアされることがあるため)
+            var previousSelected = _selectedItems.LastOrDefault();
+
+            // フィルタを適用
+            _filteredItems.Refresh();
+            OnPropertyChanged(nameof(FilteredItems));
+
+            UpdateSelectionAfterFilter(previousSelected);
+        }
+
+        /// <summary>
+        /// プロンプトフィルターを適用します
+        /// </summary>
+        public void SetPromptFilter(bool enable)
+        {
+            IsPromptFilterEnabled = enable;
+
+            // フィルタ処理を即時適用
+            ApplyFilterAndUpdateSelection();
+
+            if (enable)
+            {
+                // 別スレッドでプロンプトキャッシュを更新
+                Task.Run(async () =>
+                {
+                    var itemsCopy = Items.ToList(); // スレッドセーフのためにコピーを作成
+                    foreach (var item in itemsCopy)
+                    {
+                        await UpdatePromptCacheAsync(item.FullPath);
+                    }
+
+                    // キャッシュ更新完了後にUIスレッドでフィルタを更新
+                    await App.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        ApplyFilterAndUpdateSelection();
+                    });
+                });
+            }
+        }
+
+        public async Task UpdatePromptCacheAsync(string filePath)
+        {
+            try
+            {
+                var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                _promptCache[filePath] = !string.IsNullOrEmpty(properties?.UserComment) &&
+                                            (properties?.HasStableDiffusionData ?? false);
+            }
+            catch
+            {
+                _promptCache[filePath] = false;
+            }
         }
 
         /// <summary>
@@ -140,11 +253,59 @@ namespace Illustra.ViewModels
         /// <param name="rating">フィルターするレーティング値。0はフィルターなし</param>
         public void ApplyRatingFilter(int rating)
         {
-            _currentRatingFilter = rating;
-            _filteredItems.Refresh();
+            // 同じレーティングが選択された場合はフィルタを解除
+            if (CurrentRatingFilter == rating && rating > 0)
+            {
+                rating = 0;
+            }
+
+            CurrentRatingFilter = rating;
+
+            // 共通フィルタ処理を適用
+            ApplyFilterAndUpdateSelection();
+        }
+
+        /// <summary>
+        /// すべてのフィルターをクリアします
+        /// </summary>
+        public void ClearAllFilters()
+        {
+            var selectedItem = _selectedItems.LastOrDefault();
+            CurrentRatingFilter = 0;
+            IsPromptFilterEnabled = false;
+
+            // 共通フィルタ処理を適用
+            ApplyFilterAndUpdateSelection();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+        private void UpdateSelectionAfterFilter(FileNodeModel? previousSelected)
+        {
+            _selectedItems.Clear();
+
+            // フィルタ後のアイテムを取得
+            var filteredItems = _filteredItems.Cast<FileNodeModel>().ToList();
+
+            if (filteredItems.Count > 0)
+            {
+                if (previousSelected != null && filteredItems.Any(x => x.FullPath.Equals(previousSelected.FullPath)))
+                {
+                    // 以前選択されていたアイテムがフィルタ後も存在する場合は、
+                    // フィルタ後のリストから該当アイテムを取得して選択
+                    var matchingItem = filteredItems.First(x => x.FullPath.Equals(previousSelected.FullPath));
+                    _selectedItems.Add(matchingItem);
+                }
+                else
+                {
+                    // フィルタ後のリストの先頭アイテムを選択
+                    _selectedItems.Add(filteredItems[0]);
+                }
+            }
+
+            // 選択状態の変更を通知
+            OnPropertyChanged(nameof(SelectedItems));
+        }
+
         private void UpdateLastSelectedFlag()
         {
             // すべてのアイテムのフラグをリセット

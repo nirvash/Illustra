@@ -30,24 +30,24 @@
             </MenuItem>
             <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">
                 <MenuItem x:Name="SortByDateMenuItem"
-                            Header="{DynamicResource String_Menu_View_SortByDate}"
-                            IsCheckable="True"
-                            IsChecked="True"
-                            Click="SortByDateMenuItem_Click"/>
+                          Header="{DynamicResource String_Menu_View_SortByDate}"
+                          IsCheckable="True"
+                          IsChecked="True"
+                          Click="SortByDateMenuItem_Click"/>
                 <MenuItem x:Name="SortByNameMenuItem"
-                            Header="{DynamicResource String_Menu_View_SortByName}"
-                            IsCheckable="True"
-                            Click="SortByNameMenuItem_Click"/>
+                          Header="{DynamicResource String_Menu_View_SortByName}"
+                          IsCheckable="True"
+                          Click="SortByNameMenuItem_Click"/>
                 <Separator/>
                 <MenuItem x:Name="SortAscendingMenuItem"
-                            Header="{DynamicResource String_Menu_View_SortAscending}"
-                            IsCheckable="True"
-                            IsChecked="True"
-                            Click="SortOrderMenuItem_Click"/>
+                          Header="{DynamicResource String_Menu_View_SortAscending}"
+                          IsCheckable="True"
+                          IsChecked="True"
+                          Click="SortOrderMenuItem_Click"/>
                 <MenuItem x:Name="SortDescendingMenuItem"
-                            Header="{DynamicResource String_Menu_View_SortDescending}"
-                            IsCheckable="True"
-                            Click="SortOrderMenuItem_Click"/>
+                          Header="{DynamicResource String_Menu_View_SortDescending}"
+                          IsCheckable="True"
+                          Click="SortOrderMenuItem_Click"/>
             </MenuItem>
             <MenuItem Header="{DynamicResource String_Menu_Settings}">
                 <MenuItem Header="{DynamicResource String_Menu_Settings_Language}"
@@ -61,6 +61,41 @@
                           IsCheckable="True"
                           Click="ToggleCyclicNavigation_Click"/>
             </MenuItem>
+            <MenuItem Header="{DynamicResource String_Menu_Filter}">
+                <MenuItem Header="{DynamicResource String_Menu_Filter_Prompt}"
+                          x:Name="FilterPromptMenuItem"
+                          IsCheckable="True"
+                          Click="FilterPromptMenuItem_Click"/>
+                <MenuItem Header="{DynamicResource String_Menu_Filter_Rating}"
+                          x:Name="FilterRatingMenuItem"
+                          IsCheckable="False">
+                    <MenuItem x:Name="FilterRating1MenuItem"
+                              Header="★"
+                              IsCheckable="True"
+                              Click="FilterRating1MenuItem_Click"/>
+                    <MenuItem x:Name="FilterRating2MenuItem"
+                              Header="★★"
+                              IsCheckable="True"
+                              Click="FilterRating2MenuItem_Click"/>
+                    <MenuItem x:Name="FilterRating3MenuItem"
+                              Header="★★★"
+                              IsCheckable="True"
+                              Click="FilterRating3MenuItem_Click"/>
+                    <MenuItem x:Name="FilterRating4MenuItem"
+                              Header="★★★★"
+                              IsCheckable="True"
+                              Click="FilterRating4MenuItem_Click"/>
+                    <MenuItem x:Name="FilterRating5MenuItem"
+                              Header="★★★★★"
+                              IsCheckable="True"
+                              Click="FilterRating5MenuItem_Click"/>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="{DynamicResource String_Menu_Filter_Clear}"
+                          x:Name="FilterClearMenuItem"
+                          Click="ClearAllFilters"/>
+            </MenuItem>
+
             <MenuItem Header="{DynamicResource String_Menu_Tools}"
                       x:Name="ToolsMenu"
                       Visibility="Collapsed">

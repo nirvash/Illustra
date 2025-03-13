@@ -15,6 +15,7 @@ using System.ComponentModel;
 using GongSolutions.Wpf.DragDrop;
 using System.Collections;
 using Illustra.Functions;
+using System.Windows.Documents;
 
 namespace Illustra.Views
 {
@@ -183,9 +184,19 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(OnSelectFileRequest);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
         }
+
+
+        private void OnFilterChanged(FilterChangedEventArgs args)
+        {
+            _currentRatingFilter = args.RatingFilter;
+            UpdateFilterButtonStates(args.RatingFilter);
+        }
+
 
         private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
@@ -449,12 +460,23 @@ namespace Illustra.Views
                         // ソート順に従って適切な位置に挿入
                         _viewModel.AddItem(fileNode);
 
-                        // サムネイル生成をトリガー
-                        var index = _viewModel.Items.IndexOf(fileNode);
-                        if (index >= 0)
+                        _ = Task.Run(async () =>
                         {
-                            await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
-                        }
+                            await _viewModel.UpdatePromptCacheAsync(path);
+
+                            // RefreshFiltering を await で完了を待ってから次の処理に進む
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                _viewModel.RefreshFiltering();
+                            }).Task;  // Task を取得して await
+
+                            // サムネイル生成をトリガー
+                            var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
+                            if (index >= 0)
+                            {
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                            }
+                        });
                     }
                 }
                 catch (Exception ex)

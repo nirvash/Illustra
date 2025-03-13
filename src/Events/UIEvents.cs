@@ -90,6 +90,28 @@ namespace Illustra.Events
     }
 
     /// <summary>
+    /// フィルタ変更イベントの引数
+    /// </summary>
+    public class FilterChangedEventArgs
+    {
+        public bool IsPromptFilterEnabled { get; set; }
+        public int RatingFilter { get; set; }
+        public string SourceId { get; set; }
+
+        public FilterChangedEventArgs(bool isPromptFilterEnabled, int ratingFilter, string sourceId)
+        {
+            IsPromptFilterEnabled = isPromptFilterEnabled;
+            RatingFilter = ratingFilter;
+            SourceId = sourceId;
+        }
+    }
+
+    /// <summary>
+    /// フィルタが変更されたときにトリガーされるイベント
+    /// </summary>
+    public class FilterChangedEvent : PubSubEvent<FilterChangedEventArgs> { }
+
+    /// <summary>
     /// ファイル操作の進行状況イベント
     /// </summary>
     public class FileOperationProgressEvent : PubSubEvent<FileOperationProgressEventArgs> { }

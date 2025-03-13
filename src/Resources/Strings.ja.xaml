@@ -14,9 +14,15 @@
     <system:String x:Key="String_Menu_File">ファイル</system:String>
     <system:String x:Key="String_Menu_Edit">編集</system:String>
     <system:String x:Key="String_Menu_View">表示</system:String>
+    <system:String x:Key="String_Menu_Filter">フィルタ</system:String>
     <system:String x:Key="String_Menu_Settings">設定</system:String>
     <system:String x:Key="String_Menu_Tools">ツール</system:String>
     <system:String x:Key="String_Menu_Help">ヘルプ</system:String>
+
+    <!-- Filter Menu -->
+    <system:String x:Key="String_Menu_Filter_Prompt">プロンプト情報あり</system:String>
+    <system:String x:Key="String_Menu_Filter_Rating">レーティングでフィルタ</system:String>
+    <system:String x:Key="String_Menu_Filter_Clear">すべてのフィルタを解除</system:String>
 
     <!-- Tools Menu -->
     <system:String x:Key="String_Menu_Tools_ImageGeneration">画像生成</system:String>
