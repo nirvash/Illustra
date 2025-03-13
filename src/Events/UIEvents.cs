@@ -6,11 +6,13 @@ namespace Illustra.Events
     {
         public string Path { get; set; }
         public string SourceId { get; set; }
+        public string? InitialSelectedFilePath { get; set; }
 
-        public FolderSelectedEventArgs(string path, string sourceId)
+        public FolderSelectedEventArgs(string path, string sourceId, string? initialSelectedFilePath = null)
         {
             Path = path;
             SourceId = sourceId;
+            InitialSelectedFilePath = initialSelectedFilePath;
         }
     }
 

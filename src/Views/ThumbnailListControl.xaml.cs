@@ -186,7 +186,6 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<SelectFileRequestEvent>().Subscribe(OnSelectFileRequest);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
         }
 
@@ -209,14 +208,14 @@ namespace Illustra.Views
             UpdateFilterButtonStates(0);
             _viewModel.ApplyRatingFilter(0);
 
-            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             // 以前のフォルダの監視を停止
             if (_fileSystemMonitor.IsMonitoring)
             {
                 _fileSystemMonitor.StopMonitoring();
             }
 
-            LoadFileNodes(folderPath);
+            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
+            LoadFileNodes(folderPath, args.InitialSelectedFilePath);
 
             // 新しいフォルダの監視を開始
             _fileSystemMonitor.StartMonitoring(folderPath);
@@ -560,7 +559,17 @@ namespace Illustra.Views
 
                 string? filePath = null;
                 bool needFocus = !_isFirstLoaded;
-                if (!_isFirstLoaded)
+
+                // 優先順位：
+                // 1. 指定された初期選択ファイル
+                // 2. 初回起動時の最後に選択されていたファイル
+                // 3. リストの最初のアイテム
+                if (_pendingInitialSelectedFilePath != null)
+                {
+                    filePath = _pendingInitialSelectedFilePath;
+                    _pendingInitialSelectedFilePath = null;
+                }
+                else if (!_isFirstLoaded)
                 {
                     // 初回ロード時の処理
                     if (File.Exists(_appSettings.LastSelectedFilePath))
@@ -579,10 +588,11 @@ namespace Illustra.Views
                     }
                 }
 
+                SelectThumbnail(filePath);
+
                 // 初回起動時のみリストアイテムにフォーカスを設定させる
                 if (needFocus)
                 {
-                    SelectThumbnail(filePath);
                     // 選択中のサムネイルにフォーカスを設定
                     // レイアウト更新後にフォーカスを設定するための処理
                     EventHandler layoutUpdatedHandler = null;
@@ -642,32 +652,6 @@ namespace Illustra.Views
             }
         }
 
-        private void OnSelectFileRequest(string filePath)
-        {
-            if (_viewModel.Items.Count == 0)
-            {
-                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish("");
-                return;
-            }
-
-            // アイテムが選択済みの場合は何もしない
-            if (_viewModel.SelectedItems.Any())
-            {
-                return;
-            }
-
-            if (filePath == "")
-            {
-                var item = _viewModel.Items[0];
-                if (item == null) return;
-                filePath = item.FullPath;
-            }
-            SelectThumbnail(filePath);
-
-            // サムネイルにフォーカスを設定
-            // await Task.Delay(50);
-            // ThumbnailItemsControl.Focus();
-        }
 
         /// <summary>
         /// 指定されたファイルを選択します
@@ -1456,9 +1440,12 @@ namespace Illustra.Views
             }
         }
 
-        internal void LoadFileNodes(string path, int rating = 0)
+        private string? _pendingInitialSelectedFilePath;
+
+        internal void LoadFileNodes(string path, string? initialSelectedFilePath = null)
         {
             _currentFolderPath = path;
+            _pendingInitialSelectedFilePath = initialSelectedFilePath;
             _thumbnailLoader.LoadFileNodes(path);
         }
 
