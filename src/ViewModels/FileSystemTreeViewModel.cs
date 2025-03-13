@@ -190,6 +190,8 @@ namespace Illustra.ViewModels
             if (!string.IsNullOrEmpty(args.Path) && Directory.Exists(args.Path))
             {
                 Expand(args.Path);
+                // フォルダを展開した後、そのノードを画面内に表示
+                _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.Path);
             }
         }
 

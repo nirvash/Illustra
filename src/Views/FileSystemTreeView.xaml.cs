@@ -104,6 +104,12 @@ namespace Illustra.Views
                 _appSettings = SettingsHelper.GetSettings();
             });
 
+            // ツリーアイテムを画面内に表示するイベントを購読
+            _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Subscribe(path =>
+            {
+                ScrollToSelectedItem();
+            });
+
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
         }
@@ -118,8 +124,8 @@ namespace Illustra.Views
                     _viewModel.SelectedItem = item;
                 }
 
-                // 選択されたアイテムまでスクロール
-                ScrollToSelectedItem();
+                // ノードをクリックしたときにはスクロールは不要
+                // 外部からフォルダが指定されたときは別途スクロール処理を実行している
 
                 // 選択されたアイテムのTreeViewItemを取得して更新を強制
                 var treeView = sender as TreeView;
@@ -232,6 +238,13 @@ namespace Illustra.Views
                 await Dispatcher.InvokeAsync(() =>
                 {
                     currentContainer.BringIntoView();
+                }, DispatcherPriority.Render);
+
+                // UIの更新を待つ
+                await Task.Delay(50);
+
+                await Dispatcher.InvokeAsync(() =>
+                {
                     // BringIntoViewは単にアイテムを表示範囲内に入れるだけなので、
                     // さらに上部に持ってくるには追加の処理が必要
                     ScrollViewer scrollViewer = FindScrollViewer(treeView);
@@ -247,6 +260,9 @@ namespace Illustra.Views
                     }
                     currentContainer.IsSelected = true;
                 }, DispatcherPriority.Render);
+
+                // スクロール完了を待つ
+                await Task.Delay(50);
             }
         }
 
@@ -300,6 +316,14 @@ namespace Illustra.Views
             }
 
             return null;
+        }
+
+        private void OnFolderSelected(FolderSelectedEventArgs args)
+        {
+            if (!string.IsNullOrEmpty(args.Path))
+            {
+                ScrollToSelectedItem();
+            }
         }
 
         private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)

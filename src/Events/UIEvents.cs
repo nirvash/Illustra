@@ -115,4 +115,9 @@ namespace Illustra.Events
     /// ファイル操作の進行状況イベント
     /// </summary>
     public class FileOperationProgressEvent : PubSubEvent<FileOperationProgressEventArgs> { }
+
+    /// <summary>
+    /// ツリービュー内の特定のアイテムを画面内に表示するためのイベント
+    /// </summary>
+    public class BringTreeItemIntoViewEvent : PubSubEvent<string> { }
 }
