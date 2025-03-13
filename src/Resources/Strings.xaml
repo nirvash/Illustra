@@ -130,8 +130,8 @@
     <system:String x:Key="String_Thumbnail_Rating">Rating</system:String>
     <system:String x:Key="String_Thumbnail_RatingFilter">Filter by Rating</system:String>
     <system:String x:Key="String_Thumbnail_ClearFilter">Clear Filter</system:String>
-    <system:String x:Key="String_Thumbnail_SortAscending">↑</system:String>
-    <system:String x:Key="String_Thumbnail_SortDescending">↓</system:String>
+    <system:String x:Key="String_Thumbnail_SortAscending">Asc</system:String>
+    <system:String x:Key="String_Thumbnail_SortDescending">Dec</system:String>
     <system:String x:Key="String_Thumbnail_SortByDate">Date</system:String>
     <system:String x:Key="String_Thumbnail_SortByName">Name</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>

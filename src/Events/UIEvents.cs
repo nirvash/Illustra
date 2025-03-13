@@ -151,4 +151,26 @@ namespace Illustra.Events
     /// ショートカットキーイベント
     /// </summary>
     public class ShortcutKeyEvent : PubSubEvent<ShortcutKeyEventArgs> { }
+
+    /// <summary>
+    /// ソート順変更イベントの引数
+    /// </summary>
+    public class SortOrderChangedEventArgs
+    {
+        public bool IsByDate { get; set; }
+        public bool IsAscending { get; set; }
+        public string SourceId { get; set; }
+
+        public SortOrderChangedEventArgs(bool isByDate, bool isAscending, string sourceId)
+        {
+            IsByDate = isByDate;
+            IsAscending = isAscending;
+            SourceId = sourceId;
+        }
+    }
+
+    /// <summary>
+    /// ソート順が変更されたときにトリガーされるイベント
+    /// </summary>
+    public class SortOrderChangedEvent : PubSubEvent<SortOrderChangedEventArgs> { }
 }

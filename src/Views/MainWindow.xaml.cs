@@ -152,6 +152,40 @@ namespace Illustra.Views
                     // フィルタクリアメニューの有効/無効を更新
                     FilterClearMenuItem.IsEnabled = viewModel.IsRatingFilterActive || viewModel.IsPromptFilterEnabled;
                 }
+                // ソート順の状態が変更された場合
+                else if (e.PropertyName == nameof(MainViewModel.SortAscending))
+                {
+                    _sortAscending = viewModel.SortAscending;
+                    SortAscendingMenuItem.IsChecked = _sortAscending;
+                    SortDescendingMenuItem.IsChecked = !_sortAscending;
+
+                    // ソートメニューの状態を更新
+                    if (_sortByDateAscendingMenuItem != null)
+                        _sortByDateAscendingMenuItem.IsChecked = _sortByDate && _sortAscending;
+                    if (_sortByDateDescendingMenuItem != null)
+                        _sortByDateDescendingMenuItem.IsChecked = _sortByDate && !_sortAscending;
+                    if (_sortByNameAscendingMenuItem != null)
+                        _sortByNameAscendingMenuItem.IsChecked = !_sortByDate && _sortAscending;
+                    if (_sortByNameDescendingMenuItem != null)
+                        _sortByNameDescendingMenuItem.IsChecked = !_sortByDate && !_sortAscending;
+                }
+                // ソート種別の状態が変更された場合
+                else if (e.PropertyName == nameof(MainViewModel.SortByDate))
+                {
+                    _sortByDate = viewModel.SortByDate;
+                    SortByDateMenuItem.IsChecked = _sortByDate;
+                    SortByNameMenuItem.IsChecked = !_sortByDate;
+
+                    // ソートメニューの状態を更新
+                    if (_sortByDateAscendingMenuItem != null)
+                        _sortByDateAscendingMenuItem.IsChecked = _sortByDate && _sortAscending;
+                    if (_sortByDateDescendingMenuItem != null)
+                        _sortByDateDescendingMenuItem.IsChecked = _sortByDate && !_sortAscending;
+                    if (_sortByNameAscendingMenuItem != null)
+                        _sortByNameAscendingMenuItem.IsChecked = !_sortByDate && _sortAscending;
+                    if (_sortByNameDescendingMenuItem != null)
+                        _sortByNameDescendingMenuItem.IsChecked = !_sortByDate && !_sortAscending;
+                }
             }
         }
 
@@ -367,23 +401,29 @@ namespace Illustra.Views
             SortDescendingMenuItem.IsChecked = !_sortAscending;
         }
 
-        private async void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
+        private void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _sortByDate = true;
             SortByDateMenuItem.IsChecked = true;
             SortByNameMenuItem.IsChecked = false;
-            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
         }
 
-        private async void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
+        private void SortByNameMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _sortByDate = false;
             SortByDateMenuItem.IsChecked = false;
             SortByNameMenuItem.IsChecked = true;
-            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
         }
 
-        private async void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
+        private void SortOrderMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender == SortAscendingMenuItem)
             {
@@ -397,7 +437,10 @@ namespace Illustra.Views
                 SortAscendingMenuItem.IsChecked = false;
                 SortDescendingMenuItem.IsChecked = true;
             }
-            await ThumbnailList.SortThumbnailAsync(_sortByDate, _sortAscending);
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
         }
 
         public bool SortByDate
@@ -520,9 +563,14 @@ namespace Illustra.Views
                 if (_sortByNameDescendingMenuItem != null)
                     _sortByNameDescendingMenuItem.IsChecked = false;
 
-                await ThumbnailList.SortThumbnailAsync(true, true);
+                _sortByDate = true;
+                _sortAscending = true;
                 _appSettings.SortByDate = true;
                 _appSettings.SortAscending = true;
+
+                // ソート順変更イベントを発行
+                _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                    new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
             }
             else if (menuItem == _sortByDateDescendingMenuItem)
             {
@@ -533,9 +581,14 @@ namespace Illustra.Views
                 if (_sortByNameDescendingMenuItem != null)
                     _sortByNameDescendingMenuItem.IsChecked = false;
 
-                await ThumbnailList.SortThumbnailAsync(true, false);
+                _sortByDate = true;
+                _sortAscending = false;
                 _appSettings.SortByDate = true;
                 _appSettings.SortAscending = false;
+
+                // ソート順変更イベントを発行
+                _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                    new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
             }
         }
 
@@ -556,9 +609,14 @@ namespace Illustra.Views
                 if (_sortByNameDescendingMenuItem != null)
                     _sortByNameDescendingMenuItem.IsChecked = false;
 
-                await ThumbnailList.SortThumbnailAsync(false, true);
+                _sortByDate = false;
+                _sortAscending = true;
                 _appSettings.SortByDate = false;
                 _appSettings.SortAscending = true;
+
+                // ソート順変更イベントを発行
+                _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                    new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
             }
             else if (menuItem == _sortByNameDescendingMenuItem)
             {
@@ -569,9 +627,14 @@ namespace Illustra.Views
                 if (_sortByNameAscendingMenuItem != null)
                     _sortByNameAscendingMenuItem.IsChecked = false;
 
-                await ThumbnailList.SortThumbnailAsync(false, false);
+                _sortByDate = false;
+                _sortAscending = false;
                 _appSettings.SortByDate = false;
                 _appSettings.SortAscending = false;
+
+                // ソート順変更イベントを発行
+                _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                    new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
             }
         }
     }

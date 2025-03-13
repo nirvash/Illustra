@@ -219,6 +219,7 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
 
             // ItemContainerGenerator.StatusChangedイベントを登録
             ThumbnailItemsControl.ItemContainerGenerator.StatusChanged += ThumbnailItemsControl_StatusChanged;
@@ -1806,6 +1807,63 @@ namespace Illustra.Views
             });
         }
 
+        private async void OnSortOrderChanged(SortOrderChangedEventArgs args)
+        {
+            try
+            {
+                _isSortByDate = args.IsByDate;
+                _isSortAscending = args.IsAscending;
+
+                // ローダーの設定を更新
+                _thumbnailLoader.SortByDate = _isSortByDate;
+                _thumbnailLoader.SortAscending = _isSortAscending;
+
+                // 設定を保存
+                _appSettings.SortByDate = _isSortByDate;
+                _appSettings.SortAscending = _isSortAscending;
+                SettingsHelper.SaveSettings(_appSettings);
+
+                // UI更新
+                SortTypeText.Text = _isSortByDate ?
+                    (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                    (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+                SortDirectionText.Text = _isSortAscending ?
+                    (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                    (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+
+                // ローダーの設定を更新
+                _thumbnailLoader.SortByDate = _isSortByDate;
+                _thumbnailLoader.SortAscending = _isSortAscending;
+
+                // UI更新
+                SortTypeText.Text = _isSortByDate ?
+                    (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                    (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+                SortDirectionText.Text = _isSortAscending ?
+                    (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                    (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+
+                // 外部からのイベントの場合のみ設定を保存
+                _appSettings.SortByDate = _isSortByDate;
+                _appSettings.SortAscending = _isSortAscending;
+                SettingsHelper.SaveSettings(_appSettings);
+
+                // サムネイルをソート
+                await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+
+                // サムネイルの再生成
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer != null)
+                {
+                    await LoadVisibleThumbnailsAsync(scrollViewer);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in OnSortOrderChanged: {ex.Message}");
+            }
+        }
+
         private void OnRatingChanged(RatingChangedEventArgs args)
         {
             var fileNode = _viewModel.Items.FirstOrDefault(fn => fn.FullPath == args.FilePath);
@@ -1894,6 +1952,7 @@ namespace Illustra.Views
             _isSortAscending = !_isSortAscending;
             _appSettings.SortAscending = _isSortAscending;
             _thumbnailLoader.SortAscending = _isSortAscending;
+            _viewModel.SortAscending = _isSortAscending;
             SettingsHelper.SaveSettings(_appSettings);
             SortDirectionText.Text = _isSortAscending ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
@@ -1912,6 +1971,7 @@ namespace Illustra.Views
             _isSortByDate = !_isSortByDate;
             _appSettings.SortByDate = _isSortByDate;
             _thumbnailLoader.SortByDate = _isSortByDate;
+            _viewModel.SortByDate = _isSortByDate;
             SettingsHelper.SaveSettings(_appSettings);
             SortTypeText.Text = _isSortByDate ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :

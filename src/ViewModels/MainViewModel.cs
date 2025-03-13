@@ -12,11 +12,44 @@ namespace Illustra.ViewModels
     {
         private readonly DatabaseManager _db = new();
         private string? _currentFolderPath;
+        private bool _sortByDate;
+        private bool _sortAscending;
         public BulkObservableCollection<FileNodeModel> Items { get; } = new();
         private ICollectionView _filteredItems;
 
+        public bool SortByDate
+        {
+            get => _sortByDate;
+            set
+            {
+                if (_sortByDate != value)
+                {
+                    _sortByDate = value;
+                    OnPropertyChanged(nameof(SortByDate));
+                }
+            }
+        }
+
+        public bool SortAscending
+        {
+            get => _sortAscending;
+            set
+            {
+                if (_sortAscending != value)
+                {
+                    _sortAscending = value;
+                    OnPropertyChanged(nameof(SortAscending));
+                }
+            }
+        }
+
         public MainViewModel()
         {
+            // 初期設定を読み込む
+            var settings = SettingsHelper.GetSettings();
+            _sortByDate = settings.SortByDate;
+            _sortAscending = settings.SortAscending;
+
             _filteredItems = CollectionViewSource.GetDefaultView(Items);
             _filteredItems.Filter = FilterItems;
 
@@ -70,10 +103,9 @@ namespace Illustra.ViewModels
         {
             if (Items.Count == 0) return 0;
 
-            // 現在のソート条件を取得（ThumbnailListControl から）
-            var settings = SettingsHelper.GetSettings();
-            bool sortByDate = settings.SortByDate;
-            bool sortAscending = settings.SortAscending;
+            // ビューモデルのソート設定を使用
+            bool sortByDate = _sortByDate;
+            bool sortAscending = _sortAscending;
 
             for (int i = 0; i < Items.Count; i++)
             {
