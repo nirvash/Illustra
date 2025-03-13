@@ -453,7 +453,8 @@
                 VerticalAlignment="Center"
                 Opacity="0"
                 Padding="16,8"
-                Panel.ZIndex="1000">
+                Panel.ZIndex="1000"
+                IsHitTestVisible="False">
             <Grid>
                 <TextBlock x:Name="NotificationText"
                            Text=""
