@@ -42,6 +42,45 @@ namespace Illustra.Helpers
             InitializeDatabase();
         }
 
+        /// <summary>
+        /// デバッグログを有効化します
+        /// </summary>
+        /// <param name="enable">デバッグログを有効にするかどうか</param>
+        public void EnableDebugLogging(bool enable)
+        {
+            // DatabaseAccessクラスのデバッグログ設定を変更
+            _dbAccess.EnableDebugLogging = enable;
+            _dbAccess.EnableVerboseLogging = false; // 詳細ログは常に無効
+
+            // 設定状態をログに出力
+            if (enable)
+            {
+                Debug.WriteLine("[DatabaseManager] デバッグログを有効化しました");
+            }
+            else
+            {
+                Debug.WriteLine("[DatabaseManager] デバッグログを無効化しました");
+            }
+        }
+
+        /// <summary>
+        /// 最近のデータベースアクセスログを取得します
+        /// </summary>
+        /// <returns>ログの文字列</returns>
+        public string GetDatabaseLogs()
+        {
+            return _dbAccess.GetRecentLogs();
+        }
+
+        /// <summary>
+        /// 現在のデータベース操作の状態を取得します
+        /// </summary>
+        /// <returns>アクティブな読み取り操作数、アクティブな書き込み操作数、待機中の書き込み操作数</returns>
+        public (int ActiveReads, int ActiveWrites, int PendingWrites) GetDatabaseOperationStatus()
+        {
+            return _dbAccess.GetOperationStatus();
+        }
+
         private void InitializeDatabase()
         {
             var db = new DataConnection(_dataProvider, _connectionString);
@@ -87,7 +126,7 @@ namespace Illustra.Helpers
             });
         }
 
-        public async Task<List<FileNodeModel>> GetFileNodesAsync(string folderPath)
+        public async Task<List<FileNodeModel>> GetFileNodesAsync(string folderPath, CancellationToken cancellationToken = default)
         {
             var sw = new Stopwatch();
             sw.Start();
@@ -96,12 +135,12 @@ namespace Illustra.Helpers
                 return await db.GetTable<FileNodeModel>()
                              .Where(fn => fn.FolderPath == folderPath)
                              .ToListAsync();
-            });
+            }, cancellationToken);
             sw.Stop();
             return result;
         }
 
-        public async Task<FileNodeModel?> GetFileNodeAsync(string fullPath)
+        public async Task<FileNodeModel?> GetFileNodeAsync(string fullPath, CancellationToken cancellationToken = default)
         {
             var sw = new Stopwatch();
             sw.Start();
@@ -109,12 +148,12 @@ namespace Illustra.Helpers
             {
                 return await db.GetTable<FileNodeModel>()
                              .FirstOrDefaultAsync(fn => fn.FullPath == fullPath);
-            });
+            }, cancellationToken);
             sw.Stop();
             return result;
         }
 
-        public async Task<List<FileNodeModel>> GetSortedFileNodesAsync(string folderPath, bool sortByDate, bool sortAscending)
+        public async Task<List<FileNodeModel>> GetSortedFileNodesAsync(string folderPath, bool sortByDate, bool sortAscending, CancellationToken cancellationToken = default)
         {
             var sw = new Stopwatch();
             sw.Start();
@@ -132,7 +171,7 @@ namespace Illustra.Helpers
                 }
 
                 return await query.ToListAsync();
-            });
+            }, cancellationToken);
             sw.Stop();
             return result;
         }
@@ -164,7 +203,7 @@ namespace Illustra.Helpers
             });
         }
 
-        public async Task<List<FileNodeModel>> GetOrCreateFileNodesAsync(string folderPath, Func<string, bool> fileFilter)
+        public async Task<List<FileNodeModel>> GetOrCreateFileNodesAsync(string folderPath, Func<string, bool> fileFilter, CancellationToken cancellationToken = default)
         {
             var sw = new Stopwatch();
             sw.Start();
@@ -172,8 +211,11 @@ namespace Illustra.Helpers
             try
             {
                 // 既存のファイルノードを取得
-                var existingNodes = await GetFileNodesAsync(folderPath);
+                var existingNodes = await GetFileNodesAsync(folderPath, cancellationToken);
                 var existingNodeDict = existingNodes.ToDictionary(n => n.FullPath, n => n);
+
+                // キャンセル確認
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // ディレクトリからファイルパスを列挙
                 var filePaths = Directory.EnumerateFiles(folderPath).Where(FileHelper.IsImageFile).ToList();
@@ -195,6 +237,8 @@ namespace Illustra.Helpers
                 }
                 Debug.WriteLine($"ファイル '{folderPath}: ファイルノードを作成 {sw.ElapsedMilliseconds} ms");
 
+                // Note: Write操作のキャンセルサポートは将来の検討課題とする
+                // 現在はWrite操作開始後のキャンセルは許可しない設計
                 await _dbAccess.WriteWithTransactionAsync(async db =>
                 {
                     // DB上から該当フォルダのレコードを削除
@@ -226,6 +270,11 @@ namespace Illustra.Helpers
 
                 return newNodes;
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"GetOrCreateFileNodesAsync was cancelled for folder: {folderPath}");
+                throw;
+            }
             catch (SqliteException ex)
             {
                 Debug.WriteLine($"GetOrCreateFileNodesAsync中にSQLエラーが発生しました: {ex.Message}");
@@ -238,17 +287,19 @@ namespace Illustra.Helpers
             }
         }
 
-        public async Task<FileNodeModel> HandleFileRenamedAsync(string oldPath, string newPath)
+        public async Task<FileNodeModel> HandleFileRenamedAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)
         {
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // まずDBから古いパスのノードを探す
-                var fileNode = await GetFileNodeAsync(oldPath);
+                var fileNode = await GetFileNodeAsync(oldPath, cancellationToken);
 
                 // 古いパスのノードが見つからない場合は新規作成
                 if (fileNode == null)
                 {
-                    return await CreateFileNodeAsync(newPath);
+                    return await CreateFileNodeAsync(newPath, cancellationToken);
                 }
 
                 // ファイル情報を更新
@@ -269,6 +320,11 @@ namespace Illustra.Helpers
                 await UpdateFileNode(fileNode);
                 return fileNode;
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"HandleFileRenamedAsync was cancelled for {oldPath} -> {newPath}");
+                throw;
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error handling renamed file {oldPath} -> {newPath}: {ex.Message}");
@@ -276,13 +332,15 @@ namespace Illustra.Helpers
             }
         }
 
-        public async Task<FileNodeModel> CreateFileNodeAsync(string filePath)
+        public async Task<FileNodeModel> CreateFileNodeAsync(string filePath, CancellationToken cancellationToken = default)
         {
             var folderPath = Path.GetDirectoryName(filePath);
             var fileName = Path.GetFileName(filePath);
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // ファイル情報を取得
                 var fileInfo = new FileInfo(filePath);
                 if (!fileInfo.Exists)
@@ -305,6 +363,11 @@ namespace Illustra.Helpers
                 // DBに保存
                 await SaveFileNodeAsync(newNode);
                 return newNode;
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"CreateFileNodeAsync was cancelled for file: {filePath}");
+                throw;
             }
             catch (Exception ex)
             {

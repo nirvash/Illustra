@@ -13,6 +13,7 @@ using LinqToDB;
 using LinqToDB.DataProvider.SQLite;
 using LinqToDB.Data;
 using LinqToDB.DataProvider;
+using System.Diagnostics;
 
 namespace Illustra
 {
@@ -74,14 +75,28 @@ namespace Illustra
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            base.OnStartup(e);
+
+            // データベースのデバッグログを設定
+            var dbManager = Container.Resolve<DatabaseManager>();
+            bool enableDebugLogging = false; // デバッグログを無効化
+            dbManager.EnableDebugLogging(enableDebugLogging);
+
+            if (enableDebugLogging)
+            {
+                Debug.WriteLine("[APP] データベースデバッグログを有効化しました");
+            }
+            else
+            {
+                Debug.WriteLine("[APP] データベースデバッグログを無効化しました");
+            }
+
             // データベースの初期化
             InitializeDatabase();
 
             // AppSettingsから循環移動の設定を読み込む
             var settings = SettingsHelper.GetSettings();
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
-
-            base.OnStartup(e);
         }
 
 
@@ -131,7 +146,18 @@ namespace Illustra
             {
                 // リソース読み込みエラーの場合はログに記録
                 System.Diagnostics.Debug.WriteLine($"リソース読み込みエラー: {ex.Message}");
-                MessageBox.Show($"リソースの読み込みに失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                // Prismの標準的なダイアログサービスを使用
+                try
+                {
+                    // 現在のPrismバージョンでは直接MessageBoxを使用する方が簡単
+                    MessageBox.Show(ex.ToString(), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                catch (Exception dialogEx)
+                {
+                    // 最終的なフォールバック
+                    System.Diagnostics.Debug.WriteLine($"ダイアログ表示エラー: {dialogEx.Message}");
+                }
             }
         }
 

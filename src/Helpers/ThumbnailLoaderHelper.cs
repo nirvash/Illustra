@@ -33,6 +33,11 @@ public class ThumbnailLoaderHelper
     private readonly Action<string> _selectCallback;
     private readonly DatabaseManager _db;
 
+    // フォルダ読み込み用のキャンセルトークンソース
+    private CancellationTokenSource? _folderLoadingCTS;
+    // サムネイル読み込み用のキャンセルトークンソース
+    private CancellationTokenSource? _thumbnailLoadingCTS;
+
     public event EventHandler? FileNodesLoaded;
 
     private volatile bool _isLoading = false;
@@ -111,9 +116,9 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// 指定されたフォルダのサムネイルを読み込みます（最適化版）
+    /// 指定されたフォルダの画像のノードを読み込みます
     /// </summary>
-    /// <param name="folderPath">サムネイルを読み込むフォルダのパス</param>
+    /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
     public async Task LoadFileNodes(string folderPath)
     {
         if (_isLoading) return;
@@ -124,14 +129,26 @@ public class ThumbnailLoaderHelper
 
         try
         {
+            // 前回のフォルダ読み込み処理をキャンセル
+            if (_folderLoadingCTS != null)
+            {
+                Debug.WriteLine($"[CANCEL] 前回のフォルダ読み込み処理をキャンセルします: {_currentFolderPath}");
+                _folderLoadingCTS.Cancel();
+                _folderLoadingCTS.Dispose();
+            }
+
+            // サムネイル読み込み処理もキャンセル
+            CancelThumbnailLoading();
+
+            // 新しいキャンセルトークンを作成
+            _folderLoadingCTS = new CancellationTokenSource();
+            var cancellationToken = _folderLoadingCTS.Token;
+            _currentFolderPath = folderPath;
+
             await Task.Run(async () =>
             {
                 try
                 {
-                    CancelAllLoading();
-                    _cancellationTokenSource = new CancellationTokenSource();
-                    _currentFolderPath = folderPath;
-
                     if (!HasFolderAccess(folderPath))
                     {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -139,15 +156,39 @@ public class ThumbnailLoaderHelper
                             _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
                             FileNodesLoaded?.Invoke(this, EventArgs.Empty);
                         });
+                        Debug.WriteLine($"[ERROR] Access denied to folder: {folderPath}");
                         return;
                     }
 
-                    // 既存ノードの取得と新規ノードの作成を一括で行う
-                    var fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile);
-                    Debug.WriteLine($"フォルダ ノード生成まで　'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+                    // キャンセルされていないか確認
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    // ソート条件に従ってノードを並び替え
-                    fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending);
+                    // 既存ノードの取得と新規ノードの作成を一括で行う
+                    List<FileNodeModel> fileNodes;
+                    try
+                    {
+                        fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile, cancellationToken);
+                        Debug.WriteLine($"[INFO] フォルダ ノード生成まで　'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+
+                        // キャンセルされていないか再確認
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        // ソート条件に従ってノードを並び替え
+                        fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.WriteLine($"[CANCELLED] DB operation cancelled for folder: {folderPath}");
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ERROR] DB operation failed for folder: {folderPath}, Error: {ex.Message}");
+                        throw;
+                    }
+
+                    // キャンセルされていないか再確認
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     var dummyImage = GetDummyImage();
 
@@ -169,11 +210,25 @@ public class ThumbnailLoaderHelper
                         _ = LoadInitialThumbnailsAsync();
                     });
                 }
+                catch (OperationCanceledException)
+                {
+                    Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"フォルダ '{folderPath}' の処理中にエラーが発生しました: {ex.Message}");
+                    Debug.WriteLine($"[ERROR] フォルダ処理中にエラーが発生しました '{folderPath}': {ex.Message}");
+                    throw;
                 }
-            });
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] フォルダ読み込み処理中に予期せぬエラーが発生しました: {ex.Message}");
         }
         finally
         {
@@ -188,6 +243,10 @@ public class ThumbnailLoaderHelper
     {
         try
         {
+            // サムネイル読み込み用の新しいキャンセルトークンを作成
+            InitializeThumbnailLoadingCTS();
+            var cancellationToken = _thumbnailLoadingCTS?.Token ?? CancellationToken.None;
+
             // フィルタされたアイテムの個数をチェック
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
             if (!filteredItems.Any()) return;
@@ -207,9 +266,13 @@ public class ThumbnailLoaderHelper
                 await LoadMoreThumbnailsAsync(startIndex, endIndex);
             }
         }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine($"[CANCELLED] 初期サムネイルのロードがキャンセルされました");
+        }
         catch (Exception ex)
         {
-            Debug.WriteLine($"初期サムネイルのロード中にエラーが発生しました: {ex.Message}");
+            Debug.WriteLine($"[ERROR] 初期サムネイルのロード中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -218,8 +281,11 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public async void RefreshThumbnailSizes()
     {
-        CancelAllLoading();
-        _cancellationTokenSource = new CancellationTokenSource();
+        // サムネイル読み込みをキャンセル
+        CancelThumbnailLoading();
+
+        // 新しいキャンセルトークンを作成
+        InitializeThumbnailLoadingCTS();
 
         try
         {
@@ -243,7 +309,7 @@ public class ThumbnailLoaderHelper
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"サムネイルサイズ更新中にエラーが発生しました: {ex.Message}");
+            Debug.WriteLine($"[ERROR] サムネイルサイズ更新中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -266,7 +332,8 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
     {
-        var cancellationToken = GetCurrentCancellationToken();
+        // サムネイル読み込み用のキャンセルトークンを取得
+        var cancellationToken = GetThumbnailLoadingToken();
 
         // フィルタされていないアイテムのコレクション
         var allNodes = _viewModel.Items.ToArray();
@@ -303,7 +370,7 @@ public class ThumbnailLoaderHelper
         }
         catch (OperationCanceledException)
         {
-            // キャンセルされた場合は無視
+            Debug.WriteLine($"[CANCELLED] サムネイル読み込みバッチ処理がキャンセルされました");
         }
     }
 
@@ -329,19 +396,102 @@ public class ThumbnailLoaderHelper
         }
     }
 
-    public CancellationToken GetCurrentCancellationToken()
+    /// <summary>
+    /// サムネイル読み込み用のキャンセルトークンを初期化します
+    /// </summary>
+    private void InitializeThumbnailLoadingCTS()
     {
-        return _cancellationTokenSource?.Token ?? CancellationToken.None;
+        if (_thumbnailLoadingCTS != null)
+        {
+            _thumbnailLoadingCTS.Dispose();
+        }
+        _thumbnailLoadingCTS = new CancellationTokenSource();
     }
 
+    /// <summary>
+    /// サムネイル読み込み用のキャンセルトークンを取得します
+    /// </summary>
+    public CancellationToken GetThumbnailLoadingToken()
+    {
+        return _thumbnailLoadingCTS?.Token ?? CancellationToken.None;
+    }
+
+    /// <summary>
+    /// フォルダ読み込み用のキャンセルトークンを取得します
+    /// </summary>
+    public CancellationToken GetFolderLoadingToken()
+    {
+        return _folderLoadingCTS?.Token ?? CancellationToken.None;
+    }
+
+    /// <summary>
+    /// 現在のキャンセルトークンを取得します（後方互換性のため）
+    /// </summary>
+    public CancellationToken GetCurrentCancellationToken()
+    {
+        // 優先順位: フォルダ読み込み > サムネイル読み込み > なし
+        if (_folderLoadingCTS != null && !_folderLoadingCTS.IsCancellationRequested)
+            return _folderLoadingCTS.Token;
+        if (_thumbnailLoadingCTS != null && !_thumbnailLoadingCTS.IsCancellationRequested)
+            return _thumbnailLoadingCTS.Token;
+        return CancellationToken.None;
+    }
+
+    /// <summary>
+    /// サムネイル読み込みをキャンセルします
+    /// </summary>
+    public void CancelThumbnailLoading()
+    {
+        if (_thumbnailLoadingCTS != null)
+        {
+            try
+            {
+                _thumbnailLoadingCTS.Cancel();
+                Debug.WriteLine($"[CANCEL] サムネイル読み込み処理をキャンセルしました");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ERROR] サムネイル読み込みキャンセル処理中にエラーが発生しました: {ex.Message}");
+            }
+            finally
+            {
+                _thumbnailLoadingCTS.Dispose();
+                _thumbnailLoadingCTS = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// フォルダ読み込みをキャンセルします
+    /// </summary>
+    public void CancelFolderLoading()
+    {
+        if (_folderLoadingCTS != null)
+        {
+            try
+            {
+                _folderLoadingCTS.Cancel();
+                Debug.WriteLine($"[CANCEL] フォルダ読み込み処理をキャンセルしました: {_currentFolderPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ERROR] フォルダ読み込みキャンセル処理中にエラーが発生しました: {ex.Message}");
+            }
+            finally
+            {
+                _folderLoadingCTS.Dispose();
+                _folderLoadingCTS = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// すべての読み込み処理をキャンセルします
+    /// </summary>
     public void CancelAllLoading()
     {
-        if (_cancellationTokenSource != null)
-        {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
-            _cancellationTokenSource = null;
-        }
+        CancelFolderLoading();
+        CancelThumbnailLoading();
     }
 
     private ThumbnailInfo GetOrCreateThumbnail(string? imagePath, CancellationToken cancellationToken)
