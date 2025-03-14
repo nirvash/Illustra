@@ -42,13 +42,12 @@
         </Grid.ColumnDefinitions>
 
         <!-- メイン表示領域とレーティング表示をまとめたGrid -->
-        <Grid Grid.Column="0">
+        <Grid Grid.Column="0" Background="Transparent" PreviewMouseWheel="MainImage_PreviewMouseWheel">
             <!-- メイン表示領域 -->
             <Image x:Name="MainImage"
                    Source="{Binding ImageSource}"
                    Stretch="Uniform"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   PreviewMouseWheel="MainImage_PreviewMouseWheel"/>
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
         </Grid>
 
         <!-- レーティング表示（全体の右上に配置） -->
