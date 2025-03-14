@@ -810,16 +810,36 @@ namespace Illustra.Views
             return false;
         }
 
+        private Point? _lastMousePosition;
+        private const double MOUSE_MOVEMENT_THRESHOLD = 5; // 5ピクセル以上の移動で検知
+
         private void MainGrid_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_isFullScreen) return;
 
-            // マウスカーソルを表示
-            Mouse.OverrideCursor = null; // nullに設定することでデフォルトのカーソルに戻す
+            var currentPosition = e.GetPosition(this);
 
-            // カーソル非表示タイマーをリセット
-            hideCursorTimer.Stop();
-            hideCursorTimer.Start();
+            // 前回位置がない場合は現在位置を保存して終了
+            if (!_lastMousePosition.HasValue)
+            {
+                _lastMousePosition = currentPosition;
+                return;
+            }
+
+            // マウスの移動距離を計算
+            var deltaX = Math.Abs(currentPosition.X - _lastMousePosition.Value.X);
+            var deltaY = Math.Abs(currentPosition.Y - _lastMousePosition.Value.Y);
+            var distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            // 一定以上の移動があった場合のみカーソルを表示
+            if (distance > MOUSE_MOVEMENT_THRESHOLD)
+            {
+                Mouse.OverrideCursor = null; // nullに設定することでデフォルトのカーソルに戻す
+                hideCursorTimer.Stop();
+                hideCursorTimer.Start();
+            }
+
+            _lastMousePosition = currentPosition;
         }
 
         private void FullScreenButton_Click(object sender, RoutedEventArgs e)
