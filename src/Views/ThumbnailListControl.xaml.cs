@@ -1533,6 +1533,30 @@ namespace Illustra.Views
                     Parent = this
                 };
                 _currentViewerWindow = viewer; // 現在開いているビューアを追跡
+
+                // 初期状態のフルスクリーンモードを設定
+                _thumbnailLoader.SetFullscreenMode(viewer.IsFullScreen);
+
+                // ビューワが全画面表示モードを開始/終了した時のイベントを設定
+                viewer.IsFullscreenChanged += (s, e) =>
+                {
+                    _thumbnailLoader.SetFullscreenMode(viewer.IsFullScreen);
+                };
+
+                // ビューワが閉じられた時のイベントを設定
+                viewer.Closed += (s, e) =>
+                {
+                    _thumbnailLoader.SetFullscreenMode(false);
+                    _currentViewerWindow = null;
+
+                    // サムネイルの再生成
+                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    if (scrollViewer != null)
+                    {
+                        _ = LoadVisibleThumbnailsAsync(scrollViewer);
+                    }
+                };
+
                 viewer.Show();
                 viewer.Focus(); // ビューアウィンドウにフォーカスを設定
             }

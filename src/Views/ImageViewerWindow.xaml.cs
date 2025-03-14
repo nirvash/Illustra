@@ -26,6 +26,8 @@ namespace Illustra.Views
         private WindowStyle _previousWindowStyle;
         private bool _isFullScreen = false;
 
+        public event EventHandler? IsFullscreenChanged;
+
         public bool IsFullScreen
         {
             get => _isFullScreen;
@@ -35,6 +37,7 @@ namespace Illustra.Views
                 {
                     _isFullScreen = value;
                     OnPropertyChanged(nameof(IsFullScreen));
+                    IsFullscreenChanged?.Invoke(this, EventArgs.Empty);
                 }
             }
         }

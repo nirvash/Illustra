@@ -40,9 +40,23 @@ public class ThumbnailLoaderHelper
     public event EventHandler? FileNodesLoaded;
 
     private volatile bool _isLoading = false;
+    private volatile bool _isFullscreenMode = false;
 
     public bool SortByDate { get; set; } = true;
     public bool SortAscending { get; set; } = true;
+
+    /// <summary>
+    /// 全画面表示モードを設定します
+    /// </summary>
+    public void SetFullscreenMode(bool isFullscreen)
+    {
+        _isFullscreenMode = isFullscreen;
+        if (!isFullscreen)
+        {
+            // 全画面モード解除時は見えている範囲のサムネイルを再生成
+            _ = LoadInitialThumbnailsAsync();
+        }
+    }
 
     /// <summary>
     /// サムネイルのサイズを設定します
@@ -331,6 +345,12 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
     {
+        // 全画面表示中はサムネイル生成をスキップ
+        if (_isFullscreenMode)
+        {
+            return;
+        }
+
         // サムネイル読み込み用のキャンセルトークンを取得
         var cancellationToken = GetThumbnailLoadingToken();
 
