@@ -76,8 +76,8 @@ jobs:
           fixes=$(echo "$commits" | grep -i "^- fix:" || echo "")
           other=$(echo "$commits" | grep -v "^- feat:" | grep -v "^- fix:" || echo "")
 
-          # 出力を整形
-          output=""
+          # 出力を整形 (日本語と英語セクションを分離)
+          output="### 日本語\n\n"
           if [ ! -z "$features" ]; then
             output+="✨ 新機能:\n$features\n\n"
           fi
@@ -85,12 +85,23 @@ jobs:
             output+="🐛 バグ修正:\n$fixes\n\n"
           fi
           if [ ! -z "$other" ]; then
-            output+="🔧 その他の変更:\n$other\n"
+            output+="🔧 その他の変更:\n$other\n\n"
           fi
 
-          # 出力が空の場合のデフォルトメッセージ
+          output+="---\n\n### English\n\n"
+          if [ ! -z "$features" ]; then
+            output+="✨ New Features:\n$features\n\n"
+          fi
+          if [ ! -z "$fixes" ]; then
+            output+="🐛 Bug Fixes:\n$fixes\n\n"
+          fi
+          if [ ! -z "$other" ]; then
+            output+="🔧 Other Changes:\n$other\n"
+          fi
+
+          # 出力が空の場合のデフォルトメッセージ (日本語と英語セクションを分離)
           if [ -z "$output" ]; then
-            output="- メンテナンスの改善とバグ修正"
+            output="### 日本語\n\n- メンテナンスの改善とバグ修正\n\n---\n\n### English\n\n- Maintenance improvements and bug fixes"
           fi
 
           # 複数行出力をEOFで設定
@@ -118,7 +129,7 @@ jobs:
 
           # 既知の問題がない場合のデフォルトメッセージ
           if [ -z "$issues" ]; then
-            issues="- 現在、既知の問題はありません。"
+            issues="### 日本語\n\n- 現在、既知の問題はありません。\n\n---\n\n### English\n\n- No known issues at this time."
           fi
 
           # 複数行出力をEOFで設定
@@ -136,17 +147,38 @@ jobs:
           body: |
             ## 🚀 Illustra ${{ github.ref_name }}
 
-            ### 📦 インストール方法
+            ### 日本語
+
+            #### 📦 インストール方法
             1. Illustra-${{ github.ref_name }}.zip をダウンロード
             2. お好みの場所に展開
             3. Illustra.exe を実行
 
-            ### 💻 動作環境
+            #### 💻 動作環境
             - Windows 10/11
             - .NET 9.0 以降（実行ファイルに同梱）
 
-            ### 📝 変更点
+            #### 📝 変更点
             ${{ steps.read_release_notes.outputs.summary }}
 
-            ### 🔍 既知の問題
+            #### 🔍 既知の問題
+            ${{ steps.issues.outputs.issues }}
+
+            ---
+
+            ### English
+
+            #### 📦 Installation
+            1. Download Illustra-${{ github.ref_name }}.zip
+            2. Extract to your preferred location
+            3. Run Illustra.exe
+
+            #### 💻 System Requirements
+            - Windows 10/11
+            - .NET 9.0 or later (included in executable)
+
+            #### 📝 Changes
+            ${{ steps.read_release_notes.outputs.summary }}
+
+            #### 🔍 Known Issues
             ${{ steps.issues.outputs.issues }}
