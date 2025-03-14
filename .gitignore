@@ -18,6 +18,9 @@
 .DS_Store
 Thumbs.db
 
+# Apps
+cloc-*.exe
+
 # .NET / C# 関連
 bin/
 obj/
