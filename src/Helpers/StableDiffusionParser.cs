@@ -12,6 +12,147 @@ namespace StableDiffusionTools
     public class StableDiffusionParser
     {
         /// <summary>
+        /// 既定のセクションパターン
+        /// </summary>
+        private static readonly Dictionary<string, string> SectionPatterns = new()
+        {
+            { "Negative prompt:", "Negative prompt" },
+            { "Steps:", "Parameters" }, // Steps以降のパラメータ群は全てParametersセクションとして扱う
+        };
+
+        /// <summary>
+        /// パラメータセクションに含まれるキーのパターン
+        /// </summary>
+        private static readonly string[] ParameterKeys = new[]
+        {
+            "Steps:",
+            "Sampler:",
+            "Schedule type:",
+            "CFG scale:",
+            "Seed:",
+            "Size:",
+            "Model hash:",
+            "Model:",
+            "Clip skip:",
+            "Version:"
+        };
+
+        /// <summary>
+        /// タグを解析する共通メソッド
+        /// </summary>
+        private static List<string> ParseTags(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return new List<string>();
+
+            // 括弧内のカンマを一時的に置換
+            var tempText = Regex.Replace(text, @"\(([^)]*)\)", m => m.Value.Replace(",", "@@COMMA@@"));
+
+            // カンマで分割して処理
+            return tempText.Split(',')
+                .Select(tag => tag.Trim())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Replace("@@COMMA@@", ","))
+                .ToList();
+        }
+
+        /// <summary>
+        /// テキストをセクションに分割する
+        /// </summary>
+        private static Dictionary<string, string> SplitIntoSections(string[] lines)
+        {
+            var sections = new Dictionary<string, string>();
+            var currentSection = new StringBuilder();
+            string currentSectionName = "Prompt";
+            bool isInParametersSection = false;
+
+            // パラメータセクションのコンテンツを一時的に保持
+            var parametersContent = new StringBuilder();
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedLine)) continue;
+
+                // パラメータセクション内の場合
+                if (isInParametersSection)
+                {
+                    parametersContent.AppendLine(trimmedLine);
+                    continue;
+                }
+
+                var isNewSection = false;
+
+                // 既定のセクション開始をチェック
+                foreach (var pattern in SectionPatterns)
+                {
+                    if (trimmedLine.StartsWith(pattern.Key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 現在のセクションを保存
+                        if (currentSection.Length > 0)
+                        {
+                            sections[currentSectionName] = currentSection.ToString().Trim();
+                            currentSection.Clear();
+                        }
+
+                        currentSectionName = pattern.Value;
+                        var content = trimmedLine.Substring(pattern.Key.Length).Trim();
+
+                        // Stepsから始まるパラメータセクションの場合
+                        if (pattern.Key == "Steps:")
+                        {
+                            isInParametersSection = true;
+                            parametersContent.AppendLine(trimmedLine);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(content))
+                        {
+                            currentSection.AppendLine(content);
+                        }
+
+                        isNewSection = true;
+                        break;
+                    }
+                }
+
+                // パラメータセクションの開始をチェック
+                if (!isNewSection && Array.Exists(ParameterKeys, key => trimmedLine.StartsWith(key, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // 現在のセクションを保存
+                    if (currentSection.Length > 0)
+                    {
+                        sections[currentSectionName] = currentSection.ToString().Trim();
+                        currentSection.Clear();
+                    }
+
+                    isInParametersSection = true;
+                    currentSectionName = "Parameters";
+                    parametersContent.AppendLine(trimmedLine);
+                    continue;
+                }
+
+                // 通常のコンテンツ行の処理
+                if (!isNewSection && !isInParametersSection)
+                {
+                    currentSection.AppendLine(trimmedLine);
+                }
+            }
+
+            // 最後のセクションを保存
+            if (currentSection.Length > 0)
+            {
+                sections[currentSectionName] = currentSection.ToString().Trim();
+            }
+
+            // パラメータセクションを保存
+            if (parametersContent.Length > 0)
+            {
+                sections["Parameters"] = parametersContent.ToString().Trim();
+            }
+
+            return sections;
+        }
+
+        /// <summary>
         /// Stable Diffusionのパース結果を保持するクラス
         /// </summary>
         public class ParseResult
@@ -63,230 +204,87 @@ namespace StableDiffusionTools
 
             try
             {
-                // 入力値の検証
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     return result;
                 }
 
-                // 行ごとに分割
-                string[] lines;
-                try
-                {
-                    lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                }
-                catch (Exception)
-                {
-                    // 分割に失敗した場合は単一行として扱う
-                    lines = new[] { text };
-                }
+                // 行に分割
+                var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-                // Negative promptを見つける（区切りとして使用）
-                int negativePromptIndex = -1;
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    try
-                    {
-                        if (lines[i].Trim().StartsWith("Negative prompt:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            negativePromptIndex = i;
-                            break;
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // 個別の行の処理でエラーが発生しても続行
-                        continue;
-                    }
-                }
-
-                // パラメータ行のインデックスを見つける
-                int parametersIndex = -1;
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    var line = lines[i].Trim();
-                    if (line.StartsWith("Steps:", StringComparison.OrdinalIgnoreCase) ||
-                        line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase) ||
-                        (line.Contains(",") && line.Contains(":") &&
-                         (line.Contains("Sampler:") || line.Contains("CFG scale:"))))
-                    {
-                        parametersIndex = i;
-                        break;
-                    }
-                }
+                // セクションに分割
+                var sections = SplitIntoSections(lines);
 
                 // プロンプトの解析
-                try
+                if (sections.TryGetValue("Prompt", out var promptText))
                 {
-                    // プロンプト部分を取得（パラメータ行またはNegative Promptまで）
-                    var endIndex = parametersIndex != -1 ? parametersIndex :
-                                 negativePromptIndex != -1 ? negativePromptIndex :
-                                 lines.Length;
-
-                    var promptBuilder = new StringBuilder();
-                    for (int i = 0; i < endIndex; i++)
-                    {
-                        try
-                        {
-                            var line = lines[i].Trim();
-                            if (!string.IsNullOrWhiteSpace(line))
-                            {
-                                promptBuilder.AppendLine(line);
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            continue;
-                        }
-                    }
-
-                    // プロンプト全体を保存
-                    result.Prompt = promptBuilder.ToString().Trim();
+                    result.Prompt = promptText;
 
                     try
                     {
-                        // LoRAタグを正規表現で抽出
+                        // LoRAタグを抽出
                         var loraRegex = new Regex(@"<lora:[^>]+>");
-                        var loraMatches = loraRegex.Matches(result.Prompt);
-                        foreach (Match match in loraMatches)
-                        {
-                            if (!string.IsNullOrWhiteSpace(match.Value))
-                            {
-                                result.Loras.Add(match.Value);
-                            }
-                        }
-
-                        // LoRAタグを除いたテキストからタグを抽出
-                        string textWithoutLoras = loraRegex.Replace(result.Prompt, "");
-                        var tags = textWithoutLoras.Split(',')
-                            .Select(tag => tag.Trim())
-                            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                        var loraMatches = loraRegex.Matches(promptText);
+                        result.Loras = loraMatches
+                            .Cast<Match>()
+                            .Where(m => !string.IsNullOrWhiteSpace(m.Value))
+                            .Select(m => m.Value)
                             .ToList();
 
-                        result.Tags = tags;
+                        // LoRAタグを除いてタグを抽出
+                        string textWithoutLoras = loraRegex.Replace(promptText, "");
+                        result.Tags = ParseTags(textWithoutLoras);
                     }
                     catch (Exception)
                     {
-                        // タグ抽出に失敗した場合は空のリストを維持
                         result.Tags = new List<string>();
                         result.Loras = new List<string>();
                     }
                 }
-                catch (Exception)
-                {
-                    // プロンプト解析全体が失敗した場合は空の状態を維持
-                }
 
                 // Negative Promptの解析
-                try
+                if (sections.TryGetValue("Negative prompt", out var negativePromptText))
                 {
-                    if (negativePromptIndex != -1 && negativePromptIndex < lines.Length)
+                    result.NegativePrompt = negativePromptText;
+                    try
                     {
-                        // Negative promptの行を取得
-                        string negativePromptLine = lines[negativePromptIndex];
-
-                        // "Negative prompt:" の部分を削除
-                        string negativePromptText = negativePromptLine.Replace("Negative prompt:", "").Trim();
-
-                        // Negative Promptからパラメータ行までを取得
-                        var negativeBuilder = new StringBuilder(negativePromptText);
-                        int currentIndex = negativePromptIndex + 1;
-
-                        while (currentIndex < lines.Length)
-                        {
-                            var line = lines[currentIndex].Trim();
-
-                            // パラメータ行かどうかをチェック
-                            if (line.StartsWith("Steps:", StringComparison.OrdinalIgnoreCase) ||
-                                line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase) ||
-                                (line.Contains(",") && line.Contains(":") &&
-                                 (line.Contains("Sampler:") || line.Contains("CFG scale:"))))
-                            {
-                                break;
-                            }
-
-                            if (!string.IsNullOrWhiteSpace(line))
-                            {
-                                negativeBuilder.AppendLine();
-                                negativeBuilder.Append(line);
-                            }
-                            currentIndex++;
-                        }
-
-                        string fullNegativePrompt = negativeBuilder.ToString().Trim();
-
-                        result.NegativePrompt = fullNegativePrompt;
-
-                        try
-                        {
-                            // Negative promptをタグに分割
-                            var negativeTags = fullNegativePrompt.Split(',')
-                                .Select(tag => tag.Trim())
-                                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                                .ToList();
-
-                            result.NegativeTags = negativeTags;
-                        }
-                        catch (Exception)
-                        {
-                            // タグ分割に失敗した場合は空のリストを維持
-                            result.NegativeTags = new List<string>();
-                        }
+                        result.NegativeTags = ParseTags(negativePromptText);
+                    }
+                    catch (Exception)
+                    {
+                        result.NegativeTags = new List<string>();
                     }
                 }
-                catch (Exception)
-                {
-                    // Negative Prompt解析全体が失敗した場合は空の状態を維持
-                }
 
-                // モデル情報の抽出
-                try
+                // パラメータセクションからモデル情報を抽出
+                if (sections.TryGetValue("Parameters", out var parameters))
                 {
-                    foreach (var line in lines)
+                    var paramLines = parameters.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var line in paramLines)
                     {
-                        try
+                        if (line.Contains("Model:", StringComparison.OrdinalIgnoreCase) &&
+                            !line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (line.Contains("Model:", StringComparison.OrdinalIgnoreCase))
+                            var modelMatch = Regex.Match(line, @"Model:\s*([^,]+)", RegexOptions.IgnoreCase);
+                            if (modelMatch.Success)
                             {
-                                var match = Regex.Match(line, @"Model:\s*([^,]+)", RegexOptions.IgnoreCase);
-                                if (match.Success && match.Groups.Count > 1)
-                                {
-                                    result.Model = match.Groups[1].Value.Trim();
-                                }
-                                else
-                                {
-                                    // より緩やかなパターンでマッチを試みる
-                                    match = Regex.Match(line, @"Model:\s*(.+)", RegexOptions.IgnoreCase);
-                                    if (match.Success && match.Groups.Count > 1)
-                                    {
-                                        result.Model = match.Groups[1].Value.Trim();
-                                    }
-                                }
-                            }
-                            else if (line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var match = Regex.Match(line, @"Model hash:\s*(.+)", RegexOptions.IgnoreCase);
-                                if (match.Success && match.Groups.Count > 1)
-                                {
-                                    result.ModelHash = match.Groups[1].Value.Trim();
-                                }
+                                result.Model = modelMatch.Groups[1].Value.Trim();
                             }
                         }
-                        catch (Exception)
+                        else if (line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
                         {
-                            // 個別の行の解析エラーは無視して続行
-                            continue;
+                            var hashMatch = Regex.Match(line, @"Model hash:\s*([^,]+)", RegexOptions.IgnoreCase);
+                            if (hashMatch.Success)
+                            {
+                                result.ModelHash = hashMatch.Groups[1].Value.Trim();
+                            }
                         }
                     }
-                }
-                catch (Exception)
-                {
-                    // モデル情報の抽出全体が失敗した場合は空の状態を維持
                 }
             }
             catch (Exception)
             {
-                // 最上位での例外をキャッチし、デフォルトの結果を返す
+                // 解析に失敗した場合はデフォルトの結果を返す
             }
 
             return result;
