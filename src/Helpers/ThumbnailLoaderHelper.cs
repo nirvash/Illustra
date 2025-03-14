@@ -551,7 +551,7 @@ public class ThumbnailLoaderHelper
         var drawingVisual = new DrawingVisual();
         using (var drawingContext = drawingVisual.RenderOpen())
         {
-            drawingContext.DrawRectangle(Brushes.WhiteSmoke, null, new Rect(0, 0, width, height));
+            drawingContext.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, width, height));
 
             var pen = new Pen(Brushes.Silver, 1);
             drawingContext.DrawRectangle(null, pen, new Rect(5, 5, width - 10, height - 10));
