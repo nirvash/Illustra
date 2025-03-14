@@ -17,6 +17,7 @@ using System.Collections;
 using Illustra.Functions;
 using System.Windows.Documents;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 
 namespace Illustra.Views
 {
@@ -966,6 +967,25 @@ namespace Illustra.Views
                 var imagePaths = _viewModel.SelectedItems.Select(item => item.FullPath).ToArray();
                 var dataObject = new DataObject();
                 dataObject.SetData(DataFormats.FileDrop, imagePaths);
+
+                // 単独の画像が選択されている場合は、画像形式でもコピー
+                if (_viewModel.SelectedItems.Count == 1)
+                {
+                    try
+                    {
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.UriSource = new Uri(imagePaths[0]);
+                        bitmap.EndInit();
+                        dataObject.SetImage(bitmap);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"画像形式でのコピー中にエラーが発生しました: {ex.Message}");
+                    }
+                }
+
                 Clipboard.SetDataObject(dataObject, true);
 
                 // リソースから文言を取得して通知を表示
@@ -1725,6 +1745,12 @@ namespace Illustra.Views
                 // 現在のフォーカスアイテムを保存
                 var focusedItem = _viewModel.SelectedItems.LastOrDefault();
                 var focusedPath = focusedItem?.FullPath;
+
+                // 同じレーティングが選択された場合はフィルターを解除
+                if (rating == _currentRatingFilter && rating != 0)
+                {
+                    rating = 0;
+                }
 
                 _currentRatingFilter = rating;
                 UpdateFilterButtonStates(rating);
