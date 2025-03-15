@@ -18,6 +18,8 @@ using Illustra.Models;
 /// </summary>
 public class ThumbnailLoaderHelper
 {
+    private static SemaphoreSlim _folderLoadingSemaphore = new SemaphoreSlim(1, 1);
+    private static SemaphoreSlim _thumbnailLoadingSemaphore = new SemaphoreSlim(1, 1);
     private static BitmapSource? _commonDummyImage;
     private static BitmapSource? _commonErrorImage;
     private static readonly object _staticLock = new object();
@@ -134,118 +136,126 @@ public class ThumbnailLoaderHelper
     /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
     public async Task LoadFileNodes(string folderPath)
     {
-        if (_isLoading) return;
-        _isLoading = true;
-
-        var sw = new Stopwatch();
-        sw.Start();
-
+        await _folderLoadingSemaphore.WaitAsync();
         try
         {
-            // 前回のフォルダ読み込み処理をキャンセル
-            if (_folderLoadingCTS != null)
+            if (_isLoading) return;
+            _isLoading = true;
+
+            var sw = new Stopwatch();
+            sw.Start();
+
+            try
             {
-                Debug.WriteLine($"[CANCEL] 前回のフォルダ読み込み処理をキャンセルします: {_currentFolderPath}");
-                _folderLoadingCTS.Cancel();
-                _folderLoadingCTS.Dispose();
-            }
-
-            // サムネイル読み込み処理もキャンセル
-            CancelThumbnailLoading();
-
-            // 新しいキャンセルトークンを作成
-            _folderLoadingCTS = new CancellationTokenSource();
-            var cancellationToken = _folderLoadingCTS.Token;
-            _currentFolderPath = folderPath;
-
-            await Task.Run(async () =>
-            {
-                try
+                // 前回のフォルダ読み込み処理をキャンセル
+                if (_folderLoadingCTS != null)
                 {
-                    if (!HasFolderAccess(folderPath))
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
-                            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
-                        });
-                        Debug.WriteLine($"[ERROR] Access denied to folder: {folderPath}");
-                        return;
-                    }
+                    Debug.WriteLine($"[CANCEL] 前回のフォルダ読み込み処理をキャンセルします: {_currentFolderPath}");
+                    _folderLoadingCTS.Cancel();
+                    _folderLoadingCTS.Dispose();
+                }
 
-                    // キャンセルされていないか確認
-                    cancellationToken.ThrowIfCancellationRequested();
+                // サムネイル読み込み処理もキャンセル
+                CancelThumbnailLoading();
 
-                    // 既存ノードの取得と新規ノードの作成を一括で行う
-                    List<FileNodeModel> fileNodes;
+                // 新しいキャンセルトークンを作成
+                _folderLoadingCTS = new CancellationTokenSource();
+                var cancellationToken = _folderLoadingCTS.Token;
+                _currentFolderPath = folderPath;
+
+                await Task.Run(async () =>
+                {
                     try
                     {
-                        fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile, cancellationToken);
-                        Debug.WriteLine($"[INFO] フォルダ ノード生成まで　'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+                        if (!HasFolderAccess(folderPath))
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                _viewModel.Items.ReplaceAll(new List<FileNodeModel>());
+                                FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                            });
+                            Debug.WriteLine($"[ERROR] Access denied to folder: {folderPath}");
+                            return;
+                        }
+
+                        // キャンセルされていないか確認
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        // 既存ノードの取得と新規ノードの作成を一括で行う
+                        List<FileNodeModel> fileNodes;
+                        try
+                        {
+                            fileNodes = await _db.GetOrCreateFileNodesAsync(folderPath, FileHelper.IsImageFile, cancellationToken);
+                            Debug.WriteLine($"[INFO] フォルダ ノード生成まで　'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+
+                            // キャンセルされていないか再確認
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            // ソート条件に従ってノードを並び替え
+                            fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending, cancellationToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            Debug.WriteLine($"[CANCELLED] DB operation cancelled for folder: {folderPath}");
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[ERROR] DB operation failed for folder: {folderPath}, Error: {ex.Message}");
+                            throw;
+                        }
 
                         // キャンセルされていないか再確認
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        // ソート条件に従ってノードを並び替え
-                        fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending, cancellationToken);
+                        var dummyImage = GetDummyImage();
+
+                        // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
+                        foreach (var node in fileNodes)
+                        {
+                            node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
+                        }
+
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            // モデルにノードを設定
+                            _viewModel.Items.ReplaceAll(fileNodes);
+                            _viewModel.SelectedItems.Clear();
+
+                            // 初期選択を実行する前にUIを更新させる
+                            FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                            Debug.WriteLine($"フォルダ ロード時間'{folderPath}' : {sw.ElapsedMilliseconds} ms");
+                            _ = LoadInitialThumbnailsAsync();
+                        });
                     }
                     catch (OperationCanceledException)
                     {
-                        Debug.WriteLine($"[CANCELLED] DB operation cancelled for folder: {folderPath}");
+                        Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
                         throw;
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[ERROR] DB operation failed for folder: {folderPath}, Error: {ex.Message}");
+                        Debug.WriteLine($"[ERROR] フォルダ処理中にエラーが発生しました '{folderPath}': {ex.Message}");
                         throw;
                     }
-
-                    // キャンセルされていないか再確認
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var dummyImage = GetDummyImage();
-
-                    // サムネイル情報を設定 (ロード済みのノードでも状態をリセット)
-                    foreach (var node in fileNodes)
-                    {
-                        node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
-                    }
-
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        // モデルにノードを設定
-                        _viewModel.Items.ReplaceAll(fileNodes);
-                        _viewModel.SelectedItems.Clear();
-
-                        // 初期選択を実行する前にUIを更新させる
-                        FileNodesLoaded?.Invoke(this, EventArgs.Empty);
-                        Debug.WriteLine($"フォルダ ロード時間'{folderPath}' : {sw.ElapsedMilliseconds} ms");
-                        _ = LoadInitialThumbnailsAsync();
-                    });
-                }
-                catch (OperationCanceledException)
-                {
-                    Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[ERROR] フォルダ処理中にエラーが発生しました '{folderPath}': {ex.Message}");
-                    throw;
-                }
-            }, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ERROR] フォルダ読み込み処理中に予期せぬエラーが発生しました: {ex.Message}");
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"[CANCELLED] フォルダ読み込み処理がキャンセルされました: {folderPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ERROR] フォルダ読み込み処理中に予期せぬエラーが発生しました: {ex.Message}");
+            }
+            finally
+            {
+                _isLoading = false;
+            }
         }
         finally
         {
-            _isLoading = false;
+            _folderLoadingSemaphore.Release();
         }
     }
 
@@ -351,67 +361,45 @@ public class ThumbnailLoaderHelper
             return;
         }
 
-        // サムネイル読み込み用のキャンセルトークンを取得
-        var cancellationToken = GetThumbnailLoadingToken();
-
-        // フィルタされていないアイテムのコレクション
-        var allNodes = _viewModel.Items.ToArray();
-        // フィルタされたアイテムのリストを取得（実際に表示されているもの）
-        var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
-
-        // インデックスの範囲チェック
-        startIndex = Math.Max(0, startIndex);
-        endIndex = Math.Min(filteredNodes.Length - 1, endIndex);
-
-        if (startIndex > endIndex || startIndex < 0) return;
-
-        // より効率的なバッチサイズ（適宜調整可能）
-        int batchSize = 8;
-        var tasks = new List<Task>();
-
-        for (int batchStart = startIndex; batchStart <= endIndex; batchStart += batchSize)
-        {
-            if (cancellationToken.IsCancellationRequested) return;
-
-            int batchEnd = Math.Min(batchStart + batchSize - 1, endIndex);
-
-            // 非同期でバッチ処理を実行（フィルタされたアイテムを使用）
-            var task = ProcessBatchAsync(filteredNodes, batchStart, batchEnd, cancellationToken);
-            tasks.Add(task);
-
-            // UIがフリーズしないように少し待つ
-            await Task.Delay(5, CancellationToken.None);
-        }
-
+        await _thumbnailLoadingSemaphore.WaitAsync();
         try
         {
-            await Task.WhenAll(tasks);
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.WriteLine($"[CANCELLED] サムネイル読み込みバッチ処理がキャンセルされました");
-        }
-    }
+            // サムネイル読み込み用のキャンセルトークンを取得
+            var cancellationToken = GetThumbnailLoadingToken();
 
-    private async Task ProcessBatchAsync(FileNodeModel[] nodes, int startIndex, int endIndex, CancellationToken cancellationToken)
-    {
-        for (int i = startIndex; i <= endIndex; i++)
-        {
-            if (cancellationToken.IsCancellationRequested) return;
+            // フィルタされていないアイテムのコレクション
+            var allNodes = _viewModel.Items.ToArray();
+            // フィルタされたアイテムのリストを取得（実際に表示されているもの）
+            var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
 
-            var fileNode = nodes[i];
-            if (fileNode != null &&
-                (fileNode.ThumbnailInfo == null ||
-                 fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
+            // インデックスの範囲チェック
+            startIndex = Math.Max(0, startIndex);
+            endIndex = Math.Min(filteredNodes.Length - 1, endIndex);
+
+            if (startIndex > endIndex || startIndex < 0) return;
+
+            for (int i = startIndex; i <= endIndex; i++)
             {
-                var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken), cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
 
-                // UIスレッドにポストする必要はない（プロパティ変更通知が自動的に処理）
-                if (!cancellationToken.IsCancellationRequested)
+                var fileNode = filteredNodes[i];
+                if (fileNode != null &&
+                    (fileNode.ThumbnailInfo == null ||
+                     fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
                 {
-                    fileNode.ThumbnailInfo = thumbnailInfo;
+                    var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken), cancellationToken);
+
+                    // UIスレッドにポストする必要はない（プロパティ変更通知が自動的に処理）
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        fileNode.ThumbnailInfo = thumbnailInfo;
+                    }
                 }
             }
+        }
+        finally
+        {
+            _thumbnailLoadingSemaphore.Release();
         }
     }
 
@@ -441,19 +429,6 @@ public class ThumbnailLoaderHelper
     public CancellationToken GetFolderLoadingToken()
     {
         return _folderLoadingCTS?.Token ?? CancellationToken.None;
-    }
-
-    /// <summary>
-    /// 現在のキャンセルトークンを取得します（後方互換性のため）
-    /// </summary>
-    public CancellationToken GetCurrentCancellationToken()
-    {
-        // 優先順位: フォルダ読み込み > サムネイル読み込み > なし
-        if (_folderLoadingCTS != null && !_folderLoadingCTS.IsCancellationRequested)
-            return _folderLoadingCTS.Token;
-        if (_thumbnailLoadingCTS != null && !_thumbnailLoadingCTS.IsCancellationRequested)
-            return _thumbnailLoadingCTS.Token;
-        return CancellationToken.None;
     }
 
     /// <summary>
