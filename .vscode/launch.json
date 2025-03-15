@@ -17,24 +17,15 @@
       }
     },
     {
-      "name": "Launch Sample",
+      "name": ".NET Core NUnit Test",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build sample",
-      "program": "${workspaceFolder}/sample/DraggableListView/bin/Debug/net9.0-windows/DraggableListViewSample.dll",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/tests/bin/Debug/net9.0-windows/YourTestProject.dll",
       "args": [],
-      "cwd": "${workspaceFolder}/sample/DraggableListView/",
-      "console": "internalConsole",
+      "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
-      "justMyCode": false, // ここを追加
-      "logging": {
-        "moduleLoad": false // モジュールの読み込みログを無効化
-      }
-    },
-    {
-      "name": "Attach to Process",
-      "type": "coreclr",
-      "request": "attach"
+      "console": "internalConsole"
     }
   ]
 }
