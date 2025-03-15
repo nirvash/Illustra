@@ -28,6 +28,7 @@
   </PropertyGroup>  <!-- リソースファイルの設定 -->
   <PropertyGroup>    <!-- アセンブリの情報バージョンにGitリビジョン（コミットハッシュ）を含めるかどうか -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>    <!-- GitVersion.yml の場所指定 -->
     <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\src\GitVersion.yml"</GitVersion_ToolArguments>

@@ -7,6 +7,7 @@
              xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
              xmlns:helpers="clr-namespace:Illustra.Helpers"
              xmlns:local="clr-namespace:Illustra.Controls"
+             xmlns:converters="clr-namespace:Illustra.Converters"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
              d:DesignHeight="300"
@@ -21,6 +22,7 @@
         <helpers:IndexToXMultiConverter  x:Key="IndexToXMultiConverter"/>
         <helpers:IndexToYMultiConverter  x:Key="IndexToYMultiConverter"/>
         <helpers:IndexToZIndexConverter  x:Key="IndexToZIndexConverter"/>
+        <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
 
         <!-- レーティングスターボタンスタイル -->
         <Style x:Key="RatingStarButton"
@@ -47,6 +49,63 @@
                              Duration="0:0:0.15"
                              BeginTime="0:0:1"/>
         </Storyboard>
+
+        <DataTemplate x:Key="ThumbnailTemplate">
+            <Grid>
+                <Border Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
+                        Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
+                        BorderThickness="0">
+                    <Grid>
+                        <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="2"/>
+                        <TextBlock Text="{Binding FileName}"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Center"
+                                   Margin="2,0,2,-20"
+                                   Background="#80FFFFFF"
+                                   Padding="2"
+                                   Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
+                                   TextAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Grid HorizontalAlignment="Right"
+                              VerticalAlignment="Top"
+                              Margin="0,2,2,0"
+                              Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
+                            <local:RatingStarControl
+                                x:Name="RatingStarMark"
+                                RatingValue="{Binding Rating, UpdateSourceTrigger=PropertyChanged}"
+                                IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, UpdateSourceTrigger=PropertyChanged}"
+                                StarFill="{Binding Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
+                                StrokeColor="White"
+                                TextColor="{Binding Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"
+                                Width="22"
+                                Height="22"
+                                Margin="2">
+                                <local:RatingStarControl.Effect>
+                                    <DropShadowEffect Color="Black"
+                                                      Direction="315"
+                                                      ShadowDepth="1"
+                                                      BlurRadius="2"
+                                                      Opacity="0.7"/>
+                                </local:RatingStarControl.Effect>
+                            </local:RatingStarControl>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- アクセス検出用の非表示要素 -->
+                <Rectangle Width="0"
+                           Height="0"
+                           Opacity="0">
+                    <Rectangle.Fill>
+                        <SolidColorBrush Color="Transparent"/>
+                    </Rectangle.Fill>
+                </Rectangle>
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <UserControl.DataContext>

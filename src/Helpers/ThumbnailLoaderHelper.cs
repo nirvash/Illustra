@@ -358,9 +358,9 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// 表示されている範囲のサムネイルを読み込みます（最適化版）
+    /// 表示されている範囲のサムネイルを読み込みます（キャンセル対応版）
     /// </summary>
-    public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
+    public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex, CancellationToken cancellationToken = default)
     {
         Debug.WriteLine($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: ({startIndex} - {endIndex})");
 
@@ -370,14 +370,7 @@ public class ThumbnailLoaderHelper
             return;
         }
 
-        // 前回のサムネイル読み込みをキャンセル
-        CancelThumbnailLoading();
-
-        // 新しいキャンセルトークンを作成
-        var cts = new CancellationTokenSource();
-        _thumbnailLoadingCTS = cts;
-        var cancellationToken = cts.Token;
-
+        // 外部から渡されたトークンを使用
         try
         {
             await _thumbnailLoadingSemaphore.WaitAsync(cancellationToken);
@@ -397,11 +390,7 @@ public class ThumbnailLoaderHelper
 
                 for (int i = startIndex; i <= endIndex; i++)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        Debug.WriteLine($"[CANCELLED] サムネイル読み込み処理がキャンセルされました ({startIndex} - {endIndex})");
-                        return;
-                    }
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     var fileNode = filteredNodes[i];
                     if (fileNode != null &&
@@ -415,11 +404,7 @@ public class ThumbnailLoaderHelper
                 // 優先ノードを処理
                 foreach (var node in priorityNodes)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        // Debug.WriteLine($"[CANCELLED] サムネイル読み込み処理がキャンセルされました: {node.FullPath}");
-                        continue;
-                    }
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     try
                     {
@@ -431,9 +416,8 @@ public class ThumbnailLoaderHelper
                     }
                     catch (OperationCanceledException)
                     {
-                        // Debug.WriteLine($"[CANCELLED] サムネイル読み込み処理がキャンセルされました: {node.FullPath}");
-                        // キャンセルの場合は次のノードの処理に進む
-                        continue;
+                        Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {node.FullPath}");
+                        throw; // キャンセル例外を再スロー
                     }
                     catch (Exception ex)
                     {
@@ -450,14 +434,14 @@ public class ThumbnailLoaderHelper
                 _thumbnailLoadingSemaphore.Release();
             }
         }
-        finally
+        catch (OperationCanceledException)
         {
-            // このメソッドで作成したCTSのみを破棄
-            if (_thumbnailLoadingCTS == cts)
-            {
-                _thumbnailLoadingCTS = null;
-                cts.Dispose();
-            }
+            Debug.WriteLine("[CANCELLED] サムネイル読み込み処理がキャンセルされました");
+            throw; // キャンセル例外を再スロー
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ERROR] サムネイル読み込み中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -841,6 +825,80 @@ public class ThumbnailLoaderHelper
         {
             // 必要に応じてキャンセルトークンを破棄
         }
+    }
+
+    /// <summary>
+    /// 指定された範囲のサムネイルを並列で読み込みます
+    /// </summary>
+    /// <param name="firstIndex">開始インデックス</param>
+    /// <param name="lastIndex">終了インデックス</param>
+    /// <param name="parallelism">並列度（同時に読み込むサムネイル数）</param>
+    /// <returns>非同期タスク</returns>
+    public async Task LoadThumbnailsInParallelAsync(int firstIndex, int lastIndex, int parallelism = 4)
+    {
+        // インデックスの範囲チェック
+        if (firstIndex < 0 || lastIndex >= _viewModel.Items.Count || firstIndex > lastIndex)
+            return;
+
+        // 読み込み対象のインデックスリストを作成
+        var indicesToLoad = new List<int>();
+        for (int i = firstIndex; i <= lastIndex; i++)
+        {
+            indicesToLoad.Add(i);
+        }
+
+        // 中央から外側に向かって読み込むように並べ替え
+        int centerIndex = (firstIndex + lastIndex) / 2;
+        indicesToLoad = indicesToLoad
+            .OrderBy(i => Math.Abs(i - centerIndex))
+            .ToList();
+
+        // 並列処理用のセマフォを作成
+        using (var semaphore = new SemaphoreSlim(parallelism))
+        {
+            var tasks = new List<Task>();
+
+            foreach (var index in indicesToLoad)
+            {
+                // セマフォを取得（並列数を制限）
+                await semaphore.WaitAsync();
+
+                // 各サムネイルの読み込みをタスクとして開始
+                var task = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // サムネイル読み込み処理
+                        if (index < _viewModel.Items.Count)
+                        {
+                            var item = _viewModel.Items[index] as FileNodeModel;
+                            if (item != null)
+                            {
+                                // 既存のサムネイル読み込みロジックを呼び出す
+                                await LoadSingleThumbnailAsync(item);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        // 処理が完了したらセマフォを解放
+                        semaphore.Release();
+                    }
+                });
+
+                tasks.Add(task);
+            }
+
+            // すべてのタスクが完了するのを待機
+            await Task.WhenAll(tasks);
+        }
+    }
+
+    // 単一サムネイルを読み込むプライベートメソッド（既存のロジックを再利用）
+    private async Task LoadSingleThumbnailAsync(FileNodeModel item)
+    {
+        // 既存のサムネイル読み込みロジックをここに実装
+        // 現在のLoadMoreThumbnailsAsyncメソッドから、単一アイテムの読み込み部分を抽出
     }
 }
 
