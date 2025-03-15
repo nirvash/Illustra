@@ -324,6 +324,8 @@ namespace Illustra.Views
             // 設定を再読み込み
             _appSettings = SettingsHelper.GetSettings();
 
+            RestoreWindowLocation();
+
             ThumbnailList.ApplySettings();
             // ソート順の設定を適用
             _sortByDate = _appSettings.SortByDate;
@@ -337,6 +339,40 @@ namespace Illustra.Views
             App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
             ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
             SortDescendingMenuItem.IsChecked = !_sortAscending;
+        }
+
+        private void RestoreWindowLocation()
+        {
+            double width = _appSettings.WindowWidth;
+            double height = _appSettings.WindowHeight;
+            double top = _appSettings.WindowTop;
+            double left = _appSettings.WindowLeft;
+
+            // デフォルトサイズ（最初の起動や初期化用）
+            if (width <= 0 || height <= 0)
+            {
+                width = 800;
+                height = 600;
+            }
+
+            // モニタ範囲チェックして補正
+            Rect virtualScreen = SystemParameters.WorkArea;
+
+            // はみ出さないように補正
+            if (left < virtualScreen.Left) left = virtualScreen.Left;
+            if (top < virtualScreen.Top) top = virtualScreen.Top;
+            if (left + width > virtualScreen.Right) left = virtualScreen.Right - width;
+            if (top + height > virtualScreen.Bottom) top = virtualScreen.Bottom - height;
+
+            // 最低限の幅・高さも設定
+            if (width < 400) width = 400;
+            if (height < 300) height = 300;
+
+            // ウィンドウに反映
+            this.Width = width;
+            this.Height = height;
+            this.Left = left;
+            this.Top = top;
         }
 
         private void SortByDateMenuItem_Click(object sender, RoutedEventArgs e)
