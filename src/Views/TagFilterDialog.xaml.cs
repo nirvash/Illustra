@@ -90,33 +90,18 @@ namespace Illustra.Views
             Grid.SetColumn(textBox, 1);
             grid.Children.Add(textBox);
 
-            // 追加ボタン
-            var addButton = new Button
+            // 削除ボタン
+            var removeButton = new Button
             {
-                Content = (string)FindResource("String_TagFilter_AddTag"),
-                Margin = new Thickness(0, 0, 5, 0),
+                Content = (string)FindResource("String_TagFilter_RemoveTag"),
+                Margin = new Thickness(0),
                 Padding = new Thickness(5, 0, 5, 0),
-                MinWidth = 60
+                MinWidth = 60,
+                Tag = grid // 削除対象のグリッドを参照
             };
-            addButton.Click += AddTagButton_Click;
-            Grid.SetColumn(addButton, 2);
-            grid.Children.Add(addButton);
-
-            // 削除ボタン（最初の入力フィールド以外に表示）
-            if (_tagInputGrids.Count > 0)
-            {
-                var removeButton = new Button
-                {
-                    Content = (string)FindResource("String_TagFilter_RemoveTag"),
-                    Margin = new Thickness(0),
-                    Padding = new Thickness(5, 0, 5, 0),
-                    MinWidth = 60,
-                    Tag = grid // 削除対象のグリッドを参照
-                };
-                removeButton.Click += RemoveTagButton_Click;
-                Grid.SetColumn(removeButton, 3);
-                grid.Children.Add(removeButton);
-            }
+            removeButton.Click += RemoveTagButton_Click;
+            Grid.SetColumn(removeButton, 3);
+            grid.Children.Add(removeButton);
 
             // グリッドをスタックパネルに追加
             TagsStackPanel.Children.Add(grid);
@@ -132,8 +117,21 @@ namespace Illustra.Views
         {
             if (sender is Button button && button.Tag is Grid gridToRemove)
             {
-                TagsStackPanel.Children.Remove(gridToRemove);
-                _tagInputGrids.Remove(gridToRemove);
+                if (_tagInputGrids.Count == 1)
+                {
+                    // 1行のみの場合は入力欄をクリア
+                    var textBox = FindTextBoxInGrid(gridToRemove);
+                    if (textBox != null)
+                    {
+                        textBox.Text = string.Empty;
+                    }
+                }
+                else
+                {
+                    // 複数行の場合は行を削除
+                    TagsStackPanel.Children.Remove(gridToRemove);
+                    _tagInputGrids.Remove(gridToRemove);
+                }
             }
         }
 

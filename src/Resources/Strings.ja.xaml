@@ -114,7 +114,7 @@
     <system:String x:Key="String_TagFilter_Title">タグフィルタ</system:String>
     <system:String x:Key="String_TagFilter_Description">プロンプトに含まれるタグで画像をフィルタリングします。</system:String>
     <system:String x:Key="String_TagFilter_EnterTag">タグ:</system:String>
-    <system:String x:Key="String_TagFilter_AddTag">タグを追加</system:String>
+    <system:String x:Key="String_TagFilter_AddTag">追加</system:String>
     <system:String x:Key="String_TagFilter_RemoveTag">削除</system:String>
     <system:String x:Key="String_TagFilter_ClearAll">すべてのタグを解除</system:String>
     <system:String x:Key="String_Filter_TagApplied">タグフィルタが適用されました</system:String>

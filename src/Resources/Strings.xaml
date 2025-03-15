@@ -221,7 +221,7 @@
     <!-- Tag Filtering -->
     <system:String x:Key="String_TagFilter_Title">Tag Filter</system:String>
     <system:String x:Key="String_TagFilter_Description">Enter tags to filter images that contain these tags in their prompt.</system:String>
-    <system:String x:Key="String_TagFilter_AddTag">Add Tag</system:String>
+    <system:String x:Key="String_TagFilter_AddTag">Add</system:String>
     <system:String x:Key="String_TagFilter_RemoveTag">Remove</system:String>
     <system:String x:Key="String_TagFilter_ClearAll">Clear All Tags</system:String>
     <system:String x:Key="String_TagFilter_EnterTag">Tag:</system:String>

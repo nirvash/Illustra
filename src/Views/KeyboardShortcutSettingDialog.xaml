@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
         Title="{DynamicResource String_KeyboardShortcutSettingDialog_Title}"
+        Icon="{StaticResource AppIcon}"
         Height="280"
         Width="360"
         WindowStartupLocation="CenterOwner"

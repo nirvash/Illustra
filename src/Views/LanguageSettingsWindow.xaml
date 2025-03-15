@@ -7,6 +7,7 @@
         xmlns:vm="clr-namespace:Illustra.ViewModels"
         mc:Ignorable="d"
         Title="{DynamicResource String_LanguageSettingsWindow_Title}"
+        Icon="{StaticResource AppIcon}"
         Height="250"
         Width="400"
         WindowStartupLocation="CenterOwner"
