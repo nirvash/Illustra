@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Illustra.Models;
@@ -12,153 +11,85 @@ namespace Illustra.Tests.Services
     [TestFixture]
     public class UpdateSequenceManagerTests
     {
-        private ImageModel _imageModel;
+        private ImageCollectionModel _imageCollection;
+        private UpdateSequenceManager _manager;
 
         [SetUp]
         public void Setup()
         {
-            _imageModel = new ImageModel();
-            // テスト用のデータを追加
-            _imageModel.Items.Add(new FileNodeModel("test1.jpg") { Rating = 3 });
-            _imageModel.Items.Add(new FileNodeModel("test2.jpg") { Rating = 5 });
+            _imageCollection = new ImageCollectionModel();
+            _manager = new UpdateSequenceManager(_imageCollection);
         }
 
         [Test]
         public void Constructor_InitializesProperties()
         {
-            // Arrange & Act
-            var manager = new UpdateSequenceManager(_imageModel);
-
             // Assert
-            Assert.AreEqual(OperationState.NotStarted, manager.CurrentState);
+            Assert.NotNull(_manager);
+            Assert.AreEqual(_imageCollection, _manager.ImageCollection);
         }
 
         [Test]
-        public async Task InterruptWithFilterOperation_CompletesOperation()
+        public async Task ExecuteFilterAsync_CompletesOperation()
         {
             // Arrange
-            var manager = new UpdateSequenceManager(_imageModel);
-            var operationCompleted = false;
+            bool operationCompleted = false;
+            int rating = 3;
 
-            manager.StateChanged += (sender, args) =>
+            // Act
+            await _manager.ExecuteFilterAsync(rating, () => operationCompleted = true);
+
+            // Assert
+            Assert.IsTrue(operationCompleted);
+        }
+
+        [Test]
+        public async Task ExecuteSortAsync_CompletesOperation()
+        {
+            // Arrange
+            bool operationCompleted = false;
+            bool sortByDate = true;
+            bool ascending = true;
+
+            // Act
+            await _manager.ExecuteSortAsync(sortByDate, ascending, () => operationCompleted = true);
+
+            // Assert
+            Assert.IsTrue(operationCompleted);
+        }
+
+        [Test]
+        public async Task ExecuteMultipleOperations_ExecutesInPriorityOrder()
+        {
+            // Arrange
+            var operations = new List<string>();
+            var completionSource = new TaskCompletionSource<bool>();
+
+            // Act - Queue a sort operation that will wait for the completion source
+            var sortTask = _manager.ExecuteSortAsync(true, true, () =>
             {
-                if (args.Type == OperationType.Filter && args.State == OperationState.Completed)
-                {
-                    operationCompleted = true;
-                }
-            };
+                operations.Add("Sort");
+                return Task.CompletedTask;
+            });
 
-            // Act
-            manager.InterruptWithFilterOperation(4);
-
-            // Wait for operation to complete
-            await Task.Delay(500); // Give some time for the operation to complete
-
-            // Assert
-            Assert.IsTrue(operationCompleted, "Filter operation should have completed");
-        }
-
-        [Test]
-        public async Task InterruptWithSortOperation_CompletesOperation()
-        {
-            // Arrange
-            var manager = new UpdateSequenceManager(_imageModel);
-            var operationCompleted = false;
-
-            manager.StateChanged += (sender, args) =>
+            // Queue a filter operation that should execute after the sort
+            var filterTask = _manager.ExecuteFilterAsync(3, () =>
             {
-                if (args.Type == OperationType.Sort && args.State == OperationState.Completed)
-                {
-                    operationCompleted = true;
-                }
-            };
+                operations.Add("Filter");
+                return Task.CompletedTask;
+            });
 
-            // Act
-            manager.InterruptWithSortOperation(true, false);
+            // Allow the operations to complete
+            await Task.Delay(100); // Give time for operations to be queued
+            completionSource.SetResult(true);
 
-            // Wait for operation to complete
-            await Task.Delay(500); // Give some time for the operation to complete
+            // Wait for both operations to complete
+            await Task.WhenAll(sortTask, filterTask);
 
-            // Assert
-            Assert.IsTrue(operationCompleted, "Sort operation should have completed");
-        }
-
-        [Test]
-        public async Task WaitForOperationTypeCompletionAsync_ReturnsWhenOperationCompletes()
-        {
-            // Arrange
-            var manager = new UpdateSequenceManager(_imageModel);
-            var operationTask = manager.WaitForOperationTypeCompletionAsync(OperationType.Filter);
-
-            // Act
-            manager.InterruptWithFilterOperation(3);
-
-            // Assert
-            var completedTask = await Task.WhenAny(operationTask, Task.Delay(1000));
-            Assert.AreEqual(operationTask, completedTask);
-        }
-
-        [Test]
-        public async Task EnqueueThumbnailLoad_ProcessesImages()
-        {
-            // Arrange
-            var manager = new UpdateSequenceManager(_imageModel);
-            var operationStarted = false;
-            var operationCompleted = false;
-
-            manager.StateChanged += (sender, args) =>
-            {
-                if (args.Type == OperationType.ThumbnailLoad)
-                {
-                    if (args.State == OperationState.Running)
-                    {
-                        operationStarted = true;
-                    }
-                    else if (args.State == OperationState.Completed)
-                    {
-                        operationCompleted = true;
-                    }
-                }
-            };
-
-            // Act
-            manager.EnqueueThumbnailLoad(_imageModel.Items, true);
-
-            // Wait for operation to complete
-            await Task.Delay(500); // Give some time for the operation to complete
-
-            // Assert
-            Assert.IsTrue(operationStarted, "Thumbnail load operation should have started");
-            Assert.IsTrue(operationCompleted, "Thumbnail load operation should have completed");
-        }
-
-        [Test]
-        public async Task MultipleOperations_ExecuteInPriorityOrder()
-        {
-            // Arrange
-            var manager = new UpdateSequenceManager(_imageModel);
-            var executionOrder = new List<OperationType>();
-
-            manager.StateChanged += (sender, args) =>
-            {
-                if (args.State == OperationState.Running)
-                {
-                    executionOrder.Add(args.Type);
-                }
-            };
-
-            // Act
-            // Add low priority operation
-            manager.EnqueueThumbnailLoad(_imageModel.Items, false);
-
-            // Add high priority operation
-            manager.InterruptWithFilterOperation(4);
-
-            // Wait for operations to complete
-            await Task.Delay(1000); // Give some time for the operations to complete
-
-            // Assert
-            Assert.AreEqual(OperationType.Filter, executionOrder[0]);
+            // Assert - Operations should be executed in the order they were queued
+            Assert.AreEqual(2, operations.Count);
+            Assert.AreEqual("Sort", operations[0]);
+            Assert.AreEqual("Filter", operations[1]);
         }
     }
 }

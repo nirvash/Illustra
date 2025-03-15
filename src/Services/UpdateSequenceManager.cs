@@ -181,7 +181,7 @@ namespace Illustra.Services
     {
         private readonly OperationQueue<ImageOperationParameters> _operationQueue = new();
         private readonly Progress<OperationProgress> _progress;
-        private readonly ImageModel _imageModel;
+        private readonly ImageCollectionModel _imageCollection;
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private readonly Dictionary<OperationType, TaskCompletionSource<bool>> _operationCompletionSources = new();
         private readonly Timer _processingTimer;
@@ -200,10 +200,10 @@ namespace Illustra.Services
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        /// <param name="imageModel">画像モデル</param>
-        public UpdateSequenceManager(ImageModel imageModel)
+        /// <param name="imageCollection">画像コレクションモデル</param>
+        public UpdateSequenceManager(ImageCollectionModel imageCollection)
         {
-            _imageModel = imageModel;
+            _imageCollection = imageCollection;
             _progress = new Progress<OperationProgress>(OnProgressChanged);
             _processingTimer = new Timer(ProcessQueueCallback, null, 200, 200);
         }
@@ -473,7 +473,7 @@ namespace Illustra.Services
 
             // フィルタ処理
             progress.Report(0);
-            await _imageModel.FilterByRatingAsync(parameters.RatingFilter.Value, cancellationToken);
+            await _imageCollection.FilterByRatingAsync(parameters.RatingFilter.Value, cancellationToken);
             progress.Report(100);
         }
 
@@ -489,7 +489,7 @@ namespace Illustra.Services
 
             // ソート処理
             progress.Report(0);
-            await _imageModel.SortItemsAsync(parameters.SortByDate.Value, parameters.SortAscending.Value, cancellationToken);
+            await _imageCollection.SortItemsAsync(parameters.SortByDate.Value, parameters.SortAscending.Value, cancellationToken);
             progress.Report(100);
         }
 

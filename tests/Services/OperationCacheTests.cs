@@ -10,17 +10,123 @@ namespace Illustra.Tests.Services
     [TestFixture]
     public class OperationCacheTests
     {
+        private OperationCache _cache;
+        private ImageCollectionModel _imageCollection;
+
+        [SetUp]
+        public void Setup()
+        {
+            _imageCollection = new ImageCollectionModel();
+            _cache = new OperationCache();
+        }
+
         [Test]
         public void Constructor_InitializesProperties()
         {
-            // Arrange & Act
-            var cache = new OperationCache();
+            // Assert
+            Assert.NotNull(_cache);
+            Assert.AreEqual(0, _cache.Count);
+        }
+
+        [Test]
+        public void AddOperation_IncreasesCount()
+        {
+            // Arrange
+            var operation = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+
+            // Act
+            _cache.AddOperation("test_key", operation);
 
             // Assert
-            Assert.NotNull(cache.PromptCache);
-            Assert.NotNull(cache.TagCache);
-            Assert.IsEmpty(cache.PromptCache);
-            Assert.IsEmpty(cache.TagCache);
+            Assert.AreEqual(1, _cache.Count);
+        }
+
+        [Test]
+        public void GetOperation_ReturnsOperation()
+        {
+            // Arrange
+            var operation = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+            _cache.AddOperation("test_key", operation);
+
+            // Act
+            var result = _cache.GetOperation("test_key");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.AreEqual(operation, result);
+        }
+
+        [Test]
+        public void GetOperation_WithNonExistentKey_ReturnsNull()
+        {
+            // Act
+            var result = _cache.GetOperation("non_existent_key");
+
+            // Assert
+            Assert.IsNull(result);
+        }
+
+        [Test]
+        public void RemoveOperation_DecreasesCount()
+        {
+            // Arrange
+            var operation = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+            _cache.AddOperation("test_key", operation);
+
+            // Act
+            _cache.RemoveOperation("test_key");
+
+            // Assert
+            Assert.AreEqual(0, _cache.Count);
+        }
+
+        [Test]
+        public void Clear_RemovesAllOperations()
+        {
+            // Arrange
+            var operation1 = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+            var operation2 = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+
+            _cache.AddOperation("key1", operation1);
+            _cache.AddOperation("key2", operation2);
+
+            // Act
+            _cache.Clear();
+
+            // Assert
+            Assert.AreEqual(0, _cache.Count);
+            Assert.IsNull(_cache.GetOperation("key1"));
+            Assert.IsNull(_cache.GetOperation("key2"));
+        }
+
+        [Test]
+        public void AddOperation_ExceedingMaxSize_RemovesOldestOperation()
+        {
+            // Arrange - Set max size to 2
+            _cache = new OperationCache(2);
+
+            var operation1 = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+            var operation2 = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+            var operation3 = new Func<Task<IList<FileNodeModel>>>(() =>
+                Task.FromResult<IList<FileNodeModel>>(new List<FileNodeModel>()));
+
+            // Act
+            _cache.AddOperation("key1", operation1);
+            _cache.AddOperation("key2", operation2);
+            _cache.AddOperation("key3", operation3); // This should remove key1
+
+            // Assert
+            Assert.AreEqual(2, _cache.Count);
+            Assert.IsNull(_cache.GetOperation("key1")); // key1 should be removed
+            Assert.NotNull(_cache.GetOperation("key2"));
+            Assert.NotNull(_cache.GetOperation("key3"));
         }
 
         [Test]

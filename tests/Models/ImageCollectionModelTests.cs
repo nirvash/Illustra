@@ -9,13 +9,13 @@ using NUnit.Framework;
 namespace Illustra.Tests.Models
 {
     [TestFixture]
-    public class ImageModelTests
+    public class ImageCollectionModelTests
     {
         [Test]
         public void Constructor_InitializesProperties()
         {
             // Arrange & Act
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
 
             // Assert
             Assert.NotNull(model.Items);
@@ -27,7 +27,7 @@ namespace Illustra.Tests.Models
         public async Task LoadImagesFromFolderAsync_WithInvalidPath_ReturnsZero()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
 
             // Act
             var result = await model.LoadImagesFromFolderAsync("invalid_path");
@@ -41,7 +41,7 @@ namespace Illustra.Tests.Models
         public async Task FilterByRatingAsync_WithZeroRating_ReturnsAllItems()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
             var fileNode1 = new FileNodeModel("test1.jpg") { Rating = 3 };
             var fileNode2 = new FileNodeModel("test2.jpg") { Rating = 5 };
             model.Items.Add(fileNode1);
@@ -60,7 +60,7 @@ namespace Illustra.Tests.Models
         public async Task FilterByRatingAsync_WithRating_ReturnsFilteredItems()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
             var fileNode1 = new FileNodeModel("test1.jpg") { Rating = 3 };
             var fileNode2 = new FileNodeModel("test2.jpg") { Rating = 5 };
             model.Items.Add(fileNode1);
@@ -79,7 +79,7 @@ namespace Illustra.Tests.Models
         public async Task SortItemsAsync_ByFileName_SortsCorrectly()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
             var fileNode1 = new FileNodeModel("b.jpg");
             var fileNode2 = new FileNodeModel("a.jpg");
             model.Items.Add(fileNode1);
@@ -106,7 +106,7 @@ namespace Illustra.Tests.Models
         public async Task SortItemsAsync_ByDate_SortsCorrectly()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
             var fileNode1 = new FileNodeModel("test1.jpg")
             {
                 LastModified = DateTime.Now.AddDays(-1)
@@ -139,7 +139,7 @@ namespace Illustra.Tests.Models
         public async Task FilterByRatingAsync_WithCancellation_CancelsOperation()
         {
             // Arrange
-            var model = new ImageModel();
+            var model = new ImageCollectionModel();
             for (int i = 0; i < 100; i++)
             {
                 model.Items.Add(new FileNodeModel($"test{i}.jpg") { Rating = i % 5 });

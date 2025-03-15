@@ -13,9 +13,9 @@ using Illustra.Models;
 namespace Illustra.Models
 {
     /// <summary>
-    /// 画像ファイルの操作と管理を担当するモデルクラス
+    /// 画像ファイルのコレクションを管理するモデルクラス
     /// </summary>
-    public class ImageModel : INotifyPropertyChanged
+    public class ImageCollectionModel : INotifyPropertyChanged
     {
         private readonly DatabaseManager _db = new();
 
@@ -44,7 +44,7 @@ namespace Illustra.Models
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public ImageModel()
+        public ImageCollectionModel()
         {
         }
 
