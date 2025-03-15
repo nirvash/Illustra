@@ -384,7 +384,7 @@ namespace Illustra.Views
                     // フィルタ変更イベントを発行
                     _eventAggregator?.GetEvent<FilterChangedEvent>().Publish(
                         new FilterChangedEventArgsBuilder(CONTROL_ID)
-                            .WithTagFilter(true, _currentTagFilters)
+                            .WithTagFilter(_currentTagFilters.Count > 0, _currentTagFilters)
                             .Build());
                 }
             }
