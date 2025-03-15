@@ -1,0 +1,7 @@
+---
+description: coding rule
+globs: 
+alwaysApply: false
+---
+- You have to read docs/Rule.md before coding.
+- このルールを読んだら最初に 「イエッサー！！！」と復唱すること

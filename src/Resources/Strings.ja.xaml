@@ -110,6 +110,26 @@
     <system:String x:Key="String_Property_CopyOriginalPrompt">元のプロンプトをコピー</system:String>
     <system:String x:Key="String_Property_Comment">コメント</system:String>
 
+    <!-- Tag Filtering -->
+    <system:String x:Key="String_TagFilter_Title">タグフィルタ</system:String>
+    <system:String x:Key="String_TagFilter_Description">プロンプトに含まれるタグで画像をフィルタリングします。</system:String>
+    <system:String x:Key="String_TagFilter_EnterTag">タグ:</system:String>
+    <system:String x:Key="String_TagFilter_AddTag">タグを追加</system:String>
+    <system:String x:Key="String_TagFilter_RemoveTag">削除</system:String>
+    <system:String x:Key="String_TagFilter_ClearAll">すべてのタグを解除</system:String>
+    <system:String x:Key="String_Filter_TagApplied">タグフィルタが適用されました</system:String>
+    <system:String x:Key="String_Menu_Filter_Tag">タグでフィルタ...</system:String>
+    <system:String x:Key="String_Menu_AddTagToFilter">フィルタに追加</system:String>
+    <system:String x:Key="String_Menu_RemoveTagFromFilter">フィルタから削除</system:String>
+
+    <!-- Status Bar -->
+    <system:String x:Key="String_Status_Folder">フォルダ</system:String>
+    <system:String x:Key="String_Status_CurrentFolder">現在のフォルダ</system:String>
+    <system:String x:Key="String_Status_RatingFilter">レーティング</system:String>
+    <system:String x:Key="String_Status_TagFilter">タグ</system:String>
+    <system:String x:Key="String_Status_PromptFilter">プロンプトフィルタ有効</system:String>
+    <system:String x:Key="String_Status_Enabled">有効</system:String>
+
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">表示する項目がありません</system:String>
     <system:String x:Key="String_Thumbnail_Loading">読み込み中...</system:String>

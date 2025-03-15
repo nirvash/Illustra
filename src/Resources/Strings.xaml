@@ -218,4 +218,24 @@
     <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_LanguageSettingsWindow_Title">Language Settings</system:String>
 
+    <!-- Tag Filtering -->
+    <system:String x:Key="String_TagFilter_Title">Tag Filter</system:String>
+    <system:String x:Key="String_TagFilter_Description">Enter tags to filter images that contain these tags in their prompt.</system:String>
+    <system:String x:Key="String_TagFilter_AddTag">Add Tag</system:String>
+    <system:String x:Key="String_TagFilter_RemoveTag">Remove</system:String>
+    <system:String x:Key="String_TagFilter_ClearAll">Clear All Tags</system:String>
+    <system:String x:Key="String_TagFilter_EnterTag">Tag:</system:String>
+    <system:String x:Key="String_Filter_TagApplied">Tag filter applied</system:String>
+    <system:String x:Key="String_Menu_Filter_Tag">Filter by Tag...</system:String>
+    <system:String x:Key="String_Menu_AddTagToFilter">Add to Filter</system:String>
+    <system:String x:Key="String_Menu_RemoveTagFromFilter">Remove from Filter</system:String>
+
+    <!-- Status Bar -->
+    <system:String x:Key="String_Status_Folder">Folder</system:String>
+    <system:String x:Key="String_Status_CurrentFolder">Current Folder</system:String>
+    <system:String x:Key="String_Status_RatingFilter">Rating</system:String>
+    <system:String x:Key="String_Status_TagFilter">Tags</system:String>
+    <system:String x:Key="String_Status_PromptFilter">Prompt Filter Enabled</system:String>
+    <system:String x:Key="String_Status_Enabled">Enabled</system:String>
+
 </ResourceDictionary>

@@ -1,4 +1,6 @@
 using System.IO;
+using System;
+using System.Collections.Generic;
 using Illustra.Models;
 
 namespace Illustra.Views
@@ -6,6 +8,10 @@ namespace Illustra.Views
     public partial class MainWindow
     {
         private bool _isPromptFilterEnabled = false;
+        private bool _isTagFilterEnabled = false;
+        private int _currentRatingFilter = 0;
+        private List<string> _tagFilters = [];
+
         public bool IsPromptFilterEnabled
         {
             get => _isPromptFilterEnabled;
@@ -14,7 +20,18 @@ namespace Illustra.Views
                 if (_isPromptFilterEnabled != value)
                 {
                     _isPromptFilterEnabled = value;
-                    ThumbnailList?.GetViewModel()?.SetPromptFilter(value);
+                }
+            }
+        }
+
+        public bool IsTagFilterEnabled
+        {
+            get => _isTagFilterEnabled;
+            set
+            {
+                if (_isTagFilterEnabled != value)
+                {
+                    _isTagFilterEnabled = value;
                 }
             }
         }
@@ -27,11 +44,15 @@ namespace Illustra.Views
             try
             {
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                // PropertyPanelはXAMLで定義されたコンポーネントで、
+                // リンターエラーが表示されることがありますが、ビルド時には問題ありません
                 PropertyPanel.ImageProperties = properties;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"プロパティロードエラー: {ex}");
+                // PropertyPanelはXAMLで定義されたコンポーネントで、
+                // リンターエラーが表示されることがありますが、ビルド時には問題ありません
                 PropertyPanel.ImageProperties = new ImagePropertiesModel
                 {
                     FileName = Path.GetFileName(filePath),

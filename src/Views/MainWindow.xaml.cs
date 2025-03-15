@@ -9,11 +9,14 @@ using Illustra.Events;
 using System.Threading.Tasks;
 using System;
 using Illustra.ViewModels;
+using System.Collections.Generic;
+using DryIoc.ImTools;
 
 namespace Illustra.Views
 {
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
+    /// このクラスはpartialクラスとして実装されており、プロパティの定義はMainWindow.Properties.csに分離されています。
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
@@ -25,7 +28,7 @@ namespace Illustra.Views
         private double _favoritesFoldersSplitterPosition;
         private FavoriteFoldersControl? _favoriteFoldersControl;
         private FolderTreeControl? _folderTreeControl;
-        private string? _currentFolderPath = null;
+        private string _currentFolderPath = string.Empty;
         private const string CONTROL_ID = "MainWindow";
         public bool EnableCyclicNavigation => App.Instance.EnableCyclicNavigation;
 
@@ -39,23 +42,25 @@ namespace Illustra.Views
 
         public MainWindow(IEventAggregator eventAggregator, MainWindowViewModel viewModel)
         {
+            // InitializeComponentはXAMLから自動生成されるメソッドで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             InitializeComponent();
             _eventAggregator = eventAggregator;
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
 
-            // メニューアイテムの初期化
-            InitializeSortMenuItems();
-
-            // 設定を読み込む
+            // 設定の読み込み
             _appSettings = SettingsHelper.GetSettings();
 
-            // イベントを購読（コンストラクタで設定）
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            // イベント購読
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
 
-            // コントロールのインスタンスを取得（ここに移動）
+            // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             _favoriteFoldersControl = FavoriteFolders;
             _folderTreeControl = FolderTree;
 
@@ -64,25 +69,20 @@ namespace Illustra.Views
             // ウィンドウが閉じられるときに設定を保存
             Closing += MainWindow_Closing;
 
-            // 設定を適用
-            Width = _appSettings.WindowWidth;
-            Height = _appSettings.WindowHeight;
-            Left = _appSettings.WindowLeft;
-            Top = _appSettings.WindowTop;
-            WindowState = _appSettings.WindowState;
+            // ソートメニューの初期化
+            InitializeSortMenuItems();
 
-            // 循環移動の設定を適用
-            App.Instance.EnableCyclicNavigation = _appSettings.EnableCyclicNavigation;
+            // 設定の適用
+            ApplySettings();
+
+            // ToggleCyclicNavigationはXAMLで定義されたコンポーネントで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
 
             // スプリッター位置を復元
             _mainSplitterPosition = _appSettings.MainSplitterPosition;
             _favoritesFoldersSplitterPosition = _appSettings.FavoriteFoldersHeight;
-
-            // プロパティ領域を初期化
-            ClearPropertiesDisplay();
-
-            DataContext = _viewModel;
+            RestoreSplitterPositions();
 
             // バージョン情報をタイトルに追加
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
@@ -100,8 +100,6 @@ namespace Illustra.Views
             {
                 shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
             }
-
-            InitializeEventHandlers();
         }
 
         private void InitializeSortMenuItems()
@@ -123,102 +121,6 @@ namespace Illustra.Views
                 _sortByNameDescendingMenuItem.Click += OnNameSortChanged;
         }
 
-        private void InitializeEventHandlers()
-        {
-            // ViewModelのプロパティ変更イベントを購読
-            var viewModel = ThumbnailList.GetViewModel();
-            viewModel.PropertyChanged += ViewModel_PropertyChanged;
-
-            // 初期状態でメニューの状態を更新
-            UpdateRatingFilterMenuState(viewModel.CurrentRatingFilter);
-            FilterPromptMenuItem.IsChecked = viewModel.IsPromptFilterEnabled;
-        }
-
-        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (sender is MainViewModel viewModel)
-            {
-                // レーティングフィルタの状態が変更された場合
-                if (e.PropertyName == nameof(MainViewModel.CurrentRatingFilter) ||
-                    e.PropertyName == nameof(MainViewModel.IsRatingFilterActive))
-                {
-                    UpdateRatingFilterMenuState(viewModel.CurrentRatingFilter);
-                }
-                // プロンプトフィルタの状態が変更された場合
-                else if (e.PropertyName == nameof(MainViewModel.IsPromptFilterEnabled))
-                {
-                    FilterPromptMenuItem.IsChecked = viewModel.IsPromptFilterEnabled;
-
-                    // フィルタクリアメニューの有効/無効を更新
-                    FilterClearMenuItem.IsEnabled = viewModel.IsRatingFilterActive || viewModel.IsPromptFilterEnabled;
-                }
-                // ソート順の状態が変更された場合
-                else if (e.PropertyName == nameof(MainViewModel.SortAscending))
-                {
-                    _sortAscending = viewModel.SortAscending;
-                    SortAscendingMenuItem.IsChecked = _sortAscending;
-                    SortDescendingMenuItem.IsChecked = !_sortAscending;
-
-                    // ソートメニューの状態を更新
-                    if (_sortByDateAscendingMenuItem != null)
-                        _sortByDateAscendingMenuItem.IsChecked = _sortByDate && _sortAscending;
-                    if (_sortByDateDescendingMenuItem != null)
-                        _sortByDateDescendingMenuItem.IsChecked = _sortByDate && !_sortAscending;
-                    if (_sortByNameAscendingMenuItem != null)
-                        _sortByNameAscendingMenuItem.IsChecked = !_sortByDate && _sortAscending;
-                    if (_sortByNameDescendingMenuItem != null)
-                        _sortByNameDescendingMenuItem.IsChecked = !_sortByDate && !_sortAscending;
-                }
-                // ソート種別の状態が変更された場合
-                else if (e.PropertyName == nameof(MainViewModel.SortByDate))
-                {
-                    _sortByDate = viewModel.SortByDate;
-                    SortByDateMenuItem.IsChecked = _sortByDate;
-                    SortByNameMenuItem.IsChecked = !_sortByDate;
-
-                    // ソートメニューの状態を更新
-                    if (_sortByDateAscendingMenuItem != null)
-                        _sortByDateAscendingMenuItem.IsChecked = _sortByDate && _sortAscending;
-                    if (_sortByDateDescendingMenuItem != null)
-                        _sortByDateDescendingMenuItem.IsChecked = _sortByDate && !_sortAscending;
-                    if (_sortByNameAscendingMenuItem != null)
-                        _sortByNameAscendingMenuItem.IsChecked = !_sortByDate && _sortAscending;
-                    if (_sortByNameDescendingMenuItem != null)
-                        _sortByNameDescendingMenuItem.IsChecked = !_sortByDate && !_sortAscending;
-                }
-            }
-        }
-
-        /// <summary>
-        /// レーティングフィルタメニューの状態を更新します
-        /// </summary>
-        /// <param name="rating">現在のレーティングフィルタ値</param>
-        public void UpdateRatingFilterMenuState(int rating)
-        {
-            // 親メニューの状態を更新
-            FilterRatingMenuItem.IsChecked = rating > 0;
-
-            // サブメニューの状態を更新
-            FilterRating1MenuItem.IsChecked = rating == 1;
-            FilterRating2MenuItem.IsChecked = rating == 2;
-            FilterRating3MenuItem.IsChecked = rating == 3;
-            FilterRating4MenuItem.IsChecked = rating == 4;
-            FilterRating5MenuItem.IsChecked = rating == 5;
-
-            // フィルタクリアメニューの有効/無効を設定
-            var viewModel = ThumbnailList.GetViewModel();
-            FilterClearMenuItem.IsEnabled = rating > 0 || (viewModel != null && viewModel.IsPromptFilterEnabled);
-        }
-
-        /// <summary>
-        /// レーティングフィルタメニューの状態を更新します（UpdateRatingFilterMenuStateのエイリアス）
-        /// </summary>
-        /// <param name="rating">現在のレーティングフィルタ値</param>
-        public void UpdateRatingFilterMenuItems(int rating)
-        {
-            UpdateRatingFilterMenuState(rating);
-        }
-
         /// <summary>
         /// プロパティ表示をクリアするメソッド
         /// </summary>
@@ -235,10 +137,18 @@ namespace Illustra.Views
 
         private void ClearAllFilters(object sender, RoutedEventArgs e)
         {
-            var viewModel = ThumbnailList.GetViewModel();
-            viewModel.ClearAllFilters();
+            IsTagFilterEnabled = false;
+            _tagFilters.Clear();
+            _currentRatingFilter = 0;
+            IsPromptFilterEnabled = false;
 
-            // ThumbnailListControlのフィルタUIの更新は Model に任せる
+            // フィルタ変更イベントを発行（すべてのフィルタをクリア）
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID).Clear().Build());
+
+            // フィルタクリアメニューの有効/無効を更新
+            UpdateFilterMenu();
+            UpdateStatusBar();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -311,6 +221,31 @@ namespace Illustra.Views
         private void FilterPromptMenuItem_Click(object sender, RoutedEventArgs e)
         {
             IsPromptFilterEnabled = !IsPromptFilterEnabled;
+            UpdateFilterMenu();
+
+            // フィルタ変更イベントを発行
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID)
+                .WithPromptFilter(IsPromptFilterEnabled).Build());
+            UpdateStatusBar();
+        }
+
+        private void FilterTagMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // 複数タグに対応したコンストラクタを使用
+            var dialog = new TagFilterDialog(new List<string>(_tagFilters));
+            if (dialog.ShowDialog() == true)
+            {
+                IsTagFilterEnabled = dialog.TagFilters.Count > 0;
+                _tagFilters = new List<string>(dialog.TagFilters);
+                UpdateFilterMenu();
+
+                // フィルタ変更イベントを発行（新しいリストのインスタンスを作成）
+                _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                    new FilterChangedEventArgsBuilder(CONTROL_ID)
+                    .WithTagFilter(IsTagFilterEnabled, new List<string>(_tagFilters)).Build());
+            }
+            UpdateStatusBar();
         }
 
         private void FilterRating1MenuItem_Click(object sender, RoutedEventArgs e)
@@ -343,12 +278,15 @@ namespace Illustra.Views
         /// </summary>
         private void ApplyRatingFilter(int rating)
         {
-            var viewModel = ThumbnailList.GetViewModel();
-            viewModel.ApplyRatingFilter(rating);
-            _eventAggregator?.GetEvent<FilterChangedEvent>().Publish(
-                new FilterChangedEventArgs(IsPromptFilterEnabled, rating, CONTROL_ID));
+            // 同じレーティングが選択された場合はフィルタを解除
+            _currentRatingFilter = (rating == _currentRatingFilter && rating > 0) ? 0 : rating;
+            UpdateFilterMenu();
 
-            // ThumbnailListControlのフィルタUIの更新は Model に任せる
+            // フィルタ変更イベントを発行
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID)
+                .WithRatingFilter(_currentRatingFilter).Build());
+            UpdateStatusBar();
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
@@ -523,27 +461,60 @@ namespace Illustra.Views
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
-            // メニューアイテムの状態を更新
-            FilterPromptMenuItem.IsChecked = args.IsPromptFilterEnabled;
-            FilterRatingMenuItem.IsChecked = args.RatingFilter > 0;
-            UpdateRatingFilterMenuItems(args.RatingFilter);
+            // タグフィルタの状態を更新（新しいリストのインスタンスを作成）
+            if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+            {
+                _isTagFilterEnabled = args.IsTagFilterEnabled;
+                _tagFilters = new List<string>(args.TagFilters);
+            }
+
+            // レーティングフィルタの状態を更新
+            if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
+                _currentRatingFilter = args.RatingFilter;
+
+            // プロンプトフィルタの状態を更新
+            if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
+                _isPromptFilterEnabled = args.IsPromptFilterEnabled;
+
+            UpdateFilterMenu();
+            UpdateStatusBar();
+        }
+
+        private void UpdateFilterMenu()
+        {
+            FilterPromptMenuItem.IsChecked = IsPromptFilterEnabled;
+            FilterTagMenuItem.IsChecked = IsTagFilterEnabled;
+
+            // 親メニューの状態を更新
+            FilterRatingMenuItem.IsChecked = _currentRatingFilter > 0;
+
+            // サブメニューの状態を更新
+            FilterRating1MenuItem.IsChecked = _currentRatingFilter == 1;
+            FilterRating2MenuItem.IsChecked = _currentRatingFilter == 2;
+            FilterRating3MenuItem.IsChecked = _currentRatingFilter == 3;
+            FilterRating4MenuItem.IsChecked = _currentRatingFilter == 4;
+            FilterRating5MenuItem.IsChecked = _currentRatingFilter == 5;
+
+            // メニュー項目の状態を更新
+            FilterTagMenuItem.Header = IsTagFilterEnabled
+                ? $"{FindResource("String_Menu_Filter_Tag")} ✓"
+                : FindResource("String_Menu_Filter_Tag");
+
+            // フィルタクリアメニューの有効/無効を更新
+            FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled;
         }
 
         private void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            if (args.Path == _currentFolderPath) return;
-            if (!string.IsNullOrEmpty(args.Path) && Directory.Exists(args.Path))
-            {
-                _currentFolderPath = args.Path;
-                ClearPropertiesDisplay();
+            // 現在のフォルダパスを更新
+            _currentFolderPath = args.Path;
 
-                // フィルタをリセット
-                FilterPromptMenuItem.IsChecked = false;
-                IsPromptFilterEnabled = false;
-                UpdateRatingFilterMenuItems(0);
-                ApplyRatingFilter(0);
+            FilterChangedEventArgs filterArgs = new FilterChangedEventArgsBuilder(CONTROL_ID)
+                .Clear().Build();
+            OnFilterChanged(filterArgs);
 
-            }
+            // ステータスバーを更新
+            UpdateStatusBar();
         }
 
         private async void OnDateSortChanged(object sender, RoutedEventArgs e)
@@ -636,6 +607,63 @@ namespace Illustra.Views
                 _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
                     new SortOrderChangedEventArgs(_sortByDate, _sortAscending, CONTROL_ID));
             }
+        }
+
+        /// <summary>
+        /// ステータスバーを更新します
+        /// </summary>
+        private void UpdateStatusBar()
+        {
+            var statusItems = new List<string>();
+
+            // 現在のフォルダパスを追加
+            if (_currentFolderPath != null)
+            {
+                statusItems.Add($"{FindResource("String_Status_CurrentFolder")}: {_currentFolderPath}");
+            }
+
+            // レーティングフィルタが有効な場合、その情報を追加
+            if (_currentRatingFilter > 0)
+            {
+                statusItems.Add($"{FindResource("String_Status_RatingFilter")}: {_currentRatingFilter}+");
+            }
+
+            // タグフィルタが有効な場合、その情報を追加
+            if (_isTagFilterEnabled && _tagFilters.Count > 0)
+            {
+                string tagFilterText = string.Join(", ", _tagFilters);
+                statusItems.Add($"{FindResource("String_Status_TagFilter")}: {tagFilterText}");
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                // プロンプトフィルタが有効な場合、その情報を追加
+                if (_isPromptFilterEnabled)
+                {
+                    statusItems.Add($"{FindResource("String_Status_PromptFilter")}: {FindResource("String_Status_Enabled")}");
+                }
+
+                // ステータスバーに表示
+                StatusBar.Text = string.Join(" | ", statusItems);
+            });
+        }
+
+        private void OnSortOrderChanged(SortOrderChangedEventArgs args)
+        {
+            // ソート順の変更を処理
+            _sortByDate = args.IsByDate;
+            _sortAscending = args.IsAscending;
+
+            // メニュー項目の状態を更新
+            SortByDateMenuItem.IsChecked = _sortByDate;
+            SortByNameMenuItem.IsChecked = !_sortByDate;
+            SortAscendingMenuItem.IsChecked = _sortAscending;
+            SortDescendingMenuItem.IsChecked = !_sortAscending;
+
+            // 設定を保存
+            _appSettings.SortByDate = _sortByDate;
+            _appSettings.SortAscending = _sortAscending;
+            SettingsHelper.SaveSettings(_appSettings);
         }
     }
 }

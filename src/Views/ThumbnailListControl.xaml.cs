@@ -18,6 +18,7 @@ using Illustra.Functions;
 using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Threading.Tasks;
 
 namespace Illustra.Views
 {
@@ -43,6 +44,10 @@ namespace Illustra.Views
         private bool _isFirstLoad = true;
         private bool _pendingSelection = false;
         private int _pendingSelectionIndex = -1;
+
+        private bool _isPromptFilterEnabled = false;
+        private List<string> _currentTagFilters = new List<string>();
+        private bool _isTagFilterEnabled = false;
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -218,7 +223,7 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
+            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
 
@@ -260,12 +265,45 @@ namespace Illustra.Views
             }
         }
 
-        private void OnFilterChanged(FilterChangedEventArgs args)
+        private async void OnFilterChanged(FilterChangedEventArgs args)
         {
-            _currentRatingFilter = args.RatingFilter;
-            UpdateFilterButtonStates(args.RatingFilter);
-        }
+            try
+            {
+                if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
+                {
+                    // フィルタをクリア
+                    _currentRatingFilter = 0;
+                    UpdateFilterButtonStates(0);
+                    _currentTagFilters.Clear();
+                    _isTagFilterEnabled = false;
+                    _isPromptFilterEnabled = false;
+                }
+                else if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+                {
+                    // タグフィルタの変更
+                    _currentTagFilters = new List<string>(args.TagFilters);
+                    _isTagFilterEnabled = args.IsTagFilterEnabled;
+                }
+                else if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
+                {
+                    // プロンプトフィルタの変更
+                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
+                }
+                else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
+                {
+                    // レーティングフィルタの変更
+                    _currentRatingFilter = args.RatingFilter;
+                    UpdateFilterButtonStates(args.RatingFilter);
+                }
 
+                // 各フィルタを適用
+                await _viewModel.ApplyAllFilters(_currentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"フィルタ変更処理中にエラーが発生しました: {ex.Message}");
+            }
+        }
 
         private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
@@ -273,10 +311,16 @@ namespace Illustra.Views
             if (folderPath == _currentFolderPath)
                 return;
 
-            // フォルダが変わったらフィルタを自動的に解除
+            // フォルダが変わったらすべてのフィルタを自動的に解除
             _currentRatingFilter = 0;
             UpdateFilterButtonStates(0);
-            _viewModel.ApplyRatingFilter(0);
+            _currentTagFilters.Clear();
+            _isTagFilterEnabled = false;
+            _viewModel.ClearAllFilters();
+
+            // フィルタ変更イベントは投げない
+            // それぞれ onFolderChanged で処理する
+            // フォルダ読み込み時にフィルタは反映される
 
             // 以前のフォルダの監視を停止
             if (_fileSystemMonitor.IsMonitoring)
@@ -1725,16 +1769,22 @@ namespace Illustra.Views
         }
         private int _currentRatingFilter = 0;
 
-        private void RatingFilter_Click(object sender, RoutedEventArgs e)
+        private async void RatingFilter_Click(object sender, RoutedEventArgs e)
         {
-            if (!(sender is Button button) ||
+            if (sender is not Button button ||
                 !int.TryParse(button.Tag?.ToString(), out int rating))
                 return;
-            ApplyFilterling(rating);
+
+            // 同じレーティングが選択された場合はフィルターを解除
+            if (rating == _currentRatingFilter && rating != 0)
+            {
+                rating = 0;
+            }
+            await ApplyFilterling(rating);
         }
-        private void ClearFilter_Click(object sender, RoutedEventArgs e)
+        private async void ClearFilter_Click(object sender, RoutedEventArgs e)
         {
-            ApplyFilterling(-1);
+            await ApplyFilterling(0);
         }
 
         private void UpdateFilterButtonStates(int selectedRating)
@@ -1762,7 +1812,7 @@ namespace Illustra.Views
             ClearFilterButton.IsEnabled = selectedRating > 0;
         }
 
-        private async void ApplyFilterling(int rating)
+        private async Task ApplyFilterling(int rating)
         {
             try
             {
@@ -1770,24 +1820,17 @@ namespace Illustra.Views
                 var focusedItem = _viewModel.SelectedItems.LastOrDefault();
                 var focusedPath = focusedItem?.FullPath;
 
-                // 同じレーティングが選択された場合はフィルターを解除
-                if (rating == _currentRatingFilter && rating != 0)
-                {
-                    rating = 0;
-                }
-
                 _currentRatingFilter = rating;
                 UpdateFilterButtonStates(rating);
 
-                // レーティングフィルターの適用
-                if (rating > 0)
-                {
-                    _viewModel.ApplyRatingFilter(rating); // 選択されたレーティングのみを表示
-                }
-                else
-                {
-                    _viewModel.ApplyRatingFilter(0); // フィルタなし
-                }
+                // すべてのフィルタを適用
+                await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+
+                // フィルター変更イベントを発行して他のコントロールに通知
+                _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                    new FilterChangedEventArgsBuilder(CONTROL_ID)
+                        .WithRatingFilter(rating)
+                        .Build());
 
                 // フィルタ後のアイテムリスト
                 var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
@@ -1914,7 +1957,7 @@ namespace Illustra.Views
             }
         }
 
-        private void OnRatingChanged(RatingChangedEventArgs args)
+        private async void OnRatingChanged(RatingChangedEventArgs args)
         {
             var fileNode = _viewModel.Items.FirstOrDefault(fn => fn.FullPath == args.FilePath);
             if (fileNode != null)
@@ -1923,7 +1966,8 @@ namespace Illustra.Views
                 // フィルタが設定されている場合のみフィルタを再適用
                 if (_currentRatingFilter > 0)
                 {
-                    ApplyFilterling(_currentRatingFilter);
+                    await ApplyFilterling(_currentRatingFilter);
+                    return;
                 }
 
                 // 選択中のファイルのレーティングが変更された場合はアニメーション実行
@@ -1932,7 +1976,7 @@ namespace Illustra.Views
                     if (selectedItem.FullPath == args.FilePath)
                     {
                         // UIスレッドで実行
-                        Dispatcher.InvokeAsync(() =>
+                        await Dispatcher.InvokeAsync(() =>
                         {
                             try
                             {

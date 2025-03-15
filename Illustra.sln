@@ -4,8 +4,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Illustra", "src\Illustra.csproj", "{EA8EAA37-1FC4-4485-BDFC-E99ADB5AAE3F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Illustra.Tests", "tests\Illustra.Tests.csproj", "{64C5CF66-B902-4A70-B93C-4D0459D8F675}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

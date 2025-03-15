@@ -1,5 +1,6 @@
 using Prism.Events;
 using System.Windows.Input;
+using System.Collections.Generic;
 
 namespace Illustra.Events
 {
@@ -99,15 +100,70 @@ namespace Illustra.Events
     /// </summary>
     public class FilterChangedEventArgs
     {
+        public enum FilterChangedType
+        {
+            PromptFilterChanged,
+            RatingFilterChanged,
+            TagFilterChanged,
+            Clear
+        }
+
+        public FilterChangedType Type { get; set; }
+
         public bool IsPromptFilterEnabled { get; set; }
         public int RatingFilter { get; set; }
-        public string SourceId { get; set; }
+        public string SourceId { get; set; } = string.Empty;
+        public bool IsTagFilterEnabled { get; set; }
+        public List<string> TagFilters { get; set; } = new List<string>();
 
-        public FilterChangedEventArgs(bool isPromptFilterEnabled, int ratingFilter, string sourceId)
+        // パラメータなしのコンストラクタ
+        public FilterChangedEventArgs(string sourceId)
         {
-            IsPromptFilterEnabled = isPromptFilterEnabled;
-            RatingFilter = ratingFilter;
             SourceId = sourceId;
+        }
+    }
+
+    public class FilterChangedEventArgsBuilder
+    {
+        public FilterChangedEventArgsBuilder(string sourceId)
+        {
+            _args = new FilterChangedEventArgs(sourceId);
+            _args.SourceId = sourceId;
+        }
+
+        private FilterChangedEventArgs _args = null;
+
+        public FilterChangedEventArgsBuilder WithPromptFilter(bool isEnabled)
+        {
+            _args.IsPromptFilterEnabled = isEnabled;
+            _args.Type = FilterChangedEventArgs.FilterChangedType.PromptFilterChanged;
+            return this;
+        }
+
+        public FilterChangedEventArgsBuilder WithRatingFilter(int rating)
+        {
+            _args.RatingFilter = rating;
+            _args.Type = FilterChangedEventArgs.FilterChangedType.RatingFilterChanged;
+            return this;
+        }
+
+        public FilterChangedEventArgsBuilder WithTagFilter(bool isEnabled, List<string> tags)
+        {
+            _args.IsTagFilterEnabled = isEnabled;
+            _args.TagFilters = tags;
+            _args.Type = FilterChangedEventArgs.FilterChangedType.TagFilterChanged;
+            return this;
+        }
+
+        public FilterChangedEventArgsBuilder Clear()
+        {
+            _args.Type = FilterChangedEventArgs.FilterChangedType.Clear;
+            return this;
+        }
+
+        public FilterChangedEventArgs Build()
+        {
+            return _args;
         }
     }
 
@@ -115,6 +171,11 @@ namespace Illustra.Events
     /// フィルタが変更されたときにトリガーされるイベント
     /// </summary>
     public class FilterChangedEvent : PubSubEvent<FilterChangedEventArgs> { }
+
+    /// <summary>
+    /// 現在のフィルタ状態を取得するイベント
+    /// </summary>
+    public class GetFilterStateEvent : PubSubEvent<FilterChangedEventArgs> { }
 
     /// <summary>
     /// ファイル操作の進行状況イベント

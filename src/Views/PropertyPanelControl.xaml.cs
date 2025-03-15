@@ -12,6 +12,8 @@ using Illustra.Events;
 using Illustra.Helpers;
 using System.Diagnostics;
 using Illustra.Controls;
+using System.Windows.Input;
+using System.Collections.Generic;
 
 namespace Illustra.Views
 {
@@ -21,6 +23,8 @@ namespace Illustra.Views
         private string _currentFilePath = string.Empty;
         private FileNodeModel? _currentFileNode;
         private readonly DatabaseManager _db = new();
+        private List<string> _currentTagFilters = new List<string>();
+        private string CONTROL_ID = "PropertyPanel";
 
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(
@@ -46,6 +50,8 @@ namespace Illustra.Views
 
         public PropertyPanelControl()
         {
+            // InitializeComponentはXAMLから自動生成されるメソッドで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             InitializeComponent();
             ImageProperties = new ImagePropertiesModel();
             DataContext = ImageProperties;
@@ -65,7 +71,11 @@ namespace Illustra.Views
         {
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected);
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderChanged);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+
         }
 
         private void OnFileSelected(string filePath)
@@ -123,6 +133,8 @@ namespace Illustra.Views
 
         private async Task UpdateRatingStars(bool updateDb = false)
         {
+            // PropertiesGridはXAMLで定義されたコンポーネントで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             if (_currentFileNode != null && PropertiesGrid != null)
             {
                 var buttonList = FindButtonsInVisualTree(PropertiesGrid);
@@ -290,6 +302,155 @@ namespace Illustra.Views
                 {
                     _ = LoadFileNodeAsync(ImageProperties.FilePath);
                 }
+            }
+        }
+
+        private void OnFilterChanged(FilterChangedEventArgs args)
+        {
+            // タグフィルタが変更された場合、CurrentTagFilterを更新
+            if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+            {
+                if (args.IsTagFilterEnabled)
+                {
+                    // 複数タグのフィルタリングをサポート
+                    _currentTagFilters = new List<string>(args.TagFilters);
+                }
+                else
+                {
+                    _currentTagFilters = new List<string>();
+                }
+
+                // タグの表示状態を更新
+                UpdateAllTagsHighlight();
+            }
+        }
+
+        private void OnFolderChanged(FolderSelectedEventArgs args)
+        {
+            // フォルダが変更された場合、タグフィルタをクリア
+            _currentTagFilters = new List<string>();
+            ImageProperties = new ImagePropertiesModel();
+            DataContext = ImageProperties;
+            UpdateAllTagsHighlight();
+        }
+
+        private void Tag_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // 右クリックされたタグを記憶
+            if (sender is TextBox textBox)
+            {
+                textBox.Tag = textBox.Text;
+            }
+        }
+
+        private void AddTagToFilter_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem &&
+                menuItem.Parent is ContextMenu contextMenu &&
+                contextMenu.PlacementTarget is TextBox textBox)
+            {
+                string tag = textBox.Text;
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    // タグが既に存在しない場合のみ追加
+                    if (!_currentTagFilters.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                    {
+                        _currentTagFilters.Add(tag);
+                        UpdateAllTagsHighlight();
+
+                        // フィルタ変更イベントを発行
+                        _eventAggregator?.GetEvent<FilterChangedEvent>().Publish(
+                            new FilterChangedEventArgsBuilder(CONTROL_ID)
+                                .WithTagFilter(true, _currentTagFilters)
+                                .Build());
+                    }
+                }
+            }
+        }
+
+        private void RemoveTagFromFilter_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem &&
+                menuItem.Parent is ContextMenu contextMenu &&
+                contextMenu.PlacementTarget is TextBox textBox)
+            {
+                string tag = textBox.Text;
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    // タグを削除
+                    _currentTagFilters.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+                    UpdateAllTagsHighlight();
+
+                    // フィルタ変更イベントを発行
+                    _eventAggregator?.GetEvent<FilterChangedEvent>().Publish(
+                        new FilterChangedEventArgsBuilder(CONTROL_ID)
+                            .WithTagFilter(true, _currentTagFilters)
+                            .Build());
+                }
+            }
+        }
+
+        private void Tag_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                UpdateTagHighlight(textBox);
+            }
+        }
+
+        private void UpdateTagHighlight(TextBox textBox)
+        {
+            if (textBox == null) return;
+
+            // TextBoxのTextプロパティを使用する（Tagプロパティではなく）
+            string tag = textBox.Text ?? string.Empty;
+            bool isMatch = _currentTagFilters.Contains(tag, StringComparer.OrdinalIgnoreCase);
+
+            // TextBoxの親要素（Border）を取得
+            if (VisualTreeHelper.GetParent(textBox) is Border border)
+            {
+                // ハイライト状態を設定
+                if (isMatch)
+                {
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 120, 215)); // #0078D7
+                    border.BorderThickness = new Thickness(2);
+                }
+                else
+                {
+                    border.BorderBrush = new SolidColorBrush(Colors.Transparent);
+                    border.BorderThickness = new Thickness(1);
+                }
+            }
+        }
+
+        private void UpdateAllTagsHighlight()
+        {
+            // TagsItemsControlはXAMLで定義されたコンポーネントで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
+            if (TagsItemsControl == null) return;
+
+            // ItemsControlの子要素を再帰的に検索
+            var textBoxes = new List<TextBox>();
+            FindVisualChildren<TextBox>(TagsItemsControl, textBoxes);
+
+            // 各TextBoxのハイライト状態を更新
+            foreach (var textBox in textBoxes)
+            {
+                UpdateTagHighlight(textBox);
+            }
+        }
+
+        private void FindVisualChildren<T>(DependencyObject parent, List<T> results) where T : DependencyObject
+        {
+            int childCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t)
+                {
+                    results.Add(t);
+                }
+                FindVisualChildren<T>(child, results);
             }
         }
     }

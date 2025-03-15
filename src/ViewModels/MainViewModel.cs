@@ -149,11 +149,17 @@ namespace Illustra.ViewModels
         public void SetCurrentFolder(string path)
         {
             _currentFolderPath = path;
+
+            // フォルダ変更時にタグキャッシュをクリア
+            _tagCache.Clear();
         }
 
         private int _currentRatingFilter = 0;
         private bool _isPromptFilterEnabled = false;
-        private readonly Dictionary<string, bool> _promptCache = new();
+        private readonly Dictionary<string, bool> _promptCache = [];
+        private readonly Dictionary<string, List<string>> _tagCache = [];
+        private List<string> _tagFilters = [];
+        private bool _isTagFilterEnabled;
 
         /// <summary>
         /// 現在適用されているレーティングフィルタの値を取得します
@@ -194,24 +200,68 @@ namespace Illustra.ViewModels
             }
         }
 
+        /// <summary>
+        /// タグフィルタが有効かどうかを示す値を取得します
+        /// </summary>
+        public bool IsTagFilterEnabled
+        {
+            get => _isTagFilterEnabled;
+            private set
+            {
+                if (_isTagFilterEnabled != value)
+                {
+                    _isTagFilterEnabled = value;
+                    OnPropertyChanged(nameof(IsTagFilterEnabled));
+                }
+            }
+        }
+
+        /// <summary>
+        /// フィルタ条件に基づいてアイテムをフィルタリングします
+        /// </summary>
         private bool FilterItems(object item)
         {
-            if (item is FileNodeModel fileNode)
-            {
-                bool passesRatingFilter = _currentRatingFilter <= 0 || fileNode.Rating == _currentRatingFilter;
+            if (item is not FileNodeModel fileNode)
+                return false;
 
-                // レーティングフィルタを通過しない場合は早期リターン
-                if (!passesRatingFilter)
+            // レーティングフィルタ
+            if (CurrentRatingFilter > 0 && fileNode.Rating != CurrentRatingFilter)
+                return false;
+
+            // タグフィルタ
+            if (IsTagFilterEnabled)
+            {
+                if (!_tagCache.TryGetValue(fileNode.FullPath, out var tags) || tags == null || tags.Count == 0)
                     return false;
 
-                if (_isPromptFilterEnabled)
+                // すべてのタグが含まれているかチェック（AND検索）
+                foreach (var tag in _tagFilters)
                 {
-                    return _promptCache.TryGetValue(fileNode.FullPath, out bool hasPrompt) && hasPrompt;
-                }
+                    bool tagFound = false;
+                    foreach (var fileTag in tags)
+                    {
+                        if (fileTag.IndexOf(tag, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            tagFound = true;
+                            break;
+                        }
+                    }
 
-                return true; // レーティングフィルタのみが適用されている場合
+                    // 1つでも見つからないタグがあれば、このファイルはフィルタを通過しない
+                    if (!tagFound)
+                        return false;
+                }
             }
-            return false;
+
+            // プロンプトフィルタ
+            if (IsPromptFilterEnabled)
+            {
+                // プロンプトが空の場合は非表示
+                if (!_promptCache.TryGetValue(fileNode.FullPath, out bool hasPrompt) || !hasPrompt)
+                    return false;
+            }
+
+            return true;
         }
 
         //
@@ -235,35 +285,6 @@ namespace Illustra.ViewModels
             UpdateSelectionAfterFilter(previousSelected);
         }
 
-        /// <summary>
-        /// プロンプトフィルターを適用します
-        /// </summary>
-        public void SetPromptFilter(bool enable)
-        {
-            IsPromptFilterEnabled = enable;
-
-            // フィルタ処理を即時適用
-            ApplyFilterAndUpdateSelection();
-
-            if (enable)
-            {
-                // 別スレッドでプロンプトキャッシュを更新
-                Task.Run(async () =>
-                {
-                    var itemsCopy = Items.ToList(); // スレッドセーフのためにコピーを作成
-                    foreach (var item in itemsCopy)
-                    {
-                        await UpdatePromptCacheAsync(item.FullPath);
-                    }
-
-                    // キャッシュ更新完了後にUIスレッドでフィルタを更新
-                    await App.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        ApplyFilterAndUpdateSelection();
-                    });
-                });
-            }
-        }
 
         public async Task UpdatePromptCacheAsync(string filePath)
         {
@@ -280,34 +301,81 @@ namespace Illustra.ViewModels
         }
 
         /// <summary>
-        /// レーティングフィルターを適用します
+        /// 指定されたファイルのタグ情報をキャッシュに読み込みます
         /// </summary>
-        /// <param name="rating">フィルターするレーティング値。0はフィルターなし</param>
-        public void ApplyRatingFilter(int rating)
+        public async Task UpdateTagCacheAsync(string filePath)
         {
-            // 同じレーティングが選択された場合はフィルタを解除
-            if (CurrentRatingFilter == rating && rating > 0)
+            try
             {
-                rating = 0;
+                var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                if (properties?.StableDiffusionResult != null && properties.StableDiffusionResult.Tags.Count > 0)
+                {
+                    _tagCache[filePath] = properties.StableDiffusionResult.Tags;
+                }
+                else
+                {
+                    _tagCache[filePath] = new List<string>();
+                }
             }
-
-            CurrentRatingFilter = rating;
-
-            // 共通フィルタ処理を適用
-            ApplyFilterAndUpdateSelection();
+            catch
+            {
+                _tagCache[filePath] = new List<string>();
+            }
         }
 
         /// <summary>
+        /// レーティングフィルターとタグフィルターを適用します
+        /// </summary>
+        public async Task ApplyAllFilters(int ratingFilter, bool isPromptFilterEnabled, List<string> tagFilters, bool isTagFilterEnabled)
+        {
+            // レーティングフィルタの設定
+            CurrentRatingFilter = ratingFilter;
+
+            // プロンプトフィルタの設定
+            IsPromptFilterEnabled = isPromptFilterEnabled;
+            _promptCache.Clear();
+
+            // タグフィルタの設定（新しいリストのインスタンスを作成）
+            _tagFilters = new List<string>(tagFilters);
+            _isTagFilterEnabled = isTagFilterEnabled;
+            _tagCache.Clear();
+
+            // キャッシュの差分更新は未実装
+            // 別スレッドでタグキャッシュを更新
+            await Task.Run(async () =>
+            {
+                var itemsCopy = Items.ToList(); // スレッドセーフのためにコピーを作成
+                foreach (var item in itemsCopy)
+                {
+                    if (isTagFilterEnabled)
+                    {
+                        await UpdateTagCacheAsync(item.FullPath);
+                    }
+                    if (isPromptFilterEnabled)
+                    {
+                        await UpdatePromptCacheAsync(item.FullPath);
+                    }
+                }
+
+                // キャッシュ更新完了後にUIスレッドでフィルタを更新
+                await App.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ApplyFilterAndUpdateSelection();
+                });
+            });
+        }
+
+
+        /// <summary>
         /// すべてのフィルターをクリアします
+        /// フォルダ選択時の状態更新用
         /// </summary>
         public void ClearAllFilters()
         {
-            var selectedItem = _selectedItems.LastOrDefault();
             CurrentRatingFilter = 0;
             IsPromptFilterEnabled = false;
-
-            // 共通フィルタ処理を適用
-            ApplyFilterAndUpdateSelection();
+            IsTagFilterEnabled = false;
+            _tagFilters.Clear();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

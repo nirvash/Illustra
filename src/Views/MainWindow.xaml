@@ -49,23 +49,16 @@
                           IsCheckable="True"
                           Click="SortOrderMenuItem_Click"/>
             </MenuItem>
-            <MenuItem Header="{DynamicResource String_Menu_Settings}">
-                <MenuItem Header="{DynamicResource String_Menu_Settings_Language}"
-                          Command="{Binding OpenLanguageSettingsCommand}"/>
-                <MenuItem Header="{DynamicResource String_Menu_Settings_Shortcuts}"
-                          Command="{Binding OpenShortcutSettingsCommand}"/>
-                <MenuItem Header="{DynamicResource String_Menu_Settings_Advanced}"
-                          Command="{Binding OpenAdvancedSettingsCommand}"/>
-                <MenuItem x:Name="ToggleCyclicNavigation"
-                          Header="{DynamicResource String_Menu_Settings_CyclicNavigation}"
-                          IsCheckable="True"
-                          Click="ToggleCyclicNavigation_Click"/>
-            </MenuItem>
+
             <MenuItem Header="{DynamicResource String_Menu_Filter}">
                 <MenuItem Header="{DynamicResource String_Menu_Filter_Prompt}"
                           x:Name="FilterPromptMenuItem"
                           IsCheckable="True"
                           Click="FilterPromptMenuItem_Click"/>
+                <MenuItem Header="{DynamicResource String_Menu_Filter_Tag}"
+                          x:Name="FilterTagMenuItem"
+                          IsCheckable="False"
+                          Click="FilterTagMenuItem_Click"/>
                 <MenuItem Header="{DynamicResource String_Menu_Filter_Rating}"
                           x:Name="FilterRatingMenuItem"
                           IsCheckable="False">
@@ -94,6 +87,19 @@
                 <MenuItem Header="{DynamicResource String_Menu_Filter_Clear}"
                           x:Name="FilterClearMenuItem"
                           Click="ClearAllFilters"/>
+            </MenuItem>
+
+            <MenuItem Header="{DynamicResource String_Menu_Settings}">
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Language}"
+                          Command="{Binding OpenLanguageSettingsCommand}"/>
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Shortcuts}"
+                          Command="{Binding OpenShortcutSettingsCommand}"/>
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Advanced}"
+                          Command="{Binding OpenAdvancedSettingsCommand}"/>
+                <MenuItem x:Name="ToggleCyclicNavigation"
+                          Header="{DynamicResource String_Menu_Settings_CyclicNavigation}"
+                          IsCheckable="True"
+                          Click="ToggleCyclicNavigation_Click"/>
             </MenuItem>
 
             <MenuItem Header="{DynamicResource String_Menu_Tools}"
