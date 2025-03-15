@@ -19,6 +19,7 @@ using Illustra.Models;
 public class ThumbnailLoaderHelper
 {
     private static SemaphoreSlim _folderLoadingSemaphore = new SemaphoreSlim(1, 1);
+    private static SemaphoreSlim _thumbnailLoadingSemaphore = new SemaphoreSlim(1, 1);
     private static BitmapSource? _commonDummyImage;
     private static BitmapSource? _commonErrorImage;
     private static readonly object _staticLock = new object();
@@ -360,67 +361,45 @@ public class ThumbnailLoaderHelper
             return;
         }
 
-        // サムネイル読み込み用のキャンセルトークンを取得
-        var cancellationToken = GetThumbnailLoadingToken();
-
-        // フィルタされていないアイテムのコレクション
-        var allNodes = _viewModel.Items.ToArray();
-        // フィルタされたアイテムのリストを取得（実際に表示されているもの）
-        var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
-
-        // インデックスの範囲チェック
-        startIndex = Math.Max(0, startIndex);
-        endIndex = Math.Min(filteredNodes.Length - 1, endIndex);
-
-        if (startIndex > endIndex || startIndex < 0) return;
-
-        // より効率的なバッチサイズ（適宜調整可能）
-        int batchSize = 8;
-        var tasks = new List<Task>();
-
-        for (int batchStart = startIndex; batchStart <= endIndex; batchStart += batchSize)
-        {
-            if (cancellationToken.IsCancellationRequested) return;
-
-            int batchEnd = Math.Min(batchStart + batchSize - 1, endIndex);
-
-            // 非同期でバッチ処理を実行（フィルタされたアイテムを使用）
-            var task = ProcessBatchAsync(filteredNodes, batchStart, batchEnd, cancellationToken);
-            tasks.Add(task);
-
-            // UIがフリーズしないように少し待つ
-            await Task.Delay(5, CancellationToken.None);
-        }
-
+        await _thumbnailLoadingSemaphore.WaitAsync();
         try
         {
-            await Task.WhenAll(tasks);
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.WriteLine($"[CANCELLED] サムネイル読み込みバッチ処理がキャンセルされました");
-        }
-    }
+            // サムネイル読み込み用のキャンセルトークンを取得
+            var cancellationToken = GetThumbnailLoadingToken();
 
-    private async Task ProcessBatchAsync(FileNodeModel[] nodes, int startIndex, int endIndex, CancellationToken cancellationToken)
-    {
-        for (int i = startIndex; i <= endIndex; i++)
-        {
-            if (cancellationToken.IsCancellationRequested) return;
+            // フィルタされていないアイテムのコレクション
+            var allNodes = _viewModel.Items.ToArray();
+            // フィルタされたアイテムのリストを取得（実際に表示されているもの）
+            var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
 
-            var fileNode = nodes[i];
-            if (fileNode != null &&
-                (fileNode.ThumbnailInfo == null ||
-                 fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
+            // インデックスの範囲チェック
+            startIndex = Math.Max(0, startIndex);
+            endIndex = Math.Min(filteredNodes.Length - 1, endIndex);
+
+            if (startIndex > endIndex || startIndex < 0) return;
+
+            for (int i = startIndex; i <= endIndex; i++)
             {
-                var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken), cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
 
-                // UIスレッドにポストする必要はない（プロパティ変更通知が自動的に処理）
-                if (!cancellationToken.IsCancellationRequested)
+                var fileNode = filteredNodes[i];
+                if (fileNode != null &&
+                    (fileNode.ThumbnailInfo == null ||
+                     fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
                 {
-                    fileNode.ThumbnailInfo = thumbnailInfo;
+                    var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken), cancellationToken);
+
+                    // UIスレッドにポストする必要はない（プロパティ変更通知が自動的に処理）
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        fileNode.ThumbnailInfo = thumbnailInfo;
+                    }
                 }
             }
+        }
+        finally
+        {
+            _thumbnailLoadingSemaphore.Release();
         }
     }
 
@@ -450,19 +429,6 @@ public class ThumbnailLoaderHelper
     public CancellationToken GetFolderLoadingToken()
     {
         return _folderLoadingCTS?.Token ?? CancellationToken.None;
-    }
-
-    /// <summary>
-    /// 現在のキャンセルトークンを取得します（後方互換性のため）
-    /// </summary>
-    public CancellationToken GetCurrentCancellationToken()
-    {
-        // 優先順位: フォルダ読み込み > サムネイル読み込み > なし
-        if (_folderLoadingCTS != null && !_folderLoadingCTS.IsCancellationRequested)
-            return _folderLoadingCTS.Token;
-        if (_thumbnailLoadingCTS != null && !_thumbnailLoadingCTS.IsCancellationRequested)
-            return _thumbnailLoadingCTS.Token;
-        return CancellationToken.None;
     }
 
     /// <summary>
