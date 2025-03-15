@@ -10,7 +10,7 @@ namespace Illustra.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseManager _db = new();
+        private readonly DatabaseManager _db;
         private string? _currentFolderPath;
         private bool _sortByDate;
         private bool _sortAscending;
@@ -43,8 +43,10 @@ namespace Illustra.ViewModels
             }
         }
 
-        public MainViewModel()
+        public MainViewModel(DatabaseManager db)
         {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+
             // 初期設定を読み込む
             var settings = SettingsHelper.GetSettings();
             _sortByDate = settings.SortByDate;

@@ -17,15 +17,14 @@ namespace Illustra.Helpers
     public class FileSystemMonitor : IDisposable
     {
         private readonly FileSystemWatcher _watcher;
-        private readonly IFileSystemChangeHandler _handler;
+        private IFileSystemChangeHandler? _handler;
         private readonly ConcurrentQueue<FileSystemEventArgs> _eventQueue;
         private readonly Timer _processTimer;
         private bool _isMonitoring;
         private string _monitoredPath = string.Empty;
 
-        public FileSystemMonitor(IFileSystemChangeHandler handler, bool isDirectoryMonitoring = false)
+        public FileSystemMonitor(bool isDirectoryMonitoring = false)
         {
-            _handler = handler;
             _eventQueue = new ConcurrentQueue<FileSystemEventArgs>();
             _processTimer = new Timer(500) { AutoReset = false };
             _processTimer.Elapsed += ProcessQueuedEvents;
@@ -49,8 +48,16 @@ namespace Illustra.Helpers
 
         public bool IsMonitoring => _isMonitoring;
 
+        public void SetHandler(IFileSystemChangeHandler handler)
+        {
+            _handler = handler ?? throw new ArgumentNullException(nameof(handler));
+        }
+
         public void StartMonitoring(string path)
         {
+            if (_handler == null)
+                throw new InvalidOperationException("Handler must be set before starting monitoring");
+
             try
             {
                 if (!Directory.Exists(path))
@@ -85,21 +92,30 @@ namespace Illustra.Helpers
 
         private void ProcessQueuedEvents(object? sender, ElapsedEventArgs e)
         {
+            if (_handler == null) return;
+
             while (_eventQueue.TryDequeue(out var evt))
             {
-                switch (evt)
+                try
                 {
-                    case FileSystemEventArgs createEvent when evt.ChangeType == WatcherChangeTypes.Created:
-                        _handler.OnFileCreated(createEvent.FullPath);
-                        break;
+                    switch (evt)
+                    {
+                        case FileSystemEventArgs createEvent when evt.ChangeType == WatcherChangeTypes.Created:
+                            _handler.OnFileCreated(createEvent.FullPath);
+                            break;
 
-                    case FileSystemEventArgs deleteEvent when evt.ChangeType == WatcherChangeTypes.Deleted:
-                        _handler.OnFileDeleted(deleteEvent.FullPath);
-                        break;
+                        case FileSystemEventArgs deleteEvent when evt.ChangeType == WatcherChangeTypes.Deleted:
+                            _handler.OnFileDeleted(deleteEvent.FullPath);
+                            break;
 
-                    case RenamedEventArgs renameEvent:
-                        _handler.OnFileRenamed(renameEvent.OldFullPath, renameEvent.FullPath);
-                        break;
+                        case RenamedEventArgs renameEvent:
+                            _handler.OnFileRenamed(renameEvent.OldFullPath, renameEvent.FullPath);
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error processing file system event: {ex.Message}");
                 }
             }
         }

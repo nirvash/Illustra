@@ -19,6 +19,11 @@ using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using Prism.Events;
+using Prism.Ioc;
 
 namespace Illustra.Views
 {
@@ -51,6 +56,9 @@ namespace Illustra.Views
         private bool _isPromptFilterEnabled = false;
         private List<string> _currentTagFilters = new List<string>();
         private bool _isTagFilterEnabled = false;
+
+        // サムネイル読み込みキューの追加
+        private Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -164,8 +172,8 @@ namespace Illustra.Views
             // 既存のコード
             var dropHandler = new CustomDropHandler(this);
             var dragPreviewItemsSorter = new CustomPreviewItemSorter();
-            DragDrop.SetDropHandler(ThumbnailItemsControl, dropHandler);
-            DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, dragPreviewItemsSorter);
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, dropHandler);
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, dragPreviewItemsSorter);
 
             // 既存のコード
             ThumbnailItemsControl.PreviewMouseWheel += ThumbnailItemsControl_PreviewMouseWheel;
@@ -178,22 +186,33 @@ namespace Illustra.Views
             if (_isInitialized) return;
             _isInitialized = true;
 
-            // 既存のコード
-            _eventAggregator = ServiceLocator.Current.GetInstance<IEventAggregator>();
-            _viewModel = DataContext as MainViewModel ?? new MainViewModel();
-            _appSettings = ServiceLocator.Current.GetInstance<AppSettings>();
-            _thumbnailLoader = ServiceLocator.Current.GetInstance<ThumbnailLoaderHelper>();
-            _fileSystemMonitor = ServiceLocator.Current.GetInstance<FileSystemMonitor>();
+            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
-            // 既存のコード
-            _fileSystemMonitor.RegisterHandler(this);
-            _viewModel.FileNodesLoaded += OnFileNodesLoaded;
+            // DIコンテナから依存関係を解決
+            _eventAggregator = App.Instance.Container.Resolve<IEventAggregator>();
+            _viewModel = DataContext as MainViewModel ?? App.Instance.Container.Resolve<MainViewModel>();
+            _appSettings = App.Instance.Container.Resolve<AppSettings>();
+            _thumbnailLoader = new ThumbnailLoaderHelper(_viewModel, db, _appSettings);
+            _fileSystemMonitor = new FileSystemMonitor();
+
+            // FileSystemMonitorとThumbnailLoaderHelperの初期化
+            _fileSystemMonitor.SetHandler(this);
+            _thumbnailLoader.Initialize(ThumbnailItemsControl, SelectThumbnail, this);
+
+            // PropertyChangedイベントをOnFileNodesLoadedにリダイレクト
+            _viewModel.PropertyChanged += (s, args) =>
+            {
+                if (args.PropertyName == "Items")
+                {
+                    OnFileNodesLoaded(s, EventArgs.Empty);
+                }
+            };
 
             // イベント購読
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
-            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(args => OnLanguageChanged());
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
 
             // 新しいImageViewModelを使用するためのバインディング設定
             ThumbnailItemsControl.ItemsSource = _imageViewModel.DisplayItems;
@@ -209,6 +228,42 @@ namespace Illustra.Views
 
             // 初期設定の適用
             ApplySettings();
+        }
+
+        private void OnFolderSelected(FolderSelectedEventArgs args)
+        {
+            _currentFolderPath = args.Path;
+
+            // 新しいImageViewModelを使用したフォルダ読み込み
+            _imageViewModel.LoadImagesFromFolderAsync(args.Path);
+
+            // 初期選択アイテムの設定
+            if (!string.IsNullOrEmpty(args.InitialSelectedFilePath))
+            {
+                SelectThumbnail(args.InitialSelectedFilePath);
+            }
+            else if (_imageViewModel.DisplayItems.Count > 0)
+            {
+                ThumbnailItemsControl.SelectedItem = _imageViewModel.DisplayItems[0];
+            }
+        }
+
+        private void OnSortOrderChanged(SortOrderChangedEventArgs args)
+        {
+            // 新しいImageViewModelを使用したソート
+            _isSortByDate = args.IsByDate;
+            _isSortAscending = args.IsAscending;
+
+            // UIの更新
+            SortDirectionText.Text = _isSortAscending
+                ? (string)FindResource("String_Thumbnail_SortAscending")
+                : (string)FindResource("String_Thumbnail_SortDescending");
+
+            SortTypeText.Text = _isSortByDate
+                ? (string)FindResource("String_Thumbnail_SortByDate")
+                : (string)FindResource("String_Thumbnail_SortByName");
+
+            _imageViewModel.ApplySortAsync(_isSortByDate, _isSortAscending);
         }
 
         private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)
@@ -256,24 +311,6 @@ namespace Illustra.Views
             UpdateFilterButtonStates(_currentRatingFilter);
 
             await _imageViewModel.ApplyFilterAsync(_currentRatingFilter);
-        }
-
-        private async void OnFolderSelected(FolderSelectedEventArgs args)
-        {
-            _currentFolderPath = args.FolderPath;
-
-            // 新しいImageViewModelを使用したフォルダ読み込み
-            await _imageViewModel.LoadImagesFromFolderAsync(args.FolderPath);
-
-            // 初期選択アイテムの設定
-            if (!string.IsNullOrEmpty(args.InitialSelectedFilePath))
-            {
-                SelectThumbnail(args.InitialSelectedFilePath);
-            }
-            else if (_imageViewModel.DisplayItems.Count > 0)
-            {
-                ThumbnailItemsControl.SelectedItem = _imageViewModel.DisplayItems[0];
-            }
         }
 
         public void SaveAllData()
@@ -765,7 +802,8 @@ namespace Illustra.Views
 
             var verticalOffset = scrollViewer.VerticalOffset;
             var viewportHeight = scrollViewer.ViewportHeight;
-            var itemHeight = panel.ItemHeight;
+            // ItemHeightプロパティが存在しないため、サムネイルサイズから計算
+            var itemHeight = (int)ThumbnailSizeSlider.Value + 20; // マージンを考慮
 
             var startRow = (int)(verticalOffset / itemHeight);
             var endRow = (int)((verticalOffset + viewportHeight) / itemHeight) + 1;
@@ -1022,10 +1060,16 @@ namespace Illustra.Views
 
         private void ShowNotification(string message, int fontSize = 24)
         {
-            NotificationText.Text = message;
-            NotificationText.FontSize = fontSize;
-            var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
-            storyboard.Begin(Notification);
+            var notificationText = (TextBlock)FindName("NotificationText");
+            var notification = (FrameworkElement)FindName("Notification");
+
+            if (notificationText != null && notification != null)
+            {
+                notificationText.Text = message;
+                notificationText.FontSize = fontSize;
+                var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
+                storyboard.Begin(notification);
+            }
         }
 
         private void CopySelectedImagesToClipboard()
@@ -1318,7 +1362,7 @@ namespace Illustra.Views
         }
 
 
-        // スライダーの値が変更されたときの処理（表示の更新のみ）
+        // スライダーの値が変更されたときの処理（表示のみ）
         /// <summary>
         /// 選択中のサムネイルを画面内に表示します
         /// </summary>
@@ -1823,24 +1867,6 @@ namespace Illustra.Views
             ClearFilterButton.IsEnabled = selectedRating > 0;
         }
 
-        private async void OnSortOrderChanged(SortOrderChangedEventArgs args)
-        {
-            // 新しいImageViewModelを使用したソート
-            _isSortByDate = args.SortByDate;
-            _isSortAscending = args.SortAscending;
-
-            // UIの更新
-            SortDirectionText.Text = _isSortAscending
-                ? (string)FindResource("String_Thumbnail_SortAscending")
-                : (string)FindResource("String_Thumbnail_SortDescending");
-
-            SortTypeText.Text = _isSortByDate
-                ? (string)FindResource("String_Thumbnail_SortByDate")
-                : (string)FindResource("String_Thumbnail_SortByName");
-
-            await _imageViewModel.ApplySortAsync(_isSortByDate, _isSortAscending);
-        }
-
         private async void SortToggle_Click(object sender, RoutedEventArgs e)
         {
             // 新しいImageViewModelを使用したソート方向の切り替え
@@ -1966,6 +1992,9 @@ namespace Illustra.Views
             await ProcessThumbnailLoadQueue();
         }
 
+        /// <summary>
+        /// サムネイル読み込みキューを処理します
+        /// </summary>
         private async Task ProcessThumbnailLoadQueue()
         {
             if (_thumbnailLoadQueue.Count > 0)
@@ -1992,6 +2021,29 @@ namespace Illustra.Views
                         (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
                 });
             });
+        }
+
+        /// <summary>
+        /// レーティングフィルターを適用します
+        /// </summary>
+        private async Task ApplyFilterling(int rating)
+        {
+            _currentRatingFilter = rating;
+            UpdateFilterButtonStates(rating);
+            await _imageViewModel.ApplyFilterAsync(rating);
+        }
+
+        /// <summary>
+        /// パネル内の1行あたりのアイテム数を取得します
+        /// </summary>
+        private int GetItemsPerRow(VirtualizingWrapPanel panel)
+        {
+            if (panel == null || panel.ActualWidth <= 0)
+                return 0;
+
+            // パネルの幅とアイテムの幅から1行あたりのアイテム数を計算
+            double itemWidth = (int)ThumbnailSizeSlider.Value + 6; // マージンを考慮
+            return Math.Max(1, (int)(panel.ActualWidth / itemWidth));
         }
     }
 }

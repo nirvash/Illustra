@@ -14,7 +14,7 @@
 
             <BitmapImage x:Key="AppIcon"
                          UriSource="pack://application:,,,/assets/illustra.ico"/>
-            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>

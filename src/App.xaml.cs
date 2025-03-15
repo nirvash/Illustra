@@ -23,7 +23,7 @@ namespace Illustra
     /// </summary>
     public partial class App : PrismApplication
     {
-        private readonly DatabaseManager _db = new();
+        private DatabaseManager _db;
         public bool EnableCyclicNavigation { get; set; }
 
         public static App Instance => (App)Current;
@@ -63,7 +63,22 @@ namespace Illustra
             // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
             containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
 
+            // 基本サービスの登録
             containerRegistry.RegisterSingleton<DatabaseManager>();
+            containerRegistry.RegisterSingleton<AppSettings>();
+            containerRegistry.RegisterSingleton<FileSystemMonitor>((container) => new FileSystemMonitor());
+
+            // ViewModelの登録
+            containerRegistry.RegisterSingleton<MainViewModel>();
+
+            // サムネイル関連の登録
+            containerRegistry.RegisterSingleton<ThumbnailLoaderHelper>((container) =>
+            {
+                var viewModel = container.Resolve<MainViewModel>();
+                var db = container.Resolve<DatabaseManager>();
+                var appSettings = container.Resolve<AppSettings>();
+                return new ThumbnailLoaderHelper(viewModel, db, appSettings);
+            });
         }
 
         protected override void OnInitialized()
@@ -78,10 +93,13 @@ namespace Illustra
         {
             base.OnStartup(e);
 
+            // DIコンテナからインスタンスを取得
+            _db = Container.Resolve<DatabaseManager>();
+            var settings = Container.Resolve<AppSettings>();
+
             // データベースのデバッグログを設定
-            var dbManager = Container.Resolve<DatabaseManager>();
             bool enableDebugLogging = false; // デバッグログを無効化
-            dbManager.EnableDebugLogging(enableDebugLogging);
+            _db.EnableDebugLogging(enableDebugLogging);
 
             if (enableDebugLogging)
             {
@@ -95,8 +113,7 @@ namespace Illustra
             // データベースの初期化
             InitializeDatabase();
 
-            // AppSettingsから循環移動の設定を読み込む
-            var settings = SettingsHelper.GetSettings();
+            // 循環移動の設定を読み込む
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
         }
 

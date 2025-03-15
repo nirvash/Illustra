@@ -23,14 +23,21 @@ public class ThumbnailLoaderHelper
     private static readonly object _staticLock = new object();
 
     private string _currentFolderPath = string.Empty;
-    private readonly ItemsControl _thumbnailListBox;
+    private ItemsControl? _thumbnailListBox;
     private int _thumbnailSize = 120;
     private ObservableCollection<FileNodeModel> _viewModelItems;
-    private AppSettings _appSettings;
-    private readonly ThumbnailListControl _control;
+    private readonly AppSettings _appSettings;
+    private ThumbnailListControl? _control;
     private readonly MainViewModel _viewModel;
-    private readonly Action<string> _selectCallback;
+    private Action<string>? _selectCallback;
     private readonly DatabaseManager _db;
+    private bool _isInitialized;
+
+    private void EnsureInitialized()
+    {
+        if (!_isInitialized)
+            throw new InvalidOperationException("ThumbnailLoaderHelper must be initialized before use. Call Initialize() first.");
+    }
 
     // フォルダ読み込み用のキャンセルトークンソース
     private CancellationTokenSource? _folderLoadingCTS;
@@ -85,24 +92,23 @@ public class ThumbnailLoaderHelper
     /// <summary>
     /// サムネイルローダーを初期化します
     /// </summary>
-    public ThumbnailLoaderHelper(
-        ItemsControl thumbnailListBox,
-        Action<string> selectCallback,
-        ThumbnailListControl control,
-        MainViewModel viewModel,
-        DatabaseManager db)
+    public ThumbnailLoaderHelper(MainViewModel viewModel, DatabaseManager db, AppSettings appSettings)
     {
-        _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
-        _selectCallback = selectCallback;
-        _control = control ?? throw new ArgumentNullException(nameof(control));
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
         _viewModelItems = viewModel.Items ?? throw new ArgumentNullException(nameof(viewModel.Items));
 
-        // 設定を読み込む
-        _appSettings = SettingsHelper.GetSettings();
         SortByDate = _appSettings.SortByDate;
         SortAscending = _appSettings.SortAscending;
+    }
+
+    public void Initialize(ItemsControl thumbnailListBox, Action<string> selectCallback, ThumbnailListControl control)
+    {
+        _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
+        _selectCallback = selectCallback ?? throw new ArgumentNullException(nameof(selectCallback));
+        _control = control ?? throw new ArgumentNullException(nameof(control));
+        _isInitialized = true;
     }
 
     /// <summary>
