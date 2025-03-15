@@ -6,134 +6,122 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>assets/illustra.ico</ApplicationIcon>
-    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>    <!-- 警告をエラーとして扱わない設定 -->
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers><!-- 警告をエラーとして扱わない設定 -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>    <!-- ビルドログの詳細設定 -->
-    <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>    <!-- インメモリビルドログを有効化 -->
-    <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>    <!-- ビルド時のログ出力を詳細に -->
-    <BuildLogVerbosity>detailed</BuildLogVerbosity>    <!-- Null参照警告を無効化 -->
+    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors><!-- ビルドログの詳細設定 -->
+    <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages><!-- インメモリビルドログを有効化 -->
+    <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog><!-- ビルド時のログ出力を詳細に -->
+    <BuildLogVerbosity>detailed</BuildLogVerbosity><!-- Null参照警告を無効化 -->
     <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059</NoWarn>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting><!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
-  </PropertyGroup>  <!-- デバッグビルド設定 -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
+  </PropertyGroup><!-- デバッグビルド設定 -->
+  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Debug|AnyCPU&apos;">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>  <!-- リリースビルド設定 -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  </PropertyGroup><!-- リリースビルド設定 -->
+  <PropertyGroup Condition="&apos;$(Configuration)|$(Platform)&apos;==&apos;Release|AnyCPU&apos;">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
-  </PropertyGroup>  <!-- リソースファイルの設定 -->
-  <PropertyGroup>    <!-- アセンブリの情報バージョンにGitリビジョン（コミットハッシュ）を含めるかどうか -->
+  </PropertyGroup><!-- リソースファイルの設定 -->
+  <PropertyGroup><!-- アセンブリの情報バージョンにGitリビジョン（コミットハッシュ）を含めるかどうか -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
-  <PropertyGroup>    <!-- GitVersion.yml の場所指定 -->
-    <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\src\GitVersion.yml"</GitVersion_ToolArguments>
+  <PropertyGroup><!-- GitVersion.yml の場所指定 -->
+    <GitVersion_ToolArguments>-config &quot;$(MSBuildProjectDirectory)\src\GitVersion.yml&quot;</GitVersion_ToolArguments>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="5.5.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
-    <PackageReference Include="Hjg.Pngcs" Version="1.1.4" />
-    <PackageReference Include="linq2db" Version="5.4.1" />
-    <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
-    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
-    <PackageReference Include="Prism.Wpf" Version="9.0.537" />
-    <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
-    <PackageReference Include="Prism.Core" Version="9.0.537" />
-    <PackageReference Include="SkiaSharp" Version="2.88.6" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
-    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="5.2.8" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
-    <Resource Include="assets/illustra.ico" />
+    <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0"/>
+    <PackageReference Include="Hjg.Pngcs" Version="1.1.4"/>
+    <PackageReference Include="linq2db" Version="5.4.1"/>
+    <PackageReference Include="linq2db.SQLite" Version="5.4.1"/>
+    <PackageReference Include="MetadataExtractor" Version="2.8.1"/>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2"/>
+    <PackageReference Include="Prism.Wpf" Version="9.0.537"/>
+    <PackageReference Include="Prism.DryIoc" Version="9.0.537"/>
+    <PackageReference Include="Prism.Core" Version="9.0.537"/>
+    <PackageReference Include="SkiaSharp" Version="2.88.6"/>
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7"/>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119"/>
+    <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8"/>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+    <PackageReference Include="NLog" Version="5.2.8"/>
+    <PackageReference Include="System.Drawing.Common" Version="9.0.2"/>
+    <Resource Include="assets/illustra.ico"/>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Strings.xaml" />
-    <Resource Include="Resources\Strings.ja.xaml" />
+    <Resource Include="Resources\Strings.xaml"/>
+    <Resource Include="Resources\Strings.ja.xaml"/>
   </ItemGroup>
-
+  <ItemGroup>
+    <Page Include="**/*.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Update="**/*.xaml.cs">
+      <DependentUpon>%(Filename)</DependentUpon>
+    </Compile>
+  </ItemGroup>
   <Target Name="CreateGitVersionTag">
-    <Message Text="開始: GitVersionタグの作成プロセス" Importance="high" />
-
-    <!-- ツールの確認 -->
-    <Message Text="Gitversion Toolを復元中..." Importance="normal" />
-    <Exec Command="dotnet tool restore" Condition="Exists('$(MSBuildProjectDirectory)\.config\dotnet-tools.json')" ContinueOnError="true">
-      <Output TaskParameter="ExitCode" PropertyName="DotnetToolRestoreExitCode" />
+    <Message Text="開始: GitVersionタグの作成プロセス" Importance="high"/><!-- ツールの確認 -->
+    <Message Text="Gitversion Toolを復元中..." Importance="normal"/>
+    <Exec Command="dotnet tool restore" Condition="Exists(&apos;$(MSBuildProjectDirectory)\.config\dotnet-tools.json&apos;)" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="DotnetToolRestoreExitCode"/>
     </Exec>
-    <Message Text="ツール復元結果: $(DotnetToolRestoreExitCode)" Importance="normal" Condition="'$(VerboseGitVersionTagging)' == 'true'" />
-
-    <!-- GitVersionからバージョン情報を取得 -->
-    <Message Text="GitVersionからバージョン情報を取得中..." Importance="normal" />
+    <Message Text="ツール復元結果: $(DotnetToolRestoreExitCode)" Importance="normal" Condition="&apos;$(VerboseGitVersionTagging)&apos; == &apos;true&apos;"/><!-- GitVersionからバージョン情報を取得 -->
+    <Message Text="GitVersionからバージョン情報を取得中..." Importance="normal"/>
     <PropertyGroup>
       <GitVersionOverrideConfig>increment=Patch</GitVersionOverrideConfig>
     </PropertyGroup>
     <Exec Command="dotnet gitversion /config GitVersion.local.yml /showvariable MajorMinorPatch" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="GitVersionMajorMinorPatch" />
-      <Output TaskParameter="ExitCode" PropertyName="GitVersionExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitVersionMajorMinorPatch"/>
+      <Output TaskParameter="ExitCode" PropertyName="GitVersionExitCode"/>
     </Exec>
-
-    <Message Text="GitVersionの実行結果: ExitCode=$(GitVersionExitCode), Version=$(GitVersionMajorMinorPatch)" Importance="high" />
-    <Error Text="GitVersionの実行に失敗しました。ExitCode: $(GitVersionExitCode)" Condition="'$(GitVersionExitCode)' != '0'" />
-
-    <!-- 使用するタグの形式を決定 -->
+    <Message Text="GitVersionの実行結果: ExitCode=$(GitVersionExitCode), Version=$(GitVersionMajorMinorPatch)" Importance="high"/>
+    <Error Text="GitVersionの実行に失敗しました。ExitCode: $(GitVersionExitCode)" Condition="&apos;$(GitVersionExitCode)&apos; != &apos;0&apos;"/><!-- 使用するタグの形式を決定 -->
     <PropertyGroup>
       <GitVersionTag>v$(GitVersionMajorMinorPatch)</GitVersionTag>
     </PropertyGroup>
-
-    <Message Text="使用するタグ: $(GitVersionTag)" Importance="high" />
-
-    <!-- ユーザー情報を取得 -->
-    <Message Text="Gitユーザー情報を取得中..." Importance="normal" />
+    <Message Text="使用するタグ: $(GitVersionTag)" Importance="high"/><!-- ユーザー情報を取得 -->
+    <Message Text="Gitユーザー情報を取得中..." Importance="normal"/>
     <Exec Command="git config --get user.name" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserName" />
-      <Output TaskParameter="ExitCode" PropertyName="GitUserNameExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserName"/>
+      <Output TaskParameter="ExitCode" PropertyName="GitUserNameExitCode"/>
     </Exec>
-
     <Exec Command="git config --get user.email" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserEmail" />
-      <Output TaskParameter="ExitCode" PropertyName="GitUserEmailExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitUserEmail"/>
+      <Output TaskParameter="ExitCode" PropertyName="GitUserEmailExitCode"/>
     </Exec>
-
-    <Message Text="Git user.name取得結果: ExitCode=$(GitUserNameExitCode), Name=$(GitUserName)" Importance="normal" />
-    <Message Text="Git user.email取得結果: ExitCode=$(GitUserEmailExitCode), Email=$(GitUserEmail)" Importance="normal" />
-
-    <Error Text="Git user.nameが設定されていません。" Condition="'$(GitUserName)' == ''" />
-    <Error Text="Git user.emailが設定されていません。" Condition="'$(GitUserEmail)' == ''" />
-
-    <!-- タグが既に存在するか確認 -->
-    <Message Text="既存のタグを確認中..." Importance="normal" />
+    <Message Text="Git user.name取得結果: ExitCode=$(GitUserNameExitCode), Name=$(GitUserName)" Importance="normal"/>
+    <Message Text="Git user.email取得結果: ExitCode=$(GitUserEmailExitCode), Email=$(GitUserEmail)" Importance="normal"/>
+    <Error Text="Git user.nameが設定されていません。" Condition="&apos;$(GitUserName)&apos; == &apos;&apos;"/>
+    <Error Text="Git user.emailが設定されていません。" Condition="&apos;$(GitUserEmail)&apos; == &apos;&apos;"/><!-- タグが既に存在するか確認 -->
+    <Message Text="既存のタグを確認中..." Importance="normal"/>
     <Exec Command="git tag -l $(GitVersionTag)" ConsoleToMsBuild="true" StandardOutputImportance="normal" ContinueOnError="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="ExistingTag" />
-      <Output TaskParameter="ExitCode" PropertyName="GitTagCheckExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="ExistingTag"/>
+      <Output TaskParameter="ExitCode" PropertyName="GitTagCheckExitCode"/>
     </Exec>
-
-    <Message Text="タグ確認結果: ExitCode=$(GitTagCheckExitCode), ExistingTag='$(ExistingTag)'" Importance="normal" />
-
-    <!-- タグが存在しない場合は作成してプッシュ -->
-    <Message Text="タグ $(GitVersionTag) はまだ存在しません。作成します..." Importance="high" Condition="'$(ExistingTag)' == ''" />
-    <Message Text="タグ $(GitVersionTag) は既に存在します。スキップします。" Importance="high" Condition="'$(ExistingTag)' != ''" />
-
-    <Exec Command="git tag -a $(GitVersionTag) -m &quot;Release $(GitVersionTag) created by $(GitUserName)&quot;" Condition="'$(ExistingTag)' == ''" ContinueOnError="true">
-      <Output TaskParameter="ExitCode" PropertyName="GitTagCreateExitCode" />
+    <Message Text="タグ確認結果: ExitCode=$(GitTagCheckExitCode), ExistingTag=&apos;$(ExistingTag)&apos;" Importance="normal"/><!-- タグが存在しない場合は作成してプッシュ -->
+    <Message Text="タグ $(GitVersionTag) はまだ存在しません。作成します..." Importance="high" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos;"/>
+    <Message Text="タグ $(GitVersionTag) は既に存在します。スキップします。" Importance="high" Condition="&apos;$(ExistingTag)&apos; != &apos;&apos;"/>
+    <Exec Command="git tag -a $(GitVersionTag) -m &quot;Release $(GitVersionTag) created by $(GitUserName)&quot;" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos;" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="GitTagCreateExitCode"/>
     </Exec>
-    <Message Text="タグ作成結果: ExitCode=$(GitTagCreateExitCode)" Importance="normal" Condition="'$(ExistingTag)' == ''" />
-    <Error Text="タグの作成に失敗しました。ExitCode: $(GitTagCreateExitCode)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' != '0'" />
-
-    <Exec Command="git push origin $(GitVersionTag)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0'" ContinueOnError="true">
-      <Output TaskParameter="ExitCode" PropertyName="GitPushExitCode" />
+    <Message Text="タグ作成結果: ExitCode=$(GitTagCreateExitCode)" Importance="normal" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos;"/>
+    <Error Text="タグの作成に失敗しました。ExitCode: $(GitTagCreateExitCode)" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos; And &apos;$(GitTagCreateExitCode)&apos; != &apos;0&apos;"/>
+    <Exec Command="git push origin $(GitVersionTag)" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos; And &apos;$(GitTagCreateExitCode)&apos; == &apos;0&apos;" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="GitPushExitCode"/>
     </Exec>
-    <Message Text="タグのプッシュ結果: ExitCode=$(GitPushExitCode)" Importance="normal" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0'" />
-    <Error Text="タグのプッシュに失敗しました。ExitCode: $(GitPushExitCode)" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0' And '$(GitPushExitCode)' != '0'" />
-
-    <Message Text="タグ $(GitVersionTag) が正常に作成・プッシュされました。" Importance="high" Condition="'$(ExistingTag)' == '' And '$(GitTagCreateExitCode)' == '0' And '$(GitPushExitCode)' == '0'" />
-    <Message Text="完了: GitVersionタグの作成プロセス" Importance="high" />
+    <Message Text="タグのプッシュ結果: ExitCode=$(GitPushExitCode)" Importance="normal" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos; And &apos;$(GitTagCreateExitCode)&apos; == &apos;0&apos;"/>
+    <Error Text="タグのプッシュに失敗しました。ExitCode: $(GitPushExitCode)" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos; And &apos;$(GitTagCreateExitCode)&apos; == &apos;0&apos; And &apos;$(GitPushExitCode)&apos; != &apos;0&apos;"/>
+    <Message Text="タグ $(GitVersionTag) が正常に作成・プッシュされました。" Importance="high" Condition="&apos;$(ExistingTag)&apos; == &apos;&apos; And &apos;$(GitTagCreateExitCode)&apos; == &apos;0&apos; And &apos;$(GitPushExitCode)&apos; == &apos;0&apos;"/>
+    <Message Text="完了: GitVersionタグの作成プロセス" Importance="high"/>
   </Target>
 </Project>
