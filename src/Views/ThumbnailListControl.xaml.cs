@@ -49,6 +49,9 @@ namespace Illustra.Views
         private List<string> _currentTagFilters = new List<string>();
         private bool _isTagFilterEnabled = false;
 
+        private bool _isScrolling = false;
+        private DispatcherTimer _scrollStopTimer;
+
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
         /// </summary>
@@ -211,6 +214,13 @@ namespace Illustra.Views
                 (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
 
             _isInitialized = true;
+
+            // スクロール停止検出用タイマーの初期化
+            _scrollStopTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+            _scrollStopTimer.Tick += ScrollStopTimer_Tick;
         }
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
@@ -818,13 +828,17 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            Debug.WriteLine("[スクロール変更] OnScrollChanged メソッドが呼ばれました");
-            // 仮想化されているときは e.ExtentHeightChange や e.ExtentWidthChange が変わる
-            // 表示範囲の前後のサムネイルをロード
-            var scrollViewer = e.OriginalSource as ScrollViewer;
-            if (scrollViewer != null && _viewModel.Items.Count > 0)
+            if (sender is ScrollViewer scrollViewer)
             {
-                await LoadVisibleThumbnailsAsync(scrollViewer);
+                // スクロール中フラグを設定
+                _isScrolling = true;
+
+                // スクロール停止タイマーをリセット
+                _scrollStopTimer.Stop();
+                _scrollStopTimer.Start();
+
+                // スクロール中は表示範囲内のサムネイルのみを読み込む
+                await LoadVisibleThumbnailsAsync(scrollViewer, false);
             }
         }
 
@@ -837,56 +851,57 @@ namespace Illustra.Views
                 await loadTask();
             }
         }
-        private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
+        private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer, bool includePreload = false)
         {
-            Debug.WriteLine("[サムネイルロード] LoadVisibleThumbnailsAsync メソッドが呼ばれました");
-            _thumbnailLoadQueue.Clear();
-            _thumbnailLoadTimer.Stop();
-            _thumbnailLoadTimer.Start();
-
-            _thumbnailLoadQueue.Enqueue(async () =>
+            try
             {
-                try
+                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+
+                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                    return;
+
+                int firstIndexToLoad = 0;
+                int lastIndexToLoad = 0;
+                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
                 {
-                    // ItemsControl が初期化されるのを待つ
-                    await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-
-                    if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                        return;
-
-                    int firstIndexToLoad = 0;
-                    int lastIndexToLoad = 0;
-                    for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                    if (container != null && container.IsVisible)
                     {
-                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                        if (container != null && container.IsVisible)
+                        if (firstIndexToLoad == 0)
                         {
-                            if (firstIndexToLoad == 0)
-                            {
-                                firstIndexToLoad = i;
-                            }
-                            if (i > lastIndexToLoad)
-                            {
-                                lastIndexToLoad = i;
-                            }
+                            firstIndexToLoad = i;
                         }
+                        lastIndexToLoad = i;
                     }
-
-                    // 前後10個ずつのサムネイルをロード
-                    int bufferSize = 10;
-                    firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
-
-                    // 可視範囲のサムネイルをロード
-                    await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
+                    else if (firstIndexToLoad > 0)
+                    {
+                        // 可視範囲を超えたら終了
+                        break;
+                    }
                 }
-                catch (Exception ex)
+
+                // 先読みバッファサイズ（スクロール停止時のみ適用）
+                int bufferSize = includePreload ? 30 : 0;
+                firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
+                lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
+
+                // スクロール中は表示範囲のみ、停止時は先読み範囲も含めてログ出力
+                if (!includePreload)
                 {
-                    System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
+                    Debug.WriteLine($"[スクロール中] 表示範囲のみ読み込み: {firstIndexToLoad}～{lastIndexToLoad}");
                 }
-            });
+                else
+                {
+                    Debug.WriteLine($"[サムネイル読み込み] 範囲: {firstIndexToLoad}～{lastIndexToLoad} (先読みバッファ: {bufferSize})");
+                }
 
-            await ProcessThumbnailLoadQueue();
+                // 可視範囲（+先読み範囲）のサムネイルをロード
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -2302,6 +2317,68 @@ namespace Illustra.Views
                 ThumbnailItemsControl.ScrollIntoView(e.TargetItem);
                 ThumbnailItemsControl.SelectedItem = e.TargetItem;
                 FocusSelectedThumbnail();
+            }
+        }
+
+        private void ScrollStopTimer_Tick(object sender, EventArgs e)
+        {
+            _scrollStopTimer.Stop();
+            _isScrolling = false;
+
+            // スクロール停止後に先読みを実行
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null)
+            {
+                // 表示範囲をログに出力
+                LogVisibleRange(scrollViewer);
+
+                // 先読みを含めたサムネイル読み込みを実行
+                _ = LoadVisibleThumbnailsAsync(scrollViewer, true);
+            }
+        }
+
+        // 表示範囲をログに出力するメソッド
+        private void LogVisibleRange(ScrollViewer scrollViewer)
+        {
+            try
+            {
+                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                    return;
+
+                int firstVisibleIndex = -1;
+                int lastVisibleIndex = -1;
+
+                // 表示範囲内のアイテムのインデックスを特定
+                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+                {
+                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                    if (container != null && container.IsVisible)
+                    {
+                        if (firstVisibleIndex == -1)
+                        {
+                            firstVisibleIndex = i;
+                        }
+                        lastVisibleIndex = i;
+                    }
+                    else if (firstVisibleIndex != -1)
+                    {
+                        // 可視範囲を超えたら終了
+                        break;
+                    }
+                }
+
+                // 先読み範囲を計算
+                int bufferSize = 30;
+                int preloadFirstIndex = Math.Max(0, firstVisibleIndex - bufferSize);
+                int preloadLastIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastVisibleIndex + bufferSize);
+
+                // ログ出力
+                Debug.WriteLine($"[スクロール停止] 表示範囲: {firstVisibleIndex}～{lastVisibleIndex} (全{ThumbnailItemsControl.Items.Count}件)");
+                Debug.WriteLine($"[スクロール停止] 読み込み範囲: {preloadFirstIndex}～{preloadLastIndex} (先読みバッファ: {bufferSize})");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LogVisibleRange エラー: {ex.Message}");
             }
         }
     }
