@@ -40,6 +40,9 @@ namespace Illustra.Views
         private bool _isDragging = false;
         private readonly DispatcherTimer _resizeTimer;
 
+        // 新しいImageViewModelの追加
+        private ImageViewModel _imageViewModel;
+
         // クラスレベルの変数を追加
         private bool _isFirstLoad = true;
         private bool _pendingSelection = false;
@@ -70,8 +73,7 @@ namespace Illustra.Views
                 _isUpdatingSelection = false;
             }
         }
-        private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
-        private readonly DispatcherTimer _thumbnailLoadTimer;
+
         private const string CONTROL_ID = "ThumbnailList";
         private bool _isSortAscending = true;
         private bool _isSortByDate = true;
@@ -144,91 +146,69 @@ namespace Illustra.Views
         public ThumbnailListControl()
         {
             InitializeComponent();
-            Loaded += ThumbnailListControl_Loaded;
 
-            // サムネイルサイズ変更用のタイマーを初期化
-            _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            // 新しいImageViewModelの初期化
+            _imageViewModel = new ImageViewModel();
+
+            // 既存のコード
+            _resizeTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
             _resizeTimer.Tick += async (s, e) =>
             {
                 _resizeTimer.Stop();
                 await UpdateThumbnailSize();
             };
 
-            // 設定を読み込む
-            _appSettings = SettingsHelper.GetSettings();
+            // 既存のコード
+            var dropHandler = new CustomDropHandler(this);
+            var dragPreviewItemsSorter = new CustomPreviewItemSorter();
+            DragDrop.SetDropHandler(ThumbnailItemsControl, dropHandler);
+            DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, dragPreviewItemsSorter);
 
-            // ViewModelの初期化
-            _viewModel = new MainViewModel();
-            DataContext = _viewModel;
-
-            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
-
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new FileNodeDragHandler());
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, new CustomPreviewItemSorter());
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
-
-            // キーボードイベントハンドラのバインド
+            // 既存のコード
+            ThumbnailItemsControl.PreviewMouseWheel += ThumbnailItemsControl_PreviewMouseWheel;
             ThumbnailItemsControl.PreviewKeyDown += ThumbnailItemsControl_PreviewKeyDown;
-
-            // DatabaseManagerの取得とサムネイルローダーの初期化
-            _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
-
-            // スライダーのドラッグイベントを購読
-            ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
-            {
-                // スライダーのつまみを掴んだ場合のみドラッグモードにする
-                _isDragging = !(e.OriginalSource is System.Windows.Shapes.Rectangle);
-            };
-            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
-
-            // ファイルシステム監視の初期化
-            _fileSystemMonitor = new FileSystemMonitor(this);
-
-            // サムネイルサイズを設定から復元
-            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
-            ThumbnailSizeText.Text = _appSettings.ThumbnailSize.ToString();
-            _thumbnailLoader.ThumbnailSize = _appSettings.ThumbnailSize;
-
-            // サムネイルロード用のタイマーを初期化
-            _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-            _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
-            _thumbnailLoadTimer.Start();
-
-            // フィルターボタンの初期状態を設定
-            UpdateFilterButtonStates(0);
-
-            // ソート設定を復元
-            _isSortByDate = _appSettings.SortByDate;
-            _isSortAscending = _appSettings.SortAscending;
-            SortTypeText.Text = _isSortByDate ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-            SortDirectionText.Text = _isSortAscending ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-
-            _isInitialized = true;
+            ThumbnailItemsControl.MouseDoubleClick += Thumbnail_MouseDoubleClick;
         }
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
-            // ContainerLocatorを使ってEventAggregatorを取得
-            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            // ショートカットキーイベントを購読
-            _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
+            if (_isInitialized) return;
+            _isInitialized = true;
 
-            // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
-            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
-            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
+            // 既存のコード
+            _eventAggregator = ServiceLocator.Current.GetInstance<IEventAggregator>();
+            _viewModel = DataContext as MainViewModel ?? new MainViewModel();
+            _appSettings = ServiceLocator.Current.GetInstance<AppSettings>();
+            _thumbnailLoader = ServiceLocator.Current.GetInstance<ThumbnailLoaderHelper>();
+            _fileSystemMonitor = ServiceLocator.Current.GetInstance<FileSystemMonitor>();
 
-            // ItemContainerGenerator.StatusChangedイベントを登録
-            ThumbnailItemsControl.ItemContainerGenerator.StatusChanged += ThumbnailItemsControl_StatusChanged;
+            // 既存のコード
+            _fileSystemMonitor.RegisterHandler(this);
+            _viewModel.FileNodesLoaded += OnFileNodesLoaded;
+
+            // イベント購読
+            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
+            _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived);
+            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(args => OnLanguageChanged());
+
+            // 新しいImageViewModelを使用するためのバインディング設定
+            ThumbnailItemsControl.ItemsSource = _imageViewModel.DisplayItems;
+
+            // 選択変更イベントの設定
+            ThumbnailItemsControl.SelectionChanged += (s, args) =>
+            {
+                if (ThumbnailItemsControl.SelectedItem is FileNodeModel selectedItem)
+                {
+                    _imageViewModel.SelectedItem = selectedItem;
+                }
+            };
+
+            // 初期設定の適用
+            ApplySettings();
         }
 
         private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)
@@ -267,75 +247,33 @@ namespace Illustra.Views
 
         private async void OnFilterChanged(FilterChangedEventArgs args)
         {
-            try
-            {
-                if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
-                {
-                    // フィルタをクリア
-                    _currentRatingFilter = 0;
-                    UpdateFilterButtonStates(0);
-                    _currentTagFilters.Clear();
-                    _isTagFilterEnabled = false;
-                    _isPromptFilterEnabled = false;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
-                {
-                    // タグフィルタの変更
-                    _currentTagFilters = new List<string>(args.TagFilters);
-                    _isTagFilterEnabled = args.IsTagFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
-                {
-                    // プロンプトフィルタの変更
-                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
-                {
-                    // レーティングフィルタの変更
-                    _currentRatingFilter = args.RatingFilter;
-                    UpdateFilterButtonStates(args.RatingFilter);
-                }
+            // 新しいImageViewModelを使用したフィルタリング
+            _currentRatingFilter = args.RatingFilter;
+            _isPromptFilterEnabled = args.IsPromptFilterEnabled;
+            _currentTagFilters = args.TagFilters;
+            _isTagFilterEnabled = args.IsTagFilterEnabled;
 
-                // 各フィルタを適用
-                await _viewModel.ApplyAllFilters(_currentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"フィルタ変更処理中にエラーが発生しました: {ex.Message}");
-            }
+            UpdateFilterButtonStates(_currentRatingFilter);
+
+            await _imageViewModel.ApplyFilterAsync(_currentRatingFilter);
         }
 
         private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
-            string folderPath = args.Path;
-            if (folderPath == _currentFolderPath)
-                return;
+            _currentFolderPath = args.FolderPath;
 
-            // フォルダが変わったらすべてのフィルタを自動的に解除
-            _currentRatingFilter = 0;
-            UpdateFilterButtonStates(0);
-            _currentTagFilters.Clear();
-            _isTagFilterEnabled = false;
-            _viewModel.ClearAllFilters();
+            // 新しいImageViewModelを使用したフォルダ読み込み
+            await _imageViewModel.LoadImagesFromFolderAsync(args.FolderPath);
 
-            // フィルタ変更イベントは投げない
-            // それぞれ onFolderChanged で処理する
-            // フォルダ読み込み時にフィルタは反映される
-
-            // 以前のフォルダの監視を停止
-            if (_fileSystemMonitor.IsMonitoring)
+            // 初期選択アイテムの設定
+            if (!string.IsNullOrEmpty(args.InitialSelectedFilePath))
             {
-                _fileSystemMonitor.StopMonitoring();
+                SelectThumbnail(args.InitialSelectedFilePath);
             }
-
-            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            LoadFileNodes(folderPath, args.InitialSelectedFilePath);
-
-            // 新しいフォルダの監視を開始
-            _fileSystemMonitor.StartMonitoring(folderPath);
-
-            // ソート条件を適用
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending, !_pendingSelection);
+            else if (_imageViewModel.DisplayItems.Count > 0)
+            {
+                ThumbnailItemsControl.SelectedItem = _imageViewModel.DisplayItems[0];
+            }
         }
 
         public void SaveAllData()
@@ -409,6 +347,7 @@ namespace Illustra.Views
                 }
             }, DispatcherPriority.Render);
         }
+
         private async void ThumbnailItemsControl_Loaded(object sender, RoutedEventArgs e)
         {
             var scrollViewer = await Task.Run(() => UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl));
@@ -804,77 +743,162 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            if (e.VerticalChange != 0 || e.HorizontalChange != 0)
+            if (sender is ScrollViewer scrollViewer)
             {
-                // 表示範囲の前後のサムネイルをロード
-                var scrollViewer = e.OriginalSource as ScrollViewer;
-                if (scrollViewer != null)
+                // 新しいImageViewModelを使用したサムネイル読み込み
+                var visibleItems = GetVisibleItems(scrollViewer);
+                if (visibleItems.Any())
                 {
-                    await LoadVisibleThumbnailsAsync(scrollViewer);
+                    _imageViewModel.EnqueueThumbnailLoad(visibleItems, true);
                 }
             }
         }
 
-        private async Task ProcessThumbnailLoadQueue()
+        private IEnumerable<FileNodeModel> GetVisibleItems(ScrollViewer scrollViewer)
         {
-            if (_thumbnailLoadQueue.Count > 0)
-            {
-                var loadTask = _thumbnailLoadQueue.Dequeue();
-                await loadTask();
-            }
-        }
-        private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
-        {
-            _thumbnailLoadQueue.Clear();
+            var panel = FindVisualChild<VirtualizingWrapPanel>(scrollViewer);
+            if (panel == null) return Enumerable.Empty<FileNodeModel>();
 
-            _thumbnailLoadQueue.Enqueue(async () =>
+            var visibleItems = new List<FileNodeModel>();
+            var itemsPerRow = GetItemsPerRow(panel);
+            if (itemsPerRow <= 0) return Enumerable.Empty<FileNodeModel>();
+
+            var verticalOffset = scrollViewer.VerticalOffset;
+            var viewportHeight = scrollViewer.ViewportHeight;
+            var itemHeight = panel.ItemHeight;
+
+            var startRow = (int)(verticalOffset / itemHeight);
+            var endRow = (int)((verticalOffset + viewportHeight) / itemHeight) + 1;
+
+            var startIndex = startRow * itemsPerRow;
+            var endIndex = Math.Min(endRow * itemsPerRow, _imageViewModel.DisplayItems.Count);
+
+            for (int i = startIndex; i < endIndex; i++)
             {
-                try
+                if (i >= 0 && i < _imageViewModel.DisplayItems.Count)
                 {
-                    // ItemsControl が初期化されるのを待つ
-                    await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    visibleItems.Add(_imageViewModel.DisplayItems[i]);
+                }
+            }
 
-                    if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                        return;
+            return visibleItems;
+        }
 
-                    int firstIndexToLoad = 0;
-                    int lastIndexToLoad = 0;
-                    for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild)
+                {
+                    return typedChild;
+                }
+                else
+                {
+                    var result = FindVisualChild<T>(child);
+                    if (result != null)
                     {
-                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                        if (container != null && container.IsVisible)
-                        {
-                            if (firstIndexToLoad == 0)
-                            {
-                                firstIndexToLoad = i;
-                            }
-                            if (i > lastIndexToLoad)
-                            {
-                                lastIndexToLoad = i;
-                            }
-                        }
+                        return result;
                     }
-
-                    // 前後10個ずつのサムネイルをロード
-                    int bufferSize = 10;
-                    firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
-
-                    // 可視範囲のサムネイルをロード
-                    await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
-                }
-            });
-
-            await ProcessThumbnailLoadQueue();
+            }
+            return null;
         }
 
-        /// <summary>
-        /// サムネイルがクリックされたときの処理
-        /// </summary>
+        private async Task OnWindowSizeChanged(ScrollViewer scrollViewer)
+        {
+            // 新しいImageViewModelを使用したサムネイル読み込み
+            var visibleItems = GetVisibleItems(scrollViewer);
+            if (visibleItems.Any())
+            {
+                _imageViewModel.EnqueueThumbnailLoad(visibleItems, true);
+            }
+        }
+
+        private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
+        {
+            if (!_pendingSelection)
+                return;
+
+            if (ThumbnailItemsControl.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
+            {
+                _pendingSelection = false;  // 早めにフラグを解除して重複実行を防ぐ
+
+                await Task.Run(async () =>
+                {
+                    // UIスレッドでの遅延実行
+                    await Dispatcher.BeginInvoke(new Action(async () =>
+                    {
+                        // レイアウト更新を待機
+                        await Task.Delay(100);
+                        try
+                        {
+                            string? filePath = null;
+                            bool needFocus = !_isFirstLoaded;
+
+                            // 優先順位：
+                            // 1. 指定された初期選択ファイル
+                            // 2. 初回起動時の最後に選択されていたファイル
+                            // 3. リストの最初のアイテム
+                            if (_pendingInitialSelectedFilePath != null)
+                            {
+                                filePath = _pendingInitialSelectedFilePath;
+                                _pendingInitialSelectedFilePath = null;
+                            }
+                            else if (!_isFirstLoaded)
+                            {
+                                // 初回ロード時の処理
+                                if (File.Exists(_appSettings.LastSelectedFilePath))
+                                {
+                                    filePath = _appSettings.LastSelectedFilePath;
+                                }
+                                _isFirstLoaded = true;
+                            }
+
+                            // ファイルパスが無効な場合は最初のアイテムを選択
+                            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                            {
+                                var firstItem = _viewModel.Items.FirstOrDefault();
+                                if (firstItem != null)
+                                {
+                                    filePath = firstItem.FullPath;
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(filePath))
+                            {
+                                // レイアウト更新後に選択処理を実行
+                                await Dispatcher.InvokeAsync(() =>
+                                {
+                                    SelectThumbnail(filePath);
+                                }, DispatcherPriority.Loaded);
+
+                                // さらにレイアウト更新を待ってフォーカスを設定
+                                if (needFocus)
+                                {
+                                    await Dispatcher.InvokeAsync(() =>
+                                    {
+                                        var selectedItem = _viewModel.SelectedItems.LastOrDefault();
+                                        if (selectedItem != null)
+                                        {
+                                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                                            container?.Focus();
+                                        }
+                                    }, DispatcherPriority.Input);
+                                }
+                            }
+
+                            _isFirstLoad = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error in ThumbnailItemsControl_StatusChanged: {ex.Message}");
+                        }
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                });
+            }
+        }
+
         private void Thumbnail_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is FileNodeModel fileNode)
@@ -1771,190 +1795,76 @@ namespace Illustra.Views
 
         private async void RatingFilter_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Button button ||
-                !int.TryParse(button.Tag?.ToString(), out int rating))
-                return;
-
-            // 同じレーティングが選択された場合はフィルターを解除
-            if (rating == _currentRatingFilter && rating != 0)
+            if (sender is Button button && button.Tag is string ratingStr && int.TryParse(ratingStr, out int rating))
             {
-                rating = 0;
+                // 新しいImageViewModelを使用したフィルタリング
+                _currentRatingFilter = rating;
+                UpdateFilterButtonStates(rating);
+                await _imageViewModel.ApplyFilterAsync(rating);
             }
-            await ApplyFilterling(rating);
         }
+
         private async void ClearFilter_Click(object sender, RoutedEventArgs e)
         {
-            await ApplyFilterling(0);
+            // 新しいImageViewModelを使用したフィルタクリア
+            _currentRatingFilter = 0;
+            UpdateFilterButtonStates(0);
+            await _imageViewModel.ApplyFilterAsync(0);
         }
 
         private void UpdateFilterButtonStates(int selectedRating)
         {
-            // すべてのフィルターボタンをリセット
-            foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
-            {
-                if (int.TryParse(button.Tag?.ToString(), out int position))
-                {
-                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(button);
-                    if (starControl != null)
-                    {
-                        starControl.IsFilled = position <= selectedRating;
-                        starControl.StarFill = position <= selectedRating ?
-                            RatingHelper.GetRatingColor(position) :
-                            Brushes.Transparent;
-                        starControl.TextColor = position <= selectedRating ?
-                            RatingHelper.GetTextColor(position) :
-                            Brushes.Gray;
-                    }
-                }
-            }
-
-            // フィルター解除ボタンの状態を更新
+            // 既存のコード
+            Filter1.Background = selectedRating >= 1 ? new SolidColorBrush(Colors.LightGray) : Brushes.Transparent;
+            Filter2.Background = selectedRating >= 2 ? new SolidColorBrush(Colors.LightGray) : Brushes.Transparent;
+            Filter3.Background = selectedRating >= 3 ? new SolidColorBrush(Colors.LightGray) : Brushes.Transparent;
+            Filter4.Background = selectedRating >= 4 ? new SolidColorBrush(Colors.LightGray) : Brushes.Transparent;
+            Filter5.Background = selectedRating >= 5 ? new SolidColorBrush(Colors.LightGray) : Brushes.Transparent;
             ClearFilterButton.IsEnabled = selectedRating > 0;
-        }
-
-        private async Task ApplyFilterling(int rating)
-        {
-            try
-            {
-                // 現在のフォーカスアイテムを保存
-                var focusedItem = _viewModel.SelectedItems.LastOrDefault();
-                var focusedPath = focusedItem?.FullPath;
-
-                _currentRatingFilter = rating;
-                UpdateFilterButtonStates(rating);
-
-                // すべてのフィルタを適用
-                await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
-
-                // フィルター変更イベントを発行して他のコントロールに通知
-                _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
-                    new FilterChangedEventArgsBuilder(CONTROL_ID)
-                        .WithRatingFilter(rating)
-                        .Build());
-
-                // フィルタ後のアイテムリスト
-                var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-
-                // 選択するアイテムを決定
-                FileNodeModel? itemToSelect = null;
-                if (focusedPath != null)
-                {
-                    // 前回フォーカスされていたアイテムがフィルタ後も存在する場合はそれを選択
-                    itemToSelect = filteredItems.FirstOrDefault(fi => fi.FullPath == focusedPath);
-                }
-
-                // フォーカスアイテムが見つからない場合は先頭のアイテムを選択
-                if (itemToSelect == null && filteredItems.Any())
-                {
-                    itemToSelect = filteredItems.First();
-                }
-
-                // 選択を更新
-                _viewModel.SelectedItems.Clear();
-                if (itemToSelect != null)
-                {
-                    _viewModel.SelectedItems.Add(itemToSelect);
-                    await Dispatcher.InvokeAsync(async () =>
-                    {
-                        ThumbnailItemsControl.ScrollIntoView(itemToSelect);
-                        // ウィンドウがアクティブな場合のみフォーカス処理を実行
-                        if (Window.GetWindow(this)?.IsActive == true)
-                        {
-                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(itemToSelect) as ListViewItem;
-                            container?.Focus();
-                        }
-
-                        // サムネイルの再生成
-                        var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                        if (scrollViewer != null)
-                        {
-                            await LoadVisibleThumbnailsAsync(scrollViewer);
-                        }
-                    });
-                }
-
-                ClearFilterButton.IsEnabled = rating != 0;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"フィルタークリア中にエラーが発生: {ex.Message}");
-            }
-        }
-
-        private void OnLanguageChanged()
-        {
-            // 言語リソースの反映をまつ
-            Task.Run(() =>
-            {
-                // フィルターボタンのテキストを更新
-                Dispatcher.Invoke(() =>
-                {
-                    // ソート種類の文言を更新
-                    SortTypeText.Text = _isSortByDate ?
-                        (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                        (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-                    SortDirectionText.Text = _isSortAscending ?
-                        (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                        (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-                });
-            });
         }
 
         private async void OnSortOrderChanged(SortOrderChangedEventArgs args)
         {
-            try
-            {
-                _isSortByDate = args.IsByDate;
-                _isSortAscending = args.IsAscending;
+            // 新しいImageViewModelを使用したソート
+            _isSortByDate = args.SortByDate;
+            _isSortAscending = args.SortAscending;
 
-                // ローダーの設定を更新
-                _thumbnailLoader.SortByDate = _isSortByDate;
-                _thumbnailLoader.SortAscending = _isSortAscending;
+            // UIの更新
+            SortDirectionText.Text = _isSortAscending
+                ? (string)FindResource("String_Thumbnail_SortAscending")
+                : (string)FindResource("String_Thumbnail_SortDescending");
 
-                // 設定を保存
-                _appSettings.SortByDate = _isSortByDate;
-                _appSettings.SortAscending = _isSortAscending;
-                SettingsHelper.SaveSettings(_appSettings);
+            SortTypeText.Text = _isSortByDate
+                ? (string)FindResource("String_Thumbnail_SortByDate")
+                : (string)FindResource("String_Thumbnail_SortByName");
 
-                // UI更新
-                SortTypeText.Text = _isSortByDate ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-                SortDirectionText.Text = _isSortAscending ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+            await _imageViewModel.ApplySortAsync(_isSortByDate, _isSortAscending);
+        }
 
-                // ローダーの設定を更新
-                _thumbnailLoader.SortByDate = _isSortByDate;
-                _thumbnailLoader.SortAscending = _isSortAscending;
+        private async void SortToggle_Click(object sender, RoutedEventArgs e)
+        {
+            // 新しいImageViewModelを使用したソート方向の切り替え
+            _isSortAscending = !_isSortAscending;
 
-                // UI更新
-                SortTypeText.Text = _isSortByDate ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-                SortDirectionText.Text = _isSortAscending ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+            // UIの更新
+            SortDirectionText.Text = _isSortAscending
+                ? (string)FindResource("String_Thumbnail_SortAscending")
+                : (string)FindResource("String_Thumbnail_SortDescending");
 
-                // 外部からのイベントの場合のみ設定を保存
-                _appSettings.SortByDate = _isSortByDate;
-                _appSettings.SortAscending = _isSortAscending;
-                SettingsHelper.SaveSettings(_appSettings);
+            await _imageViewModel.ApplySortAsync(_isSortByDate, _isSortAscending);
+        }
 
-                // サムネイルをソート
-                await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+        private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            // 新しいImageViewModelを使用したソート種類の切り替え
+            _isSortByDate = !_isSortByDate;
 
-                // サムネイルの再生成
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer != null)
-                {
-                    await LoadVisibleThumbnailsAsync(scrollViewer);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in OnSortOrderChanged: {ex.Message}");
-            }
+            // UIの更新
+            SortTypeText.Text = _isSortByDate
+                ? (string)FindResource("String_Thumbnail_SortByDate")
+                : (string)FindResource("String_Thumbnail_SortByName");
+
+            await _imageViewModel.ApplySortAsync(_isSortByDate, _isSortAscending);
         }
 
         private async void OnRatingChanged(RatingChangedEventArgs args)
@@ -2007,269 +1917,81 @@ namespace Illustra.Views
             }
         }
 
-        // DataTemplate内の特定の名前を持つ要素を検索するヘルパーメソッド
-        private T? FindElementInTemplate<T>(FrameworkElement container, string elementName) where T : FrameworkElement
+        private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
         {
-            if (container == null)
-                return null;
+            _thumbnailLoadQueue.Clear();
 
-            T? result = null;
-
-            // コンテナ内のすべての子要素を検索
-            var childCount = VisualTreeHelper.GetChildrenCount(container);
-            for (int i = 0; i < childCount; i++)
+            _thumbnailLoadQueue.Enqueue(async () =>
             {
-                var child = VisualTreeHelper.GetChild(container, i) as DependencyObject;
-                if (child == null) continue;
-
-                // 目的の型と名前に一致する要素を検索
-                if (child is T element && (element.Name == elementName || string.IsNullOrEmpty(elementName)))
+                try
                 {
-                    return element;
-                }
+                    // ItemsControl が初期化されるのを待つ
+                    await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
 
-                // 再帰的に子要素を検索
-                if (child is FrameworkElement frameworkElement)
-                {
-                    result = FindElementInTemplate<T>(frameworkElement, elementName);
-                    if (result != null)
-                        return result;
-                }
-            }
+                    if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                        return;
 
-            return result;
-        }
-
-
-        private async void SortToggle_Click(object sender, RoutedEventArgs e)
-        {
-            _isSortAscending = !_isSortAscending;
-            _appSettings.SortAscending = _isSortAscending;
-            _thumbnailLoader.SortAscending = _isSortAscending;
-            _viewModel.SortAscending = _isSortAscending;
-            SettingsHelper.SaveSettings(_appSettings);
-            SortDirectionText.Text = _isSortAscending ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
-            // サムネイルの再生成
-            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-            if (scrollViewer != null)
-            {
-                await LoadVisibleThumbnailsAsync(scrollViewer);
-            }
-        }
-
-        private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
-        {
-            _isSortByDate = !_isSortByDate;
-            _appSettings.SortByDate = _isSortByDate;
-            _thumbnailLoader.SortByDate = _isSortByDate;
-            _viewModel.SortByDate = _isSortByDate;
-            SettingsHelper.SaveSettings(_appSettings);
-            SortTypeText.Text = _isSortByDate ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
-            // サムネイルの再生成
-            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-            if (scrollViewer != null)
-            {
-                await LoadVisibleThumbnailsAsync(scrollViewer);
-            }
-        }
-
-        /// <summary>
-        /// VirtualizingWrapPanelの実際のレイアウトから列数を取得します
-        /// </summary>
-        /// <summary>
-        /// ウィンドウサイズ変更時に表示範囲のサムネイルを再生成します
-        /// </summary>
-        private async Task OnWindowSizeChanged(ScrollViewer scrollViewer)
-        {
-            try
-            {
-                // レイアウトの更新を待機
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                // 表示範囲のサムネイルを再ロード
-                await LoadVisibleThumbnailsAsync(scrollViewer);
-
-                // 選択中のサムネイルを画面内に表示
-                _ = Dispatcher.InvokeAsync(async () =>
-                {
-                    await EnsureSelectedThumbnailVisibleAsync();
-                }, DispatcherPriority.Render);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"ウィンドウサイズ変更時のサムネイル再生成エラー: {ex.Message}");
-            }
-        }
-
-        private int GetItemsPerRow(VirtualizingWrapPanel panel)
-        {
-            try
-            {
-                if (ThumbnailItemsControl.Items.Count == 0 || panel == null)
-                    return 1;
-
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer == null)
-                    return 1;
-
-                double? firstRowY = null;
-                int itemsInFirstRow = 0;
-                double lastX = double.MinValue;
-                bool foundFirstRow = false;
-
-                // アイテムが表示されている範囲を計算
-                var panelToScrollViewer = panel.TransformToAncestor(scrollViewer);
-                var panelPoint = panelToScrollViewer.Transform(new Point(0, 0));
-                var panelRect = new Rect(panelPoint, panel.RenderSize);
-                var viewport = new Rect(new Point(0, 0), new Size(scrollViewer.ViewportWidth, scrollViewer.ViewportHeight));
-
-                // 表示範囲内のアイテムを探す
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-                {
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                    if (container != null)
+                    int firstIndexToLoad = 0;
+                    int lastIndexToLoad = 0;
+                    for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
                     {
-                        // コンテナの位置をパネル座標系で取得
-                        var containerToPanelTransform = container.TransformToAncestor(panel);
-                        var containerPoint = containerToPanelTransform.Transform(new Point(0, 0));
-                        var containerRect = new Rect(containerPoint, container.RenderSize);
-
-                        // スクロールビューア座標系に変換
-                        var containerToScrollViewerTransform = container.TransformToAncestor(scrollViewer);
-                        var containerInScrollViewer = containerToScrollViewerTransform.Transform(new Point(0, 0));
-
-                        // スクロールビューアの表示範囲内かチェック
-                        if (containerInScrollViewer.Y >= -container.ActualHeight &&
-                            containerInScrollViewer.Y <= viewport.Height)
+                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                        if (container != null && container.IsVisible)
                         {
-                            if (!firstRowY.HasValue)
+                            if (firstIndexToLoad == 0)
                             {
-                                firstRowY = containerPoint.Y;
-                                itemsInFirstRow = 1;
-                                lastX = containerPoint.X;
+                                firstIndexToLoad = i;
                             }
-                            else if (Math.Abs(containerPoint.Y - firstRowY.Value) <= 1)
+                            if (i > lastIndexToLoad)
                             {
-                                if (containerPoint.X > lastX + 1)
-                                {
-                                    itemsInFirstRow++;
-                                    lastX = containerPoint.X;
-                                }
-                            }
-                            else if (!foundFirstRow)
-                            {
-                                foundFirstRow = true;
+                                lastIndexToLoad = i;
                             }
                         }
                     }
-                }
 
-                if (itemsInFirstRow > 0)
+                    // 前後10個ずつのサムネイルをロード
+                    int bufferSize = 10;
+                    firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
+                    lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
+
+                    // 可視範囲のサムネイルをロード
+                    await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
+                }
+                catch (Exception ex)
                 {
-                    return itemsInFirstRow;
+                    System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
                 }
+            });
 
-                // 見つからなかった場合は、実際のサイズから計算
-                var itemWidth = ThumbnailSizeSlider.Value + 20;
-                var columns = Math.Max(1, (int)(panel.ActualWidth / itemWidth));
-                Debug.WriteLine($"Using calculated columns: {columns} (Width={panel.ActualWidth:F2}, ItemWidth={itemWidth:F2})");
-                return columns;
-            }
-            catch (Exception ex)
+            await ProcessThumbnailLoadQueue();
+        }
+
+        private async Task ProcessThumbnailLoadQueue()
+        {
+            if (_thumbnailLoadQueue.Count > 0)
             {
-                Debug.WriteLine($"Error in GetItemsPerRow: {ex.Message}");
-                return 1;
+                var loadTask = _thumbnailLoadQueue.Dequeue();
+                await loadTask();
             }
         }
 
-        private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
+        private async void OnLanguageChanged()
         {
-            if (!_pendingSelection)
-                return;
-
-            if (ThumbnailItemsControl.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
+            // 言語リソースの反映をまつ
+            Task.Run(() =>
             {
-                _pendingSelection = false;  // 早めにフラグを解除して重複実行を防ぐ
-
-                await Task.Run(async () =>
+                // フィルターボタンのテキストを更新
+                Dispatcher.Invoke(() =>
                 {
-                    // UIスレッドでの遅延実行
-                    await Dispatcher.BeginInvoke(new Action(async () =>
-                    {
-                        // レイアウト更新を待機
-                        await Task.Delay(100);
-                        try
-                        {
-                            string? filePath = null;
-                            bool needFocus = !_isFirstLoaded;
-
-                            // 優先順位：
-                            // 1. 指定された初期選択ファイル
-                            // 2. 初回起動時の最後に選択されていたファイル
-                            // 3. リストの最初のアイテム
-                            if (_pendingInitialSelectedFilePath != null)
-                            {
-                                filePath = _pendingInitialSelectedFilePath;
-                                _pendingInitialSelectedFilePath = null;
-                            }
-                            else if (!_isFirstLoaded)
-                            {
-                                // 初回ロード時の処理
-                                if (File.Exists(_appSettings.LastSelectedFilePath))
-                                {
-                                    filePath = _appSettings.LastSelectedFilePath;
-                                }
-                                _isFirstLoaded = true;
-                            }
-
-                            // ファイルパスが無効な場合は最初のアイテムを選択
-                            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                            {
-                                var firstItem = _viewModel.Items.FirstOrDefault();
-                                if (firstItem != null)
-                                {
-                                    filePath = firstItem.FullPath;
-                                }
-                            }
-
-                            if (!string.IsNullOrEmpty(filePath))
-                            {
-                                // レイアウト更新後に選択処理を実行
-                                await Dispatcher.InvokeAsync(() =>
-                                {
-                                    SelectThumbnail(filePath);
-                                }, DispatcherPriority.Loaded);
-
-                                // さらにレイアウト更新を待ってフォーカスを設定
-                                if (needFocus)
-                                {
-                                    await Dispatcher.InvokeAsync(() =>
-                                    {
-                                        var selectedItem = _viewModel.SelectedItems.LastOrDefault();
-                                        if (selectedItem != null)
-                                        {
-                                            var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                                            container?.Focus();
-                                        }
-                                    }, DispatcherPriority.Input);
-                                }
-                            }
-
-                            _isFirstLoad = false;
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error in ThumbnailItemsControl_StatusChanged: {ex.Message}");
-                        }
-                    }), System.Windows.Threading.DispatcherPriority.Background);
+                    // ソート種類の文言を更新
+                    SortTypeText.Text = _isSortByDate ?
+                        (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                        (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+                    SortDirectionText.Text = _isSortAscending ?
+                        (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                        (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
                 });
-            }
+            });
         }
     }
 }

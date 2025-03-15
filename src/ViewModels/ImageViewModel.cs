@@ -212,7 +212,7 @@ namespace Illustra.ViewModels
                 var count = await _imageCollection.LoadImagesFromFolderAsync(folderPath);
 
                 // キャッシュのクリア
-                _operationCache.Clear();
+                _operationCache.ClearCache();
 
                 // 表示アイテムの更新
                 await UpdateDisplayItemsAsync();
@@ -264,10 +264,11 @@ namespace Illustra.ViewModels
                 {
                     StatusMessage = "フィルタ処理が完了しました";
                     ProgressValue = 100;
+                    return Task.CompletedTask;
                 });
 
                 // 結果をキャッシュに保存
-                _operationCache.CacheFilterResult(rating, result);
+                _operationCache.CacheFilterResult(rating, result.ToList());
 
                 // 表示アイテムの更新
                 UpdateDisplayItems(result);
@@ -314,10 +315,11 @@ namespace Illustra.ViewModels
                 {
                     StatusMessage = "ソート処理が完了しました";
                     ProgressValue = 100;
+                    return Task.CompletedTask;
                 });
 
                 // 結果をキャッシュに保存
-                _operationCache.CacheSortResult(sortByDate, sortAscending, result);
+                _operationCache.CacheSortResult(sortByDate, sortAscending, result.ToList());
 
                 // 表示アイテムの更新
                 UpdateDisplayItems(result);
