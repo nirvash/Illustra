@@ -173,6 +173,8 @@ namespace Illustra.Views
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(ThumbnailItemsControl, SelectThumbnail, this, _viewModel, db);
+            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
+            _thumbnailLoader.ScrollToItemRequested += OnScrollToItemRequested;
 
             // スライダーのドラッグイベントを購読
             ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
@@ -267,6 +269,7 @@ namespace Illustra.Views
 
         private async void OnFilterChanged(FilterChangedEventArgs args)
         {
+            Debug.WriteLine($"[フィルタ変更] フィルタ変更イベントが発生しました: {args.Type}");
             try
             {
                 if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
@@ -298,6 +301,9 @@ namespace Illustra.Views
 
                 // 各フィルタを適用
                 await _viewModel.ApplyAllFilters(_currentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+
+                // フィルタリング後の選択位置を更新
+                _thumbnailLoader.UpdateSelectionAfterFilter();
             }
             catch (Exception ex)
             {
@@ -328,6 +334,10 @@ namespace Illustra.Views
             {
                 _fileSystemMonitor.StopMonitoring();
             }
+
+            // 前のフォルダのサムネイルをクリア
+            // クリアしないとロード中に前のノードにサムネイルを設定してしまう
+            _viewModel.ClearItems();
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             LoadFileNodes(folderPath, args.InitialSelectedFilePath);
@@ -718,15 +728,18 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたファイルを選択します
         /// </summary>
-        private void SelectThumbnail(string filePath)
+        private async void SelectThumbnail(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
                 System.Diagnostics.Debug.WriteLine("Invalid file path or file does not exist");
                 return;
             }
+            Debug.WriteLine($"[サムネイル選択] ファイル選択: {filePath}");
 
             // DisplayGeneratedItemsInfo(ThumbnailItemsControl);
+
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
             // まずフィルター適用後のアイテムリストから検索
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
@@ -757,7 +770,7 @@ namespace Illustra.Views
                 matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
                 if (matchingItem != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Item found in original list but filtered out");
+                    System.Diagnostics.Debug.WriteLine("[サムネイル選択] Item found in original list but filtered out");
 
                     // フィルター解除が必要
                     if (_currentRatingFilter > 0)
@@ -809,7 +822,7 @@ namespace Illustra.Views
             // 仮想化されているときは e.ExtentHeightChange や e.ExtentWidthChange が変わる
             // 表示範囲の前後のサムネイルをロード
             var scrollViewer = e.OriginalSource as ScrollViewer;
-            if (scrollViewer != null)
+            if (scrollViewer != null && _viewModel.Items.Count > 0)
             {
                 await LoadVisibleThumbnailsAsync(scrollViewer);
             }
@@ -828,6 +841,8 @@ namespace Illustra.Views
         {
             Debug.WriteLine("[サムネイルロード] LoadVisibleThumbnailsAsync メソッドが呼ばれました");
             _thumbnailLoadQueue.Clear();
+            _thumbnailLoadTimer.Stop();
+            _thumbnailLoadTimer.Start();
 
             _thumbnailLoadQueue.Enqueue(async () =>
             {
@@ -2194,10 +2209,10 @@ namespace Illustra.Views
 
         private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
         {
-            Debug.WriteLine("[ステータス変更] ThumbnailItemsControl_StatusChanged メソッドが呼ばれました");
             if (!_pendingSelection)
                 return;
 
+            Debug.WriteLine("[ステータス変更] ThumbnailItemsControl_StatusChanged メソッドが呼ばれました PendingSelection を実行します");
             if (ThumbnailItemsControl.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
             {
                 _pendingSelection = false;  // 早めにフラグを解除して重複実行を防ぐ
@@ -2274,6 +2289,19 @@ namespace Illustra.Views
                         }
                     }), System.Windows.Threading.DispatcherPriority.Background);
                 });
+            }
+        }
+
+        /// <summary>
+        /// スクロールリクエストを処理します
+        /// </summary>
+        private void OnScrollToItemRequested(object? sender, ScrollToItemRequestEventArgs e)
+        {
+            if (e.TargetItem != null)
+            {
+                ThumbnailItemsControl.ScrollIntoView(e.TargetItem);
+                ThumbnailItemsControl.SelectedItem = e.TargetItem;
+                FocusSelectedThumbnail();
             }
         }
     }

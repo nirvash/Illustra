@@ -12,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Illustra.Models;
+using Illustra.Helpers;
 
 /// <summary>
 /// サムネイルの読み込みと管理を行うヘルパークラス
@@ -40,6 +41,7 @@ public class ThumbnailLoaderHelper
     private CancellationTokenSource? _thumbnailLoadingCTS;
 
     public event EventHandler? FileNodesLoaded;
+    public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
 
     private volatile bool _isLoading = false;
     private volatile bool _isFullscreenMode = false;
@@ -147,6 +149,7 @@ public class ThumbnailLoaderHelper
 
             try
             {
+                Debug.WriteLine($"[INFO] フォルダ読み込み処理を開始します: {folderPath}");
                 // 前回のフォルダ読み込み処理をキャンセル
                 if (_folderLoadingCTS != null)
                 {
@@ -156,6 +159,7 @@ public class ThumbnailLoaderHelper
                 }
 
                 // サムネイル読み込み処理もキャンセル
+                Debug.WriteLine($"[CANCEL] フォルダ読み込み処理のためサムネイル読み込み処理をキャンセルします {folderPath}");
                 CancelThumbnailLoading();
 
                 // 新しいキャンセルトークンを作成
@@ -192,7 +196,8 @@ public class ThumbnailLoaderHelper
                             cancellationToken.ThrowIfCancellationRequested();
 
                             // ソート条件に従ってノードを並び替え
-                            fileNodes = await _db.GetSortedFileNodesAsync(folderPath, SortByDate, SortAscending, cancellationToken);
+                            // メモリ上でソートを実行
+                            SortHelper.SortFileNodes(fileNodes, SortByDate, SortAscending);
                         }
                         catch (OperationCanceledException)
                         {
@@ -216,6 +221,7 @@ public class ThumbnailLoaderHelper
                             node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
                         }
 
+                        // UIスレッドでノードを設定 (BulkObservableCollectionの操作は同一スレッド(=UI)のみ)
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             // モデルにノードを設定
@@ -225,7 +231,7 @@ public class ThumbnailLoaderHelper
                             // 初期選択を実行する前にUIを更新させる
                             FileNodesLoaded?.Invoke(this, EventArgs.Empty);
                             Debug.WriteLine($"フォルダ ロード時間'{folderPath}' : {sw.ElapsedMilliseconds} ms");
-                            _ = LoadInitialThumbnailsAsync();
+                            //_ = LoadInitialThumbnailsAsync();
                         });
                     }
                     catch (OperationCanceledException)
@@ -356,7 +362,7 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
     {
-        Debug.WriteLine($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: startIndex={startIndex}, endIndex={endIndex}");
+        Debug.WriteLine($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: ({startIndex} - {endIndex})");
         // 全画面表示中はサムネイル生成をスキップ
         if (_isFullscreenMode)
         {
@@ -382,8 +388,11 @@ public class ThumbnailLoaderHelper
 
             for (int i = startIndex; i <= endIndex; i++)
             {
-                if (cancellationToken.IsCancellationRequested) return;
-
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    Debug.WriteLine($"[CANCELLED] 処理中のサムネイル読み込み処理がキャンセルされました　({startIndex} - {endIndex})");
+                    return;
+                }
                 var fileNode = filteredNodes[i];
                 if (fileNode != null &&
                     (fileNode.ThumbnailInfo == null ||
@@ -395,6 +404,11 @@ public class ThumbnailLoaderHelper
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         fileNode.ThumbnailInfo = thumbnailInfo;
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[CANCELLED] サムネイル読み込み処理がキャンセルされました　({startIndex} - {endIndex})");
+                        return;
                     }
                 }
             }
@@ -509,10 +523,12 @@ public class ThumbnailLoaderHelper
         }
         catch (OperationCanceledException)
         {
+            Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
             throw;
         }
         catch (Exception)
         {
+            Debug.WriteLine($"[ERROR] サムネイルの作成中にエラーが発生しました: {imagePath}");
             var errorImage = GetErrorImage();
             return new ThumbnailInfo(errorImage, ThumbnailState.Error);
         }
@@ -653,5 +669,50 @@ public class ThumbnailLoaderHelper
             Debug.WriteLine($"ファイル名変更処理中にエラーが発生しました: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// フィルタリング後の選択位置を更新し、必要に応じてスクロールリクエストを発行します
+    /// </summary>
+    public void UpdateSelectionAfterFilter()
+    {
+        var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+        if (!filteredItems.Any()) return;
+
+        Debug.Write("[フィルタリング後の選択位置更新] UpdateSelectionAfterFilter メソッドが呼ばれました");
+
+        // 現在の選択アイテムがフィルタ結果に含まれているか確認
+        var selectedItems = _viewModel.SelectedItems.Cast<FileNodeModel>().ToList();
+        var firstVisibleSelectedItem = selectedItems.FirstOrDefault(item => filteredItems.Contains(item));
+
+        if (firstVisibleSelectedItem != null)
+        {
+            // 選択アイテムが表示範囲内にある場合、そのアイテムまでスクロール
+            ScrollToItemRequested?.Invoke(this, new ScrollToItemRequestEventArgs(firstVisibleSelectedItem));
+        }
+        else
+        {
+            // 選択アイテムが表示範囲内にない場合、最初のアイテムを選択してスクロール
+            var firstItem = filteredItems.FirstOrDefault();
+            if (firstItem != null)
+            {
+                _viewModel.SelectedItems.Clear();
+                _viewModel.SelectedItems.Add(firstItem);
+                ScrollToItemRequested?.Invoke(this, new ScrollToItemRequestEventArgs(firstItem));
+            }
+        }
+    }
+}
+
+/// <summary>
+/// スクロールリクエストのイベント引数クラス
+/// </summary>
+public class ScrollToItemRequestEventArgs : EventArgs
+{
+    public FileNodeModel TargetItem { get; }
+
+    public ScrollToItemRequestEventArgs(FileNodeModel targetItem)
+    {
+        TargetItem = targetItem;
     }
 }

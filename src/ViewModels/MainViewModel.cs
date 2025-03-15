@@ -5,6 +5,8 @@ using System.Windows.Data;
 using Illustra.Models;
 using Illustra.Helpers;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using Illustra.Views;
 
 namespace Illustra.ViewModels
 {
@@ -138,12 +140,21 @@ namespace Illustra.ViewModels
             return Items.Count;
         }
 
-        public async Task SortItemsAsync(bool sortByDate, bool sortAscending)
+        public void SortItems(bool sortByDate, bool sortAscending)
         {
             if (string.IsNullOrEmpty(_currentFolderPath)) return;
 
-            var sortedItems = await _db.GetSortedFileNodesAsync(_currentFolderPath, sortByDate, sortAscending);
+            // メモリ上でソートを行う
+            var sortedItems = Items.ToList();
+            SortHelper.SortFileNodes(sortedItems, sortByDate, sortAscending);
             Items.ReplaceAll(sortedItems);
+        }
+
+        // ThumbnailListControlからの呼び出し用に非同期メソッドを残す
+        public Task SortItemsAsync(bool sortByDate, bool sortAscending)
+        {
+            SortItems(sortByDate, sortAscending);
+            return Task.CompletedTask;
         }
 
         public void SetCurrentFolder(string path)
@@ -275,6 +286,7 @@ namespace Illustra.ViewModels
         /// </summary>
         private void ApplyFilterAndUpdateSelection()
         {
+            Debug.WriteLine("[フィルタ処理後処理] ApplyFilterAndUpdateSelection");
             // フィルタ適用前の選択状態を保持 (Refresh でクリアされることがあるため)
             var previousSelected = _selectedItems.LastOrDefault();
 
@@ -381,6 +393,7 @@ namespace Illustra.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         private void UpdateSelectionAfterFilter(FileNodeModel? previousSelected)
         {
+            Debug.WriteLine("[フィルタ処理後処理] UpdateSelectionAfterFilter");
             _selectedItems.Clear();
 
             // フィルタ後のアイテムを取得

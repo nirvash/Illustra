@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.IO;
 using Illustra.Helpers;
 using LinqToDB.Mapping;
+using System.Diagnostics;
 
 namespace Illustra.Models
 {
@@ -115,10 +116,29 @@ namespace Illustra.Models
             {
                 if (_thumbnailInfo != value)
                 {
+                    if (_thumbnailInfo != null)
+                    {
+                        // 古いThumbnailInfoのイベントを解除
+                        _thumbnailInfo.PropertyChanged -= OnThumbnailInfoPropertyChanged;
+                    }
+
                     _thumbnailInfo = value;
+
+                    if (_thumbnailInfo != null)
+                    {
+                        // 新しいThumbnailInfoのイベントをサブスクライブ
+                        _thumbnailInfo.PropertyChanged += OnThumbnailInfoPropertyChanged;
+                    }
+
                     OnPropertyChanged(nameof(ThumbnailInfo));
                 }
             }
+        }
+
+        private void OnThumbnailInfoPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // ThumbnailInfoのプロパティが変更されたことを通知
+            OnPropertyChanged(nameof(ThumbnailInfo));
         }
 
         [Column, NotNull]
@@ -185,17 +205,76 @@ namespace Illustra.Models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        ~FileNodeModel()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_thumbnailInfo != null)
+                {
+                    _thumbnailInfo.PropertyChanged -= OnThumbnailInfoPropertyChanged;
+                    if (_thumbnailInfo.Thumbnail != null)
+                    {
+                        _thumbnailInfo.Thumbnail = null;
+                    }
+                    _thumbnailInfo = null;
+                }
+            }
+        }
     }
 
-    public class ThumbnailInfo
+    public class ThumbnailInfo : INotifyPropertyChanged
     {
-        public BitmapSource? Thumbnail { get; set; }
-        public ThumbnailState State { get; set; }
+        private BitmapSource? _thumbnail;
+        public BitmapSource? Thumbnail
+        {
+            get => _thumbnail;
+            set
+            {
+                if (_thumbnail != value)
+                {
+                    _thumbnail = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private ThumbnailState _state;
+        public ThumbnailState State
+        {
+            get => _state;
+            set
+            {
+                if (_state != value)
+                {
+                    _state = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public ThumbnailInfo(BitmapSource? thumbnail, ThumbnailState state)
         {
-            Thumbnail = thumbnail;
-            State = state;
+            _thumbnail = thumbnail;
+            _state = state;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

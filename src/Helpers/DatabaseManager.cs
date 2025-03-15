@@ -153,29 +153,6 @@ namespace Illustra.Helpers
             return result;
         }
 
-        public async Task<List<FileNodeModel>> GetSortedFileNodesAsync(string folderPath, bool sortByDate, bool sortAscending, CancellationToken cancellationToken = default)
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-            var result = await _dbAccess.ReadAsync(async db =>
-            {
-                var query = db.GetTable<FileNodeModel>().Where(fn => fn.FolderPath == folderPath);
-
-                if (sortByDate)
-                {
-                    query = sortAscending ? query.OrderBy(fn => fn.CreationTime) : query.OrderByDescending(fn => fn.CreationTime);
-                }
-                else
-                {
-                    query = sortAscending ? query.OrderBy(fn => fn.FileName) : query.OrderByDescending(fn => fn.FileName);
-                }
-
-                return await query.ToListAsync();
-            }, cancellationToken);
-            sw.Stop();
-            return result;
-        }
-
         public async Task UpdateRatingAsync(string fullPath, int rating)
         {
             await _dbAccess.WriteAsync(async db =>

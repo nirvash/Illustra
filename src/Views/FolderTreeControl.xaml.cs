@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Illustra.Events;
+using Illustra.Helpers;
 
 namespace Illustra.Views
 {
@@ -102,7 +103,8 @@ namespace Illustra.Views
 
         public void SaveAllData()
         {
-            // 必要に応じて実装
+            var appSettings = ContainerLocator.Container.Resolve<AppSettings>();
+            appSettings.LastFolderPath = _currentSelectedFilePath;
         }
     }
 }
