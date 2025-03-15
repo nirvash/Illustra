@@ -3,6 +3,10 @@
 ## 共通ルール
 
 - 機能と実装箇所のマッピングは `docs/Implementation.md` を参照する。このマッピングはコードの理解と保守性向上のための重要なガイドとなる
+- テスト結果の確認手順:
+  1. テストを実行する: `dotnet test --logger "trx;LogFileName=test_results.trx"`
+  2. テスト結果ファイルを確認する: `tests/TestResults/test_results.trx`
+  3. 失敗したテストの詳細を確認するために、テスト結果ファイルを開く
 
 ## UI 実装ルール
 

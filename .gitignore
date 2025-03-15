@@ -42,6 +42,9 @@ obj/
 /[Ll]og/
 /[Ll]ogs/
 
+# テスト結果
+tests/TestResults/
+
 # NuGet パッケージ
 *.nupkg
 # NuGet シンボルパッケージ
@@ -126,3 +129,4 @@ ehthumbs.db
 # JetBrains Rider
 .idea/
 *.sln.iml
+tests/TestResults/test_results.trx
