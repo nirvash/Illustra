@@ -110,6 +110,9 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# Test
+tests/test-results/
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
@@ -126,3 +129,4 @@ ehthumbs.db
 # JetBrains Rider
 .idea/
 *.sln.iml
+tests/TestResults/test_results.trx
