@@ -166,12 +166,15 @@ namespace Illustra.Services
     /// </summary>
     public interface IUpdateSequenceManager
     {
+        ImageCollectionModel ImageCollection { get; }
         OperationState CurrentState { get; }
         event EventHandler<OperationStateChangedEventArgs> StateChanged;
         void EnqueueThumbnailLoad(IEnumerable<FileNodeModel> images, bool isVisible);
         void InterruptWithFilterOperation(int ratingFilter);
         void InterruptWithSortOperation(bool sortByDate, bool sortAscending);
         Task WaitForOperationTypeCompletionAsync(OperationType type);
+        Task<IList<FileNodeModel>> ExecuteFilterAsync(int rating, Func<Task> onCompleted = null);
+        Task<IList<FileNodeModel>> ExecuteSortAsync(bool sortByDate, bool sortAscending, Func<Task> onCompleted = null);
     }
 
     /// <summary>
@@ -186,6 +189,11 @@ namespace Illustra.Services
         private readonly Dictionary<OperationType, TaskCompletionSource<bool>> _operationCompletionSources = new();
         private readonly Timer _processingTimer;
         private bool _isProcessing;
+
+        /// <summary>
+        /// 画像コレクションモデル
+        /// </summary>
+        public ImageCollectionModel ImageCollection => _imageCollection;
 
         /// <summary>
         /// 現在の処理状態
@@ -235,7 +243,7 @@ namespace Illustra.Services
             var filterOperation = new Operation<ImageOperationParameters>(
                 OperationType.Filter,
                 new ImageOperationParameters { RatingFilter = ratingFilter },
-                ExecuteFilterAsync
+                ExecuteFilterOperationAsync
             );
 
             _operationQueue.InterruptWithHighPriorityOperation(filterOperation);
@@ -256,7 +264,7 @@ namespace Illustra.Services
             var sortOperation = new Operation<ImageOperationParameters>(
                 OperationType.Sort,
                 new ImageOperationParameters { SortByDate = sortByDate, SortAscending = sortAscending },
-                ExecuteSortAsync
+                ExecuteSortOperationAsync
             );
 
             _operationQueue.InterruptWithHighPriorityOperation(sortOperation);
@@ -462,35 +470,82 @@ namespace Illustra.Services
         }
 
         /// <summary>
-        /// フィルタ操作の実行
+        /// フィルタ処理を実行する
         /// </summary>
-        private async Task ExecuteFilterAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
+        /// <param name="rating">レーティングフィルタ値</param>
+        /// <param name="onCompleted">完了時のコールバック</param>
+        /// <returns>フィルタリングされたアイテムのリスト</returns>
+        public async Task<IList<FileNodeModel>> ExecuteFilterAsync(int rating, Func<Task> onCompleted = null)
         {
-            if (parameters.RatingFilter == null)
-            {
-                return;
-            }
+            // 現在の処理を中断
+            _operationQueue.Interrupt();
 
-            // フィルタ処理
-            progress.Report(0);
-            await _imageCollection.FilterByRatingAsync(parameters.RatingFilter.Value, cancellationToken);
-            progress.Report(100);
+            // 状態変更通知
+            NotifyStateChanged(OperationType.Filter, OperationState.Running);
+
+            try
+            {
+                // フィルタ処理を実行
+                var result = await _imageCollection.FilterByRatingAsync(rating);
+
+                // 完了通知
+                NotifyStateChanged(OperationType.Filter, OperationState.Completed);
+
+                // コールバックがあれば実行
+                if (onCompleted != null)
+                {
+                    await onCompleted();
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // エラー通知
+                NotifyStateChanged(OperationType.Filter, OperationState.Failed);
+                System.Diagnostics.Debug.WriteLine($"Filter error: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
-        /// ソート操作の実行
+        /// ソート処理を実行する
         /// </summary>
-        private async Task ExecuteSortAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
+        /// <param name="sortByDate">日付順でソートするかどうか</param>
+        /// <param name="sortAscending">昇順でソートするかどうか</param>
+        /// <param name="onCompleted">完了時のコールバック</param>
+        /// <returns>ソートされたアイテムのリスト</returns>
+        public async Task<IList<FileNodeModel>> ExecuteSortAsync(bool sortByDate, bool sortAscending, Func<Task> onCompleted = null)
         {
-            if (parameters.SortByDate == null || parameters.SortAscending == null)
-            {
-                return;
-            }
+            // 現在の処理を中断
+            _operationQueue.Interrupt();
 
-            // ソート処理
-            progress.Report(0);
-            await _imageCollection.SortItemsAsync(parameters.SortByDate.Value, parameters.SortAscending.Value, cancellationToken);
-            progress.Report(100);
+            // 状態変更通知
+            NotifyStateChanged(OperationType.Sort, OperationState.Running);
+
+            try
+            {
+                // ソート処理を実行
+                var result = await _imageCollection.SortItemsAsync(sortByDate, sortAscending);
+
+                // 完了通知
+                NotifyStateChanged(OperationType.Sort, OperationState.Completed);
+
+                // コールバックがあれば実行
+                if (onCompleted != null)
+                {
+                    await onCompleted();
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // エラー通知
+                NotifyStateChanged(OperationType.Sort, OperationState.Failed);
+                System.Diagnostics.Debug.WriteLine($"Sort error: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -564,6 +619,38 @@ namespace Illustra.Services
         private void NotifyStateChanged(OperationType type, OperationState state)
         {
             StateChanged?.Invoke(this, new OperationStateChangedEventArgs(type, state));
+        }
+
+        /// <summary>
+        /// フィルタ操作の実行（内部用）
+        /// </summary>
+        private async Task ExecuteFilterOperationAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
+        {
+            if (parameters.RatingFilter == null)
+            {
+                return;
+            }
+
+            // フィルタ処理
+            progress.Report(0);
+            await _imageCollection.FilterByRatingAsync(parameters.RatingFilter.Value, cancellationToken);
+            progress.Report(100);
+        }
+
+        /// <summary>
+        /// ソート操作の実行（内部用）
+        /// </summary>
+        private async Task ExecuteSortOperationAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
+        {
+            if (parameters.SortByDate == null || parameters.SortAscending == null)
+            {
+                return;
+            }
+
+            // ソート処理
+            progress.Report(0);
+            await _imageCollection.SortItemsAsync(parameters.SortByDate.Value, parameters.SortAscending.Value, cancellationToken);
+            progress.Report(100);
         }
     }
 }
