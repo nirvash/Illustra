@@ -14,6 +14,21 @@ namespace Illustra.ViewModels
         private string? _currentFolderPath;
         private bool _sortByDate;
         private bool _sortAscending;
+        private double _thumbnailSize = 200.0; // デフォルトサイズ
+
+        public double ThumbnailSize
+        {
+            get => _thumbnailSize;
+            set
+            {
+                if (_thumbnailSize != value)
+                {
+                    _thumbnailSize = value;
+                    OnPropertyChanged(nameof(ThumbnailSize));
+                }
+            }
+        }
+
         public BulkObservableCollection<FileNodeModel> Items { get; } = new();
         private ICollectionView _filteredItems;
 

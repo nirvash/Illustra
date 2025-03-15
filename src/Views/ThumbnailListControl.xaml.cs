@@ -72,21 +72,18 @@ namespace Illustra.Views
             Loaded += ThumbnailListControl_Loaded;
 
             // サムネイルサイズ変更用のタイマーを初期化
-            _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-            _resizeTimer.Tick += async (s, e) => await UpdateThumbnailSize();
+            _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            _resizeTimer.Tick += async (s, e) =>
+            {
+                _resizeTimer.Stop();
+                await UpdateThumbnailSize();
+            };
 
-            // 新しいImageViewModelの初期化
-            _imageViewModel = new ImageViewModel();
-
-            // サムネイルロード用のタイマーを初期化
-            _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-            _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
-            _thumbnailLoadTimer.Start();
-
-            // 設定を読み込む
-            _appSettings = SettingsHelper.GetSettings();
-
+            // 依存関係の解決
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _appSettings = ContainerLocator.Container.Resolve<AppSettings>();
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _imageViewModel = ContainerLocator.Container.Resolve<ImageViewModel>();
 
             // ViewModelの初期化
             _viewModel = new MainViewModel(db);
@@ -102,6 +99,7 @@ namespace Illustra.Views
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(_viewModel, db, _appSettings);
+            // コンストラクタでの初期化は行わない（Loadedイベントで行う）
 
             // スライダーのドラッグイベントを購読
             ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
@@ -118,11 +116,6 @@ namespace Illustra.Views
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
             ThumbnailSizeText.Text = _appSettings.ThumbnailSize.ToString();
             _thumbnailLoader.ThumbnailSize = _appSettings.ThumbnailSize;
-
-            // サムネイルロード用のタイマーを初期化
-            _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-            _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
-            _thumbnailLoadTimer.Start();
 
             // フィルターボタンの初期状態を設定
             UpdateFilterButtonStates(0);
@@ -142,8 +135,16 @@ namespace Illustra.Views
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
-            // ContainerLocatorを使ってEventAggregatorを取得
+            Debug.WriteLine("[INFO] ThumbnailListControl_Loaded started");
+            Debug.WriteLine($"[INFO] DataContext: {DataContext}");
+
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            Debug.WriteLine($"[INFO] EventAggregator resolved: {_eventAggregator != null}");
+
+            _thumbnailLoader.Initialize(ThumbnailItemsControl,
+                (path) => _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(path));
+            Debug.WriteLine("[INFO] ThumbnailLoader initialized");
+
             // ショートカットキーイベントを購読
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
@@ -752,22 +753,22 @@ namespace Illustra.Views
                 await loadTask();
             }
         }
+
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
         {
             _thumbnailLoadQueue.Clear();
-
             _thumbnailLoadQueue.Enqueue(async () =>
             {
                 try
                 {
-                    // ItemsControl が初期化されるのを待つ
+                    // ItemsControlが初期化されるのを待つ
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-
                     if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
                         return;
 
                     int firstIndexToLoad = 0;
                     int lastIndexToLoad = 0;
+
                     for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
                     {
                         var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
@@ -789,12 +790,14 @@ namespace Illustra.Views
                     firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
                     lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
 
+                    Debug.WriteLine($"[INFO] Loading thumbnails from index {firstIndexToLoad} to {lastIndexToLoad} (total: {lastIndexToLoad - firstIndexToLoad + 1} items)");
+
                     // 可視範囲のサムネイルをロード
                     await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"LoadVisibleThumbnailsAsync エラー: {ex.Message}");
+                    Debug.WriteLine($"[ERROR] LoadVisibleThumbnailsAsync エラー: {ex.Message}");
                 }
             });
 
@@ -2064,88 +2067,25 @@ namespace Illustra.Views
         /// <summary>
         /// サムネイルのステータス変更時の処理
         /// </summary>
-        private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
+        private void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
         {
-            if (!_pendingSelection)
-                return;
-
             if (ThumbnailItemsControl.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
             {
-                _pendingSelection = false;  // 早めにフラグを解除して重複実行を防ぐ
-
-                // 選択インデックスが有効な場合
-                if (_pendingSelectionIndex >= 0 && _pendingSelectionIndex < ThumbnailItemsControl.Items.Count)
+                // 選択が保留中の場合は選択を実行
+                if (_pendingSelection)
                 {
-                    try
+                    _pendingSelection = false;
+                    if (!string.IsNullOrEmpty(_appSettings.LastSelectedFilePath))
                     {
-                        // 選択を設定
-                        ThumbnailItemsControl.SelectedIndex = _pendingSelectionIndex;
-
-                        // 選択アイテムを取得
-                        var selectedItem = ThumbnailItemsControl.SelectedItem as FileNodeModel;
-                        if (selectedItem != null)
-                        {
-                            // ViewModelの選択を更新
-                            _viewModel.SelectedItems.Clear();
-                            _viewModel.SelectedItems.Add(selectedItem);
-
-                            // 選択アイテムを表示
-                            ThumbnailItemsControl.ScrollIntoView(selectedItem);
-
-                            // 選択アイテムにフォーカス
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                                container?.Focus();
-                            }, DispatcherPriority.Input);
-
-                            // 選択イベントを発行
-                            _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedItem.FullPath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error in ThumbnailItemsControl_StatusChanged: {ex.Message}");
+                        SelectThumbnail(_appSettings.LastSelectedFilePath);
                     }
                 }
-                else if (_pendingInitialSelectedFilePath != null)
+
+                // 可視範囲のサムネイルをロード
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer != null)
                 {
-                    try
-                    {
-                        // ファイルパスから選択アイテムを検索
-                        var matchingItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(item =>
-                            string.Equals(item.FullPath, _pendingInitialSelectedFilePath, StringComparison.OrdinalIgnoreCase));
-
-                        if (matchingItem != null)
-                        {
-                            // 選択を設定
-                            ThumbnailItemsControl.SelectedItem = matchingItem;
-                            _viewModel.SelectedItems.Clear();
-                            _viewModel.SelectedItems.Add(matchingItem);
-
-                            // 選択アイテムを表示
-                            ThumbnailItemsControl.ScrollIntoView(matchingItem);
-
-                            // 選択アイテムにフォーカス
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                if (Window.GetWindow(this)?.IsActive == true)
-                                {
-                                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(matchingItem) as ListViewItem;
-                                    container?.Focus();
-                                }
-                            }, DispatcherPriority.Input);
-
-                            // 選択イベントを発行
-                            _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(matchingItem.FullPath);
-                        }
-
-                        _pendingInitialSelectedFilePath = null;
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error in ThumbnailItemsControl_StatusChanged (file path): {ex.Message}");
-                    }
+                    _ = LoadVisibleThumbnailsAsync(scrollViewer);
                 }
             }
         }
@@ -2166,7 +2106,7 @@ namespace Illustra.Views
                 ThumbnailItemsControl.SelectedItems.Clear();
                 foreach (var item in _viewModel.SelectedItems)
                 {
-                    ThumbnailItemsControl.SelectedItems.Add(item);
+                    //ThumbnailItemsControl.SelectedItems.Add(item);
                 }
             }
             finally
@@ -2259,6 +2199,37 @@ namespace Illustra.Views
             RatingFilterText.Text = _currentRatingFilter == 0
                 ? "全て"
                 : $"{_currentRatingFilter}★以上";
+        }
+
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (sender is not ScrollViewer scrollViewer)
+                return;
+
+            // スクロール位置が変更された場合のみ処理
+            if (e.VerticalChange == 0)
+                return;
+
+            // 表示範囲の計算
+            var itemsPerRow = Math.Max(1, (int)(scrollViewer.ViewportWidth / (_thumbnailLoader.ThumbnailSize + 4)));
+            var visibleRows = Math.Max(1, (int)(scrollViewer.ViewportHeight / _thumbnailLoader.ThumbnailSize) + 2);
+            var totalItems = itemsPerRow * visibleRows;
+
+            // スクロール位置から表示されているアイテムのインデックス範囲を計算
+            var verticalOffset = scrollViewer.VerticalOffset;
+            var itemHeight = _thumbnailLoader.ThumbnailSize + 4; // マージンを考慮
+            var firstVisibleRow = (int)(verticalOffset / itemHeight);
+            var firstVisibleIndex = firstVisibleRow * itemsPerRow;
+            var lastVisibleIndex = firstVisibleIndex + totalItems;
+
+            // バッファを追加（前後1行分）
+            var startIndex = Math.Max(0, firstVisibleIndex - itemsPerRow);
+            var endIndex = lastVisibleIndex + itemsPerRow;
+
+            Debug.WriteLine($"[INFO] Scroll: {startIndex} to {endIndex} (Rows: {visibleRows}, Items per row: {itemsPerRow})");
+
+            // サムネイルの読み込みを開始
+            _ = _thumbnailLoader.LoadMoreThumbnailsAsync(startIndex, endIndex);
         }
     }
 }
