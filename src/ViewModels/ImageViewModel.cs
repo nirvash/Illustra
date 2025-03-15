@@ -140,14 +140,15 @@ namespace Illustra.ViewModels
         /// </summary>
         public bool SortAscending
         {
-            get => _sortAscending;
+            get => _sortDirection == SortDirection.Ascending;
             set
             {
-                if (_sortAscending != value)
+                var newDirection = value ? SortDirection.Ascending : SortDirection.Descending;
+                if (_sortDirection != newDirection)
                 {
-                    _sortAscending = value;
-                    OnPropertyChanged();
-                    _ = ApplySortAsync(_sortByDate, _sortAscending);
+                    _sortDirection = newDirection;
+                    OnPropertyChanged(nameof(SortAscending));
+                    _ = ApplySortAsync(SortByDate, value);
                 }
             }
         }

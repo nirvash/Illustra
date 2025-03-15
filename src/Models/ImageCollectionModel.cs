@@ -132,28 +132,32 @@ namespace Illustra.Models
         /// <returns>フィルタリングされたアイテムのリスト</returns>
         public async Task<List<FileNodeModel>> FilterByRatingAsync(int rating, CancellationToken cancellationToken = default)
         {
-            if (rating <= 0)
+            try
             {
-                return Items.ToList(); // フィルタなし
-            }
-
-            return await Task.Run(() =>
-            {
-                var result = new List<FileNodeModel>();
-                foreach (var item in Items)
+                if (rating <= 0)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    if (item.Rating >= rating)
-                    {
-                        result.Add(item);
-                    }
+                    return Items.ToList(); // フィルタなし
                 }
-                return result;
-            }, cancellationToken);
+
+                return await Task.Run(() =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var result = new List<FileNodeModel>();
+                    foreach (var item in Items)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (item.Rating >= rating)
+                        {
+                            result.Add(item);
+                        }
+                    }
+                    return result;
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return new List<FileNodeModel>();
+            }
         }
 
         /// <summary>

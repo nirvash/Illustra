@@ -71,11 +71,10 @@ namespace Illustra.Services
     /// </summary>
     public class ImageOperationParameters
     {
-        public IEnumerable<FileNodeModel>? Images { get; set; }
-        public int? RatingFilter { get; set; }
-        public bool? SortByDate { get; set; }
-        public bool? SortAscending { get; set; }
-        public int ResumePoint { get; set; }
+        public int Rating { get; set; }
+        public bool SortByDate { get; set; }
+        public bool SortAscending { get; set; }
+        public Func<Task>? OnCompleted { get; set; }
     }
 
     /// <summary>
@@ -84,17 +83,43 @@ namespace Illustra.Services
     /// <typeparam name="T">処理パラメータの型</typeparam>
     public class Operation<T>
     {
-        public OperationType Type { get; }
-        public T Parameters { get; }
-        public Func<T, CancellationToken, IProgress<int>, Task> ExecuteAsync { get; }
-        public OperationState State { get; set; } = OperationState.NotStarted;
-        public int ResumePoint { get; set; }
+        private readonly TaskCompletionSource<IList<FileNodeModel>> _tcs = new();
+        private readonly ImageCollectionModel _imageCollection;
 
-        public Operation(OperationType type, T parameters, Func<T, CancellationToken, IProgress<int>, Task> executeAsync)
+        public OperationType Type { get; set; }
+        public T Parameters { get; set; }
+        public Func<T, CancellationToken, IProgress<int>, Task> Execute { get; set; }
+        public Task<IList<FileNodeModel>> Task => _tcs.Task;
+        public OperationState State { get; set; } = OperationState.NotStarted;
+
+        public Operation(OperationType type, T parameters, Func<T, CancellationToken, IProgress<int>, Task> execute, ImageCollectionModel imageCollection)
         {
             Type = type;
             Parameters = parameters;
-            ExecuteAsync = executeAsync;
+            Execute = execute;
+            _imageCollection = imageCollection;
+        }
+
+        public async Task<IList<FileNodeModel>> RunAsync(T parameters, CancellationToken token, IProgress<int> progress = null)
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                await Execute(parameters, token, progress ?? new Progress<int>());
+                var result = _imageCollection.Items.ToList();
+                _tcs.TrySetResult(result);
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                _tcs.TrySetCanceled();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _tcs.TrySetException(ex);
+                throw;
+            }
         }
     }
 
@@ -183,7 +208,7 @@ namespace Illustra.Services
     public class UpdateSequenceManager : IUpdateSequenceManager
     {
         private readonly OperationQueue<ImageOperationParameters> _operationQueue = new();
-        private readonly Progress<OperationProgress> _progress;
+        private readonly IProgress<OperationProgress> _progress;
         private readonly ImageCollectionModel _imageCollection;
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private readonly Dictionary<OperationType, TaskCompletionSource<bool>> _operationCompletionSources = new();
@@ -212,7 +237,7 @@ namespace Illustra.Services
         public UpdateSequenceManager(ImageCollectionModel imageCollection)
         {
             _imageCollection = imageCollection;
-            _progress = new Progress<OperationProgress>(OnProgressChanged);
+            _progress = new Progress<OperationProgress>();
             _processingTimer = new Timer(ProcessQueueCallback, null, 200, 200);
         }
 
@@ -224,8 +249,9 @@ namespace Illustra.Services
             var priority = isVisible ? OperationPriority.High : OperationPriority.Normal;
             var operation = new Operation<ImageOperationParameters>(
                 OperationType.ThumbnailLoad,
-                new ImageOperationParameters { Images = images },
-                ExecuteThumbnailLoadAsync
+                new ImageOperationParameters { Rating = 0, SortByDate = false, SortAscending = false },
+                ExecuteThumbnailLoadAsync,
+                _imageCollection
             );
 
             _operationQueue.Enqueue(operation, (int)priority);
@@ -242,8 +268,9 @@ namespace Illustra.Services
             // フィルタ操作を高優先度で追加
             var filterOperation = new Operation<ImageOperationParameters>(
                 OperationType.Filter,
-                new ImageOperationParameters { RatingFilter = ratingFilter },
-                ExecuteFilterOperationAsync
+                new ImageOperationParameters { Rating = ratingFilter },
+                ExecuteFilterOperationAsync,
+                _imageCollection
             );
 
             _operationQueue.InterruptWithHighPriorityOperation(filterOperation);
@@ -264,7 +291,8 @@ namespace Illustra.Services
             var sortOperation = new Operation<ImageOperationParameters>(
                 OperationType.Sort,
                 new ImageOperationParameters { SortByDate = sortByDate, SortAscending = sortAscending },
-                ExecuteSortOperationAsync
+                ExecuteSortOperationAsync,
+                _imageCollection
             );
 
             _operationQueue.InterruptWithHighPriorityOperation(sortOperation);
@@ -374,7 +402,7 @@ namespace Illustra.Services
                                 ((IProgress<OperationProgress>)_progress).Report(progressInfo);
                             });
 
-                            await operation.ExecuteAsync(
+                            await operation.RunAsync(
                                 operation.Parameters,
                                 _operationQueue.CurrentCancellationToken,
                                 progress
@@ -446,26 +474,25 @@ namespace Illustra.Services
         /// </summary>
         private async Task ExecuteThumbnailLoadAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
         {
-            if (parameters.Images == null)
-            {
-                return;
-            }
-
             // この段階では単純な実装
             // 実際の実装ではサムネイル生成処理を行う
-            var images = parameters.Images.ToList();
+            var images = _imageCollection.Items.ToList();
             var total = images.Count;
             var processed = 0;
 
             foreach (var image in images)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
 
-                // サムネイル生成処理（ダミー）
-                await Task.Delay(10, cancellationToken);
+                // サムネイル生成処理
+                await Task.Delay(10, cancellationToken); // 仮の処理時間
 
                 processed++;
-                progress.Report((int)((float)processed / total * 100));
+                var percentage = (int)((float)processed / total * 100);
+                progress.Report(percentage);
             }
         }
 
@@ -477,35 +504,20 @@ namespace Illustra.Services
         /// <returns>フィルタリングされたアイテムのリスト</returns>
         public async Task<IList<FileNodeModel>> ExecuteFilterAsync(int rating, Func<Task> onCompleted = null)
         {
-            // 現在の処理を中断
-            _operationQueue.Interrupt();
-
-            // 状態変更通知
-            NotifyStateChanged(OperationType.Filter, OperationState.Running);
-
-            try
+            var parameters = new ImageOperationParameters
             {
-                // フィルタ処理を実行
-                var result = await _imageCollection.FilterByRatingAsync(rating);
-
-                // 完了通知
-                NotifyStateChanged(OperationType.Filter, OperationState.Completed);
-
-                // コールバックがあれば実行
-                if (onCompleted != null)
-                {
-                    await onCompleted();
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                // エラー通知
-                NotifyStateChanged(OperationType.Filter, OperationState.Failed);
-                System.Diagnostics.Debug.WriteLine($"Filter error: {ex.Message}");
-                throw;
-            }
+                Rating = rating,
+                OnCompleted = onCompleted
+            };
+            var operation = new Operation<ImageOperationParameters>(
+                OperationType.Filter,
+                parameters,
+                ExecuteFilterOperationAsync,
+                _imageCollection
+            );
+            _operationQueue.Enqueue(operation, (int)OperationPriority.Normal);
+            await StartProcessingAsync();
+            return await operation.Task;
         }
 
         /// <summary>
@@ -517,35 +529,21 @@ namespace Illustra.Services
         /// <returns>ソートされたアイテムのリスト</returns>
         public async Task<IList<FileNodeModel>> ExecuteSortAsync(bool sortByDate, bool sortAscending, Func<Task> onCompleted = null)
         {
-            // 現在の処理を中断
-            _operationQueue.Interrupt();
-
-            // 状態変更通知
-            NotifyStateChanged(OperationType.Sort, OperationState.Running);
-
-            try
+            var parameters = new ImageOperationParameters
             {
-                // ソート処理を実行
-                var result = await _imageCollection.SortItemsAsync(sortByDate, sortAscending);
-
-                // 完了通知
-                NotifyStateChanged(OperationType.Sort, OperationState.Completed);
-
-                // コールバックがあれば実行
-                if (onCompleted != null)
-                {
-                    await onCompleted();
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                // エラー通知
-                NotifyStateChanged(OperationType.Sort, OperationState.Failed);
-                System.Diagnostics.Debug.WriteLine($"Sort error: {ex.Message}");
-                throw;
-            }
+                SortByDate = sortByDate,
+                SortAscending = sortAscending,
+                OnCompleted = onCompleted
+            };
+            var operation = new Operation<ImageOperationParameters>(
+                OperationType.Sort,
+                parameters,
+                ExecuteSortOperationAsync,
+                _imageCollection
+            );
+            _operationQueue.Enqueue(operation, (int)OperationPriority.High);
+            await StartProcessingAsync();
+            return await operation.Task;
         }
 
         /// <summary>
@@ -605,15 +603,6 @@ namespace Illustra.Services
         }
 
         /// <summary>
-        /// 進捗変更の処理
-        /// </summary>
-        private void OnProgressChanged(OperationProgress progress)
-        {
-            // 進捗情報の処理
-            System.Diagnostics.Debug.WriteLine($"Progress: {progress.Type}, {progress.Percentage}%, {progress.Message}");
-        }
-
-        /// <summary>
         /// 状態変更の通知
         /// </summary>
         private void NotifyStateChanged(OperationType type, OperationState state)
@@ -626,15 +615,30 @@ namespace Illustra.Services
         /// </summary>
         private async Task ExecuteFilterOperationAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
         {
-            if (parameters.RatingFilter == null)
+            if (parameters.Rating == 0)
             {
                 return;
             }
 
             // フィルタ処理
             progress.Report(0);
-            await _imageCollection.FilterByRatingAsync(parameters.RatingFilter.Value, cancellationToken);
+            var result = await _imageCollection.FilterByRatingAsync(parameters.Rating, cancellationToken);
+            _imageCollection.Items.Clear();
+            foreach (var item in result)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException();
+                }
+                _imageCollection.Items.Add(item);
+            }
             progress.Report(100);
+
+            // コールバックがあれば実行
+            if (parameters.OnCompleted != null)
+            {
+                await parameters.OnCompleted();
+            }
         }
 
         /// <summary>
@@ -642,15 +646,97 @@ namespace Illustra.Services
         /// </summary>
         private async Task ExecuteSortOperationAsync(ImageOperationParameters parameters, CancellationToken cancellationToken, IProgress<int> progress)
         {
-            if (parameters.SortByDate == null || parameters.SortAscending == null)
+            if (!parameters.SortByDate && !parameters.SortAscending)
             {
                 return;
             }
 
             // ソート処理
             progress.Report(0);
-            await _imageCollection.SortItemsAsync(parameters.SortByDate.Value, parameters.SortAscending.Value, cancellationToken);
+            var result = await _imageCollection.SortItemsAsync(parameters.SortByDate, parameters.SortAscending, cancellationToken);
+            _imageCollection.Items.Clear();
+            foreach (var item in result)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException();
+                }
+                _imageCollection.Items.Add(item);
+            }
             progress.Report(100);
+
+            // コールバックがあれば実行
+            if (parameters.OnCompleted != null)
+            {
+                await parameters.OnCompleted();
+            }
+        }
+
+        private async Task StartProcessingAsync()
+        {
+            if (_isProcessing)
+            {
+                return;
+            }
+
+            await _processingLock.WaitAsync();
+            try
+            {
+                _isProcessing = true;
+                while (_operationQueue.TryDequeue(out var operation, out var priority))
+                {
+                    try
+                    {
+                        NotifyStateChanged(operation.Type, OperationState.Running);
+                        var result = await operation.RunAsync(
+                            operation.Parameters,
+                            _operationQueue.CurrentCancellationToken,
+                            new Progress<int>(percentage =>
+                            {
+                                var progress = new OperationProgress
+                                {
+                                    Type = operation.Type,
+                                    Percentage = percentage
+                                };
+                                ((IProgress<OperationProgress>)_progress).Report(progress);
+                            })
+                        );
+
+                        if (_operationCompletionSources.TryGetValue(operation.Type, out var tcs))
+                        {
+                            tcs.TrySetResult(true);
+                            _operationCompletionSources.Remove(operation.Type);
+                        }
+
+                        NotifyStateChanged(operation.Type, OperationState.Completed);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        NotifyStateChanged(operation.Type, OperationState.Cancelled);
+                        if (_operationCompletionSources.TryGetValue(operation.Type, out var tcs))
+                        {
+                            tcs.TrySetCanceled();
+                            _operationCompletionSources.Remove(operation.Type);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        NotifyStateChanged(operation.Type, OperationState.Failed);
+                        if (_operationCompletionSources.TryGetValue(operation.Type, out var tcs))
+                        {
+                            tcs.TrySetException(ex);
+                            _operationCompletionSources.Remove(operation.Type);
+                        }
+                        System.Diagnostics.Debug.WriteLine($"Operation error: {ex.Message}");
+                        throw;
+                    }
+                }
+            }
+            finally
+            {
+                _isProcessing = false;
+                _processingLock.Release();
+            }
         }
     }
 }

@@ -70,30 +70,9 @@ namespace Illustra.Services
     /// </summary>
     public class OperationCache
     {
-        private readonly Dictionary<string, Func<Task<IList<FileNodeModel>>>> _operations = new();
+        private readonly Dictionary<string, (DateTime AddedTime, Func<Task<IList<FileNodeModel>>> Operation)> _operations = new();
 
         public int Count => _operations.Count;
-
-        public void AddOperation(string key, Func<Task<IList<FileNodeModel>>> operation)
-        {
-            _operations[key] = operation;
-        }
-
-        public Func<Task<IList<FileNodeModel>>>? GetOperation(string key)
-        {
-            _operations.TryGetValue(key, out var operation);
-            return operation;
-        }
-
-        public void RemoveOperation(string key)
-        {
-            _operations.Remove(key);
-        }
-
-        public void Clear()
-        {
-            _operations.Clear();
-        }
 
         private readonly Dictionary<CacheKey, CacheEntry<object>> _cache = new();
         private readonly int _maxCacheSize;
@@ -108,6 +87,41 @@ namespace Illustra.Services
         {
             _maxCacheSize = maxCacheSize;
             _cacheExpiration = TimeSpan.FromMinutes(cacheExpirationMinutes);
+        }
+
+        public void AddOperation(string key, Func<Task<IList<FileNodeModel>>> operation)
+        {
+            // キャッシュサイズのチェック
+            while (_operations.Count >= _maxCacheSize)
+            {
+                // 最も古いエントリを削除
+                var oldestKey = _operations
+                    .OrderBy(x => x.Value.AddedTime)
+                    .First()
+                    .Key;
+                _operations.Remove(oldestKey);
+            }
+
+            _operations[key] = (DateTime.Now, operation);
+        }
+
+        public Func<Task<IList<FileNodeModel>>>? GetOperation(string key)
+        {
+            if (_operations.TryGetValue(key, out var entry))
+            {
+                return entry.Operation;
+            }
+            return null;
+        }
+
+        public void RemoveOperation(string key)
+        {
+            _operations.Remove(key);
+        }
+
+        public void Clear()
+        {
+            _operations.Clear();
         }
 
         /// <summary>
