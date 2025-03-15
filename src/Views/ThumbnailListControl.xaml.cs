@@ -307,6 +307,7 @@ namespace Illustra.Views
 
         private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
+            Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.Path}");
             string folderPath = args.Path;
             if (folderPath == _currentFolderPath)
                 return;
@@ -804,14 +805,13 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            if (e.VerticalChange != 0 || e.HorizontalChange != 0)
+            Debug.WriteLine("[スクロール変更] OnScrollChanged メソッドが呼ばれました");
+            // 仮想化されているときは e.ExtentHeightChange や e.ExtentWidthChange が変わる
+            // 表示範囲の前後のサムネイルをロード
+            var scrollViewer = e.OriginalSource as ScrollViewer;
+            if (scrollViewer != null)
             {
-                // 表示範囲の前後のサムネイルをロード
-                var scrollViewer = e.OriginalSource as ScrollViewer;
-                if (scrollViewer != null)
-                {
-                    await LoadVisibleThumbnailsAsync(scrollViewer);
-                }
+                await LoadVisibleThumbnailsAsync(scrollViewer);
             }
         }
 
@@ -819,12 +819,14 @@ namespace Illustra.Views
         {
             if (_thumbnailLoadQueue.Count > 0)
             {
+                Debug.WriteLine("[サムネイルロードキュー] ProcessThumbnailLoadQueue メソッドが呼ばれました Deque {0} items", _thumbnailLoadQueue.Count);
                 var loadTask = _thumbnailLoadQueue.Dequeue();
                 await loadTask();
             }
         }
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer)
         {
+            Debug.WriteLine("[サムネイルロード] LoadVisibleThumbnailsAsync メソッドが呼ばれました");
             _thumbnailLoadQueue.Clear();
 
             _thumbnailLoadQueue.Enqueue(async () =>
@@ -1712,6 +1714,7 @@ namespace Illustra.Views
         /// </summary>
         public void FocusSelectedThumbnail()
         {
+            Debug.WriteLine("[フォーカス] FocusSelectedThumbnail メソッドが呼ばれました");
             if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
             {
                 var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
@@ -1902,6 +1905,7 @@ namespace Illustra.Views
 
         private async void OnSortOrderChanged(SortOrderChangedEventArgs args)
         {
+            Debug.WriteLine($"[ソート順変更] ソート順: {(args.IsAscending ? "昇順" : "降順")}, ソート基準: {(args.IsByDate ? "日付" : "名前")}");
             try
             {
                 _isSortByDate = args.IsByDate;
@@ -2190,6 +2194,7 @@ namespace Illustra.Views
 
         private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
         {
+            Debug.WriteLine("[ステータス変更] ThumbnailItemsControl_StatusChanged メソッドが呼ばれました");
             if (!_pendingSelection)
                 return;
 

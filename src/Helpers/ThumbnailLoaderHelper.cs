@@ -264,6 +264,7 @@ public class ThumbnailLoaderHelper
     /// </summary>
     private async Task LoadInitialThumbnailsAsync()
     {
+        Debug.WriteLine("[初期サムネイルロード] LoadInitialThumbnailsAsync メソッドが呼ばれました");
         try
         {
             // サムネイル読み込み用の新しいキャンセルトークンを作成
@@ -355,6 +356,7 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex)
     {
+        Debug.WriteLine($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: startIndex={startIndex}, endIndex={endIndex}");
         // 全画面表示中はサムネイル生成をスキップ
         if (_isFullscreenMode)
         {
