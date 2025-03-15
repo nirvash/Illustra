@@ -65,73 +65,7 @@ namespace Illustra.Views
         private List<string> _currentTagFilters = new List<string>();
         private bool _isTagFilterEnabled = false;
 
-        // Prismを使用した依存性注入のためのコンストラクタ
-        public ThumbnailListControl(IEventAggregator eventAggregator, MainViewModel viewModel,
-                                   AppSettings appSettings, ThumbnailLoaderHelper thumbnailLoader,
-                                   FileSystemMonitor fileSystemMonitor)
-        {
-            InitializeComponent();
-            Loaded += ThumbnailListControl_Loaded;
-
-            // 依存性注入されたサービスを設定
-            _eventAggregator = eventAggregator;
-            _viewModel = viewModel;
-            _appSettings = appSettings;
-            _thumbnailLoader = thumbnailLoader;
-            _fileSystemMonitor = fileSystemMonitor;
-
-            // サムネイルサイズ変更用のタイマーを初期化
-            _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-            _resizeTimer.Tick += async (s, e) => await UpdateThumbnailSize();
-
-            // ファイルシステム監視の設定
-            _fileSystemMonitor.FileCreated += (s, e) => OnFileCreated(e.Path);
-            _fileSystemMonitor.FileDeleted += (s, e) => OnFileDeleted(e.Path);
-            _fileSystemMonitor.FileRenamed += (s, e) => OnFileRenamed(e.OldPath, e.NewPath);
-            _fileSystemMonitor.FileNodesLoaded += OnFileNodesLoaded;
-
-            // ドラッグドロップの設定
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new FileNodeDragHandler());
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, new CustomPreviewItemSorter());
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
-
-            // キーボードイベントハンドラのバインド
-            ThumbnailItemsControl.PreviewKeyDown += ThumbnailItemsControl_PreviewKeyDown;
-
-            // スライダーのドラッグイベントを購読
-            ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
-            {
-                // スライダーのつまみを掴んだ場合のみドラッグモードにする
-                _isDragging = !(e.OriginalSource is System.Windows.Shapes.Rectangle);
-            };
-            ThumbnailSizeSlider.PreviewMouseLeftButtonUp += (s, e) => _isDragging = false;
-
-            // サムネイルサイズを設定から復元
-            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
-            ThumbnailSizeText.Text = _appSettings.ThumbnailSize.ToString();
-            _thumbnailLoader.ThumbnailSize = _appSettings.ThumbnailSize;
-
-            // フィルターボタンの初期状態を設定
-            UpdateFilterButtonStates(0);
-
-            _isSortByDate = _appSettings.SortByDate;
-            _isSortAscending = _appSettings.SortAscending;
-            SortTypeText.Text = _isSortByDate ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-            SortDirectionText.Text = _isSortAscending ?
-                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-
-            // ItemContainerGenerator.StatusChangedイベントを登録
-            ThumbnailItemsControl.ItemContainerGenerator.StatusChanged += ThumbnailItemsControl_StatusChanged;
-
-            // 新しいImageViewModelの初期化
-            _imageViewModel = new ImageViewModel();
-        }
-
-        // デフォルトコンストラクタ（デザイナーとXAML用）
+        // デフォルトコンストラクタ
         public ThumbnailListControl()
         {
             InitializeComponent();
@@ -141,17 +75,6 @@ namespace Illustra.Views
             _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
             _resizeTimer.Tick += async (s, e) => await UpdateThumbnailSize();
 
-            // デザイナーモードの場合はダミーオブジェクトを作成
-            if (DesignerProperties.GetIsInDesignMode(this))
-            {
-                _appSettings = new AppSettings();
-                // デザイナー用のダミーオブジェクト
-                _viewModel = new MainViewModel(new DatabaseManager());
-                _thumbnailLoader = new ThumbnailLoaderHelper(_viewModel, new DatabaseManager(), _appSettings);
-                _fileSystemMonitor = new FileSystemMonitor();
-                _eventAggregator = new EventAggregator();
-            }
-
             // 新しいImageViewModelの初期化
             _imageViewModel = new ImageViewModel();
 
@@ -159,12 +82,62 @@ namespace Illustra.Views
             _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
             _thumbnailLoadTimer.Start();
-        }
 
-        // XAMLからの初期化用メソッド
-        private void InitializeComponent()
-        {
-            System.Windows.Application.LoadComponent(this, new System.Uri("/Illustra;component/Views/ThumbnailListControl.xaml", System.UriKind.Relative));
+            // 設定を読み込む
+            _appSettings = SettingsHelper.GetSettings();
+
+            var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+
+            // ViewModelの初期化
+            _viewModel = new MainViewModel(db);
+            DataContext = _viewModel;
+
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(ThumbnailItemsControl, new FileNodeDragHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragPreviewItemsSorter(ThumbnailItemsControl, new CustomPreviewItemSorter());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
+
+            // キーボードイベントハンドラのバインド
+            ThumbnailItemsControl.PreviewKeyDown += ThumbnailItemsControl_PreviewKeyDown;
+
+            // DatabaseManagerの取得とサムネイルローダーの初期化
+            _thumbnailLoader = new ThumbnailLoaderHelper(_viewModel, db, _appSettings);
+
+            // スライダーのドラッグイベントを購読
+            ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
+            {
+                // スライダーのつまみを掴んだ場合のみドラッグモードにする
+                _isDragging = !(e.OriginalSource is System.Windows.Shapes.Rectangle);
+            };
+            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
+
+            // ファイルシステム監視の初期化
+            _fileSystemMonitor = new FileSystemMonitor(this);
+
+            // サムネイルサイズを設定から復元
+            ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
+            ThumbnailSizeText.Text = _appSettings.ThumbnailSize.ToString();
+            _thumbnailLoader.ThumbnailSize = _appSettings.ThumbnailSize;
+
+            // サムネイルロード用のタイマーを初期化
+            _thumbnailLoadTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
+            _thumbnailLoadTimer.Start();
+
+            // フィルターボタンの初期状態を設定
+            UpdateFilterButtonStates(0);
+
+            // ソート設定を復元
+            _isSortByDate = _appSettings.SortByDate;
+            _isSortAscending = _appSettings.SortAscending;
+            SortTypeText.Text = _isSortByDate ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortByName");
+            SortDirectionText.Text = _isSortAscending ?
+                (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
+                (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+
+            _isInitialized = true;
         }
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
@@ -2140,7 +2113,7 @@ namespace Illustra.Views
                     try
                     {
                         // ファイルパスから選択アイテムを検索
-                        var matchingItem = _viewModel.FilteredItems.FirstOrDefault(item =>
+                        var matchingItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(item =>
                             string.Equals(item.FullPath, _pendingInitialSelectedFilePath, StringComparison.OrdinalIgnoreCase));
 
                         if (matchingItem != null)
@@ -2247,9 +2220,14 @@ namespace Illustra.Views
             }
 
             // コンテナクラス
-            public class CompositeItem
+            public class CompositeItem : IEnumerable
             {
-                public IEnumerable<object> Items { get; set; }
+                public IEnumerable<object> Items { get; set; } = [];
+
+                public IEnumerator GetEnumerator()
+                {
+                    return Items.GetEnumerator();
+                }
             }
         }
 
@@ -2258,7 +2236,7 @@ namespace Illustra.Views
         /// </summary>
         private void UpdateSortDirectionText()
         {
-            SortDirectionText.Text = _appSettings.SortDirection == SortDirection.Ascending
+            SortDirectionText.Text = _appSettings.SortAscending
                 ? "↑"
                 : "↓";
         }
@@ -2268,18 +2246,9 @@ namespace Illustra.Views
         /// </summary>
         private void UpdateSortTypeText()
         {
-            switch (_appSettings.SortType)
-            {
-                case 0:
-                    SortTypeText.Text = "名前";
-                    break;
-                case 1:
-                    SortTypeText.Text = "日付";
-                    break;
-                case 2:
-                    SortTypeText.Text = "評価";
-                    break;
-            }
+            SortTypeText.Text = _isSortByDate
+               ? (string)FindResource("String_Thumbnail_SortByDate")
+               : (string)FindResource("String_Thumbnail_SortByName");
         }
 
         /// <summary>
@@ -2287,9 +2256,9 @@ namespace Illustra.Views
         /// </summary>
         private void UpdateRatingFilterText()
         {
-            RatingFilterText.Text = _appSettings.RatingFilter == 0
+            RatingFilterText.Text = _currentRatingFilter == 0
                 ? "全て"
-                : $"{_appSettings.RatingFilter}★以上";
+                : $"{_currentRatingFilter}★以上";
         }
     }
 }

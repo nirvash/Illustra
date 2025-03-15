@@ -175,7 +175,6 @@
                         IsEnabled="False"/>
                 <!-- ソートボタン -->
                 <Button x:Name="SortDirectionButton"
-                        Click="SortDirectionButton_Click"
                         Margin="0,0,5,0"
                         Focusable="False"
                         ToolTip="{DynamicResource String_Thumbnail_SortToggleTooltip}">
@@ -183,7 +182,6 @@
                                x:Name="SortDirectionText"/>
                 </Button>
                 <Button x:Name="SortTypeButton"
-                        Click="SortTypeButton_Click"
                         MinWidth="50"
                         Margin="0,0,5,0"
                         Focusable="False"
@@ -192,7 +190,6 @@
                                x:Name="SortTypeText"/>
                 </Button>
                 <Button x:Name="RatingFilterButton"
-                        Click="RatingFilterButton_Click"
                         MinWidth="50"
                         Margin="0,0,5,0"
                         Focusable="False"

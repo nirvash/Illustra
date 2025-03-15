@@ -37,7 +37,7 @@ namespace Illustra.Tests.Services
             int rating = 3;
 
             // Act
-            await _manager.ExecuteFilterAsync(rating, () => operationCompleted = true);
+            await _manager.ExecuteFilterAsync(rating, () => { operationCompleted = true; return Task.CompletedTask; });
 
             // Assert
             Assert.IsTrue(operationCompleted);
@@ -52,7 +52,7 @@ namespace Illustra.Tests.Services
             bool ascending = true;
 
             // Act
-            await _manager.ExecuteSortAsync(sortByDate, ascending, () => operationCompleted = true);
+            await _manager.ExecuteSortAsync(sortByDate, ascending, () => { operationCompleted = true; return Task.CompletedTask; });
 
             // Assert
             Assert.IsTrue(operationCompleted);

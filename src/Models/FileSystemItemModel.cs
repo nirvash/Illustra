@@ -380,7 +380,7 @@ namespace Illustra.Models
                 }
 
                 // 新しい監視を開始
-                _monitor = new FileSystemMonitor(true);  // サブディレクトリも監視する
+                _monitor = new FileSystemMonitor(this, true);  // サブディレクトリも監視する
                 _monitor.StartMonitoring(FullPath);
             }
             catch (Exception ex)

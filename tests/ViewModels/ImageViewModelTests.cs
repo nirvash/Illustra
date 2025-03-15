@@ -196,7 +196,7 @@ namespace Illustra.Tests.ViewModels
         }
 
         [Test]
-        public void SortByDate_WhenChanged_TriggersSortOperation()
+        public void SortByDate_WhenChanged_RaisesPropertyChangedEvent()
         {
             // Arrange
             // PropertyChangedイベントの購読
@@ -216,12 +216,13 @@ namespace Illustra.Tests.ViewModels
             Assert.IsTrue(_viewModel.SortByDate);
             Assert.IsTrue(propertyChangedRaised);
 
-            // 非同期メソッドの呼び出しを検証するのは難しいため、
-            // ここではプロパティの変更と値の設定のみを検証
+            // 注意: このテストではプロパティの変更とPropertyChangedイベントの発火のみを検証しています
+            // ApplySortAsyncメソッドが実際に呼び出されたかどうかはテスト対象ではありません
+            // 非同期メソッドの呼び出しを検証するには、モックフレームワークなどの追加の仕組みが必要です
         }
 
         [Test]
-        public void SortAscending_WhenChanged_TriggersSortOperation()
+        public void SortAscending_WhenChanged_RaisesPropertyChangedEvent()
         {
             // Arrange
             // PropertyChangedイベントの購読
@@ -241,8 +242,9 @@ namespace Illustra.Tests.ViewModels
             Assert.IsFalse(_viewModel.SortAscending);
             Assert.IsTrue(propertyChangedRaised);
 
-            // 非同期メソッドの呼び出しを検証するのは難しいため、
-            // ここではプロパティの変更と値の設定のみを検証
+            // 注意: このテストではプロパティの変更とPropertyChangedイベントの発火のみを検証しています
+            // ApplySortAsyncメソッドが実際に呼び出されたかどうかはテスト対象ではありません
+            // 非同期メソッドの呼び出しを検証するには、モックフレームワークなどの追加の仕組みが必要です
         }
 
         [Test]

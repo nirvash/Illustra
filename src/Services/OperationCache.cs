@@ -70,6 +70,31 @@ namespace Illustra.Services
     /// </summary>
     public class OperationCache
     {
+        private readonly Dictionary<string, Func<Task<IList<FileNodeModel>>>> _operations = new();
+
+        public int Count => _operations.Count;
+
+        public void AddOperation(string key, Func<Task<IList<FileNodeModel>>> operation)
+        {
+            _operations[key] = operation;
+        }
+
+        public Func<Task<IList<FileNodeModel>>>? GetOperation(string key)
+        {
+            _operations.TryGetValue(key, out var operation);
+            return operation;
+        }
+
+        public void RemoveOperation(string key)
+        {
+            _operations.Remove(key);
+        }
+
+        public void Clear()
+        {
+            _operations.Clear();
+        }
+
         private readonly Dictionary<CacheKey, CacheEntry<object>> _cache = new();
         private readonly int _maxCacheSize;
         private readonly TimeSpan _cacheExpiration;

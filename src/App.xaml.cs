@@ -66,7 +66,6 @@ namespace Illustra
             // 基本サービスの登録
             containerRegistry.RegisterSingleton<DatabaseManager>();
             containerRegistry.RegisterSingleton<AppSettings>();
-            containerRegistry.RegisterSingleton<FileSystemMonitor>((container) => new FileSystemMonitor());
 
             // ViewModelの登録
             containerRegistry.RegisterSingleton<MainViewModel>();
