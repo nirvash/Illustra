@@ -12,6 +12,22 @@ using Illustra.Services;
 namespace Illustra.ViewModels
 {
     /// <summary>
+    /// ソート方向を表す列挙型
+    /// </summary>
+    public enum SortDirection
+    {
+        /// <summary>
+        /// 昇順
+        /// </summary>
+        Ascending,
+
+        /// <summary>
+        /// 降順
+        /// </summary>
+        Descending
+    }
+
+    /// <summary>
     /// 画像表示のためのViewModelクラス
     /// </summary>
     public class ImageViewModel : INotifyPropertyChanged
@@ -28,6 +44,9 @@ namespace Illustra.ViewModels
         private bool _sortAscending;
         private string? _statusMessage;
         private int _progressValue;
+        private SortDirection _sortDirection = SortDirection.Ascending;
+        private int _sortType = 1; // 0: 名前, 1: 日付, 2: 評価
+        private int _ratingFilter = 0;
 
         /// <summary>
         /// 表示用の画像アイテムコレクション
@@ -134,6 +153,57 @@ namespace Illustra.ViewModels
         }
 
         /// <summary>
+        /// ソート方向（昇順/降順）
+        /// </summary>
+        public SortDirection SortDirection
+        {
+            get => _sortDirection;
+            set
+            {
+                if (_sortDirection != value)
+                {
+                    _sortDirection = value;
+                    OnPropertyChanged();
+                    SortAscending = value == SortDirection.Ascending;
+                }
+            }
+        }
+
+        /// <summary>
+        /// ソートタイプ（0: 名前, 1: 日付, 2: 評価）
+        /// </summary>
+        public int SortType
+        {
+            get => _sortType;
+            set
+            {
+                if (_sortType != value)
+                {
+                    _sortType = value;
+                    OnPropertyChanged();
+                    SortByDate = value == 1; // 1の場合は日付順
+                }
+            }
+        }
+
+        /// <summary>
+        /// レーティングフィルター（0: すべて表示, 1-5: 指定評価以上）
+        /// </summary>
+        public int RatingFilter
+        {
+            get => _ratingFilter;
+            set
+            {
+                if (_ratingFilter != value)
+                {
+                    _ratingFilter = value;
+                    OnPropertyChanged();
+                    CurrentRatingFilter = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// ステータスメッセージ
         /// </summary>
         public string? StatusMessage
@@ -212,7 +282,7 @@ namespace Illustra.ViewModels
                 var count = await _imageCollection.LoadImagesFromFolderAsync(folderPath);
 
                 // キャッシュのクリア
-                _operationCache.ClearCache();
+                _operationCache.Clear();
 
                 // 表示アイテムの更新
                 await UpdateDisplayItemsAsync();
