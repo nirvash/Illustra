@@ -96,7 +96,7 @@ namespace Illustra.Helpers
         private readonly DequeList<ThumbnailRequest> _normalPriorityRequests = new DequeList<ThumbnailRequest>();
         private bool _isProcessing = false;
         private readonly IThumbnailProcessorService _thumbnailProcessor;
-        private bool _isScrolling = false;
+        private ScrollType _scrollType = ScrollType.None;
 
         /// <summary>
         /// コンストラクタ
@@ -194,22 +194,35 @@ namespace Illustra.Helpers
                 }
 
                 // スクロール中の処理制御
-                if (_isScrolling && !request.IsHighPriority)
+                bool isScrolling = _scrollType != ScrollType.None;
+
+                // スクロールバードラッグ時のみ通常優先度リクエストをスキップ
+                if (_scrollType == ScrollType.ScrollBar && !request.IsHighPriority)
                 {
-                    // 現在処理中のリクエストと範囲が重なる場合のみ処理を継続
-                    if (_currentRequest != null && request.OverlapsWith(_currentRequest))
-                    {
-                        LogHelper.LogWithTimestamp($"スクロール中ですが表示範囲内のため処理継続: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-                    }
-                    else
-                    {
-                        LogHelper.LogWithTimestamp($"スクロール中かつ表示範囲外のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-                        return;
-                    }
+                    LogHelper.LogWithTimestamp($"スクロールバードラッグ中のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    return;
                 }
 
-                // バッチ処理の実装 - バッチサイズを10に増やす
-                int batchSize = 10; // 一度に処理するサムネイルの数を増やす
+                // バッチ処理の実装 - スクロール方法に応じてバッチサイズを調整
+                int batchSize;
+                int maxParallelism;
+
+                switch (_scrollType)
+                {
+                    case ScrollType.ScrollBar:
+                        batchSize = 5;      // スクロールバードラッグ時は小さいバッチサイズ
+                        maxParallelism = 2; // 並列度も低く
+                        break;
+                    case ScrollType.Wheel:
+                        batchSize = 8;      // ホイールスクロール時は中程度のバッチサイズ
+                        maxParallelism = 3; // 並列度も中程度
+                        break;
+                    default: // ScrollType.None
+                        batchSize = 15;     // スクロールなしの時は大きいバッチサイズ
+                        maxParallelism = 4; // 並列度も高く
+                        break;
+                }
+
                 for (int i = request.StartIndex; i <= request.EndIndex; i += batchSize)
                 {
                     if (request.CancellationToken.IsCancellationRequested)
@@ -220,27 +233,40 @@ namespace Illustra.Helpers
 
                     int endBatchIndex = Math.Min(i + batchSize - 1, request.EndIndex);
 
-                    // 各バッチの処理を並列化
+                    // 各バッチの処理を並列化（並列度を制限）
+                    using var semaphore = new SemaphoreSlim(maxParallelism);
                     var tasks = new List<Task>();
+
                     for (int j = i; j <= endBatchIndex; j++)
                     {
-                        int index = j; // ローカル変数にキャプチャ
                         if (request.CancellationToken.IsCancellationRequested)
                         {
-                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセルされました: インデックス {index}", LogHelper.Categories.ThumbnailQueue);
+                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセルされました: インデックス {j}", LogHelper.Categories.ThumbnailQueue);
                             return;
                         }
 
-                        // 各サムネイル処理をタスクとして追加
+                        int index = j; // ローカル変数にキャプチャ
+
+                        // 各サムネイル処理をタスクとして追加（並列度制限付き）
                         tasks.Add(Task.Run(async () =>
                         {
                             try
                             {
-                                await _thumbnailProcessor.CreateThumbnailAsync(index, request.CancellationToken);
+                                // セマフォを使用して並列度を制限
+                                await semaphore.WaitAsync(request.CancellationToken);
+
+                                try
+                                {
+                                    await _thumbnailProcessor.CreateThumbnailAsync(index, request.CancellationToken);
+                                }
+                                finally
+                                {
+                                    semaphore.Release();
+                                }
                             }
                             catch (OperationCanceledException)
                             {
-                                LogHelper.LogWithTimestamp($"サムネイル生成中にキャンセルされました: インデックス {index}", LogHelper.Categories.ThumbnailQueue);
+                                // キャンセルは正常な動作として扱う
                             }
                             catch (Exception ex)
                             {
@@ -265,10 +291,24 @@ namespace Illustra.Helpers
                         // バッチ処理のエラーは記録するが処理は続行
                     }
 
-                    // バッチ間で短い遅延を入れる（キャンセルチェック付き）
+                    // スクロール方法に応じて遅延時間を調整
                     if (!request.CancellationToken.IsCancellationRequested)
                     {
-                        await Task.Delay(5);
+                        int delayMs;
+                        switch (_scrollType)
+                        {
+                            case ScrollType.ScrollBar:
+                                delayMs = 20; // スクロールバードラッグ時は長めの遅延
+                                break;
+                            case ScrollType.Wheel:
+                                delayMs = 10; // ホイールスクロール時は中程度の遅延
+                                break;
+                            default: // ScrollType.None
+                                delayMs = 5;  // スクロールなしの時は短い遅延
+                                break;
+                        }
+
+                        await Task.Delay(delayMs);
                     }
                 }
 
@@ -440,35 +480,37 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
-        /// スクロール中かどうかを設定します
+        /// スクロール状態を設定します
         /// </summary>
-        public void SetScrolling(bool isScrolling)
+        /// <param name="scrollType">スクロールタイプ</param>
+        public void SetScrolling(ScrollType scrollType)
         {
             lock (_queueLock)
             {
-                _isScrolling = isScrolling;
+                _scrollType = scrollType;
 
-                // スクロール中になった場合、現在のリクエストと重ならない通常優先度リクエストをクリア
-                if (isScrolling && _currentRequest != null)
+                // スクロールバードラッグ時のみ通常優先度キューをクリア
+                if (scrollType == ScrollType.ScrollBar)
                 {
-                    int removedCount = 0;
-                    for (int i = _normalPriorityRequests.Count - 1; i >= 0; i--)
-                    {
-                        var request = _normalPriorityRequests[i];
-                        // 現在のリクエストと範囲が重ならないものだけを削除
-                        if (!request.OverlapsWith(_currentRequest))
-                        {
-                            _normalPriorityRequests.RemoveAt(i);
-                            removedCount++;
-                        }
-                    }
-
-                    if (removedCount > 0)
-                    {
-                        LogHelper.LogWithTimestamp($"スクロール中のため表示範囲外の{removedCount}件のリクエストをクリア", LogHelper.Categories.ThumbnailQueue);
-                    }
+                    _normalPriorityRequests.Clear();
+                    LogHelper.LogWithTimestamp("スクロールバードラッグ中のため通常優先度キューをクリア", LogHelper.Categories.ThumbnailQueue);
                 }
             }
         }
+
+        // 既存のSetScrollingメソッドをオーバーロードとして残す（後方互換性のため）
+        public void SetScrolling(bool isScrolling)
+        {
+            SetScrolling(isScrolling ? ScrollType.Wheel : ScrollType.None);
+        }
+    }
+
+    // スクロールタイプを表す列挙型を追加
+    public enum ScrollType
+    {
+        None,       // スクロールなし
+        Wheel,      // ホイールスクロール
+        ScrollBar   // スクロールバードラッグ
     }
 }
+

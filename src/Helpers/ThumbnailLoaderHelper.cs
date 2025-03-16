@@ -59,6 +59,9 @@ public class ThumbnailLoaderHelper
     private readonly ThumbnailRequestQueue _requestQueue;
     private readonly IThumbnailProcessorService _thumbnailProcessor;
 
+    private bool _lastSortByDate = true;
+    private bool _lastSortAscending = true;
+
     public event EventHandler<FileNodesLoadedEventArgs>? FileNodesLoaded;
     public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
     public event EventHandler<ThumbnailLoadEventArgs>? ThumbnailsLoaded;
@@ -70,8 +73,17 @@ public class ThumbnailLoaderHelper
 
     private volatile bool _isFullscreenMode = false;
 
-    public bool SortByDate { get; set; } = true;
-    public bool SortAscending { get; set; } = true;
+    public bool SortByDate
+    {
+        get => _lastSortByDate;
+        set => _lastSortByDate = value;
+    }
+
+    public bool SortAscending
+    {
+        get => _lastSortAscending;
+        set => _lastSortAscending = value;
+    }
 
     /// <summary>
     /// 全画面表示モードを設定します
@@ -164,141 +176,112 @@ public class ThumbnailLoaderHelper
     /// </summary>
     /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
     /// <param name="initialSelectedFilePath">初期選択するファイルパス</param>
-    /// <param name="cancellationToken">キャンセルトークン</param>
-    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null, CancellationToken externalToken = default)
+    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null)
     {
         try
         {
-            // キャンセルされていたら早期リターン
-            if (externalToken.IsCancellationRequested)
-                return;
-
-            // 注意: ここでCancelAllLoadingを呼び出さない
-            // CancelAllLoading();
-
-            // フォルダ読み込み用の新しいトークンを作成
-            var newCts = new CancellationTokenSource();
-            var oldCts = Interlocked.Exchange(ref _folderLoadingCTS, newCts);
-            if (oldCts != null)
+            // 内部でのみトークンを管理
+            if (_folderLoadingCTS != null)
             {
-                try
+                _folderLoadingCTS.Cancel();
+                _folderLoadingCTS.Dispose();
+            }
+            _folderLoadingCTS = new CancellationTokenSource();
+            var token = _folderLoadingCTS.Token;
+
+            LogHelper.LogWithTimestamp($"[THUMBNAIL_LOADER] フォルダ読み込み開始: {folderPath}", LogHelper.Categories.ThumbnailLoader);
+
+            // 既存のアイテムをクリア
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                _viewModel.Items.Clear();
+                _viewModel.FilteredItems.Refresh();
+            }, DispatcherPriority.Send);
+
+            // ファイル一覧を取得
+            LogHelper.LogWithTimestamp("[PERFORMANCE] ファイル一覧の取得を開始", LogHelper.Categories.ThumbnailLoader);
+            var sw = Stopwatch.StartNew();
+            var files = await Task.Run(() => GetFilesInFolder(folderPath), token);
+            sw.Stop();
+            LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ファイル取得: {sw.ElapsedMilliseconds}ms - {files.Count}件のファイルを取得", LogHelper.Categories.ThumbnailLoader);
+
+            // ファイル一覧をソート
+            LogHelper.LogWithTimestamp("ファイル一覧を名前順にソートします", LogHelper.Categories.ThumbnailLoader);
+            sw.Restart();
+            files.Sort((a, b) => string.Compare(a, b, StringComparison.OrdinalIgnoreCase));
+            sw.Stop();
+            LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ソート処理: {sw.ElapsedMilliseconds}ms", LogHelper.Categories.ThumbnailLoader);
+
+            // 以下、既存の処理...
+
+            // ファイルノードを作成
+            LogHelper.LogWithTimestamp("ファイルノードの作成を開始", LogHelper.Categories.ThumbnailLoader);
+            LogHelper.LogWithTimestamp($"{files.Count}件のファイルからノードを作成します", LogHelper.Categories.ThumbnailLoader);
+            var fileNodes = CreateFileNodes(files, token);
+
+            // データベースから情報を取得してノードを強化
+            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のファイルのメタデータをバルク取得します", LogHelper.Categories.ThumbnailLoader);
+            LogHelper.LogWithTimestamp($"フォルダパス: {folderPath}", LogHelper.Categories.ThumbnailLoader);
+            await EnrichFileNodesWithDatabaseInfoBulk(fileNodes, folderPath);
+            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードをDBから取得しました", LogHelper.Categories.ThumbnailLoader);
+            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードにDBの情報を設定しました", LogHelper.Categories.ThumbnailLoader);
+            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードを作成しました", LogHelper.Categories.ThumbnailLoader);
+
+            // ソート条件に基づいてノードをソート
+            if (fileNodes.Count > 0)
+            {
+                if (SortByDate != _lastSortByDate || SortAscending != _lastSortAscending)
                 {
-                    oldCts.Dispose();
+                    SortFileNodes(fileNodes);
                 }
-                catch (ObjectDisposedException)
+                else
                 {
-                    // 既に破棄されている場合は無視
+                    LogHelper.LogWithTimestamp("ファイルノードはすでにソート済みです", LogHelper.Categories.ThumbnailLoader);
                 }
             }
 
-            // 外部トークンとフォルダ読み込みトークンを結合
-            using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken, newCts.Token))
+            // ViewModelのItemsを更新
+            LogHelper.LogWithTimestamp($"ViewModelのItemsを更新開始: {fileNodes.Count}件", LogHelper.Categories.ThumbnailLoader);
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                var combinedToken = linkedCts.Token;
+                _viewModel.Items.Clear();
+                foreach (var node in fileNodes)
+                {
+                    _viewModel.Items.Add(node);
+                }
+                _viewModel.FilteredItems.Refresh();
 
-                // 同時に複数のフォルダを読み込まないようにセマフォを使用
-                await _folderLoadingSemaphore.WaitAsync(combinedToken);
+                // 重要: FilteredItemsの件数を確認してログ出力
+                int filteredCount = _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
+                LogHelper.LogWithTimestamp($"FilteredItemsの件数: {filteredCount}件", LogHelper.Categories.ThumbnailLoader);
+            }, DispatcherPriority.Send);
 
+            // 現在のフォルダパスを更新
+            _currentFolderPath = folderPath;
+
+            // FileNodesLoadedイベントを発火
+            if (!_isFileNodesLoadedEventFiring)
+            {
+                _isFileNodesLoadedEventFiring = true;
                 try
                 {
-                    LogHelper.LogWithTimestamp($"フォルダ読み込み開始: {folderPath}", LogHelper.Categories.ThumbnailLoader);
-                    _currentFolderPath = folderPath;
-
-                    // フォルダ内のファイル一覧を取得（すでにソート済み）
-                    LogHelper.LogWithTimestamp("ファイル一覧の取得を開始", LogHelper.Categories.Performance);
-                    var files = await Task.Run(() => GetImageFilesFromFolder(folderPath, combinedToken), combinedToken);
-                    LogHelper.EndTimeMeasurement(LogHelper.StartTimeMeasurement("ファイル取得", LogHelper.Categories.Performance), "ファイル取得", $"{files.Count}件のファイルを取得");
-
-                    combinedToken.ThrowIfCancellationRequested();
-
-                    // ファイルノードの作成
-                    LogHelper.LogWithTimestamp("ファイルノードの作成を開始", "ThumbnailLoader");
-                    var fileNodes = await Task.Run(() => CreateFileNodes(files, combinedToken), combinedToken);
-
-                    combinedToken.ThrowIfCancellationRequested();
-
-                    // ファイルノードのソートは不要（すでにソート済み）
-                    LogHelper.LogWithTimestamp("ファイルノードはすでにソート済みです", "ThumbnailLoader");
-
-                    // ViewModelのItemsを更新
-                    LogHelper.LogWithTimestamp($"ViewModelのItemsを更新開始: {fileNodes.Count}件", "ThumbnailLoader");
-
-                    combinedToken.ThrowIfCancellationRequested();
-
-                    // UIスレッドのDispatcherを使用（Application.Current.Dispatcherを使用）
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        try
-                        {
-                            // キャンセルされていたら何もしない
-                            combinedToken.ThrowIfCancellationRequested();
-
-                            // 新しいアイテムを追加
-                            foreach (var node in fileNodes)
-                            {
-                                _viewModelItems.Add(node);
-                            }
-
-                            // 初期選択ファイルがある場合は選択
-                            if (!string.IsNullOrEmpty(initialSelectedFilePath))
-                            {
-                                var itemToSelect = fileNodes.FirstOrDefault(n => n.FullPath.Equals(initialSelectedFilePath, StringComparison.OrdinalIgnoreCase));
-                                if (itemToSelect != null)
-                                {
-                                    InvokeScrollToItemRequested(itemToSelect);
-                                }
-                            }
-
-                            // ファイルノード読み込み完了イベントを発行
-                            if (!_isFileNodesLoadedEventFiring)
-                            {
-                                _isFileNodesLoadedEventFiring = true;
-                                try
-                                {
-                                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(_currentFolderPath));
-                                }
-                                finally
-                                {
-                                    _isFileNodesLoadedEventFiring = false;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LogHelper.LogError($"ViewModelのItems更新中にエラー: {ex.Message}", ex, "ThumbnailLoader");
-                            throw;
-                        }
-                    }, DispatcherPriority.Normal);
-
-                    LogHelper.LogWithTimestamp("完了", "ThumbnailLoader");
+                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath));
                 }
                 finally
                 {
-                    _folderLoadingSemaphore.Release();
+                    _isFileNodesLoadedEventFiring = false;
                 }
             }
 
-            // 使用が終わったらCTSを破棄
-            try
-            {
-                if (_folderLoadingCTS == newCts)
-                {
-                    _folderLoadingCTS = null;
-                }
-                newCts.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-                // 既に破棄されている場合は無視
-            }
+            LogHelper.LogWithTimestamp("完了", LogHelper.Categories.ThumbnailLoader);
         }
         catch (OperationCanceledException)
         {
-            LogHelper.LogWithTimestamp("キャンセルされました", "ThumbnailLoader");
+            LogHelper.LogWithTimestamp("キャンセルされました", LogHelper.Categories.ThumbnailLoader);
         }
         catch (Exception ex)
         {
-            LogHelper.LogError($"エラー: {ex.Message}", ex, "ThumbnailLoader");
+            LogHelper.LogError($"ファイルノードの読み込み中にエラーが発生しました: {ex.Message}", ex);
         }
     }
 
@@ -1016,7 +999,7 @@ public class ThumbnailLoaderHelper
         }
     }
 
-    private List<string> GetImageFilesFromFolder(string folderPath, CancellationToken cancellationToken)
+    private List<string> GetFilesInFolder(string folderPath)
     {
         try
         {
@@ -1037,7 +1020,6 @@ public class ThumbnailLoaderHelper
             var files = new List<string>();
             foreach (var extension in supportedExtensions)
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 files.AddRange(Directory.GetFiles(folderPath, $"*{extension}", SearchOption.TopDirectoryOnly));
             }
 
