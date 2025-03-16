@@ -7,6 +7,7 @@ using Illustra.Helpers;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using Illustra.Views;
+using System.Linq;
 
 namespace Illustra.ViewModels
 {
@@ -311,14 +312,21 @@ namespace Illustra.ViewModels
             try
             {
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                var allTags = new List<string>();
+
+                // 通常のタグを追加
                 if (properties?.StableDiffusionResult != null && properties.StableDiffusionResult.Tags.Count > 0)
                 {
-                    _tagCache[filePath] = properties.StableDiffusionResult.Tags;
+                    allTags.AddRange(properties.StableDiffusionResult.Tags);
                 }
-                else
+
+                // Loraタグを追加
+                if (properties?.StableDiffusionResult != null && properties.StableDiffusionResult.Loras.Count > 0)
                 {
-                    _tagCache[filePath] = new List<string>();
+                    allTags.AddRange(properties.StableDiffusionResult.Loras);
                 }
+
+                _tagCache[filePath] = allTags;
             }
             catch
             {

@@ -8,6 +8,7 @@
     <system:String x:Key="String_Common_Cancel">キャンセル</system:String>
     <system:String x:Key="String_Common_Copy">コピー</system:String>
     <system:String x:Key="String_Common_Information">情報</system:String>
+    <system:String x:Key="String_Menu_CopyText">テキストをコピー</system:String>
     <system:String x:Key="String_Common_CopyCompleted">バージョン情報をクリップボードにコピーしました。</system:String>
 
     <!-- Menu -->

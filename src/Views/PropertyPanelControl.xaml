@@ -360,12 +360,16 @@
                                                                                  Loaded="Tag_Loaded">
                                                                                 <TextBox.ContextMenu>
                                                                                         <ContextMenu>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                                        Click="CopyTag_Click"
+                                                                                                        Tag="{Binding}"/>
+                                                                                                <Separator/>
                                                                                                 <MenuItem Header="{DynamicResource String_Menu_AddTagToFilter}"
-                                                                                                          Click="AddTagToFilter_Click"
-                                                                                                          Tag="{Binding}"/>
+                                                                                                        Click="AddTagToFilter_Click"
+                                                                                                        Tag="{Binding}"/>
                                                                                                 <MenuItem Header="{DynamicResource String_Menu_RemoveTagFromFilter}"
-                                                                                                          Click="RemoveTagFromFilter_Click"
-                                                                                                          Tag="{Binding}"/>
+                                                                                                        Click="RemoveTagFromFilter_Click"
+                                                                                                        Tag="{Binding}"/>
                                                                                         </ContextMenu>
                                                                                 </TextBox.ContextMenu>
                                                                         </TextBox>
@@ -378,7 +382,7 @@
                                         <TextBlock Text="{DynamicResource String_Property_LoRA}"
                                                    Margin="0,10,0,5"
                                                    Visibility="{Binding StableDiffusionResult.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
-                                        <ItemsControl ItemsSource="{Binding StableDiffusionResult.Loras}">
+                                        <ItemsControl x:Name="LoraTagsItemsControl" ItemsSource="{Binding StableDiffusionResult.Loras}">
                                                 <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
                                                                 <WrapPanel/>
@@ -387,14 +391,34 @@
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                                 <Border Background="#D4EDDA"
+                                                                        BorderThickness="1"
+                                                                        BorderBrush="Transparent"
                                                                         Padding="5,2"
                                                                         Margin="0,0,5,5"
                                                                         CornerRadius="3">
                                                                         <TextBox Text="{Binding Path=.}"
-                                                                                 Style="{StaticResource LoRATagTextBoxStyle}"
-                                                                                 IsReadOnlyCaretVisible="True"
-                                                                                 VerticalAlignment="Center"
-                                                                                 MinWidth="20"/>
+                                                                                Style="{StaticResource LoRATagTextBoxStyle}"
+                                                                                IsReadOnlyCaretVisible="True"
+                                                                                VerticalAlignment="Center"
+                                                                                MinWidth="20"
+                                                                                Tag="{Binding Path=.}"
+                                                                                PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
+                                                                                Loaded="Tag_Loaded">
+                                                                                <TextBox.ContextMenu>
+                                                                                        <ContextMenu>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                                        Click="CopyTag_Click"
+                                                                                                        Tag="{Binding}"/>
+                                                                                                <Separator/>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_AddTagToFilter}"
+                                                                                                        Click="AddTagToFilter_Click"
+                                                                                                        Tag="{Binding}"/>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_RemoveTagFromFilter}"
+                                                                                                        Click="RemoveTagFromFilter_Click"
+                                                                                                        Tag="{Binding}"/>
+                                                                                        </ContextMenu>
+                                                                                </TextBox.ContextMenu>
+                                                                        </TextBox>
                                                                 </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

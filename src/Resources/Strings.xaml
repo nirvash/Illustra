@@ -9,6 +9,7 @@
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
     <system:String x:Key="String_Common_Copy">Copy</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
+    <system:String x:Key="String_Menu_CopyText">Copy text</system:String>
     <system:String x:Key="String_Common_CopyCompleted">The version information has been copied to the clipboard.</system:String>
     <system:String x:Key="String_Common_Delete">delete</system:String>
     <system:String x:Key="String_Common_Move">move</system:String>

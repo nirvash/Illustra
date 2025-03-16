@@ -427,11 +427,22 @@ namespace Illustra.Views
         {
             // TagsItemsControlはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
-            if (TagsItemsControl == null) return;
+            if (TagsItemsControl == null && LoraTagsItemsControl == null) return;
 
             // ItemsControlの子要素を再帰的に検索
             var textBoxes = new List<TextBox>();
-            FindVisualChildren<TextBox>(TagsItemsControl, textBoxes);
+
+            // 通常のタグを検索
+            if (TagsItemsControl != null)
+            {
+                FindVisualChildren<TextBox>(TagsItemsControl, textBoxes);
+            }
+
+            // Loraタグを検索
+            if (LoraTagsItemsControl != null)
+            {
+                FindVisualChildren<TextBox>(LoraTagsItemsControl, textBoxes);
+            }
 
             // 各TextBoxのハイライト状態を更新
             foreach (var textBox in textBoxes)
@@ -451,6 +462,24 @@ namespace Illustra.Views
                     results.Add(t);
                 }
                 FindVisualChildren<T>(child, results);
+            }
+        }
+
+        private void CopyTag_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem &&
+                menuItem.Parent is ContextMenu contextMenu &&
+                contextMenu.PlacementTarget is TextBox textBox)
+            {
+                try
+                {
+                    Clipboard.SetText(textBox.Text);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }
