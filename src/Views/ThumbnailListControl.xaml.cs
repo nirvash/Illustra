@@ -1152,12 +1152,12 @@ namespace Illustra.Views
                 var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
                 {
-                    Debug.WriteLine($"[スクロール停止] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
+                    LogHelper.LogScrollTracking($"[スクロール停止] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
 
                     // アイテム数が少ない場合は全て読み込む
                     if (ThumbnailItemsControl.Items.Count <= 100)
                     {
-                        Debug.WriteLine($"[スクロール停止] アイテム数が少ないため全て読み込みます: 0～{ThumbnailItemsControl.Items.Count - 1}");
+                        LogHelper.LogScrollTracking($"[スクロール停止] アイテム数が少ないため全て読み込みます: 0～{ThumbnailItemsControl.Items.Count - 1}");
                         await _thumbnailLoader.LoadMoreThumbnailsAsync(0, ThumbnailItemsControl.Items.Count - 1, cancellationToken);
                         return;
                     }
@@ -1172,7 +1172,7 @@ namespace Illustra.Views
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[スクロール停止] エラー: {ex.Message}");
+                LogHelper.LogError("スクロール停止処理中にエラーが発生しました", ex);
             }
         }
 
@@ -1186,7 +1186,7 @@ namespace Illustra.Views
                     return;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[サムネイルロードキュー] ProcessThumbnailLoadQueue メソッドが呼ばれました Deque {_thumbnailLoadQueue.Count} items");
+                LogWithTimestamp($"[サムネイルロードキュー] ProcessThumbnailLoadQueue メソッドが呼ばれました Deque {_thumbnailLoadQueue.Count} items");
 
                 // キューから取り出して処理
                 var task = _thumbnailLoadQueue.Dequeue();
@@ -1196,17 +1196,17 @@ namespace Illustra.Views
                 if (_thumbnailLoadQueue.Count == 0)
                 {
                     _thumbnailLoadTimer.Stop();
-                    System.Diagnostics.Debug.WriteLine("[サムネイルロードキュー] 全てのサムネイル読み込みが完了しました");
+                    LogWithTimestamp("[サムネイルロードキュー] 全てのサムネイル読み込みが完了しました");
                 }
             }
             catch (OperationCanceledException)
             {
                 // キャンセルは正常な動作
-                System.Diagnostics.Debug.WriteLine("[サムネイルロードキュー] 処理がキャンセルされました");
+                LogWithTimestamp("[サムネイルロードキュー] 処理がキャンセルされました");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[サムネイルロードキュー] エラー: {ex.Message}");
+                LogWithTimestamp($"[サムネイルロードキュー] エラー: {ex.Message}");
             }
         }
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer, bool includePreload = false, CancellationToken cancellationToken = default)
@@ -2828,18 +2828,18 @@ namespace Illustra.Views
                 int preloadLastIndex = ThumbnailItemsControl.Items.Count - 1; // 最後まで確実に含める
 
                 // ログ出力
-                Debug.WriteLine($"[スクロール停止] 表示範囲: {firstVisibleIndex}～{lastVisibleIndex} (全{ThumbnailItemsControl.Items.Count}件)");
-                Debug.WriteLine($"[スクロール停止] 読み込み範囲: {preloadFirstIndex}～{preloadLastIndex} (先読みバッファ: {bufferSize})");
-                Debug.WriteLine($"[スクロール停止] 推定行: {estimatedFirstRow}～{estimatedLastRow}, 1行あたり: {estimatedItemsPerRow}項目");
+                LogHelper.LogScrollTracking($"[スクロール停止] 表示範囲: {firstVisibleIndex}～{lastVisibleIndex} (全{ThumbnailItemsControl.Items.Count}件)");
+                LogHelper.LogScrollTracking($"[スクロール停止] 読み込み範囲: {preloadFirstIndex}～{preloadLastIndex} (先読みバッファ: {bufferSize})");
+                LogHelper.LogScrollTracking($"[スクロール停止] 推定行: {estimatedFirstRow}～{estimatedLastRow}, 1行あたり: {estimatedItemsPerRow}項目");
 
                 if (isNearBottom)
                 {
-                    Debug.WriteLine("[スクロール停止] 最下部に近いため、最後のアイテムまで確実に読み込みます");
+                    LogHelper.LogScrollTracking("[スクロール停止] 最下部に近いため、最後のアイテムまで確実に読み込みます");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ERROR] LogVisibleRange エラー: {ex.Message}");
+                LogHelper.LogError($"[ERROR] LogVisibleRange エラー: {ex.Message}");
             }
         }
 
@@ -3011,7 +3011,7 @@ namespace Illustra.Views
                 // 表示されているアイテムがない場合は従来の方法にフォールバック
                 if (visibleIndices.Count == 0)
                 {
-                    Debug.WriteLine("[可視性検出] 表示アイテムが見つかりませんでした。計算方式にフォールバックします。");
+                    LogHelper.LogVisibilityDetection("[可視性検出] 表示アイテムが見つかりませんでした。計算方式にフォールバックします。");
 
                     var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                     if (scrollViewer != null)
@@ -3084,7 +3084,7 @@ namespace Illustra.Views
                     {
                         // 最下部に近い場合は、最後のアイテムまで確実に含める
                         lastIndex = ThumbnailItemsControl.Items.Count - 1;
-                        Debug.WriteLine("[可視性検出] 最下部に近いため、最後のアイテムまで読み込みます");
+                        LogHelper.LogVisibilityDetection("[可視性検出] 最下部に近いため、最後のアイテムまで読み込みます");
                     }
                 }
 
@@ -3093,13 +3093,13 @@ namespace Illustra.Views
                 int firstIndexWithBuffer = Math.Max(0, firstIndex - visibilityBufferSize);
                 int lastIndexWithBuffer = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndex + visibilityBufferSize);
 
-                Debug.WriteLine($"[可視性検出] 表示範囲: {firstIndex}～{lastIndex} (表示アイテム: {visibleIndices.Count}件)");
-                Debug.WriteLine($"[可視性検出] 読み込み範囲: {firstIndexWithBuffer}～{lastIndexWithBuffer} (先読みバッファ: {visibilityBufferSize})");
+                LogHelper.LogVisibilityDetection($"[可視性検出] 表示範囲: {firstIndex}～{lastIndex} (表示アイテム: {visibleIndices.Count}件)");
+                LogHelper.LogVisibilityDetection($"[可視性検出] 読み込み範囲: {firstIndexWithBuffer}～{lastIndexWithBuffer} (先読みバッファ: {visibilityBufferSize})");
 
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // サムネイルを読み込む
-                Debug.WriteLine($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: ({firstIndexWithBuffer} - {lastIndexWithBuffer})");
+                LogWithTimestamp($"[サムネイルロード] LoadMoreThumbnailsAsync メソッドが呼ばれました: ({firstIndexWithBuffer} - {lastIndexWithBuffer})");
                 await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexWithBuffer, lastIndexWithBuffer, cancellationToken);
             }
             catch (OperationCanceledException)

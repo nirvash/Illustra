@@ -1363,64 +1363,7 @@ public class ThumbnailLoaderHelper
         ScrollToItemRequested?.Invoke(this, args);
     }
 
-    // スクロール停止時に表示範囲のサムネイルを優先的に処理するように修正
-    private void LogVisibleRange(ScrollViewer scrollViewer)
-    {
-        if (scrollViewer == null) return;
 
-        try
-        {
-            // 表示範囲の計算
-            double verticalOffset = scrollViewer.VerticalOffset;
-            double viewportHeight = scrollViewer.ViewportHeight;
-            double extentHeight = scrollViewer.ExtentHeight;
-
-            // スクロール方向を判定
-            ScrollDirection direction = ScrollDirection.None;
-            if (verticalOffset > _lastScrollOffset)
-            {
-                direction = ScrollDirection.Down;
-            }
-            else if (verticalOffset < _lastScrollOffset)
-            {
-                direction = ScrollDirection.Up;
-            }
-            _lastScrollOffset = verticalOffset;
-
-            LogHelper.LogScrollTracking($"スクロール位置: {verticalOffset}/{extentHeight}");
-
-            // アイテムの高さを計算
-            double itemHeight = _thumbnailSize + 4; // マージンを考慮
-
-            // 表示範囲内の最初と最後のインデックスを計算
-            int firstVisibleIndex = Math.Max(0, (int)(verticalOffset / itemHeight) * CalculateItemsPerRow(scrollViewer.ViewportWidth));
-            int lastVisibleIndex = Math.Min(
-                _viewModelItems.Count - 1,
-                (int)((verticalOffset + viewportHeight) / itemHeight + 1) * CalculateItemsPerRow(scrollViewer.ViewportWidth) - 1
-            );
-
-            // 先読み範囲を計算（前後に余裕を持たせる）
-            int preloadBuffer = 30; // 前後30アイテム分を先読み
-            int preloadFirstIndex = Math.Max(0, firstVisibleIndex - preloadBuffer);
-            int preloadLastIndex = Math.Min(_viewModelItems.Count - 1, lastVisibleIndex + preloadBuffer);
-
-            LogHelper.LogVisibilityDetection($"表示範囲: {firstVisibleIndex}～{lastVisibleIndex} (表示アイテム: {lastVisibleIndex - firstVisibleIndex + 1}件)");
-            LogHelper.LogScrollTracking($"読み込み範囲: {preloadFirstIndex}～{preloadLastIndex} (先読みバッファ: {preloadBuffer})");
-
-            // キャンセルトークンを取得
-            var cancellationToken = GetThumbnailLoadingToken();
-
-            // サムネイルを読み込む
-            LogHelper.LogWithTimestamp($"LoadMoreThumbnailsAsync メソッドが呼ばれました: ({preloadFirstIndex} - {preloadLastIndex}, highPriority: True, direction: {direction})", LogHelper.Categories.ThumbnailLoader);
-
-            // 重要: highPriorityをtrueに設定して表示範囲を優先的に処理
-            _ = LoadMoreThumbnailsAsync(preloadFirstIndex, preloadLastIndex, cancellationToken, true, direction);
-        }
-        catch (Exception ex)
-        {
-            LogHelper.LogError("表示範囲の計算中にエラーが発生しました", ex);
-        }
-    }
 }
 
 /// <summary>
