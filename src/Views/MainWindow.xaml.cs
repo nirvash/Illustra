@@ -546,6 +546,16 @@ namespace Illustra.Views
             // 現在のフォルダパスを更新
             _currentFolderPath = args.Path;
 
+            // フィルタをクリア
+            _currentRatingFilter = 0;
+            _isPromptFilterEnabled = false;
+            _tagFilters = new List<string>();
+            _isTagFilterEnabled = false;
+
+            // メニューの状態を更新
+            UpdateFilterMenu();
+
+            // フィルタクリアイベントを発行
             FilterChangedEventArgs filterArgs = new FilterChangedEventArgsBuilder(CONTROL_ID)
                 .Clear().Build();
             OnFilterChanged(filterArgs);
