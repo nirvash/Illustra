@@ -64,6 +64,8 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 
 ### キーボードショートカット
 
+#### メイン画面
+
 | キー     | 動作                             |
 | -------- | -------------------------------- |
 | ←/→/↑/↓  | サムネイル選択の移動             |
@@ -75,9 +77,18 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 | Ctrl+V   | クリップボードから画像を貼り付け |
 | Delete   | ファイルを削除                   |
 | F11      | フルスクリーン切り替え           |
-| Esc      | 画像ビューを閉じる               |
-| S        | スライドショーの開始/停止        |
-| +/-      | スライドショーの間隔を増減       |
+
+#### ビューワ画面
+
+| キー     | 動作                      |
+| -------- | ------------------------- |
+| ←/→     | 前/次の画像に移動         |
+| 1-5      | レーティングを設定        |
+| P        | プロパティパネルの表示/非表示 |
+| F11      | フルスクリーン切り替え    |
+| Esc      | ビューワを閉じる          |
+| S        | スライドショーの開始/停止 |
+| +/-      | スライドショーの間隔を増減 |
 
 ※ キーボードショートカットはカスタマイズ可能です。設定 → キーボードショートカット設定から変更できます。
 以下の機能も設定から任意のキーに割り当てられます：
@@ -168,6 +179,8 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 
 ### Keyboard Shortcuts
 
+#### Main Window
+
 | Key      | Action                        |
 | -------- | ----------------------------- |
 | ←/→/↑/↓  | Move thumbnail selection      |
@@ -175,11 +188,22 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 | Enter    | Display selected image        |
 | 1-5      | Set rating for selected image |
 | Ctrl+A   | Select all thumbnails         |
+| Ctrl+C   | Copy selected images to clipboard |
+| Ctrl+V   | Paste images from clipboard   |
 | Delete   | Delete file                   |
 | F11      | Toggle fullscreen             |
-| Esc      | Close image view              |
-| S        | Toggle slideshow              |
-| +/-      | Adjust slideshow interval     |
+
+#### Image Viewer
+
+| Key      | Action                     |
+| -------- | -------------------------- |
+| ←/→      | Previous/Next image        |
+| 1-5      | Set rating                 |
+| P        | Toggle property panel      |
+| F11      | Toggle fullscreen          |
+| Esc      | Close viewer               |
+| S        | Toggle slideshow           |
+| +/-      | Adjust slideshow interval  |
 
 Note: Keyboard shortcuts are customizable. You can modify them in Settings → Keyboard Shortcuts.
 The following features can also be assigned to any key:

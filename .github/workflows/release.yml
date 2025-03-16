@@ -123,14 +123,6 @@ jobs:
           response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" \
             -d "{\"query\": \"$query\"}" https://api.github.com/graphql)
 
-          # 既知の問題リストを生成
-          issues=$(echo "$response" | jq -r '.data.repository.issues.nodes[] | "- [\(.title)](\(.url))"')
-
-          # 既知の問題がない場合のデフォルトメッセージ
-          if [ -z "$issues" ]; then
-            issues="### 日本語\n\n- 現在、既知の問題はありません。\n\n---\n\n### English\n\n- No known issues at this time."
-          fi
-
           # 複数行出力をEOFで設定
           echo "issues<<EOF" >> "$GITHUB_OUTPUT"
           echo -e "$issues" >> "$GITHUB_OUTPUT"
@@ -161,7 +153,7 @@ jobs:
             ${{ steps.read_release_notes.outputs.summary }}
 
             #### 🔍 既知の問題
-            ${{ steps.issues.outputs.issues }}
+            - Issues タブを確認してください
 
             ---
 
@@ -180,4 +172,4 @@ jobs:
             ${{ steps.read_release_notes.outputs.summary }}
 
             #### 🔍 Known Issues
-            ${{ steps.issues.outputs.issues }}
+            - Check the Issues tab
