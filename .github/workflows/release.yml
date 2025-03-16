@@ -76,32 +76,31 @@ jobs:
           fixes=$(echo "$commits" | grep -i "^- fix:" || echo "")
           other=$(echo "$commits" | grep -v "^- feat:" | grep -v "^- fix:" || echo "")
 
-          # 出力を整形 (日本語と英語セクションを分離)
-          output="### 日本語\n\n"
+          # Create separate outputs for Japanese and English sections
+          jp_output=""
+          en_output=""
+
           if [ ! -z "$features" ]; then
-            output+="✨ 新機能:\n$features\n\n"
+            jp_output+="✨ 新機能:\n$features\n\n"
+            en_output+="✨ New Features:\n$features\n\n"
           fi
           if [ ! -z "$fixes" ]; then
-            output+="🐛 バグ修正:\n$fixes\n\n"
+            jp_output+="🐛 バグ修正:\n$fixes\n\n"
+            en_output+="🐛 Bug Fixes:\n$fixes\n\n"
           fi
           if [ ! -z "$other" ]; then
-            output+="🔧 その他の変更:\n$other\n\n"
+            jp_output+="🔧 その他の変更:\n$other"
+            en_output+="🔧 Other Changes:\n$other"
           fi
 
-          output+="---\n\n### English\n\n"
-          if [ ! -z "$features" ]; then
-            output+="✨ New Features:\n$features\n\n"
-          fi
-          if [ ! -z "$fixes" ]; then
-            output+="🐛 Bug Fixes:\n$fixes\n\n"
-          fi
-          if [ ! -z "$other" ]; then
-            output+="🔧 Other Changes:\n$other\n"
-          fi
+          # Create final output
+          output="$jp_output"
 
           # 出力が空の場合のデフォルトメッセージ (日本語と英語セクションを分離)
           if [ -z "$output" ]; then
-            output="### 日本語\n\n- メンテナンスの改善とバグ修正\n\n---\n\n### English\n\n- Maintenance improvements and bug fixes"
+            jp_output="- メンテナンスの改善とバグ修正"
+            en_output="- Maintenance improvements and bug fixes"
+            output="$jp_output"
           fi
 
           # 複数行出力をEOFで設定
