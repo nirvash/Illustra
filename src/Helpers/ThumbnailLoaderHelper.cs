@@ -511,7 +511,8 @@ public class ThumbnailLoaderHelper
             switch (scrollDirection)
             {
                 case ScrollDirection.Down:
-                    // 下方向スクロール時は上から下へ処理
+                default:
+                    // 不明時と下方向スクロール時は上から下へ処理
                     indicesToProcess = indicesToProcess.OrderBy(i => i).ToList();
                     LogHelper.LogWithTimestamp("下方向スクロール: 上から下へ処理", LogHelper.Categories.ThumbnailLoader);
                     break;
@@ -520,15 +521,6 @@ public class ThumbnailLoaderHelper
                     // 上方向スクロール時は下から上へ処理
                     indicesToProcess = indicesToProcess.OrderByDescending(i => i).ToList();
                     LogHelper.LogWithTimestamp("上方向スクロール: 下から上へ処理", LogHelper.Categories.ThumbnailLoader);
-                    break;
-
-                default:
-                    // スクロール方向不明または初期表示時は中央から外側へ処理
-                    int centerIndex = (startIndex + endIndex) / 2;
-                    indicesToProcess = indicesToProcess
-                        .OrderBy(i => Math.Abs(i - centerIndex))
-                        .ToList();
-                    LogHelper.LogWithTimestamp($"中央優先処理: 中央={centerIndex}, アイテム数={indicesToProcess.Count}", LogHelper.Categories.ThumbnailLoader);
                     break;
             }
 
