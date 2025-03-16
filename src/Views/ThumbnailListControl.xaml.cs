@@ -1042,55 +1042,51 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            if (_isScrolling) return;
-
             try
             {
                 _isScrolling = true;
 
-                // スクロール方向を検出
-                // スクロール中のサムネイル読み込み
+                // スクロールビューアを取得
                 var scrollViewer = sender as ScrollViewer;
-                if (scrollViewer != null)
+                if (scrollViewer == null) return;
+
+                // スクロール停止タイマーをリセット
+                _scrollStopTimer.Stop();
+                _scrollStopTimer.Start();
+
+                // スクロール方向を検出
+                bool isScrollingDown = e.VerticalChange > 0;
+                bool isScrollingUp = e.VerticalChange < 0;
+
+                // スクロール位置のログ出力
+                LogHelper.LogScrollTracking($"[スクロール中] 位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}, 変化量: {e.VerticalChange:F2}");
+
+                // 表示範囲内のサムネイルを計算
+                if (_thumbnailLoadCts != null)
                 {
-                    var lastScrollOffset = scrollViewer.VerticalOffset;
-                    Illustra.Helpers.ScrollDirection scrollDirection = Illustra.Helpers.ScrollDirection.None;
-                    if (e.VerticalOffset > lastScrollOffset)
-                    {
-                        scrollDirection = Illustra.Helpers.ScrollDirection.Down;
-                    }
-                    else if (e.VerticalOffset < lastScrollOffset)
-                    {
-                        scrollDirection = Illustra.Helpers.ScrollDirection.Up;
-                    }
-
-                    // スクロールタイマーをリセット
-                    _scrollStopTimer.Stop();
-                    _scrollStopTimer.Start();
-
-                    // 表示範囲の計算
-                    double itemHeight = _appSettings.ThumbnailSize + 4; // マージンを考慮
-                    // サムネイルサイズとマージンを考慮して1行あたりの表示可能数を計算
-                    int itemsPerRow = Math.Max(1, (int)(scrollViewer.ViewportWidth / (_appSettings.ThumbnailSize + 4)));
-
-                    int firstVisibleIndex = Math.Max(0, (int)(scrollViewer.VerticalOffset / itemHeight) * itemsPerRow);
-                    int lastVisibleIndex = Math.Min(
-                        GetFilteredItemsCount() - 1,
-                        (int)((scrollViewer.VerticalOffset + scrollViewer.ViewportHeight) / itemHeight + 1) * itemsPerRow - 1
-                    );
-
-                    // スクロール方向を渡して読み込み
-                    await _thumbnailLoader.LoadMoreThumbnailsAsync(
-                        firstVisibleIndex,
-                        lastVisibleIndex,
-                        _thumbnailLoadCts?.Token ?? CancellationToken.None,
-                        false,
-                        scrollDirection);
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
                 }
+                _thumbnailLoadCts = new CancellationTokenSource();
+
+                // スクロール中は軽量版のサムネイル読み込みを実行
+                await LoadVisibleThumbnailsLightAsync(scrollViewer, _thumbnailLoadCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルされた場合は何もしない
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"スクロール処理中にエラーが発生しました: {ex.Message}", ex);
             }
             finally
             {
-                _isScrolling = false;
+                // スクロールが完了したらフラグをリセット（ただしタイマーが動いている間は保持）
+                if (!_scrollStopTimer.IsEnabled)
+                {
+                    _isScrolling = false;
+                }
             }
         }
 
@@ -1099,39 +1095,31 @@ namespace Illustra.Views
         {
             try
             {
-                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                // 低優先度で実行
+                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
                     return;
 
-                int firstIndexToLoad = 0;
-                int lastIndexToLoad = 0;
+                // スクロール位置から表示範囲を直接計算（コンテナ検索より高速）
+                double itemHeight = _appSettings.ThumbnailSize + 4; // マージンを考慮
+                int itemsPerRow = Math.Max(1, (int)(scrollViewer.ViewportWidth / (_appSettings.ThumbnailSize + 4)));
 
-                // 表示されているアイテムを検出（最大20個まで）
-                int count = 0;
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count && count < 20; i++)
-                {
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                    if (container != null && container.IsVisible)
-                    {
-                        count++;
-                        if (firstIndexToLoad == 0)
-                        {
-                            firstIndexToLoad = i;
-                        }
-                        lastIndexToLoad = i;
-                    }
-                }
+                int firstVisibleIndex = Math.Max(0, (int)(scrollViewer.VerticalOffset / itemHeight) * itemsPerRow);
+                int lastVisibleIndex = Math.Min(
+                    GetFilteredItemsCount() - 1,
+                    (int)((scrollViewer.VerticalOffset + scrollViewer.ViewportHeight) / itemHeight + 1) * itemsPerRow - 1
+                );
 
-                // 前後10個ずつのサムネイルをロード（小さいバッファ）
-                int bufferSize = 10;
-                firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
+                // 小さいバッファで読み込み（スクロール中は最小限）
+                int bufferSize = 5;
+                int firstIndexToLoad = Math.Max(0, firstVisibleIndex - bufferSize);
+                int lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastVisibleIndex + bufferSize);
 
                 // サムネイルを読み込む
                 cancellationToken.ThrowIfCancellationRequested();
-                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad, cancellationToken);
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexToLoad, lastIndexToLoad, cancellationToken, true);
             }
             catch (OperationCanceledException)
             {
@@ -1147,7 +1135,6 @@ namespace Illustra.Views
         {
             try
             {
-                _isScrolling = false;
                 _scrollStopTimer.Stop();
 
                 // 既存のキャンセルトークンをキャンセルして破棄
@@ -1170,8 +1157,8 @@ namespace Illustra.Views
                     // アイテム数が少ない場合は全て読み込む
                     if (ThumbnailItemsControl.Items.Count <= 100)
                     {
-                        LogHelper.LogScrollTracking($"[スクロール停止] アイテム数が少ないため全て読み込みます: 0～{ThumbnailItemsControl.Items.Count - 1}");
                         await _thumbnailLoader.LoadMoreThumbnailsAsync(0, ThumbnailItemsControl.Items.Count - 1, cancellationToken);
+                        _isScrolling = false;
                         return;
                     }
 
@@ -1179,13 +1166,13 @@ namespace Illustra.Views
                     await LoadVisibleThumbnailsByVisibilityDetectionAsync(cancellationToken);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // キャンセルは正常な動作なのでログ出力しない
-            }
             catch (Exception ex)
             {
-                LogHelper.LogError("スクロール停止処理中にエラーが発生しました", ex);
+                LogHelper.LogError($"ScrollStopTimer_Tick エラー: {ex.Message}", ex, "ThumbnailListControl");
+            }
+            finally
+            {
+                _isScrolling = false;
             }
         }
 
@@ -3162,4 +3149,3 @@ namespace Illustra.Views
         }
     }
 }
-

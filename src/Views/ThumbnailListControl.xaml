@@ -263,7 +263,7 @@
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.CanContentScroll="True"
                   ScrollViewer.PanningMode="VerticalOnly"
-                  ScrollViewer.IsDeferredScrollingEnabled="True"
+                  ScrollViewer.IsDeferredScrollingEnabled="False"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
                   VirtualizingPanel.ScrollUnit="Pixel"
