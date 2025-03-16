@@ -46,8 +46,6 @@ namespace Illustra.Views
         // クラスレベルの変数を追加
         private bool _isFirstLoad = true;
         private bool _pendingSelection = false;
-        private int _pendingSelectionIndex = -1;
-
         private bool _isPromptFilterEnabled = false;
         private List<string> _currentTagFilters = new List<string>();
         private bool _isTagFilterEnabled = false;
@@ -57,8 +55,13 @@ namespace Illustra.Views
 
         private CancellationTokenSource? _thumbnailLoadCts;
 
-        // フォルダ読み込み完了イベントハンドラを改善
-        private bool _isProcessingFileNodesLoaded = false;
+        // フォルダ読み込み完了イベント処理中フラグ（OnFileNodesLoaded処理中のみtrue）
+        private bool _isProcessingOnFileNodesLoaded = false;
+        // 現在処理中のフォルダパス（OnFileNodesLoaded処理中のみ有効）
+        private string? _processingFolderPath = null;
+
+        private string? _pendingInitialSelectedFilePath;
+        private string? _initialSelectedFilePath;
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -339,7 +342,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void OnFolderSelected(FolderSelectedEventArgs args)
+        private void OnFolderSelected(FolderSelectedEventArgs args)
         {
             Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.Path}");
             string folderPath = args.Path;
@@ -367,14 +370,13 @@ namespace Illustra.Views
             // クリアしないとロード中に前のノードにサムネイルを設定してしまう
             _viewModel.ClearItems();
 
-            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            LoadFileNodes(folderPath, args.InitialSelectedFilePath);
-
             // 新しいフォルダの監視を開始
             _fileSystemMonitor.StartMonitoring(folderPath);
 
-            // ソート条件を適用
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending, !_pendingSelection);
+            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
+            LoadFileNodes(folderPath, args.InitialSelectedFilePath);
+
+            // ソート条件の適用はOnFileNodesLoadedで行う
         }
 
         public void SaveAllData()
@@ -709,59 +711,69 @@ namespace Illustra.Views
 
         private async void OnFileNodesLoaded(object? sender, EventArgs e)
         {
-            // 既に処理中の場合は重複実行を防止
-            if (_isProcessingFileNodesLoaded)
+            // 既に処理中の場合は実行しない
+            if (_isProcessingOnFileNodesLoaded)
+            {
+                LogHelper.LogWithTimestamp("OnFileNodesLoaded: 既に処理中のため、スキップします", "ThumbnailListControl");
                 return;
+            }
 
-            _isProcessingFileNodesLoaded = true;
+            _isProcessingOnFileNodesLoaded = true;
+            _processingFolderPath = _currentFolderPath;
 
             try
             {
-                LogWithTimestamp("[フォルダ切替] OnFileNodesLoaded メソッドが呼ばれました");
-
-                // キャンセルトークンを初期化
-                if (_thumbnailLoadCts != null)
-                {
-                    _thumbnailLoadCts.Cancel();
-                    _thumbnailLoadCts.Dispose();
-                }
-                _thumbnailLoadCts = new CancellationTokenSource();
-
-                // スクロール位置をリセット
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                    if (scrollViewer != null)
-                    {
-                        scrollViewer.ScrollToTop();
-                        LogWithTimestamp("[フォルダ切替] OnFileNodesLoadedでスクロール位置を先頭にリセットしました");
-                    }
-                }, DispatcherPriority.Render);
-
-                // レイアウトの更新を待機
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    ThumbnailItemsControl.UpdateLayout();
-                    LogWithTimestamp("[フォルダ切替] ThumbnailItemsControlのレイアウトを更新しました");
-                }, DispatcherPriority.Render);
+                LogHelper.LogWithTimestamp($"OnFileNodesLoaded: 処理開始 フォルダ: {_processingFolderPath}", "ThumbnailListControl");
 
                 // 初期サムネイルの読み込み
-                await LoadInitialThumbnailsAsync(_thumbnailLoadCts.Token);
-
-                // 先頭アイテムを選択
-                if (ThumbnailItemsControl.Items.Count > 0)
+                try
                 {
-                    var firstItem = ThumbnailItemsControl.Items[0] as FileNodeModel;
-                    if (firstItem != null)
+                    // 既存のキャンセルトークンがあれば利用し、なければ新規作成
+                    if (_thumbnailLoadCts == null || _thumbnailLoadCts.IsCancellationRequested)
                     {
-                        LogWithTimestamp($"[フォルダ切替] 先頭アイテムを選択します: {firstItem.FullPath}");
-                        SelectThumbnail(firstItem.FullPath);
+                        _thumbnailLoadCts = new CancellationTokenSource();
+                    }
+
+                    await _thumbnailLoader.LoadInitialThumbnailsAsync(_thumbnailLoadCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    LogHelper.LogWithTimestamp("OnFileNodesLoaded: サムネイルロードがキャンセルされました", "ThumbnailListControl");
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"OnFileNodesLoaded: サムネイルロード中にエラーが発生しました: {ex.Message}", ex, "ThumbnailListControl");
+                }
+
+                // 初期選択アイテムの処理
+                if (_initialSelectedFilePath != null)
+                {
+                    LogHelper.LogWithTimestamp($"OnFileNodesLoaded: 初期選択ファイル: {_initialSelectedFilePath}", "ThumbnailListControl");
+                    SelectThumbnail(_initialSelectedFilePath);
+                    _initialSelectedFilePath = null;
+                }
+                else if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    // 初期選択ファイルが指定されていない場合は最初のアイテムを選択
+                    LogHelper.LogWithTimestamp("OnFileNodesLoaded: 最初のアイテムを選択します", "ThumbnailListControl");
+                    ThumbnailItemsControl.SelectedIndex = 0;
+
+                    // 選択したアイテムのイベントを発行
+                    if (ThumbnailItemsControl.SelectedItem is FileNodeModel selectedItem)
+                    {
+                        _viewModel.SelectedItems.Clear();
+                        _viewModel.SelectedItems.Add(selectedItem);
+                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedItem.FullPath);
+                        LogHelper.LogWithTimestamp($"OnFileNodesLoaded: 最初のアイテムを選択しました: {selectedItem.FullPath}", "ThumbnailListControl");
                     }
                 }
+
+                LogHelper.LogWithTimestamp("OnFileNodesLoaded: 処理完了", "ThumbnailListControl");
             }
             finally
             {
-                _isProcessingFileNodesLoaded = false;
+                _isProcessingOnFileNodesLoaded = false;
+                _processingFolderPath = null;
             }
         }
 
@@ -1131,7 +1143,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void ScrollStopTimer_Tick(object sender, EventArgs e)
+        private async void ScrollStopTimer_Tick(object? sender, EventArgs e)
         {
             try
             {
@@ -1418,7 +1430,6 @@ namespace Illustra.Views
                             isCut = BitConverter.ToInt32(bytes, 0) == 2;
                         }
                     }
-
                     // ファイルを処理（isCut=trueの場合は移動、falseの場合はコピー）
                     var processedFiles = await ProcessImageFiles(files, !isCut);
 
@@ -1712,7 +1723,7 @@ namespace Illustra.Views
         /// <summary>
         /// レーティングキーの処理を行います
         /// </summary>
-        private bool HandleRatingKey(KeyEventArgs e)
+        private async Task<bool> HandleRatingKey(KeyEventArgs e)
         {
             for (int i = 1; i <= 5; i++)
             {
@@ -1753,7 +1764,7 @@ namespace Illustra.Views
             // フィルター解除
             if (KeyboardShortcutHandler.Instance.IsShortcutMatch(FuncId.FilterRating0, e.Key))
             {
-                ApplyFilterling(0);
+                await ApplyFilterling(0);
                 e.Handled = true;
                 return true;
             }
@@ -2201,17 +2212,26 @@ namespace Illustra.Views
             }, DispatcherPriority.Input);
         }
 
-        private string? _pendingInitialSelectedFilePath;
-
         internal void LoadFileNodes(string path, string? initialSelectedFilePath = null)
         {
             System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodes: {path}, 初期選択ファイル: {initialSelectedFilePath ?? "なし"}");
 
+            // 前の読み込み処理をキャンセル
+            if (_thumbnailLoadCts != null)
+            {
+                _thumbnailLoadCts.Cancel();
+                System.Diagnostics.Debug.WriteLine($"[CANCEL] フォルダ読み込み処理をキャンセルしました: {_currentFolderPath}");
+                _thumbnailLoadCts.Dispose();
+                _thumbnailLoadCts = null;
+            }
+
+            // 現在のフォルダパスを更新
             _currentFolderPath = path;
             _pendingInitialSelectedFilePath = initialSelectedFilePath;
+            _initialSelectedFilePath = initialSelectedFilePath;
 
-            // UIスレッドで実行
-            Dispatcher.InvokeAsync(() =>
+            // UIスレッドで実行（完了を待たない）
+            _ = Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -2227,8 +2247,25 @@ namespace Illustra.Views
                     _viewModel.SelectedItems.Clear();
                     ThumbnailItemsControl.SelectedItems.Clear();
 
-                    // ファイルノードの読み込みを開始
-                    _thumbnailLoader.LoadFileNodes(path);
+                    // 新しいキャンセルトークンを作成
+                    _thumbnailLoadCts = new CancellationTokenSource();
+
+                    // ファイルノードの読み込みを開始（バックグラウンドで実行）
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath, _thumbnailLoadCts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesがキャンセルされました: {path}");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesエラー: {ex.Message}");
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -2674,7 +2711,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void ThumbnailItemsControl_StatusChanged(object sender, EventArgs e)
+        private async void ThumbnailItemsControl_StatusChanged(object? sender, EventArgs e)
         {
             if (!_pendingSelection)
                 return;
@@ -2968,7 +3005,6 @@ namespace Illustra.Views
                 Debug.WriteLine($"LoadVisibleThumbnailsByPanelDetectionAsync エラー: {ex.Message}");
             }
         }
-
         private async Task LoadVisibleThumbnailsByVisibilityDetectionAsync(CancellationToken cancellationToken = default)
         {
             try
@@ -3126,3 +3162,4 @@ namespace Illustra.Views
         }
     }
 }
+

@@ -276,7 +276,7 @@ namespace Illustra.Models
         }
 
         // OnThumbnailInfoPropertyChangedメソッドを追加
-        private void OnThumbnailInfoPropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void OnThumbnailInfoPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             // ThumbnailInfoのプロパティが変更されたときの処理
             if (e.PropertyName == nameof(ThumbnailInfo.State))
@@ -353,7 +353,7 @@ namespace Illustra.Models
             _state = state;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
         {

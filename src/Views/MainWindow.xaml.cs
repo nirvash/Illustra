@@ -600,7 +600,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void OnNameSortChanged(object sender, RoutedEventArgs e)
+        private void OnNameSortChanged(object sender, RoutedEventArgs e)
         {
             var menuItem = sender as MenuItem;
             if (menuItem == null) return;

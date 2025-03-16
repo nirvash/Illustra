@@ -21,12 +21,25 @@ using System.Windows.Threading;
 using System.Collections.Concurrent;
 
 /// <summary>
+/// FileNodesLoadedEventArgsクラスを追加
+/// </summary>
+public class FileNodesLoadedEventArgs : EventArgs
+{
+    public string FolderPath { get; }
+
+    public FileNodesLoadedEventArgs(string folderPath)
+    {
+        FolderPath = folderPath;
+    }
+}
+
+/// <summary>
 /// サムネイルの読み込みと管理を行うヘルパークラス
 /// </summary>
 public class ThumbnailLoaderHelper
 {
-    private static SemaphoreSlim _folderLoadingSemaphore = new SemaphoreSlim(1, 1);
-    private static SemaphoreSlim _thumbnailLoadingSemaphore = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim _folderLoadingSemaphore = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim _thumbnailLoadingSemaphore = new SemaphoreSlim(1, 1);
     private static BitmapSource? _commonDummyImage;
     private static BitmapSource? _commonErrorImage;
     private static readonly object _staticLock = new object();
@@ -40,30 +53,21 @@ public class ThumbnailLoaderHelper
     private readonly MainViewModel _viewModel;
     private readonly Action<string> _selectCallback;
     private readonly DatabaseManager _db;
-
-    // フォルダ読み込み用のキャンセルトークンソース
+    private bool _isFileNodesLoadedEventFiring = false;
     private CancellationTokenSource? _folderLoadingCTS;
-    // サムネイル読み込み用のキャンセルトークンソース
-    private CancellationTokenSource? _thumbnailLoadingCTS;
 
-    public event EventHandler? FileNodesLoaded;
+    public event EventHandler<FileNodesLoadedEventArgs>? FileNodesLoaded;
     public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
 
-    private volatile bool _isLoading = false;
+    /// <summary>
+    /// 現在読み込み中または読み込み済みのフォルダパスを取得します
+    /// </summary>
+    public string CurrentFolderPath => _currentFolderPath;
+
     private volatile bool _isFullscreenMode = false;
 
     public bool SortByDate { get; set; } = true;
     public bool SortAscending { get; set; } = true;
-
-    // フォルダ読み込み用のセマフォを追加
-    private readonly SemaphoreSlim _folderLoadSemaphore = new SemaphoreSlim(1, 1);
-    // サムネイル読み込み用のセマフォを追加
-    private readonly SemaphoreSlim _thumbnailLoadSemaphore = new SemaphoreSlim(1, 1);
-
-    private volatile bool _isFileNodesLoadedEventFiring = false;
-
-    // 前回のスクロール位置を保持するフィールドを追加
-    private double _lastScrollOffset = 0;
 
     /// <summary>
     /// 全画面表示モードを設定します
@@ -152,27 +156,23 @@ public class ThumbnailLoaderHelper
     /// 指定されたフォルダの画像のノードを読み込みます
     /// </summary>
     /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
-    public async Task LoadFileNodes(string folderPath, string? initialSelectedFilePath = null)
+    /// <param name="initialSelectedFilePath">初期選択するファイルパス</param>
+    /// <param name="cancellationToken">キャンセルトークン</param>
+    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            // フォルダ読み込み用の新しいキャンセルトークンを作成
-            CancelFolderLoading();
-            _folderLoadingCTS = new CancellationTokenSource();
-            var cancellationToken = _folderLoadingCTS.Token;
+            // キャンセルされていたら早期リターン
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             // 同時に複数のフォルダを読み込まないようにセマフォを使用
-            await _folderLoadSemaphore.WaitAsync(cancellationToken);
+            await _folderLoadingSemaphore.WaitAsync(cancellationToken);
 
             try
             {
                 LogHelper.LogWithTimestamp($"フォルダ読み込み開始: {folderPath}", LogHelper.Categories.ThumbnailLoader);
                 _currentFolderPath = folderPath;
-                _isLoading = true;
-
-                // ViewModelのItemsをクリア
-                LogHelper.LogWithTimestamp("ViewModelのItemsをクリアしました", "ThumbnailLoader");
-                _viewModelItems.Clear();
 
                 // フォルダ内のファイル一覧を取得（すでにソート済み）
                 LogHelper.LogWithTimestamp("ファイル一覧の取得を開始", LogHelper.Categories.Performance);
@@ -195,13 +195,20 @@ public class ThumbnailLoaderHelper
                 // ViewModelのItemsを更新
                 LogHelper.LogWithTimestamp($"ViewModelのItemsを更新開始: {fileNodes.Count}件", "ThumbnailLoader");
 
-                // 重要: UIスレッドで実行し、DeferRefreshを使用しない
-                await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+                // キャンセルされていたら早期リターン
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
+                // UIスレッドのDispatcherを使用（Application.Current.Dispatcherを使用）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {
-                        // コレクションを一度クリアして、新しいアイテムを追加
-                        _viewModelItems.Clear();
+                        // キャンセルされていたら何もしない
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
+                        // 新しいアイテムを追加
                         foreach (var node in fileNodes)
                         {
                             _viewModelItems.Add(node);
@@ -223,7 +230,7 @@ public class ThumbnailLoaderHelper
                             _isFileNodesLoadedEventFiring = true;
                             try
                             {
-                                FileNodesLoaded?.Invoke(this, EventArgs.Empty);
+                                FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(_currentFolderPath));
                             }
                             finally
                             {
@@ -241,8 +248,7 @@ public class ThumbnailLoaderHelper
             }
             finally
             {
-                _isLoading = false;
-                _folderLoadSemaphore.Release();
+                _folderLoadingSemaphore.Release();
             }
         }
         catch (OperationCanceledException)
@@ -258,7 +264,7 @@ public class ThumbnailLoaderHelper
     /// <summary>
     /// 初期表示時に見える範囲のサムネイルをロードします
     /// </summary>
-    private async Task LoadInitialThumbnailsAsync(CancellationToken cancellationToken = default)
+    public async Task LoadInitialThumbnailsAsync(CancellationToken cancellationToken = default)
     {
         LogHelper.LogWithTimestamp("開始", "ThumbnailLoader");
 
@@ -267,17 +273,17 @@ public class ThumbnailLoaderHelper
             // 既存のトークンが有効な場合は再利用し、無効な場合のみ初期化
             lock (_staticLock)
             {
-                if (_thumbnailLoadingCTS == null || _thumbnailLoadingCTS.IsCancellationRequested)
+                if (_folderLoadingCTS == null || _folderLoadingCTS.IsCancellationRequested)
                 {
-                    InitializeThumbnailLoadingCTS();
+                    _folderLoadingCTS = new CancellationTokenSource();
                 }
             }
 
-            var thumbnailLoadingToken = _thumbnailLoadingCTS?.Token ?? CancellationToken.None;
+            var folderLoadingToken = _folderLoadingCTS.Token;
 
             // 複合キャンセルトークンを作成（外部からのキャンセルも受け付ける）
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, thumbnailLoadingToken);
+                cancellationToken, folderLoadingToken);
 
             // フィルタされたアイテムの個数をチェック
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
@@ -318,8 +324,8 @@ public class ThumbnailLoaderHelper
         try
         {
             // サムネイル読み込み用の新しいキャンセルトークンを作成
-            InitializeThumbnailLoadingCTS();
-            var thumbnailLoadingToken = _thumbnailLoadingCTS?.Token ?? CancellationToken.None;
+            _folderLoadingCTS = new CancellationTokenSource();
+            var folderLoadingToken = _folderLoadingCTS.Token;
 
             // ダミー画像を取得
             var dummyImage = GetDummyImage();
@@ -337,7 +343,7 @@ public class ThumbnailLoaderHelper
                 int firstIndex = 0;
                 int lastIndex = Math.Min(20, fileNodes.Count - 1);
 
-                await LoadMoreThumbnailsAsync(firstIndex, lastIndex, thumbnailLoadingToken);
+                await LoadMoreThumbnailsAsync(firstIndex, lastIndex, folderLoadingToken);
             }
         }
         catch (Exception ex)
@@ -474,68 +480,9 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// サムネイル読み込み用のキャンセルトークンを初期化します
-    /// </summary>
-    private void InitializeThumbnailLoadingCTS()
-    {
-        lock (_staticLock)
-        {
-            if (_thumbnailLoadingCTS != null)
-            {
-                if (!_thumbnailLoadingCTS.IsCancellationRequested)
-                {
-                    _thumbnailLoadingCTS.Cancel();
-                }
-                _thumbnailLoadingCTS.Dispose();
-            }
-            _thumbnailLoadingCTS = new CancellationTokenSource();
-        }
-    }
-
-    /// <summary>
-    /// サムネイル読み込み用のキャンセルトークンを取得します
-    /// </summary>
-    public CancellationToken GetThumbnailLoadingToken()
-    {
-        return _thumbnailLoadingCTS?.Token ?? CancellationToken.None;
-    }
-
-    /// <summary>
-    /// フォルダ読み込み用のキャンセルトークンを取得します
-    /// </summary>
-    public CancellationToken GetFolderLoadingToken()
-    {
-        return _folderLoadingCTS?.Token ?? CancellationToken.None;
-    }
-
-    /// <summary>
     /// サムネイル読み込みをキャンセルします
     /// </summary>
-    public void CancelThumbnailLoading()
-    {
-        if (_thumbnailLoadingCTS != null)
-        {
-            try
-            {
-                _thumbnailLoadingCTS.Cancel();
-                Debug.WriteLine($"[CANCEL] サムネイル読み込み処理をキャンセルしました");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ERROR] サムネイル読み込みキャンセル処理中にエラーが発生しました: {ex.Message}");
-            }
-            finally
-            {
-                _thumbnailLoadingCTS.Dispose();
-                _thumbnailLoadingCTS = null;
-            }
-        }
-    }
-
-    /// <summary>
-    /// フォルダ読み込みをキャンセルします
-    /// </summary>
-    public void CancelFolderLoading()
+    public void CancelAllLoading()
     {
         if (_folderLoadingCTS != null)
         {
@@ -554,15 +501,6 @@ public class ThumbnailLoaderHelper
                 _folderLoadingCTS = null;
             }
         }
-    }
-
-    /// <summary>
-    /// すべての読み込み処理をキャンセルします
-    /// </summary>
-    public void CancelAllLoading()
-    {
-        CancelFolderLoading();
-        CancelThumbnailLoading();
     }
 
     private ThumbnailInfo GetOrCreateThumbnail(string? imagePath, CancellationToken cancellationToken)
@@ -587,7 +525,7 @@ public class ThumbnailLoaderHelper
             Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
             throw;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Debug.WriteLine($"[ERROR] サムネイルの作成中にエラーが発生しました: {imagePath}");
             var errorImage = GetErrorImage();
@@ -849,7 +787,7 @@ public class ThumbnailLoaderHelper
 
 
         // キャンセルトークンを取得
-        var cancellationToken = GetThumbnailLoadingToken();
+        var cancellationToken = _folderLoadingCTS?.Token ?? CancellationToken.None;
 
         try
         {
@@ -860,7 +798,6 @@ public class ThumbnailLoaderHelper
                 // 先読み範囲を設定
                 int preloadStartIndex = Math.Max(0, endIndex + 1);
                 int preloadEndIndex = Math.Min(filteredNodes.Length - 1, endIndex + 72); // 72個先まで先読み
-
                 for (int i = preloadStartIndex; i <= preloadEndIndex; i++)
                 {
                     if (cancellationToken.IsCancellationRequested)
@@ -1387,4 +1324,5 @@ public enum ScrollDirection
     Up,     // 上方向へのスクロール
     Down    // 下方向へのスクロール
 }
+
 
