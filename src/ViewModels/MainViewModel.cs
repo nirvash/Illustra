@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using Illustra.Views;
 using System.Linq;
+using System.IO;
 
 namespace Illustra.ViewModels
 {
@@ -295,8 +296,16 @@ namespace Illustra.ViewModels
             try
             {
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                _promptCache[filePath] = !string.IsNullOrEmpty(properties?.UserComment) &&
-                                            (properties?.HasStableDiffusionData ?? false);
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
+                if (extension == ".jpg" || extension == ".jpeg" || extension == ".png")
+                {
+                    _promptCache[filePath] = !string.IsNullOrEmpty(properties?.UserComment) &&
+                                                (properties?.HasStableDiffusionData ?? false);
+                }
+                else
+                {
+                    _promptCache[filePath] = false;
+                }
             }
             catch
             {
