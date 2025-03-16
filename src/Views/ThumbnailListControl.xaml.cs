@@ -1050,6 +1050,13 @@ namespace Illustra.Views
                 var scrollViewer = sender as ScrollViewer;
                 if (scrollViewer == null) return;
 
+                // アイテムがない場合は何もしない
+                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                {
+                    LogHelper.LogScrollTracking("[スクロール中] アイテムが存在しないため処理をスキップします");
+                    return;
+                }
+
                 // スクロール停止タイマーをリセット
                 _scrollStopTimer.Stop();
                 _scrollStopTimer.Start();
@@ -1095,22 +1102,38 @@ namespace Illustra.Views
         {
             try
             {
+                // アイテムがない場合は何もしない
+                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                {
+                    LogHelper.LogScrollTracking("[スクロール中] アイテムが存在しないため軽量サムネイル読み込みをスキップします");
+                    return;
+                }
+
                 // 低優先度で実行
                 await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
                 // スクロール位置から表示範囲を直接計算（コンテナ検索より高速）
-                double itemHeight = _appSettings.ThumbnailSize + 4; // マージンを考慮
-                int itemsPerRow = Math.Max(1, (int)(scrollViewer.ViewportWidth / (_appSettings.ThumbnailSize + 4)));
+                double viewportTop = scrollViewer.VerticalOffset;
+                double viewportBottom = viewportTop + scrollViewer.ViewportHeight;
 
-                int firstVisibleIndex = Math.Max(0, (int)(scrollViewer.VerticalOffset / itemHeight) * itemsPerRow);
-                int lastVisibleIndex = Math.Min(
-                    GetFilteredItemsCount() - 1,
-                    (int)((scrollViewer.VerticalOffset + scrollViewer.ViewportHeight) / itemHeight + 1) * itemsPerRow - 1
-                );
+                // サムネイルサイズから推定アイテム高さを計算
+                double itemHeight = _appSettings.ThumbnailSize + 20; // マージンを考慮
+
+                // パネルからアイテム数/行を取得
+                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+                int itemsPerRow = GetItemsPerRow(panel);
+                if (itemsPerRow <= 0) itemsPerRow = 1;
+
+                // 表示範囲内の行を計算
+                int firstVisibleRow = Math.Max(0, (int)(viewportTop / itemHeight));
+                int lastVisibleRow = Math.Min((int)(ThumbnailItemsControl.Items.Count / itemsPerRow),
+                                            (int)(viewportBottom / itemHeight) + 1);
+
+                // 行からアイテムのインデックスを計算
+                int firstVisibleIndex = firstVisibleRow * itemsPerRow;
+                int lastVisibleIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1,
+                                            (lastVisibleRow + 1) * itemsPerRow - 1);
 
                 // 小さいバッファで読み込み（スクロール中は最小限）
                 int bufferSize = 5;
@@ -1123,56 +1146,11 @@ namespace Illustra.Views
             }
             catch (OperationCanceledException)
             {
-                throw;
+                // キャンセルされた場合は何もしない
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"LoadVisibleThumbnailsLightAsync エラー: {ex.Message}");
-            }
-        }
-
-        private async void ScrollStopTimer_Tick(object? sender, EventArgs e)
-        {
-            try
-            {
-                _scrollStopTimer.Stop();
-
-                // 既存のキャンセルトークンをキャンセルして破棄
-                if (_thumbnailLoadCts != null)
-                {
-                    _thumbnailLoadCts.Cancel();
-                    _thumbnailLoadCts.Dispose();
-                }
-
-                // 新しいキャンセルトークンを作成
-                _thumbnailLoadCts = new CancellationTokenSource();
-                var cancellationToken = _thumbnailLoadCts.Token;
-
-                // スクロール位置のログ出力
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer != null)
-                {
-                    LogHelper.LogScrollTracking($"[スクロール停止] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
-
-                    // アイテム数が少ない場合は全て読み込む
-                    if (ThumbnailItemsControl.Items.Count <= 100)
-                    {
-                        await _thumbnailLoader.LoadMoreThumbnailsAsync(0, ThumbnailItemsControl.Items.Count - 1, cancellationToken);
-                        _isScrolling = false;
-                        return;
-                    }
-
-                    // 可視性検出を使用してサムネイルを読み込む
-                    await LoadVisibleThumbnailsByVisibilityDetectionAsync(cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"ScrollStopTimer_Tick エラー: {ex.Message}", ex, "ThumbnailListControl");
-            }
-            finally
-            {
-                _isScrolling = false;
             }
         }
 
@@ -2199,26 +2177,28 @@ namespace Illustra.Views
             }, DispatcherPriority.Input);
         }
 
-        internal void LoadFileNodes(string path, string? initialSelectedFilePath = null)
+        /// <summary>
+        /// 指定されたフォルダのファイルノードを読み込みます
+        /// </summary>
+        public async Task LoadFileNodes(string path, string? initialSelectedFilePath = null)
         {
-            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodes: {path}, 初期選択ファイル: {initialSelectedFilePath ?? "なし"}");
+            if (string.IsNullOrEmpty(path))
+                return;
 
-            // 前の読み込み処理をキャンセル
-            if (_thumbnailLoadCts != null)
-            {
-                _thumbnailLoadCts.Cancel();
-                System.Diagnostics.Debug.WriteLine($"[CANCEL] フォルダ読み込み処理をキャンセルしました: {_currentFolderPath}");
-                _thumbnailLoadCts.Dispose();
-                _thumbnailLoadCts = null;
-            }
+            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodes: {path}, 初期選択ファイル: {initialSelectedFilePath ?? "なし"}");
 
             // 現在のフォルダパスを更新
             _currentFolderPath = path;
             _pendingInitialSelectedFilePath = initialSelectedFilePath;
             _initialSelectedFilePath = initialSelectedFilePath;
 
+            // 既存のアイテムをクリア
+            _viewModel.Items.Clear();
+            // FilteredItemsはICollectionViewなのでClearメソッドがない
+            // _viewModel.FilteredItems.Clear();
+
             // UIスレッドで実行（完了を待たない）
-            _ = Dispatcher.InvokeAsync(() =>
+            _ = Dispatcher.InvokeAsync(async () =>
             {
                 try
                 {
@@ -2234,31 +2214,45 @@ namespace Illustra.Views
                     _viewModel.SelectedItems.Clear();
                     ThumbnailItemsControl.SelectedItems.Clear();
 
-                    // 新しいキャンセルトークンを作成
-                    _thumbnailLoadCts = new CancellationTokenSource();
-
-                    // ファイルノードの読み込みを開始（バックグラウンドで実行）
-                    _ = Task.Run(async () =>
+                    // 既存のキャンセルトークンをキャンセルして破棄
+                    if (_thumbnailLoadCts != null)
                     {
                         try
                         {
-                            await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath, _thumbnailLoadCts.Token);
+                            _thumbnailLoadCts.Cancel();
+                            _thumbnailLoadCts.Dispose();
                         }
-                        catch (OperationCanceledException)
+                        catch (ObjectDisposedException ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesがキャンセルされました: {path}");
+                            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] キャンセルトークン破棄中にエラー: {ex.Message}");
                         }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesエラー: {ex.Message}");
-                        }
-                    });
+                        _thumbnailLoadCts = null;
+                    }
+
+                    // 新しいキャンセルトークンを作成
+                    _thumbnailLoadCts = new CancellationTokenSource();
+                    var token = _thumbnailLoadCts.Token;
+
+                    // ファイルノードの読み込みを開始
+                    try
+                    {
+                        // 直接同期的に呼び出す（Task.Runを使わない）
+                        await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesがキャンセルされました: {path}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesエラー: {ex.Message}");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesエラー: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[フォルダ切替] UIスレッド処理中にエラー: {ex.Message}");
                 }
-            }, DispatcherPriority.Normal);
+            });
         }
 
 
@@ -3146,6 +3140,63 @@ namespace Illustra.Views
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
             System.Diagnostics.Debug.WriteLine($"[{timestamp}] {message}");
+        }
+
+        private async void ScrollStopTimer_Tick(object? sender, EventArgs e)
+        {
+            try
+            {
+                _scrollStopTimer.Stop();
+
+                // アイテムがない場合は何もしない
+                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                {
+                    LogHelper.LogScrollTracking("[スクロール停止] アイテムが存在しないため処理をスキップします");
+                    _isScrolling = false;
+                    return;
+                }
+
+                // 既存のキャンセルトークンをキャンセルして破棄
+                if (_thumbnailLoadCts != null)
+                {
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
+                }
+
+                // 新しいキャンセルトークンを作成
+                _thumbnailLoadCts = new CancellationTokenSource();
+                var cancellationToken = _thumbnailLoadCts.Token;
+
+                // スクロール位置のログ出力
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer != null)
+                {
+                    LogHelper.LogScrollTracking($"[スクロール停止] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
+
+                    // アイテム数が少ない場合は全て読み込む
+                    if (ThumbnailItemsControl.Items.Count <= 100)
+                    {
+                        await _thumbnailLoader.LoadMoreThumbnailsAsync(0, ThumbnailItemsControl.Items.Count - 1, cancellationToken);
+                        _isScrolling = false;
+                        return;
+                    }
+
+                    // 可視性検出を使用してサムネイルを読み込む
+                    await LoadVisibleThumbnailsByVisibilityDetectionAsync(cancellationToken);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルされた場合は何もしない
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"ScrollStopTimer_Tick エラー: {ex.Message}", ex, "ThumbnailListControl");
+            }
+            finally
+            {
+                _isScrolling = false;
+            }
         }
     }
 }
