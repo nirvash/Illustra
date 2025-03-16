@@ -1895,7 +1895,7 @@ namespace Illustra.Views
                             var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
                             if (index >= 0)
                             {
-                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None);
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None, true);
                             }
                         });
                     }

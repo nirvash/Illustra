@@ -1101,7 +1101,7 @@ public class ThumbnailLoaderHelper
         try
         {
             // 処理中フラグを設定
-            await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 fileNode.ThumbnailInfo.IsLoadingThumbnail = true;
             }, DispatcherPriority.Send);
@@ -1135,7 +1135,7 @@ public class ThumbnailLoaderHelper
             if (thumbnail != null)
             {
                 // 重要: UIスレッドで同期的に実行し、確実に更新を反映させる
-                await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // 既に読み込み済みの場合はスキップ（並列処理による競合を防ぐ）
                     if (fileNode.ThumbnailInfo.State == ThumbnailState.Loaded)
@@ -1152,7 +1152,7 @@ public class ThumbnailLoaderHelper
             }
             else
             {
-                await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // エラー状態を設定
                     fileNode.ThumbnailInfo = new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
@@ -1164,7 +1164,7 @@ public class ThumbnailLoaderHelper
         catch (OperationCanceledException)
         {
             // キャンセルされた場合は処理中フラグをリセット
-            await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 fileNode.ThumbnailInfo.IsLoadingThumbnail = false;
             }, DispatcherPriority.Send);
@@ -1174,7 +1174,7 @@ public class ThumbnailLoaderHelper
         catch (Exception ex)
         {
             // エラー発生時も処理中フラグをリセット
-            await Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 fileNode.ThumbnailInfo.IsLoadingThumbnail = false;
             }, DispatcherPriority.Send);
@@ -1446,7 +1446,7 @@ public class ThumbnailLoaderHelper
         // UIスレッドで実行されていない場合は、UIスレッドにディスパッチ
         if (!System.Windows.Threading.Dispatcher.CurrentDispatcher.CheckAccess())
         {
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+            Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 InvokeScrollToItemRequested(item);
             }, System.Windows.Threading.DispatcherPriority.Normal);
