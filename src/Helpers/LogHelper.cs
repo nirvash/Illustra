@@ -17,6 +17,7 @@ namespace Illustra.Helpers
             public const string Error = "ERROR";
             public const string Performance = "PERFORMANCE";
             public const string ThumbnailLoader = "THUMBNAIL_LOADER";
+            public const string ThumbnailQueue = "THUMBNAIL_QUEUE";
             public const string FileOperation = "FILE_OPERATION";
             public const string Database = "DATABASE";
             public const string UI = "UI";
@@ -39,6 +40,7 @@ namespace Illustra.Helpers
             _enabledCategories[Categories.Error] = true;
             _enabledCategories[Categories.Performance] = true;
             _enabledCategories[Categories.ThumbnailLoader] = true;
+            _enabledCategories[Categories.ThumbnailQueue] = true;
             _enabledCategories[Categories.FileOperation] = true;
             _enabledCategories[Categories.Database] = true;
             _enabledCategories[Categories.UI] = true;

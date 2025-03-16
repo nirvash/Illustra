@@ -56,9 +56,12 @@ public class ThumbnailLoaderHelper
     private bool _isFileNodesLoadedEventFiring = false;
     private CancellationTokenSource? _folderLoadingCTS;
     private CancellationTokenSource? _thumbnailLoadCts;
+    private readonly ThumbnailRequestQueue _requestQueue;
+    private readonly IThumbnailProcessorService _thumbnailProcessor;
 
     public event EventHandler<FileNodesLoadedEventArgs>? FileNodesLoaded;
     public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
+    public event EventHandler<ThumbnailLoadEventArgs>? ThumbnailsLoaded;
 
     /// <summary>
     /// 現在読み込み中または読み込み済みのフォルダパスを取得します
@@ -115,7 +118,8 @@ public class ThumbnailLoaderHelper
         Action<string> selectCallback,
         ThumbnailListControl control,
         MainViewModel viewModel,
-        DatabaseManager db)
+        DatabaseManager db,
+        IThumbnailProcessorService thumbnailProcessor)
     {
         _thumbnailListBox = thumbnailListBox ?? throw new ArgumentNullException(nameof(thumbnailListBox));
         _selectCallback = selectCallback;
@@ -123,6 +127,8 @@ public class ThumbnailLoaderHelper
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _viewModelItems = viewModel.Items ?? throw new ArgumentNullException(nameof(viewModel.Items));
+        _thumbnailProcessor = thumbnailProcessor ?? throw new ArgumentNullException(nameof(thumbnailProcessor));
+        _requestQueue = new ThumbnailRequestQueue(_thumbnailProcessor);
 
         // 設定を読み込む
         _appSettings = SettingsHelper.GetSettings();
@@ -462,108 +468,39 @@ public class ThumbnailLoaderHelper
     /// <summary>
     /// 表示されている範囲のサムネイルを読み込みます（キャンセル対応版）
     /// </summary>
-    public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex, CancellationToken cancellationToken, bool highPriority = false, ScrollDirection scrollDirection = ScrollDirection.None)
+    public async Task LoadMoreThumbnailsAsync(int startIndex, int endIndex, CancellationToken cancellationToken, bool isHighPriority = false)
     {
-        try
-        {
-            LogHelper.LogWithTimestamp($"LoadMoreThumbnailsAsync メソッドが呼ばれました: ({startIndex} - {endIndex}, highPriority: {highPriority}, direction: {scrollDirection})", LogHelper.Categories.ThumbnailLoader);
+        var tcs = new TaskCompletionSource<bool>();
 
-            // 無効な範囲の場合は早期リターン
-            if (endIndex < startIndex)
+        // 新しいリクエストを作成
+        var request = new ThumbnailRequest(
+            startIndex: startIndex,
+            endIndex: endIndex,
+            isHighPriority: isHighPriority,
+            cancellationToken: cancellationToken,
+            completionCallback: (req, success) =>
             {
-                LogHelper.LogWithTimestamp($"無効な範囲が指定されました: {startIndex}～{endIndex}", LogHelper.Categories.ThumbnailLoader);
-                return;
-            }
-
-            // インデックスの範囲を調整
-            startIndex = Math.Max(0, startIndex);
-            endIndex = Math.Min(_viewModelItems.Count - 1, endIndex);
-
-            // 調整後も無効な範囲の場合は早期リターン
-            if (endIndex < startIndex || startIndex < 0 || endIndex < 0)
-            {
-                LogHelper.LogWithTimestamp($"調整後の範囲が無効です: {startIndex}～{endIndex}", LogHelper.Categories.ThumbnailLoader);
-                return;
-            }
-
-            LogHelper.LogWithTimestamp($"調整後の範囲: {startIndex}～{endIndex}", LogHelper.Categories.ThumbnailLoader);
-
-            // 処理するインデックスのリストを作成
-            var indicesToProcess = new List<int>();
-            for (int i = startIndex; i <= endIndex; i++)
-            {
-                // 既に処理中または処理済みのアイテムはスキップ
-                var item = _viewModelItems[i];
-                if (item.ThumbnailInfo.State == ThumbnailState.Loading ||
-                    item.ThumbnailInfo.State == ThumbnailState.Loaded)
-                    continue;
-
-                indicesToProcess.Add(i);
-            }
-
-            if (indicesToProcess.Count == 0)
-            {
-                LogHelper.LogWithTimestamp("処理対象のアイテムがありません（すべて処理済みまたは処理中）", LogHelper.Categories.ThumbnailLoader);
-                return;
-            }
-
-            // スクロール方向に応じて処理順序を最適化
-            switch (scrollDirection)
-            {
-                case ScrollDirection.Down:
-                default:
-                    // 不明時と下方向スクロール時は上から下へ処理
-                    indicesToProcess = indicesToProcess.OrderBy(i => i).ToList();
-                    LogHelper.LogWithTimestamp("下方向スクロール: 上から下へ処理", LogHelper.Categories.ThumbnailLoader);
-                    break;
-
-                case ScrollDirection.Up:
-                    // 上方向スクロール時は下から上へ処理
-                    indicesToProcess = indicesToProcess.OrderByDescending(i => i).ToList();
-                    LogHelper.LogWithTimestamp("上方向スクロール: 下から上へ処理", LogHelper.Categories.ThumbnailLoader);
-                    break;
-            }
-
-            // 高優先度の場合は、最初の数個のアイテムを同期的に処理
-            if (highPriority && indicesToProcess.Count > 0)
-            {
-                int syncProcessCount = Math.Min(4, indicesToProcess.Count);
-                LogHelper.LogWithTimestamp($"高優先度処理: 同期処理数={syncProcessCount}", LogHelper.Categories.ThumbnailLoader);
-
-                for (int i = 0; i < syncProcessCount; i++)
+                // 完了時のコールバック
+                if (success)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
-
-                    int index = indicesToProcess[i];
-                    await CreateThumbnailAsync(index, cancellationToken);
+                    tcs.TrySetResult(true);
+                }
+                else
+                {
+                    tcs.TrySetResult(false); // または例外情報があればTrySetExceptionも可能
                 }
 
-                // 同期処理したアイテムを除外
-                indicesToProcess = indicesToProcess.Skip(syncProcessCount).ToList();
+                // 必要に応じて追加の処理（UI更新通知など）
+                OnThumbnailsLoaded(startIndex, endIndex, success);
             }
+        );
 
-            // 残りのアイテムを並列処理
-            if (indicesToProcess.Count > 0 && !cancellationToken.IsCancellationRequested)
-            {
-                int maxParallel = highPriority ? 8 : 16;
-                LogHelper.LogWithTimestamp($"{(highPriority ? "高優先度" : "通常優先度")}処理: 並列度={maxParallel}", LogHelper.Categories.ThumbnailLoader);
+        // リクエストをキューに追加
+        _requestQueue.EnqueueRequest(request);
 
-                await Task.WhenAll(
-                    Partitioner.Create(indicesToProcess)
-                        .GetPartitions(maxParallel)
-                        .Select(async partition =>
-                        {
-                            using (partition)
-                            {
-                                while (partition.MoveNext() && !cancellationToken.IsCancellationRequested)
-                                {
-                                    await CreateThumbnailAsync(partition.Current, cancellationToken);
-                                }
-                            }
-                        })
-                );
-            }
+        try
+        {
+            await tcs.Task;
         }
         catch (OperationCanceledException)
         {
@@ -580,110 +517,14 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public void CancelAllLoading()
     {
-        CancelFolderLoading();
-        CancelThumbnailLoading();
+        _requestQueue.ClearQueue();
+        // 必要に応じて現在処理中のリクエストをキャンセルする処理を追加
     }
 
-    private void CancelThumbnailLoading()
+    private void OnThumbnailsLoaded(int startIndex, int endIndex, bool success)
     {
-        var cts = Interlocked.Exchange(ref _thumbnailLoadCts, null);
-        if (cts != null)
-        {
-            try
-            {
-                if (!cts.IsCancellationRequested)
-                {
-                    cts.Cancel();
-                    Debug.WriteLine("[CANCEL] サムネイル読み込み処理をキャンセルしました");
-                }
-            }
-            catch (ObjectDisposedException ex)
-            {
-                Debug.WriteLine($"[CANCEL] サムネイル読み込みキャンセル - トークンは既に破棄されています: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ERROR] サムネイル読み込みキャンセル処理中にエラーが発生しました: {ex.Message}");
-            }
-            finally
-            {
-                try
-                {
-                    cts.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 既に破棄されている場合は無視
-                }
-            }
-        }
+        ThumbnailsLoaded?.Invoke(this, new ThumbnailLoadEventArgs(startIndex, endIndex, success));
     }
-
-    private void CancelFolderLoading()
-    {
-        var cts = Interlocked.Exchange(ref _folderLoadingCTS, null);
-        if (cts != null)
-        {
-            try
-            {
-                if (!cts.IsCancellationRequested)
-                {
-                    cts.Cancel();
-                    Debug.WriteLine($"[CANCEL] フォルダ読み込み処理をキャンセルしました: {_currentFolderPath}");
-                }
-            }
-            catch (ObjectDisposedException ex)
-            {
-                Debug.WriteLine($"[CANCEL] フォルダ読み込みキャンセル - トークンは既に破棄されています: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ERROR] フォルダ読み込みキャンセル処理中にエラーが発生しました: {ex.Message}");
-            }
-            finally
-            {
-                try
-                {
-                    cts.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 既に破棄されている場合は無視
-                }
-            }
-        }
-    }
-
-    private ThumbnailInfo GetOrCreateThumbnail(string? imagePath, CancellationToken cancellationToken)
-    {
-        if (imagePath == null)
-        {
-            return new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
-        }
-
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var thumbnail = ThumbnailHelper.CreateThumbnailOptimized(imagePath, _thumbnailSize - 2, _thumbnailSize - 2, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            return new ThumbnailInfo(thumbnail, ThumbnailState.Loaded);
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
-            throw;
-        }
-        catch (Exception)
-        {
-            Debug.WriteLine($"[ERROR] サムネイルの作成中にエラーが発生しました: {imagePath}");
-            var errorImage = GetErrorImage();
-            return new ThumbnailInfo(errorImage, ThumbnailState.Error);
-        }
-    }
-
 
     public BitmapSource GetDummyImage()
     {
@@ -1450,7 +1291,81 @@ public class ThumbnailLoaderHelper
         ScrollToItemRequested?.Invoke(this, args);
     }
 
+    private ThumbnailInfo GetOrCreateThumbnail(string? imagePath, CancellationToken cancellationToken)
+    {
+        if (imagePath == null)
+        {
+            return new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
+        }
 
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var thumbnail = ThumbnailHelper.CreateThumbnailOptimized(imagePath, _thumbnailSize - 2, _thumbnailSize - 2, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return new ThumbnailInfo(thumbnail, ThumbnailState.Loaded);
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
+            throw;
+        }
+        catch (Exception)
+        {
+            Debug.WriteLine($"[ERROR] サムネイルの作成中にエラーが発生しました: {imagePath}");
+            var errorImage = GetErrorImage();
+            return new ThumbnailInfo(errorImage, ThumbnailState.Error);
+        }
+    }
+
+    /// <summary>
+    /// 処理キューを使用してサムネイルを読み込みます
+    /// </summary>
+    public Task LoadThumbnailsWithQueueAsync(int startIndex, int endIndex, CancellationToken cancellationToken, bool isHighPriority = false)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+
+        // 新しいリクエストを作成
+        var request = new ThumbnailRequest(
+            startIndex: startIndex,
+            endIndex: endIndex,
+            isHighPriority: isHighPriority,
+            cancellationToken: cancellationToken,
+            completionCallback: (req, success) =>
+            {
+                // キャンセルされた場合は特別な処理をしない
+                if (req.CancellationToken.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled();
+                    return;
+                }
+
+                // 完了時のコールバック
+                if (success)
+                {
+                    tcs.TrySetResult(true);
+                }
+                else
+                {
+                    tcs.TrySetResult(false);
+                }
+
+                // 必要に応じて追加の処理
+                LogHelper.LogWithTimestamp($"サムネイル処理完了通知: {req.StartIndex}～{req.EndIndex}, 成功: {success}", LogHelper.Categories.ThumbnailLoader);
+            }
+        );
+
+        // キャンセルされたリクエストをキューから削除
+        _requestQueue.CancelRequests(cancellationToken);
+
+        // リクエストをキューに追加
+        _requestQueue.EnqueueRequest(request);
+
+        return tcs.Task;
+    }
 }
 
 /// <summary>
@@ -1474,6 +1389,23 @@ public enum ScrollDirection
     None,   // 方向不明または初期表示
     Up,     // 上方向へのスクロール
     Down    // 下方向へのスクロール
+}
+
+/// <summary>
+/// サムネイルロード完了イベント引数クラス
+/// </summary>
+public class ThumbnailLoadEventArgs : EventArgs
+{
+    public int StartIndex { get; }
+    public int EndIndex { get; }
+    public bool Success { get; }
+
+    public ThumbnailLoadEventArgs(int startIndex, int endIndex, bool success)
+    {
+        StartIndex = startIndex;
+        EndIndex = endIndex;
+        Success = success;
+    }
 }
 
 
