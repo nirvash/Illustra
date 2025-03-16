@@ -71,6 +71,7 @@ namespace Illustra.Helpers
         private readonly DequeList<ThumbnailRequest> _normalPriorityRequests = new DequeList<ThumbnailRequest>();
         private bool _isProcessing = false;
         private readonly IThumbnailProcessorService _thumbnailProcessor;
+        private bool _isScrolling = false;
 
         /// <summary>
         /// コンストラクタ
@@ -158,17 +159,69 @@ namespace Illustra.Helpers
             {
                 LogHelper.LogWithTimestamp($"サムネイル処理実行中: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
 
-                // キャンセルされていないか確認
-                request.CancellationToken.ThrowIfCancellationRequested();
-
-                // サムネイル処理の実行
-                for (int i = request.StartIndex; i <= request.EndIndex; i++)
+                // キャンセルされていないか確認（例外ではなく早期リターン）
+                if (request.CancellationToken.IsCancellationRequested)
                 {
-                    // 各インデックスごとにキャンセルチェック
-                    request.CancellationToken.ThrowIfCancellationRequested();
+                    LogHelper.LogWithTimestamp($"サムネイル処理がキャンセルされました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    return;
+                }
 
-                    // サムネイル生成処理を実行
-                    await _thumbnailProcessor.CreateThumbnailAsync(i, request.CancellationToken);
+                // スクロール中かどうかをチェック
+                if (_isScrolling && !request.IsHighPriority)
+                {
+                    LogHelper.LogWithTimestamp($"スクロール中のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    return;
+                }
+
+                // バッチ処理の実装
+                int batchSize = 5; // 一度に処理するサムネイルの数
+                for (int i = request.StartIndex; i <= request.EndIndex; i += batchSize)
+                {
+                    // バッチごとにキャンセルチェック（例外ではなく早期リターン）
+                    if (request.CancellationToken.IsCancellationRequested)
+                    {
+                        LogHelper.LogWithTimestamp($"バッチ処理中にキャンセルされました: {i}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                        return;
+                    }
+
+                    // バッチの終了インデックスを計算
+                    int endBatchIndex = Math.Min(i + batchSize - 1, request.EndIndex);
+
+                    // バッチ内の各サムネイルを処理
+                    for (int j = i; j <= endBatchIndex; j++)
+                    {
+                        // 各インデックスごとにキャンセルチェック（例外ではなく早期リターン）
+                        if (request.CancellationToken.IsCancellationRequested)
+                        {
+                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセルされました: インデックス {j}", LogHelper.Categories.ThumbnailQueue);
+                            return;
+                        }
+
+                        try
+                        {
+                            // サムネイル生成処理を実行
+                            await _thumbnailProcessor.CreateThumbnailAsync(j, request.CancellationToken);
+
+                            // UIの応答性を維持するために短い遅延を入れる
+                            // キャンセルトークンを渡さないことで、キャンセル時に例外が発生しないようにする
+                            await Task.Delay(1);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // キャンセル例外を無視して処理を終了（例外ではなく早期リターン）
+                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセル例外が発生しました: インデックス {j}", LogHelper.Categories.ThumbnailQueue);
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            // その他の例外はログに記録するが処理は続行
+                            LogHelper.LogError($"サムネイル処理中にエラーが発生しました (インデックス: {j}): {ex.Message}", ex);
+                        }
+                    }
+
+                    // バッチ間で短い遅延を入れてUIスレッドに処理を戻す
+                    // キャンセルトークンを渡さないことで、キャンセル時に例外が発生しないようにする
+                    await Task.Delay(5);
                 }
 
                 success = true;
@@ -176,6 +229,7 @@ namespace Illustra.Helpers
             }
             catch (OperationCanceledException)
             {
+                // キャンセル例外をキャッチして処理を終了
                 LogHelper.LogWithTimestamp($"サムネイル処理がキャンセルされました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
                 success = false;
             }
@@ -235,19 +289,23 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
-        /// キャンセルされたリクエストをキューから削除します
+        /// 指定されたキャンセルトークンに関連するリクエストをキューから削除します
         /// </summary>
         public void CancelRequests(CancellationToken token)
         {
             lock (_queueLock)
             {
-                // 高優先度リストからキャンセルされたリクエストを削除
-                _highPriorityRequests.RemoveAll(request => request.CancellationToken.IsCancellationRequested);
+                int highPriorityRemoved = _highPriorityRequests.RemoveAll(request =>
+                    request.CancellationToken == token || request.CancellationToken.IsCancellationRequested);
 
-                // 通常優先度リストからキャンセルされたリクエストを削除
-                _normalPriorityRequests.RemoveAll(request => request.CancellationToken.IsCancellationRequested);
+                int normalPriorityRemoved = _normalPriorityRequests.RemoveAll(request =>
+                    request.CancellationToken == token || request.CancellationToken.IsCancellationRequested);
 
-                LogHelper.LogWithTimestamp("キャンセルされたリクエストをキューから削除しました", LogHelper.Categories.ThumbnailQueue);
+                if (highPriorityRemoved > 0 || normalPriorityRemoved > 0)
+                {
+                    LogHelper.LogWithTimestamp($"キャンセルされたリクエストをキューから削除しました: 高優先度={highPriorityRemoved}件, 通常優先度={normalPriorityRemoved}件",
+                        LogHelper.Categories.ThumbnailQueue);
+                }
             }
         }
 
@@ -276,8 +334,71 @@ namespace Illustra.Helpers
         /// </summary>
         private void OptimizeRequestList(DequeList<ThumbnailRequest> requests)
         {
-            // 実装例：重複する範囲のリクエストを統合する
-            // 実際の実装はアプリケーションの要件に合わせて調整してください
+            if (requests.Count <= 1)
+                return;
+
+            // リクエストをリストに変換して処理
+            var requestList = requests.Items.ToList();
+            var optimizedRequests = new List<ThumbnailRequest>();
+
+            // リクエストをソート（開始インデックスの昇順）
+            requestList.Sort((a, b) => a.StartIndex.CompareTo(b.StartIndex));
+
+            // 重複するリクエストをマージ
+            ThumbnailRequest current = requestList[0];
+            for (int i = 1; i < requestList.Count; i++)
+            {
+                var next = requestList[i];
+
+                // 現在のリクエストが次のリクエストと重複または隣接している場合
+                if (next.StartIndex <= current.EndIndex + 1)
+                {
+                    // 範囲を拡張
+                    current = new ThumbnailRequest(
+                        startIndex: Math.Min(current.StartIndex, next.StartIndex),
+                        endIndex: Math.Max(current.EndIndex, next.EndIndex),
+                        isHighPriority: current.IsHighPriority || next.IsHighPriority,
+                        cancellationToken: current.CancellationToken,
+                        completionCallback: current.CompletionCallback
+                    );
+                }
+                else
+                {
+                    // 重複していない場合は現在のリクエストを追加して次へ
+                    optimizedRequests.Add(current);
+                    current = next;
+                }
+            }
+
+            // 最後のリクエストを追加
+            optimizedRequests.Add(current);
+
+            // 元のリストをクリアして最適化されたリクエストを追加
+            requests.Clear();
+            foreach (var request in optimizedRequests)
+            {
+                requests.PushBack(request);
+            }
+
+            LogHelper.LogWithTimestamp($"リクエストを最適化しました: {requestList.Count}件 → {optimizedRequests.Count}件", LogHelper.Categories.ThumbnailQueue);
+        }
+
+        /// <summary>
+        /// スクロール中かどうかを設定します
+        /// </summary>
+        public void SetScrolling(bool isScrolling)
+        {
+            lock (_queueLock)
+            {
+                _isScrolling = isScrolling;
+
+                // スクロール中になった場合、通常優先度キューをクリア
+                if (isScrolling)
+                {
+                    _normalPriorityRequests.Clear();
+                    LogHelper.LogWithTimestamp("スクロール中のため通常優先度キューをクリア", LogHelper.Categories.ThumbnailQueue);
+                }
+            }
         }
     }
 }
