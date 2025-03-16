@@ -401,12 +401,21 @@ namespace Illustra.Views
                 var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
                 if (scrollViewer != null)
                 {
+                    // マウスホイールの方向を維持しつつ、倍率を適用
                     double multiplier = _appSettings?.MouseWheelMultiplier ?? 1.0;
-                    double scrollAmount = (e.Delta * multiplier) / 3;
+                    double delta = e.Delta;
+
+                    // 標準のスクロール量は48ピクセル
+                    const double baseScrollAmount = 48.0;
+                    // 上スクロール時は負の値、下スクロール時は正の値を維持
+                    double scrollAmount = baseScrollAmount * multiplier * Math.Sign(delta);
 
                     // 現在のオフセット位置から計算した新しい位置にスクロール
                     double newOffset = scrollViewer.VerticalOffset - scrollAmount;
                     scrollViewer.ScrollToVerticalOffset(newOffset);
+
+                    // ログ出力
+                    LogHelper.LogWithTimestamp($"マウスホイール移動: 倍率={multiplier:F1}, Delta={delta}, 移動量={scrollAmount:F1}px", LogHelper.Categories.ScrollTracking);
 
                     // スクロールイベントが処理されたことをマーク
                     e.Handled = true;
@@ -1349,6 +1358,7 @@ namespace Illustra.Views
 
             // サムネイルサイズを設定
             ThumbnailSizeSlider.Value = _appSettings.ThumbnailSize;
+            LogHelper.LogWithTimestamp($"マウスホイール倍率を更新: {_appSettings.MouseWheelMultiplier:F1}", LogHelper.Categories.UI);
         }
 
 

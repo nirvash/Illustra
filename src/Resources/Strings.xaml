@@ -54,12 +54,15 @@
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">Settings</system:String>
+    <system:String x:Key="String_Settings_ScrollConfig_Section">Scroll Settings</system:String>
+    <system:String x:Key="String_Settings_MouseWheelMultiplier">Mouse Wheel Speed</system:String>
     <system:String x:Key="String_Settings_Language">Language</system:String>
     <system:String x:Key="String_Menu_Settings_Advanced">Advanced Settings</system:String>
     <system:String x:Key="String_Settings_Slideshow_Section">Slideshow</system:String>
     <system:String x:Key="String_Settings_Slideshow_Interval">Interval:</system:String>
     <system:String x:Key="String_Settings_Slideshow_Seconds">seconds</system:String>
     <system:String x:Key="String_Settings_Slideshow_InvalidInterval">Please enter a value greater than 0 for the interval.</system:String>
+    <system:String x:Key="String_Settings_MouseWheel_InvalidValue">Please enter a value greater than 0 for the mouse wheel speed.</system:String>
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>

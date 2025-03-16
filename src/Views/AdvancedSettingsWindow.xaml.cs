@@ -9,6 +9,20 @@ namespace Illustra.Views
 {
     public partial class AdvancedSettingsWindow : Window, INotifyPropertyChanged
     {
+        private double _mouseWheelMultiplier;
+        public double MouseWheelMultiplier
+        {
+            get => _mouseWheelMultiplier;
+            set
+            {
+                if (_mouseWheelMultiplier != value)
+                {
+                    _mouseWheelMultiplier = value;
+                    OnPropertyChanged(nameof(MouseWheelMultiplier));
+                }
+            }
+        }
+
         private double _slideshowInterval;
         public double SlideshowInterval
         {
@@ -120,6 +134,7 @@ namespace Illustra.Views
             // 設定から値を読み込む
             DeveloperMode = _settings.DeveloperMode;
             SlideshowInterval = 5.0; // ViewerSettingsから取得する必要がある
+            MouseWheelMultiplier = _settings.MouseWheelMultiplier;
 
             // 起動モードの設定
             UpdateStartupMode(_settings.StartupMode);
@@ -206,12 +221,24 @@ namespace Illustra.Views
                     return;
                 }
 
+                // 入力値の検証（マウスホイール倍率）
+                if (MouseWheelMultiplier <= 0)
+                {
+                    MessageBox.Show(
+                        "マウスホイール倍率は0より大きい値を入力してください。",
+                        (string)FindResource("String_Error"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
                 // 設定を保存
                 _settings.DeveloperMode = DeveloperMode;
                 _settings.StartupMode = _startupModeNone ? AppSettingsModel.StartupFolderMode.None :
-                                       _startupModeLastOpened ? AppSettingsModel.StartupFolderMode.LastOpened :
-                                       AppSettingsModel.StartupFolderMode.Specified;
+                                      _startupModeLastOpened ? AppSettingsModel.StartupFolderMode.LastOpened :
+                                      AppSettingsModel.StartupFolderMode.Specified;
                 _settings.StartupFolderPath = StartupFolderPath;
+                _settings.MouseWheelMultiplier = MouseWheelMultiplier;
 
                 SettingsHelper.SaveSettings(_settings);
 
@@ -229,6 +256,14 @@ namespace Illustra.Views
                 if (Application.Current.MainWindow is MainWindow mainWindow)
                 {
                     mainWindow.UpdateToolsMenuVisibility();
+
+                    // ThumbnailListControlの設定を更新
+                    var thumbnailList = UIHelper.FindVisualChild<ThumbnailListControl>(mainWindow);
+                    if (thumbnailList != null)
+                    {
+                        thumbnailList.ApplySettings();
+                        LogHelper.LogWithTimestamp($"マウスホイール倍率を更新: {MouseWheelMultiplier:F1}", LogHelper.Categories.UI);
+                    }
                 }
 
                 DialogResult = true;

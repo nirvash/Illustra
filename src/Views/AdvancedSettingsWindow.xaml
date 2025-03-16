@@ -48,8 +48,31 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- スクロール設定セクション -->
+            <GroupBox Header="{DynamicResource String_Settings_ScrollConfig_Section}"
+                      Margin="0,10,0,0">
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0"
+                           Content="{DynamicResource String_Settings_MouseWheelMultiplier}"
+                           VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding MouseWheelMultiplier, UpdateSourceTrigger=PropertyChanged, StringFormat=F1}"
+                             VerticalAlignment="Center"
+                             Margin="5,0"/>
+                    <Label Grid.Column="2"
+                           Content="×"
+                           VerticalAlignment="Center"/>
+                </Grid>
+            </GroupBox>
+
             <!-- スライドショー設定セクション -->
-            <GroupBox Header="{DynamicResource String_Settings_Slideshow_Section}">
+            <GroupBox Header="{DynamicResource String_Settings_Slideshow_Section}"
+                      Margin="0,10,0,0">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

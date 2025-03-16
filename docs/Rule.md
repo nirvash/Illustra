@@ -79,7 +79,8 @@ public string Title
 // 例: 設定の定義と使用
 public class AppSettings
 {
-    public int ThumbnailSize { get; set; } = 200; // デフォルト値
+    public int ThumbnailSize { get; set; } = 200; // デフォルト値: サムネイルサイズ
+    public double MouseWheelMultiplier { get; set; } = 1.0; // デフォルト値: マウスホイールスクロール倍率
 }
 ```
 

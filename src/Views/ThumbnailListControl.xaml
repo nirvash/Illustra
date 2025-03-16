@@ -274,7 +274,8 @@
                   KeyboardNavigation.TabNavigation="None"
                   IsTabStop="True"
                   TabIndex="3"
-                  FocusVisualStyle="{x:Null}">
+                  FocusVisualStyle="{x:Null}"
+                  PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
             <dd:DragDrop.DragAdornerTemplate>
                 <DataTemplate>
                     <Border BorderBrush="#AA000000"
