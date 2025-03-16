@@ -16,6 +16,31 @@ namespace Illustra.Helpers
 
         public int Count => list.Count;
 
+        // インデクサー
+        public T this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= list.Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                return list[index];
+            }
+            set
+            {
+                if (index < 0 || index >= list.Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                list[index] = value;
+            }
+        }
+
+        // 要素の削除
+        public void RemoveAt(int index)
+        {
+            if (index < 0 || index >= list.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            list.RemoveAt(index);
+        }
+
         // 追加
         public void PushFront(T item) => list.Insert(0, item);
         public void PushBack(T item) => list.Add(item);
@@ -154,95 +179,110 @@ namespace Illustra.Helpers
 
         private async Task ProcessThumbnailRequestAsync(ThumbnailRequest request)
         {
-            bool success = false;
+            LogHelper.LogWithTimestamp($"サムネイル処理実行中: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+
+            // 初期状態では成功と仮定
+            bool success = true;
+
             try
             {
-                LogHelper.LogWithTimestamp($"サムネイル処理実行中: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-
-                // キャンセルされていないか確認（例外ではなく早期リターン）
+                // キャンセルチェック
                 if (request.CancellationToken.IsCancellationRequested)
                 {
-                    LogHelper.LogWithTimestamp($"サムネイル処理がキャンセルされました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    LogHelper.LogWithTimestamp($"開始前にキャンセルされました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
                     return;
                 }
 
-                // スクロール中かどうかをチェック
+                // スクロール中の処理制御
                 if (_isScrolling && !request.IsHighPriority)
                 {
-                    LogHelper.LogWithTimestamp($"スクロール中のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-                    return;
+                    // 現在処理中のリクエストと範囲が重なる場合のみ処理を継続
+                    if (_currentRequest != null && request.OverlapsWith(_currentRequest))
+                    {
+                        LogHelper.LogWithTimestamp($"スクロール中ですが表示範囲内のため処理継続: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    }
+                    else
+                    {
+                        LogHelper.LogWithTimestamp($"スクロール中かつ表示範囲外のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                        return;
+                    }
                 }
 
-                // バッチ処理の実装
-                int batchSize = 5; // 一度に処理するサムネイルの数
+                // バッチ処理の実装 - バッチサイズを10に増やす
+                int batchSize = 10; // 一度に処理するサムネイルの数を増やす
                 for (int i = request.StartIndex; i <= request.EndIndex; i += batchSize)
                 {
-                    // バッチごとにキャンセルチェック（例外ではなく早期リターン）
                     if (request.CancellationToken.IsCancellationRequested)
                     {
                         LogHelper.LogWithTimestamp($"バッチ処理中にキャンセルされました: {i}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
                         return;
                     }
 
-                    // バッチの終了インデックスを計算
                     int endBatchIndex = Math.Min(i + batchSize - 1, request.EndIndex);
 
-                    // バッチ内の各サムネイルを処理
+                    // 各バッチの処理を並列化
+                    var tasks = new List<Task>();
                     for (int j = i; j <= endBatchIndex; j++)
                     {
-                        // 各インデックスごとにキャンセルチェック（例外ではなく早期リターン）
+                        int index = j; // ローカル変数にキャプチャ
                         if (request.CancellationToken.IsCancellationRequested)
                         {
-                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセルされました: インデックス {j}", LogHelper.Categories.ThumbnailQueue);
+                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセルされました: インデックス {index}", LogHelper.Categories.ThumbnailQueue);
                             return;
                         }
 
-                        try
+                        // 各サムネイル処理をタスクとして追加
+                        tasks.Add(Task.Run(async () =>
                         {
-                            // サムネイル生成処理を実行
-                            await _thumbnailProcessor.CreateThumbnailAsync(j, request.CancellationToken);
-
-                            // UIの応答性を維持するために短い遅延を入れる
-                            // キャンセルトークンを渡さないことで、キャンセル時に例外が発生しないようにする
-                            await Task.Delay(1);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // キャンセル例外を無視して処理を終了（例外ではなく早期リターン）
-                            LogHelper.LogWithTimestamp($"サムネイル処理中にキャンセル例外が発生しました: インデックス {j}", LogHelper.Categories.ThumbnailQueue);
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            // その他の例外はログに記録するが処理は続行
-                            LogHelper.LogError($"サムネイル処理中にエラーが発生しました (インデックス: {j}): {ex.Message}", ex);
-                        }
+                            try
+                            {
+                                await _thumbnailProcessor.CreateThumbnailAsync(index, request.CancellationToken);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                LogHelper.LogWithTimestamp($"サムネイル生成中にキャンセルされました: インデックス {index}", LogHelper.Categories.ThumbnailQueue);
+                            }
+                            catch (Exception ex)
+                            {
+                                LogHelper.LogError($"サムネイル処理中にエラーが発生しました (インデックス: {index}): {ex.Message}", ex);
+                            }
+                        }));
                     }
 
-                    // バッチ間で短い遅延を入れてUIスレッドに処理を戻す
-                    // キャンセルトークンを渡さないことで、キャンセル時に例外が発生しないようにする
-                    await Task.Delay(5);
+                    try
+                    {
+                        // すべてのタスクが完了するまで待機（キャンセル可能）
+                        await Task.WhenAll(tasks);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        LogHelper.LogWithTimestamp($"バッチ処理中にキャンセルされました: {i}～{endBatchIndex}", LogHelper.Categories.ThumbnailQueue);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.LogError($"バッチ処理中にエラーが発生しました: {ex.Message}", ex);
+                        // バッチ処理のエラーは記録するが処理は続行
+                    }
+
+                    // バッチ間で短い遅延を入れる（キャンセルチェック付き）
+                    if (!request.CancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(5);
+                    }
                 }
 
-                success = true;
-                LogHelper.LogWithTimestamp($"サムネイル処理完了: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-            }
-            catch (OperationCanceledException)
-            {
-                // キャンセル例外をキャッチして処理を終了
-                LogHelper.LogWithTimestamp($"サムネイル処理がキャンセルされました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-                success = false;
+                LogHelper.LogWithTimestamp($"サムネイル処理が完了しました: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
             }
             catch (Exception ex)
             {
-                LogHelper.LogError($"サムネイル処理中にエラーが発生しました: {ex.Message}", ex);
                 success = false;
+                LogHelper.LogError($"サムネイル処理中にエラーが発生しました: {ex.Message}", ex);
             }
             finally
             {
                 try
                 {
-                    // 処理完了時にコールバックを呼び出す
                     request.CompletionCallback?.Invoke(request, success);
                 }
                 catch (Exception callbackEx)
@@ -252,11 +292,8 @@ namespace Illustra.Helpers
 
                 lock (_queueLock)
                 {
-                    // 現在のリクエストをクリアして処理中フラグをリセット
                     _currentRequest = null;
                     _isProcessing = false;
-
-                    // 次のリクエストを処理
                     ProcessNextRequestIfAvailable();
                 }
             }
@@ -295,11 +332,30 @@ namespace Illustra.Helpers
         {
             lock (_queueLock)
             {
-                int highPriorityRemoved = _highPriorityRequests.RemoveAll(request =>
-                    request.CancellationToken == token || request.CancellationToken.IsCancellationRequested);
+                int highPriorityRemoved = 0;
+                int normalPriorityRemoved = 0;
 
-                int normalPriorityRemoved = _normalPriorityRequests.RemoveAll(request =>
-                    request.CancellationToken == token || request.CancellationToken.IsCancellationRequested);
+                // 高優先度キューから削除
+                for (int i = _highPriorityRequests.Count - 1; i >= 0; i--)
+                {
+                    if (_highPriorityRequests[i].CancellationToken == token ||
+                        _highPriorityRequests[i].CancellationToken.IsCancellationRequested)
+                    {
+                        _highPriorityRequests.RemoveAt(i);
+                        highPriorityRemoved++;
+                    }
+                }
+
+                // 通常優先度キューから削除
+                for (int i = _normalPriorityRequests.Count - 1; i >= 0; i--)
+                {
+                    if (_normalPriorityRequests[i].CancellationToken == token ||
+                        _normalPriorityRequests[i].CancellationToken.IsCancellationRequested)
+                    {
+                        _normalPriorityRequests.RemoveAt(i);
+                        normalPriorityRemoved++;
+                    }
+                }
 
                 if (highPriorityRemoved > 0 || normalPriorityRemoved > 0)
                 {
@@ -392,11 +448,25 @@ namespace Illustra.Helpers
             {
                 _isScrolling = isScrolling;
 
-                // スクロール中になった場合、通常優先度キューをクリア
-                if (isScrolling)
+                // スクロール中になった場合、現在のリクエストと重ならない通常優先度リクエストをクリア
+                if (isScrolling && _currentRequest != null)
                 {
-                    _normalPriorityRequests.Clear();
-                    LogHelper.LogWithTimestamp("スクロール中のため通常優先度キューをクリア", LogHelper.Categories.ThumbnailQueue);
+                    int removedCount = 0;
+                    for (int i = _normalPriorityRequests.Count - 1; i >= 0; i--)
+                    {
+                        var request = _normalPriorityRequests[i];
+                        // 現在のリクエストと範囲が重ならないものだけを削除
+                        if (!request.OverlapsWith(_currentRequest))
+                        {
+                            _normalPriorityRequests.RemoveAt(i);
+                            removedCount++;
+                        }
+                    }
+
+                    if (removedCount > 0)
+                    {
+                        LogHelper.LogWithTimestamp($"スクロール中のため表示範囲外の{removedCount}件のリクエストをクリア", LogHelper.Categories.ThumbnailQueue);
+                    }
                 }
             }
         }
