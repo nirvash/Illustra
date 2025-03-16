@@ -98,87 +98,95 @@ namespace Illustra.Helpers
         {
             try
             {
-                // キャンセルされたかチェック
+                // キャンセルチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // ファイルからビットマップデータを読み込む
-                using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                // ファイルストリーム準備
+                using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var inputStream = new SKManagedStream(fileStream);
 
-                // SKCodecを使用して縮小デコード
+                // コーデック準備
                 using var codec = SKCodec.Create(inputStream);
                 if (codec == null)
-                {
                     return GenerateErrorThumbnail(width, height, "画像の読み込みに失敗しました");
-                }
 
-                // キャンセルされたかチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 元画像のサイズを取得
+                // 元画像サイズとアスペクト比
                 var originalInfo = codec.Info;
                 float aspectRatio = (float)originalInfo.Width / originalInfo.Height;
 
-                // サムネイルのサイズを計算
+                // サムネイルサイズ計算
                 int targetWidth, targetHeight;
                 if (aspectRatio > 1)
                 {
-                    // 横長画像
                     targetWidth = width;
-                    targetHeight = (int)(width / aspectRatio);
+                    targetHeight = Math.Max(1, (int)(width / aspectRatio));
                 }
                 else
                 {
-                    // 縦長画像
                     targetHeight = height;
-                    targetWidth = (int)(height * aspectRatio);
+                    targetWidth = Math.Max(1, (int)(height * aspectRatio));
                 }
 
-                // スケールファクターを計算（元画像に対する縮小率）
+                // スケールファクターとサンプルサイズ
                 float scaleFactor = Math.Min((float)targetWidth / originalInfo.Width, (float)targetHeight / originalInfo.Height);
+                int sampleSize = scaleFactor <= 0.125f ? 8 : scaleFactor <= 0.25f ? 4 : scaleFactor <= 0.5f ? 2 : 1;
 
-                // 最適なサンプルサイズを選択
-                var sampleSize = 1;
-                if (scaleFactor <= 0.125f) sampleSize = 8;
-                else if (scaleFactor <= 0.25f) sampleSize = 4;
-                else if (scaleFactor <= 0.5f) sampleSize = 2;
-
-                // デコードオプションを設定
+                // オプション（ゼロ除算防止）
                 var options = new SKImageInfo(
-                    width: originalInfo.Width / sampleSize,
-                    height: originalInfo.Height / sampleSize,
+                    width: Math.Max(1, originalInfo.Width / sampleSize),
+                    height: Math.Max(1, originalInfo.Height / sampleSize),
                     colorType: SKColorType.Bgra8888,
                     alphaType: SKAlphaType.Premul);
 
-                // 縮小デコード
+                // デコード
                 using var bitmap = SKBitmap.Decode(codec, options);
                 if (bitmap == null)
-                {
-                    return GenerateErrorThumbnail(width, height, "画像のデコードに失敗しました");
-                }
+                    return CreateThumbnail(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
 
-                // キャンセルされたかチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 必要に応じて正確なサイズにリサイズ
-                using var resizedBitmap = bitmap.Width == targetWidth && bitmap.Height == targetHeight
-                    ? bitmap
-                    : bitmap.Resize(new SKImageInfo(targetWidth, targetHeight), SKFilterQuality.Medium);
+                // リサイズ処理
+                SKBitmap finalBitmap = null;
+                bool needResize = bitmap.Width != targetWidth || bitmap.Height != targetHeight;
+                if (needResize)
+                {
+                    finalBitmap = bitmap.Resize(new SKImageInfo(targetWidth, targetHeight), SKFilterQuality.Medium);
+                    if (finalBitmap == null)
+                        return CreateThumbnail(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
+                }
+                else
+                {
+                    finalBitmap = bitmap; // そのまま利用
+                }
 
-                // WriteableBitmapを使用して直接メモリにコピー
+                // WriteableBitmap作成
                 var writeableBitmap = new WriteableBitmap(targetWidth, targetHeight, 96, 96, PixelFormats.Bgra32, null);
                 writeableBitmap.Lock();
-                CopySkBitmapToWriteableBitmap(resizedBitmap, writeableBitmap);
-                writeableBitmap.AddDirtyRect(new Int32Rect(0, 0, targetWidth, targetHeight));
-                writeableBitmap.Unlock();
-                writeableBitmap.Freeze(); // UIスレッド渡すなら必須
+                try
+                {
+                    CopySkBitmapToWriteableBitmap(finalBitmap, writeableBitmap);
+                    writeableBitmap.AddDirtyRect(new Int32Rect(0, 0, targetWidth, targetHeight));
+                }
+                finally
+                {
+                    writeableBitmap.Unlock();
+                }
+                writeableBitmap.Freeze();
+
+                // bitmapとfinalBitmapが同じ場合、二重Dispose防止
+                if (!ReferenceEquals(bitmap, finalBitmap))
+                {
+                    finalBitmap.Dispose();
+                }
 
                 return writeableBitmap;
             }
             catch (OperationCanceledException)
             {
                 Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
-                throw; // キャンセル例外は上位に伝播
+                throw;
             }
             catch (Exception ex)
             {
@@ -186,6 +194,7 @@ namespace Illustra.Helpers
                 return GenerateErrorThumbnail(width, height, "サムネイル作成エラー");
             }
         }
+
 
         /// <summary>
         /// 高品質な画像表示用に画像をロードします。フルスクリーン表示などに適しています。
