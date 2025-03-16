@@ -2427,32 +2427,8 @@ namespace Illustra.Views
                     (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                     (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
 
-                // ローダーの設定を更新
-                _thumbnailLoader.SortByDate = _isSortByDate;
-                _thumbnailLoader.SortAscending = _isSortAscending;
-
-                // UI更新
-                SortTypeText.Text = _isSortByDate ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-                SortDirectionText.Text = _isSortAscending ?
-                    (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
-                    (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-
-                // 外部からのイベントの場合のみ設定を保存
-                _appSettings.SortByDate = _isSortByDate;
-                _appSettings.SortAscending = _isSortAscending;
-                SettingsHelper.SaveSettings(_appSettings);
-
                 // サムネイルをソート
-                await SortThumbnailAsync(_isSortByDate, _isSortAscending);
-
-                // サムネイルの再生成
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer != null)
-                {
-                    await LoadVisibleThumbnailsAsync(scrollViewer);
-                }
+                await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
             }
             catch (Exception ex)
             {
@@ -2554,7 +2530,7 @@ namespace Illustra.Views
             SortDirectionText.Text = _isSortAscending ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
             // サムネイルの再生成
             var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
             if (scrollViewer != null)
