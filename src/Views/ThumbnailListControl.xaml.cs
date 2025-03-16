@@ -844,7 +844,8 @@ namespace Illustra.Views
         public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending, bool selectItem = false)
         {
             var currentSelectedPath = selectItem ? _viewModel.SelectedItems.LastOrDefault()?.FullPath : null;
-            _viewModel.SetCurrentFolder(_currentFolderPath ?? "");
+
+            // ソート実行
             await _viewModel.SortItemsAsync(sortByDate, sortAscending);
 
             if (!string.IsNullOrEmpty(currentSelectedPath))
@@ -2427,7 +2428,7 @@ namespace Illustra.Views
                     (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                     (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
 
-                // サムネイルをソート
+                // フィルタリングが適用されている場合も考慮してソート
                 await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
             }
             catch (Exception ex)
@@ -2530,7 +2531,10 @@ namespace Illustra.Views
             SortDirectionText.Text = _isSortAscending ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
+
+            // フィルタリングが適用されている場合も考慮してソート
             await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
+
             // サムネイルの再生成
             var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
             if (scrollViewer != null)
@@ -2549,7 +2553,10 @@ namespace Illustra.Views
             SortTypeText.Text = _isSortByDate ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortByDate") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortByName");
-            await SortThumbnailAsync(_isSortByDate, _isSortAscending);
+
+            // フィルタリングが適用されている場合も考慮してソート
+            await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
+
             // サムネイルの再生成
             var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
             if (scrollViewer != null)

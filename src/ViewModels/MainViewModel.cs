@@ -12,8 +12,6 @@ namespace Illustra.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseManager _db = new();
-        private string? _currentFolderPath;
         private bool _sortByDate;
         private bool _sortAscending;
         public BulkObservableCollection<FileNodeModel> Items { get; } = new();
@@ -142,12 +140,12 @@ namespace Illustra.ViewModels
 
         public void SortItems(bool sortByDate, bool sortAscending)
         {
-            if (string.IsNullOrEmpty(_currentFolderPath)) return;
-
             // メモリ上でソートを行う
             var sortedItems = Items.ToList();
             SortHelper.SortFileNodes(sortedItems, sortByDate, sortAscending);
             Items.ReplaceAll(sortedItems);
+
+            // フィルタ条件が変わっていないので、フィルタの Refresh は不要
         }
 
         // ThumbnailListControlからの呼び出し用に非同期メソッドを残す
@@ -157,13 +155,6 @@ namespace Illustra.ViewModels
             return Task.CompletedTask;
         }
 
-        public void SetCurrentFolder(string path)
-        {
-            _currentFolderPath = path;
-
-            // フォルダ変更時にタグキャッシュをクリア
-            _tagCache.Clear();
-        }
 
         private int _currentRatingFilter = 0;
         private bool _isPromptFilterEnabled = false;
