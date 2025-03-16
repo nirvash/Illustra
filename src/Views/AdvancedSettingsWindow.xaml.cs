@@ -2,6 +2,8 @@ using System;
 using System.Windows;
 using System.ComponentModel;
 using Illustra.Helpers;
+using System.Windows.Controls;
+using Illustra.Models;
 
 namespace Illustra.Views
 {
@@ -44,7 +46,7 @@ namespace Illustra.Views
                 if (_startupModeNone != value)
                 {
                     _startupModeNone = value;
-                    if (value) UpdateStartupMode(AppSettings.StartupFolderMode.None);
+                    if (value) UpdateStartupMode(AppSettingsModel.StartupFolderMode.None);
                     OnPropertyChanged(nameof(StartupModeNone));
                 }
             }
@@ -59,7 +61,7 @@ namespace Illustra.Views
                 if (_startupModeLastOpened != value)
                 {
                     _startupModeLastOpened = value;
-                    if (value) UpdateStartupMode(AppSettings.StartupFolderMode.LastOpened);
+                    if (value) UpdateStartupMode(AppSettingsModel.StartupFolderMode.LastOpened);
                     OnPropertyChanged(nameof(StartupModeLastOpened));
                 }
             }
@@ -74,7 +76,7 @@ namespace Illustra.Views
                 if (_startupModeSpecified != value)
                 {
                     _startupModeSpecified = value;
-                    if (value) UpdateStartupMode(AppSettings.StartupFolderMode.Specified);
+                    if (value) UpdateStartupMode(AppSettingsModel.StartupFolderMode.Specified);
                     OnPropertyChanged(nameof(StartupModeSpecified));
                 }
             }
@@ -94,44 +96,98 @@ namespace Illustra.Views
             }
         }
 
+        private AppSettingsModel _settings;
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void UpdateStartupMode(AppSettings.StartupFolderMode mode)
+        private void UpdateStartupMode(AppSettingsModel.StartupFolderMode mode)
         {
-            _startupModeNone = mode == AppSettings.StartupFolderMode.None;
-            _startupModeLastOpened = mode == AppSettings.StartupFolderMode.LastOpened;
-            _startupModeSpecified = mode == AppSettings.StartupFolderMode.Specified;
+            _startupModeNone = mode == AppSettingsModel.StartupFolderMode.None;
+            _startupModeLastOpened = mode == AppSettingsModel.StartupFolderMode.LastOpened;
+            _startupModeSpecified = mode == AppSettingsModel.StartupFolderMode.Specified;
         }
 
         public AdvancedSettingsWindow()
         {
             InitializeComponent();
+            _settings = SettingsHelper.GetSettings();
             DataContext = this;
 
-            // 現在の設定を読み込む
-            var settings = SettingsHelper.GetSettings();
-            DeveloperMode = settings.DeveloperMode;
-            SlideshowInterval = ViewerSettingsHelper.LoadSettings().SlideshowIntervalSeconds;
+            // 設定から値を読み込む
+            DeveloperMode = _settings.DeveloperMode;
+            SlideshowInterval = 5.0; // ViewerSettingsから取得する必要がある
 
-            // スタートアップ設定を読み込む
-            UpdateStartupMode(settings.StartupMode);
-            StartupFolderPath = settings.StartupFolderPath;
+            // 起動モードの設定
+            UpdateStartupMode(_settings.StartupMode);
+            StartupFolderPath = _settings.StartupFolderPath;
+
+            // 開発者モードの状態に応じてログカテゴリ設定の表示/非表示を切り替え
+            UpdateLogCategoriesVisibility();
+
+            // 開発者モードが有効な場合はログカテゴリ設定を初期化
+            if (_settings.DeveloperMode)
+            {
+                InitializeLogCategorySettings();
+            }
         }
 
-        private void BrowseStartupFolder_Click(object sender, RoutedEventArgs e)
+        private void DeveloperModeCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            var dialog = new Microsoft.Win32.OpenFolderDialog
-            {
-                Title = (string)FindResource("String_Settings_Startup_Section")
-            };
+            UpdateLogCategoriesVisibility();
 
-            if (dialog.ShowDialog() == true)
+            // 開発者モードが有効になった場合、ログカテゴリ設定を初期化
+            if (DeveloperModeCheckBox.IsChecked == true && LogCategoriesPanel.Children.Count == 0)
             {
-                StartupFolderPath = dialog.FolderName;
+                InitializeLogCategorySettings();
+            }
+        }
+
+        private void UpdateLogCategoriesVisibility()
+        {
+            // 開発者モードが有効な場合のみログカテゴリ設定を表示
+            LogCategoriesExpander.Visibility =
+                DeveloperModeCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void InitializeLogCategorySettings()
+        {
+            // 既存のチェックボックスをクリア
+            LogCategoriesPanel.Children.Clear();
+
+            // チェックボックスを動的に生成
+            foreach (var categoryField in typeof(LogHelper.Categories).GetFields())
+            {
+                if (categoryField.IsLiteral && !categoryField.IsInitOnly)
+                {
+                    string categoryName = (string)categoryField.GetValue(null);
+                    bool isEnabled = LogHelper.IsCategoryEnabled(categoryName);
+
+                    var checkBox = new CheckBox
+                    {
+                        Content = categoryName,
+                        IsChecked = isEnabled,
+                        Margin = new Thickness(5),
+                        Tag = categoryName
+                    };
+
+                    checkBox.Checked += LogCategory_CheckedChanged;
+                    checkBox.Unchecked += LogCategory_CheckedChanged;
+
+                    LogCategoriesPanel.Children.Add(checkBox);
+                }
+            }
+        }
+
+        private void LogCategory_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            var checkBox = sender as CheckBox;
+            if (checkBox != null && checkBox.Tag is string categoryName)
+            {
+                LogHelper.SetCategoryEnabled(categoryName, checkBox.IsChecked ?? false);
             }
         }
 
@@ -151,19 +207,19 @@ namespace Illustra.Views
                 }
 
                 // 設定を保存
-                var settings = SettingsHelper.GetSettings();
-                settings.DeveloperMode = DeveloperMode;
+                _settings.DeveloperMode = DeveloperMode;
+                _settings.StartupMode = _startupModeNone ? AppSettingsModel.StartupFolderMode.None :
+                                       _startupModeLastOpened ? AppSettingsModel.StartupFolderMode.LastOpened :
+                                       AppSettingsModel.StartupFolderMode.Specified;
+                _settings.StartupFolderPath = StartupFolderPath;
 
-                // スタートアップモードを判定して保存
-                if (StartupModeNone)
-                    settings.StartupMode = AppSettings.StartupFolderMode.None;
-                else if (StartupModeLastOpened)
-                    settings.StartupMode = AppSettings.StartupFolderMode.LastOpened;
-                else
-                    settings.StartupMode = AppSettings.StartupFolderMode.Specified;
+                SettingsHelper.SaveSettings(_settings);
 
-                settings.StartupFolderPath = StartupFolderPath;
-                SettingsHelper.SaveSettings(settings);
+                // ログカテゴリ設定も保存
+                if (_settings.DeveloperMode)
+                {
+                    LogHelper.SaveCategorySettings();
+                }
 
                 var viewerSettings = ViewerSettingsHelper.LoadSettings();
                 viewerSettings.SlideshowIntervalSeconds = SlideshowInterval;
@@ -185,6 +241,19 @@ namespace Illustra.Views
                     (string)FindResource("String_Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        private void BrowseStartupFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = (string)FindResource("String_Settings_Startup_Section")
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                StartupFolderPath = dialog.FolderName;
             }
         }
     }

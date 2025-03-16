@@ -20,9 +20,11 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Threading.Tasks;
 using System.Threading;
+using Illustra.Extensions; // 追加: FileNodeModelExtensionsを使用するため
 
 namespace Illustra.Views
 {
+    [System.Windows.Markup.ContentProperty("Content")]
     public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
     {
         private IEventAggregator _eventAggregator = null!;
@@ -31,7 +33,7 @@ namespace Illustra.Views
         private ImageViewerWindow? _currentViewerWindow;
         private string? _currentFolderPath;
 
-        private AppSettings _appSettings;
+        private AppSettingsModel _appSettings;
         private bool _isFirstLoaded = false;
         private ThumbnailLoaderHelper _thumbnailLoader;
         private FileSystemMonitor _fileSystemMonitor;
@@ -55,21 +57,34 @@ namespace Illustra.Views
 
         private CancellationTokenSource? _thumbnailLoadCts;
 
+        // フォルダ読み込み完了イベントハンドラを改善
+        private bool _isProcessingFileNodesLoaded = false;
+
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
         /// </summary>
         private void UpdateUISelection()
         {
-            if (_isUpdatingSelection) return;
-            _isUpdatingSelection = true;
-
             try
             {
+                _isUpdatingSelection = true;
+
                 ThumbnailItemsControl.SelectedItems.Clear();
                 foreach (var item in _viewModel.SelectedItems)
                 {
                     ThumbnailItemsControl.SelectedItems.Add(item);
                 }
+
+                // 選択アイテムがある場合はログ出力
+                if (_viewModel.SelectedItems.Any())
+                {
+                    var selectedItem = _viewModel.SelectedItems.First();
+                    System.Diagnostics.Debug.WriteLine($"[選択更新] アイテムを選択: {(selectedItem as FileNodeModel)?.FullPath ?? "不明"}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[選択更新] エラー: {ex.Message}");
             }
             finally
             {
@@ -611,7 +626,7 @@ namespace Illustra.Views
                             var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
                             if (index >= 0)
                             {
-                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None);
                             }
                         });
                     }
@@ -662,7 +677,7 @@ namespace Illustra.Views
                             var index = _viewModel.Items.IndexOf(existingNode);
                             if (index >= 0)
                             {
-                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None);
                             }
                         }
                         else
@@ -685,84 +700,136 @@ namespace Illustra.Views
 
         private async void OnFileNodesLoaded(object? sender, EventArgs e)
         {
+            // 既に処理中の場合は重複実行を防止
+            if (_isProcessingFileNodesLoaded)
+                return;
+
+            _isProcessingFileNodesLoaded = true;
+
             try
             {
-                Debug.WriteLine("[ファイル読み込み完了] OnFileNodesLoaded メソッドが呼ばれました");
+                LogWithTimestamp("[フォルダ切替] OnFileNodesLoaded メソッドが呼ばれました");
 
-                // 前回のキャンセルトークンを破棄して新しいものを作成
-                _thumbnailLoadCts?.Cancel();
-                _thumbnailLoadCts?.Dispose();
+                // キャンセルトークンを初期化
+                if (_thumbnailLoadCts != null)
+                {
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
+                }
                 _thumbnailLoadCts = new CancellationTokenSource();
 
-                // レイアウト更新を待機
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                // スクロール位置をリセット
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    if (scrollViewer != null)
+                    {
+                        scrollViewer.ScrollToTop();
+                        LogWithTimestamp("[フォルダ切替] OnFileNodesLoadedでスクロール位置を先頭にリセットしました");
+                    }
+                }, DispatcherPriority.Render);
 
-                // 初期表示時は画面全体のサムネイルを読み込む
+                // レイアウトの更新を待機
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ThumbnailItemsControl.UpdateLayout();
+                    LogWithTimestamp("[フォルダ切替] ThumbnailItemsControlのレイアウトを更新しました");
+                }, DispatcherPriority.Render);
+
+                // 初期サムネイルの読み込み
                 await LoadInitialThumbnailsAsync(_thumbnailLoadCts.Token);
+
+                // 先頭アイテムを選択
+                if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    var firstItem = ThumbnailItemsControl.Items[0] as FileNodeModel;
+                    if (firstItem != null)
+                    {
+                        LogWithTimestamp($"[フォルダ切替] 先頭アイテムを選択します: {firstItem.FullPath}");
+                        SelectThumbnail(firstItem.FullPath);
+                    }
+                }
             }
-            catch (OperationCanceledException)
+            finally
             {
-                Debug.WriteLine("[ファイル読み込み完了] 処理がキャンセルされました");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ファイル読み込み完了] エラー: {ex.Message}");
+                _isProcessingFileNodesLoaded = false;
             }
         }
 
         private async Task LoadInitialThumbnailsAsync(CancellationToken cancellationToken)
         {
+            LogWithTimestamp("[初期サムネイルロード] 開始");
+
             try
             {
-                Debug.WriteLine("[初期サムネイル読み込み] 開始");
-
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer == null)
-                    return;
-
-                // 画面に表示される行数を計算
-                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                int itemsPerRow = GetItemsPerRow(panel);
-                if (itemsPerRow <= 0) itemsPerRow = 1;
-
-                // サムネイルサイズから推定アイテム高さを計算
-                double estimatedItemHeight = _appSettings.ThumbnailSize + 20; // マージンを考慮
-
-                // 画面に表示される行数を計算（余裕を持って多めに）
-                int visibleRows = (int)(scrollViewer.ViewportHeight / estimatedItemHeight) + 2;
-
-                // 初期表示時は画面に表示される範囲の3倍程度のサムネイルを読み込む
-                int initialLoadRows = visibleRows * 3;
-                int initialLoadCount = initialLoadRows * itemsPerRow;
-
-                // 読み込む範囲を計算
-                int endIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1, initialLoadCount - 1);
-
-                Debug.WriteLine($"[初期サムネイル読み込み] 範囲: 0～{endIndex} (行数: {initialLoadRows}, 1行あたり: {itemsPerRow}項目)");
-
-                // サムネイルを読み込む
-                await _thumbnailLoader.LoadMoreThumbnailsAsync(0, endIndex, cancellationToken);
-
-                // 選択アイテムがある場合は表示範囲内に入るようにスクロール
-                if (_viewModel.SelectedItems.Any())
+                // UIスレッドで実行
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    await EnsureSelectedThumbnailVisibleAsync();
-                }
+                    try
+                    {
+                        if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
+                        {
+                            LogWithTimestamp("[初期サムネイル読み込み] アイテムが存在しません");
+                            return;
+                        }
 
-                Debug.WriteLine("[初期サムネイル読み込み] 完了");
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("[初期サムネイル読み込み] 処理がキャンセルされました");
-                throw;
+                        int itemCount = ThumbnailItemsControl.Items.Count;
+                        LogWithTimestamp($"[初期サムネイルロード] アイテム数: {itemCount}");
+
+                        // レイアウトの更新を強制
+                        ThumbnailItemsControl.UpdateLayout();
+
+                        // ScrollViewerとパネルを取得
+                        var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                        var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+
+                        if (scrollViewer == null || panel == null)
+                        {
+                            LogWithTimestamp("[初期サムネイルロード] ScrollViewerまたはパネルが見つかりません");
+                            return;
+                        }
+
+                        LogWithTimestamp($"[初期サムネイルロード] ScrollViewer取得: 成功, パネル取得: 成功, 行あたりのアイテム数: {GetItemsPerRow(panel)}");
+
+                        // 表示範囲内のアイテムを優先的に読み込む
+                        double itemHeight = _thumbnailLoader.ThumbnailSize + 40; // サムネイルサイズ + マージン
+                        int itemsPerRow = GetItemsPerRow(panel);
+
+                        // ビューポートの高さから表示行数を計算
+                        double viewportHeight = scrollViewer.ViewportHeight;
+                        int visibleRows = (int)Math.Ceiling(viewportHeight / itemHeight) + 1; // +1 for partial rows
+
+                        // 表示範囲内のアイテム数を計算
+                        int visibleItems = visibleRows * itemsPerRow;
+
+                        // 最低60個、または表示範囲内のアイテム数の大きい方を読み込む
+                        int itemsToLoad = Math.Max(60, visibleItems);
+                        int endIndex = Math.Min(itemCount - 1, itemsToLoad - 1);
+
+                        LogWithTimestamp($"[初期サムネイルロード] 範囲: 0～{endIndex} (行数: {visibleRows}, 1行あたり: {itemsPerRow}項目)");
+                        LogWithTimestamp($"[初期サムネイルロード] ビューポート高さ: {viewportHeight:F2}, アイテム高さ: {itemHeight:F2}");
+
+                        // 高優先度フラグを設定してサムネイルを読み込む
+                        LogWithTimestamp("[初期サムネイル読み込み] LoadMoreThumbnailsAsync呼び出し開始");
+                        await _thumbnailLoader.LoadMoreThumbnailsAsync(0, endIndex, cancellationToken, highPriority: true);
+                        LogWithTimestamp("[初期サムネイル読み込み] LoadMoreThumbnailsAsync呼び出し完了");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        LogWithTimestamp("[初期サムネイル読み込み] 処理がキャンセルされました");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogWithTimestamp($"[初期サムネイル読み込み] エラー: {ex.Message}");
+                    }
+                }, DispatcherPriority.Normal);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[初期サムネイル読み込み] エラー: {ex.Message}");
+                LogWithTimestamp($"[初期サムネイルロード] Dispatcher呼び出しエラー: {ex.Message}");
             }
+
+            LogWithTimestamp("[初期サムネイル読み込み] 完了");
         }
 
         public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending, bool selectItem = false)
@@ -805,65 +872,60 @@ namespace Illustra.Views
         /// </summary>
         private async void SelectThumbnail(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            if (string.IsNullOrEmpty(filePath))
             {
-                System.Diagnostics.Debug.WriteLine("Invalid file path or file does not exist");
+                System.Diagnostics.Debug.WriteLine("[選択] ファイルパスが空のため選択をスキップします");
                 return;
             }
-            Debug.WriteLine($"[サムネイル選択] ファイル選択: {filePath}");
 
-            DisplayGeneratedItemsInfo(ThumbnailItemsControl);
+            System.Diagnostics.Debug.WriteLine($"[選択] SelectThumbnail メソッドが呼ばれました: {filePath}");
 
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-            // まずフィルター適用後のアイテムリストから検索
-            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>();
-            var matchingItem = filteredItems.FirstOrDefault(x => x.FullPath == filePath);
-
-            if (matchingItem != null)
+            await Dispatcher.InvokeAsync(async () =>
             {
-                if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
+                try
                 {
-                    ThumbnailItemsControl.SelectedItems.Add(matchingItem);
-                }
-                _viewModel.SelectedItems.Clear();
-                _viewModel.SelectedItems.Add(matchingItem);
-                ThumbnailItemsControl.ScrollIntoView(matchingItem);
+                    DisplayGeneratedItemsInfo(ThumbnailItemsControl);
 
-                // FileSelectedEvent を発行
-                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
+                    // 選択するアイテムを検索
+                    var filteredItems = GetFilteredItemsList();
+                    var matchingItem = filteredItems.FirstOrDefault(x => x.FullPath == filePath);
 
-                // LastSelectedFilePath を保存
-                _appSettings.LastSelectedFilePath = filePath;
-                SettingsHelper.SaveSettings(_appSettings);
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("No matching item found in filtered list");
-
-                // フィルターされていない元のItemsから検索
-                matchingItem = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
-                if (matchingItem != null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[サムネイル選択] Item found in original list but filtered out");
-
-                    // フィルター解除が必要
-                    if (_currentRatingFilter > 0)
+                    if (matchingItem != null)
                     {
-                        // ユーザーにフィルターが適用されていて見つからない旨を通知
-                        MessageBoxResult result = MessageBox.Show(
-                            (string)Application.Current.FindResource("String_Thumbnail_RatingFilterMessage"),
-                            (string)Application.Current.FindResource("String_Thumbnail_RatingFilterTitle"),
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question);
+                        System.Diagnostics.Debug.WriteLine($"[選択] フィルタリングされたアイテムから一致するアイテムを見つけました: {matchingItem.FullPath}");
 
-                        if (result == MessageBoxResult.Yes)
+                        if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
                         {
-                            // フィルターを解除
-                            ApplyFilterling(0);
+                            ThumbnailItemsControl.SelectedItems.Add(matchingItem);
+                        }
+                        _viewModel.SelectedItems.Clear();
+                        _viewModel.SelectedItems.Add(matchingItem);
+                        ThumbnailItemsControl.ScrollIntoView(matchingItem);
+
+                        // FileSelectedEvent を発行 - 同期メソッドを使用
+                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
+
+                        System.Diagnostics.Debug.WriteLine($"[選択更新] アイテムを選択: {filePath}");
+                        System.Diagnostics.Debug.WriteLine($"[フォルダ切替] アイテム選択完了: {filePath}");
+                    }
+                    else
+                    {
+                        // フィルタリングされていないアイテムから検索
+                        var allItems = _viewModel.Items.Cast<FileNodeModel>().ToList();
+                        var matchingItemFromAll = allItems.FirstOrDefault(x => x.FullPath == filePath);
+
+                        if (matchingItemFromAll != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[選択] 全アイテムから一致するアイテムを見つけました: {matchingItemFromAll.FullPath}");
+
+                            // フィルタリングを解除する必要がある場合
+                            // ここでフィルタリングを解除するロジックを追加
 
                             // 再度検索
-                            matchingItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault(x => x.FullPath == filePath);
+                            await Task.Delay(100); // フィルタリング解除後の更新を待つ
+                            filteredItems = GetFilteredItemsList();
+                            matchingItem = filteredItems.FirstOrDefault(x => x.FullPath == filePath);
+
                             if (matchingItem != null)
                             {
                                 if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
@@ -874,21 +936,27 @@ namespace Illustra.Views
                                 _viewModel.SelectedItems.Add(matchingItem);
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
-                                // FileSelectedEvent を発行
-                                _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(filePath);
+                                // FileSelectedEvent を発行 - 同期メソッドを使用
+                                _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
 
-                                // LastSelectedFilePath を保存
-                                _appSettings.LastSelectedFilePath = filePath;
-                                SettingsHelper.SaveSettings(_appSettings);
+                                System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: {filePath}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[選択エラー] フィルタリング解除後もアイテムが見つかりません: {filePath}");
                             }
                         }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("No matching item found even in the original list");
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[選択エラー] 指定されたファイルパスに一致するアイテムが見つかりません: {filePath}");
+                        }
                     }
                 }
-            }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[選択エラー] SelectThumbnail でエラーが発生しました: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>
@@ -952,49 +1020,55 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            if (_isScrolling) return;
+
             try
             {
-                if (e.VerticalChange == 0) return;
-
                 _isScrolling = true;
 
-                // スクロールタイマーをリセット
-                _scrollStopTimer.Stop();
-                _scrollStopTimer.Start();
-
-                // 前回のキャンセルトークンを破棄して新しいものを作成
-                _thumbnailLoadCts?.Cancel();
-                _thumbnailLoadCts?.Dispose();
-                _thumbnailLoadCts = new CancellationTokenSource();
-
+                // スクロール方向を検出
+                // スクロール中のサムネイル読み込み
                 var scrollViewer = sender as ScrollViewer;
                 if (scrollViewer != null)
                 {
-                    // ホイールスクロール中は最小限の処理だけを行う
-                    // キューに入れて処理を軽くする
-                    _thumbnailLoadQueue.Clear();
-                    _thumbnailLoadQueue.Enqueue(async () =>
+                    var lastScrollOffset = scrollViewer.VerticalOffset;
+                    Illustra.Helpers.ScrollDirection scrollDirection = Illustra.Helpers.ScrollDirection.None;
+                    if (e.VerticalOffset > lastScrollOffset)
                     {
-                        try
-                        {
-                            Debug.WriteLine($"[スクロール中] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
+                        scrollDirection = Illustra.Helpers.ScrollDirection.Down;
+                    }
+                    else if (e.VerticalOffset < lastScrollOffset)
+                    {
+                        scrollDirection = Illustra.Helpers.ScrollDirection.Up;
+                    }
 
-                            // スクロール中は小さいバッファで高速に処理
-                            await LoadVisibleThumbnailsLightAsync(scrollViewer, _thumbnailLoadCts.Token);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // キャンセル例外は無視
-                            Debug.WriteLine("[スクロール中] 処理がキャンセルされました");
-                        }
-                    });
+                    // スクロールタイマーをリセット
+                    _scrollStopTimer.Stop();
+                    _scrollStopTimer.Start();
 
-                    await ProcessThumbnailLoadQueue();
+                    // 表示範囲の計算
+                    double itemHeight = _appSettings.ThumbnailSize + 4; // マージンを考慮
+                    // サムネイルサイズとマージンを考慮して1行あたりの表示可能数を計算
+                    int itemsPerRow = Math.Max(1, (int)(scrollViewer.ViewportWidth / (_appSettings.ThumbnailSize + 4)));
+
+                    int firstVisibleIndex = Math.Max(0, (int)(scrollViewer.VerticalOffset / itemHeight) * itemsPerRow);
+                    int lastVisibleIndex = Math.Min(
+                        GetFilteredItemsCount() - 1,
+                        (int)((scrollViewer.VerticalOffset + scrollViewer.ViewportHeight) / itemHeight + 1) * itemsPerRow - 1
+                    );
+
+                    // スクロール方向を渡して読み込み
+                    await _thumbnailLoader.LoadMoreThumbnailsAsync(
+                        firstVisibleIndex,
+                        lastVisibleIndex,
+                        _thumbnailLoadCts?.Token ?? CancellationToken.None,
+                        false,
+                        scrollDirection);
                 }
             }
-            catch (Exception ex)
+            finally
             {
-                Debug.WriteLine($"[スクロール中] エラー: {ex.Message}");
+                _isScrolling = false;
             }
         }
 
@@ -1051,13 +1125,19 @@ namespace Illustra.Views
         {
             try
             {
-                _scrollStopTimer.Stop();
                 _isScrolling = false;
+                _scrollStopTimer.Stop();
 
-                // 前回のキャンセルトークンを破棄して新しいものを作成
-                _thumbnailLoadCts?.Cancel();
-                _thumbnailLoadCts?.Dispose();
+                // 既存のキャンセルトークンをキャンセルして破棄
+                if (_thumbnailLoadCts != null)
+                {
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
+                }
+
+                // 新しいキャンセルトークンを作成
                 _thumbnailLoadCts = new CancellationTokenSource();
+                var cancellationToken = _thumbnailLoadCts.Token;
 
                 // スクロール位置のログ出力
                 var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
@@ -1065,17 +1145,21 @@ namespace Illustra.Views
                 {
                     Debug.WriteLine($"[スクロール停止] スクロール位置: {scrollViewer.VerticalOffset:F2}/{scrollViewer.ScrollableHeight:F2}");
 
-                    try
+                    // アイテム数が少ない場合は全て読み込む
+                    if (ThumbnailItemsControl.Items.Count <= 100)
                     {
-                        // スクロール停止時は詳細な可視性検出でサムネイルを読み込む
-                        await LoadVisibleThumbnailsByVisibilityDetectionAsync(_thumbnailLoadCts.Token);
+                        Debug.WriteLine($"[スクロール停止] アイテム数が少ないため全て読み込みます: 0～{ThumbnailItemsControl.Items.Count - 1}");
+                        await _thumbnailLoader.LoadMoreThumbnailsAsync(0, ThumbnailItemsControl.Items.Count - 1, cancellationToken);
+                        return;
                     }
-                    catch (OperationCanceledException)
-                    {
-                        // キャンセル例外は無視
-                        Debug.WriteLine("[スクロール停止] 処理がキャンセルされました");
-                    }
+
+                    // 可視性検出を使用してサムネイルを読み込む
+                    await LoadVisibleThumbnailsByVisibilityDetectionAsync(cancellationToken);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルは正常な動作なのでログ出力しない
             }
             catch (Exception ex)
             {
@@ -1085,11 +1169,35 @@ namespace Illustra.Views
 
         private async Task ProcessThumbnailLoadQueue()
         {
-            if (_thumbnailLoadQueue.Count > 0)
+            try
             {
-                Debug.WriteLine("[サムネイルロードキュー] ProcessThumbnailLoadQueue メソッドが呼ばれました Deque {0} items", _thumbnailLoadQueue.Count);
-                var loadTask = _thumbnailLoadQueue.Dequeue();
-                await loadTask();
+                if (_thumbnailLoadQueue.Count == 0)
+                {
+                    _thumbnailLoadTimer.Stop();
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[サムネイルロードキュー] ProcessThumbnailLoadQueue メソッドが呼ばれました Deque {_thumbnailLoadQueue.Count} items");
+
+                // キューから取り出して処理
+                var task = _thumbnailLoadQueue.Dequeue();
+                await task();
+
+                // キューが空になったらタイマーを停止
+                if (_thumbnailLoadQueue.Count == 0)
+                {
+                    _thumbnailLoadTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[サムネイルロードキュー] 全てのサムネイル読み込みが完了しました");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルは正常な動作
+                System.Diagnostics.Debug.WriteLine("[サムネイルロードキュー] 処理がキャンセルされました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[サムネイルロードキュー] エラー: {ex.Message}");
             }
         }
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer, bool includePreload = false, CancellationToken cancellationToken = default)
@@ -1609,7 +1717,7 @@ namespace Illustra.Views
                 var filterId = new FuncId($"filter_rating_{i}");
                 if (KeyboardShortcutHandler.Instance.IsShortcutMatch(filterId, e.Key))
                 {
-                    ApplyFilterling(i);
+                    _ = ApplyFilterling(i);
                     e.Handled = true;
                     return true;
                 }
@@ -1800,7 +1908,7 @@ namespace Illustra.Views
                             var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
                             if (index >= 0)
                             {
-                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index);
+                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None);
                             }
                         });
                     }
@@ -2061,27 +2169,61 @@ namespace Illustra.Views
         /// </summary>
         public void FocusSelectedThumbnail()
         {
-            Debug.WriteLine("[フォーカス] FocusSelectedThumbnail メソッドが呼ばれました");
-            if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
+            Dispatcher.InvokeAsync(() =>
             {
-                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                Dispatcher.InvokeAsync(() =>
+                try
                 {
-                    if (Window.GetWindow(this)?.IsActive == true)
+                    if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
                     {
-                        container?.Focus();
+                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                        if (Window.GetWindow(this)?.IsActive == true)
+                        {
+                            container?.Focus();
+                            System.Diagnostics.Debug.WriteLine($"[フォーカス] 選択アイテムにフォーカス: {selectedItem.FullPath}");
+                        }
                     }
-                }, DispatcherPriority.Input);
-            }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[フォーカス] エラー: {ex.Message}");
+                }
+            }, DispatcherPriority.Input);
         }
 
         private string? _pendingInitialSelectedFilePath;
 
         internal void LoadFileNodes(string path, string? initialSelectedFilePath = null)
         {
+            System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodes: {path}, 初期選択ファイル: {initialSelectedFilePath ?? "なし"}");
+
             _currentFolderPath = path;
             _pendingInitialSelectedFilePath = initialSelectedFilePath;
-            _thumbnailLoader.LoadFileNodes(path);
+
+            // UIスレッドで実行
+            Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    // スクロール位置をリセット
+                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    if (scrollViewer != null)
+                    {
+                        scrollViewer.ScrollToTop();
+                        System.Diagnostics.Debug.WriteLine("[フォルダ切替] LoadFileNodesでスクロール位置を先頭にリセットしました");
+                    }
+
+                    // 選択状態をクリア
+                    _viewModel.SelectedItems.Clear();
+                    ThumbnailItemsControl.SelectedItems.Clear();
+
+                    // ファイルノードの読み込みを開始
+                    _thumbnailLoader.LoadFileNodes(path);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[フォルダ切替] LoadFileNodesエラー: {ex.Message}");
+                }
+            }, DispatcherPriority.Normal);
         }
 
 
@@ -2959,6 +3101,35 @@ namespace Illustra.Views
             {
                 Debug.WriteLine($"LoadVisibleThumbnailsByVisibilityDetectionAsync エラー: {ex.Message}");
             }
+        }
+
+        // FilteredItemsのヘルパーメソッドを追加
+        private List<FileNodeModel> GetFilteredItemsList()
+        {
+            return _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+        }
+
+        // 特定のインデックスのアイテムを取得するヘルパーメソッド
+        private FileNodeModel? GetFilteredItemAt(int index)
+        {
+            var items = GetFilteredItemsList();
+            if (index >= 0 && index < items.Count)
+            {
+                return items[index];
+            }
+            return null;
+        }
+
+        // フィルタリングされたアイテムの数を取得するヘルパーメソッド
+        private int GetFilteredItemsCount()
+        {
+            return _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
+        }
+
+        private void LogWithTimestamp(string message)
+        {
+            string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            System.Diagnostics.Debug.WriteLine($"[{timestamp}] {message}");
         }
     }
 }

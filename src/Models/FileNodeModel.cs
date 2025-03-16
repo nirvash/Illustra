@@ -38,6 +38,12 @@ namespace Illustra.Models
                 FileSize = fileInfo.Length;
             }
             ThumbnailInfo = thumbnailInfo ?? new ThumbnailInfo(null, ThumbnailState.NotLoaded);
+
+            // ThumbnailInfoのPropertyChangedイベントを購読
+            if (_thumbnailInfo != null)
+            {
+                _thumbnailInfo.PropertyChanged += OnThumbnailInfoPropertyChanged;
+            }
         }
 
         private bool IsImageExtension(string extension)
@@ -108,37 +114,34 @@ namespace Illustra.Models
         }
         private string _folderPath = string.Empty;
 
-        private ThumbnailInfo? _thumbnailInfo = null;
-        public ThumbnailInfo? ThumbnailInfo
+        private ThumbnailInfo _thumbnailInfo;
+        public ThumbnailInfo ThumbnailInfo
         {
             get => _thumbnailInfo;
             set
             {
                 if (_thumbnailInfo != value)
                 {
+                    // 古いThumbnailInfoのイベント購読を解除
                     if (_thumbnailInfo != null)
                     {
-                        // 古いThumbnailInfoのイベントを解除
                         _thumbnailInfo.PropertyChanged -= OnThumbnailInfoPropertyChanged;
                     }
 
                     _thumbnailInfo = value;
 
+                    // 新しいThumbnailInfoのイベント購読を設定
                     if (_thumbnailInfo != null)
                     {
-                        // 新しいThumbnailInfoのイベントをサブスクライブ
                         _thumbnailInfo.PropertyChanged += OnThumbnailInfoPropertyChanged;
                     }
 
                     OnPropertyChanged(nameof(ThumbnailInfo));
+                    // HasThumbnailプロパティも更新
+                    HasThumbnail = value?.State == ThumbnailState.Loaded;
+                    IsLoadingThumbnail = value?.State == ThumbnailState.Loading;
                 }
             }
-        }
-
-        private void OnThumbnailInfoPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            // ThumbnailInfoのプロパティが変更されたことを通知
-            OnPropertyChanged(nameof(ThumbnailInfo));
         }
 
         [Column, NotNull]
@@ -224,33 +227,88 @@ namespace Illustra.Models
                 if (_thumbnailInfo != null)
                 {
                     _thumbnailInfo.PropertyChanged -= OnThumbnailInfoPropertyChanged;
-                    if (_thumbnailInfo.Thumbnail != null)
+                    if (_thumbnailInfo.Image != null)
                     {
-                        _thumbnailInfo.Thumbnail = null;
+                        _thumbnailInfo.Image = null;
                     }
                     _thumbnailInfo = null;
                 }
             }
         }
-    }
 
-    public class ThumbnailInfo : INotifyPropertyChanged
-    {
-        private BitmapSource? _thumbnail;
-        public BitmapSource? Thumbnail
+        private bool _hasThumbnail;
+        // データベースに永続化しないプロパティ
+        [LinqToDB.Mapping.NotColumn]
+        public bool HasThumbnail
         {
-            get => _thumbnail;
+            get => _hasThumbnail;
             set
             {
-                if (_thumbnail != value)
+                if (_hasThumbnail != value)
                 {
-                    _thumbnail = value;
-                    OnPropertyChanged();
+                    _hasThumbnail = value;
+                    OnPropertyChanged(nameof(HasThumbnail));
                 }
             }
         }
 
+        private bool _isLoadingThumbnail;
+        // データベースに永続化しないプロパティ
+        [LinqToDB.Mapping.NotColumn]
+        public bool IsLoadingThumbnail
+        {
+            get => _isLoadingThumbnail;
+            set
+            {
+                if (_isLoadingThumbnail != value)
+                {
+                    _isLoadingThumbnail = value;
+                    OnPropertyChanged(nameof(IsLoadingThumbnail));
+                }
+            }
+        }
+
+        // サムネイルを設定するメソッド
+        public void SetThumbnail(BitmapSource thumbnail)
+        {
+            ThumbnailInfo = new ThumbnailInfo(thumbnail, ThumbnailState.Loaded);
+            HasThumbnail = thumbnail != null;
+        }
+
+        // OnThumbnailInfoPropertyChangedメソッドを追加
+        private void OnThumbnailInfoPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // ThumbnailInfoのプロパティが変更されたときの処理
+            if (e.PropertyName == nameof(ThumbnailInfo.State))
+            {
+                // 状態が変更されたら、HasThumbnailとIsLoadingThumbnailを更新
+                HasThumbnail = _thumbnailInfo?.State == ThumbnailState.Loaded;
+                IsLoadingThumbnail = _thumbnailInfo?.State == ThumbnailState.Loading;
+            }
+
+            // ThumbnailInfoの変更を通知
+            OnPropertyChanged(nameof(ThumbnailInfo));
+        }
+    }
+
+    public class ThumbnailInfo : INotifyPropertyChanged
+    {
+        private BitmapSource _image;
         private ThumbnailState _state;
+
+        public BitmapSource Image
+        {
+            get => _image;
+            set
+            {
+                if (_image != value)
+                {
+                    _image = value;
+                    OnPropertyChanged(nameof(Image));
+                }
+            }
+        }
+
         public ThumbnailState State
         {
             get => _state;
@@ -259,20 +317,45 @@ namespace Illustra.Models
                 if (_state != value)
                 {
                     _state = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(State));
+                    OnPropertyChanged(nameof(IsLoadingThumbnail));
+                    OnPropertyChanged(nameof(HasThumbnail));
                 }
             }
         }
 
-        public ThumbnailInfo(BitmapSource? thumbnail, ThumbnailState state)
+        // IsLoadingThumbnailをプロパティとして実装
+        public bool IsLoadingThumbnail
         {
-            _thumbnail = thumbnail;
+            get => State == ThumbnailState.Loading;
+            set
+            {
+                if (value)
+                {
+                    State = ThumbnailState.Loading;
+                }
+                else if (State == ThumbnailState.Loading)
+                {
+                    State = ThumbnailState.NotLoaded;
+                }
+            }
+        }
+
+        // HasThumbnailをプロパティとして実装
+        public bool HasThumbnail
+        {
+            get => State == ThumbnailState.Loaded;
+        }
+
+        public ThumbnailInfo(BitmapSource image, ThumbnailState state)
+        {
+            _image = image;
             _state = state;
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

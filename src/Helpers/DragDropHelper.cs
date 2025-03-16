@@ -63,10 +63,10 @@ namespace Illustra.Helpers
             if (selectedItems.Count == 1)
             {
                 var item = selectedItems[0];
-                if (item.ThumbnailInfo?.Thumbnail == null)
+                if (item.ThumbnailInfo?.Image == null)
                     return CreateTextVisual(item.FileName);
 
-                return CreateThumbnailVisual(item.ThumbnailInfo.Thumbnail, item.FileName);
+                return CreateThumbnailVisual(item.ThumbnailInfo.Image, item.FileName);
             }
 
             // 複数選択の場合は重なり合った表示を作成

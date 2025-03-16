@@ -24,7 +24,7 @@ namespace Illustra.Views
     {
         private FileSystemTreeViewModel? _viewModel;
         private IEventAggregator? _eventAggregator;
-        private AppSettings? _appSettings;
+        private AppSettingsModel? _appSettings;
         private FileOperationHelper _fileOperationHelper;
         private const string FAVORITES_CONTROL_ID = "FavoriteFolders";
 
@@ -71,13 +71,13 @@ namespace Illustra.Views
             // 起動時フォルダ設定に応じてパスを設定
             switch (_appSettings.StartupMode)
             {
-                case AppSettings.StartupFolderMode.LastOpened:
+                case AppSettingsModel.StartupFolderMode.LastOpened:
                     folderPath = _appSettings.LastFolderPath;
                     break;
-                case AppSettings.StartupFolderMode.Specified:
+                case AppSettingsModel.StartupFolderMode.Specified:
                     folderPath = _appSettings.StartupFolderPath;
                     break;
-                case AppSettings.StartupFolderMode.None:
+                case AppSettingsModel.StartupFolderMode.None:
                 default:
                     folderPath = null;
                     break;

@@ -98,6 +98,9 @@ namespace Illustra
             // AppSettingsから循環移動の設定を読み込む
             var settings = SettingsHelper.GetSettings();
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
+
+            // ログカテゴリ設定を読み込む
+            LogHelper.LoadCategorySettings();
         }
 
 

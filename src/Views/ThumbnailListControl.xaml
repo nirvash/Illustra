@@ -10,8 +10,8 @@
              xmlns:converters="clr-namespace:Illustra.Converters"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
-             d:DesignHeight="300"
-             d:DesignWidth="300">
+             d:DesignHeight="450"
+             d:DesignWidth="800">
 
     <UserControl.Resources>
         <helpers:RatingToStarsConverter x:Key="RatingToStarsConverter"/>
@@ -56,7 +56,7 @@
                         Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
                         BorderThickness="0">
                     <Grid>
-                        <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                        <Image Source="{Binding ThumbnailInfo.Image}"
                                Stretch="Uniform"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
@@ -142,7 +142,7 @@
                 <Slider x:Name="ThumbnailSizeSlider"
                         Width="150"
                         Minimum="60"
-                        Maximum="480"
+                        Maximum="300"
                         Value="120"
                         TickFrequency="20"
                         IsSnapToTickEnabled="True"
@@ -263,8 +263,10 @@
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.CanContentScroll="True"
                   ScrollViewer.PanningMode="VerticalOnly"
+                  ScrollViewer.IsDeferredScrollingEnabled="True"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
+                  VirtualizingPanel.ScrollUnit="Pixel"
                   BorderThickness="0"
                   AllowDrop="True"
                   dd:DragDrop.IsDragSource="True"
@@ -280,7 +282,7 @@
                             Width="120"
                             Height="120"
                             Margin="0 0 0 20">
-                        <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                        <Image Source="{Binding ThumbnailInfo.Image}"
                                Width="120"
                                Height="120"
                                Stretch="UniformToFill"/>
@@ -306,7 +308,7 @@
                                         BorderThickness="1"
                                         Width="100"
                                         Height="100">
-                                    <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                                    <Image Source="{Binding ThumbnailInfo.Image}"
                                            Width="100"
                                            Height="100"
                                            Stretch="UniformToFill"/>
@@ -455,7 +457,7 @@
                             Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
                             BorderThickness="0">
                         <Grid>
-                            <Image Source="{Binding ThumbnailInfo.Thumbnail}"
+                            <Image Source="{Binding ThumbnailInfo.Image}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"

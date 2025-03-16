@@ -5,6 +5,7 @@ using System.Windows;
 using SkiaSharp;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace Illustra.Helpers
 {
@@ -343,22 +344,22 @@ namespace Illustra.Helpers
         /// <summary>
         /// SKBitmapからWriteableBitmapへのピクセルデータのコピーを行います
         /// </summary>
-        private static unsafe void CopySkBitmapToWriteableBitmap(SKBitmap skBitmap, WriteableBitmap writeableBitmap)
+        private static void CopySkBitmapToWriteableBitmap(SKBitmap skBitmap, WriteableBitmap writeableBitmap)
         {
             // SKBitmapのピクセルデータをコピー
-            var sourcePtr = skBitmap.GetPixels();
-            var byteCount = skBitmap.ByteCount;
+            IntPtr sourcePtr = skBitmap.GetPixels();
+            int byteCount = skBitmap.ByteCount;
 
-            // unsafe コンテキストで Marshal.Copy を使用
-            byte[] buffer = new byte[byteCount];
-            Marshal.Copy((IntPtr)sourcePtr, buffer, 0, byteCount);
-            Marshal.Copy(buffer, 0, writeableBitmap.BackBuffer, byteCount);
+            // バイト配列を介してコピー
+            byte[] tempBuffer = new byte[byteCount];
+            Marshal.Copy(sourcePtr, tempBuffer, 0, byteCount);
+            Marshal.Copy(tempBuffer, 0, writeableBitmap.BackBuffer, byteCount);
         }
 
         /// <summary>
         /// エラー時に表示するサムネイルを生成します
         /// </summary>
-        private static BitmapSource GenerateErrorThumbnail(int width, int height, string errorMessage)
+        public static BitmapSource GenerateErrorThumbnail(int width, int height, string errorMessage = "Error")
         {
             // エラーメッセージを含む簡易サムネイルを作成
             var info = new SKImageInfo(width, height);

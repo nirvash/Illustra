@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
+using Illustra.Models;
 
 namespace Illustra.Views
 {
@@ -103,7 +104,7 @@ namespace Illustra.Views
 
         public void SaveAllData()
         {
-            var appSettings = ContainerLocator.Container.Resolve<AppSettings>();
+            var appSettings = ContainerLocator.Container.Resolve<AppSettingsModel>();
             appSettings.LastFolderPath = _currentSelectedFilePath;
         }
     }

@@ -11,6 +11,7 @@ using System;
 using Illustra.ViewModels;
 using System.Collections.Generic;
 using DryIoc.ImTools;
+using Illustra.Models;
 
 namespace Illustra.Views
 {
@@ -21,7 +22,7 @@ namespace Illustra.Views
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly IEventAggregator _eventAggregator;
-        private AppSettings _appSettings;
+        private AppSettingsModel _appSettings;
         private bool _sortByDate = true;
         private bool _sortAscending = true;
         private double _mainSplitterPosition;

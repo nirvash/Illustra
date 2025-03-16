@@ -17,7 +17,7 @@ namespace Illustra.Views
     public partial class FavoriteFoldersControl : UserControl, IActiveAware
     {
         private ObservableCollection<FavoriteFolderModel> _favoriteFolders = [];
-        private AppSettings _appSettings;
+        private AppSettingsModel _appSettings;
         private IEventAggregator? _eventAggregator;
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FavoriteFolders";
