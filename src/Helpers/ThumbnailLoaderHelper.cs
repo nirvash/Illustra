@@ -1104,13 +1104,12 @@ public class ThumbnailLoaderHelper
             // サポートされている画像ファイル拡張子
             string[] supportedExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
 
-            // フォルダ内のファイルを取得
+            // フォルダ内のファイルを取得 (大文字小文字は区別されないのでこれでOK)
             var files = new List<string>();
             foreach (var extension in supportedExtensions)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 files.AddRange(Directory.GetFiles(folderPath, $"*{extension}", SearchOption.TopDirectoryOnly));
-                files.AddRange(Directory.GetFiles(folderPath, $"*{extension.ToUpper()}", SearchOption.TopDirectoryOnly));
             }
 
             // ファイル取得時間を計測
