@@ -819,6 +819,15 @@ namespace Illustra.Views
 
             var currentPosition = e.GetPosition(this);
 
+            // マウスがプロパティパネル上にある場合は、カーソルを表示したままにする
+            if (e.OriginalSource is DependencyObject element && IsDescendantOf(element, PropertyPanel))
+            {
+                Mouse.OverrideCursor = null;
+                hideCursorTimer.Stop();
+                _lastMousePosition = currentPosition;
+                return;
+            }
+
             // 前回位置がない場合は現在位置を保存して終了
             if (!_lastMousePosition.HasValue)
             {
