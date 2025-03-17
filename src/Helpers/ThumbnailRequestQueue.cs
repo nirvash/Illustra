@@ -144,22 +144,35 @@ namespace Illustra.Helpers
             lock (_queueLock)
             {
                 // 既に処理中なら何もしない
-                if (_isProcessing)
+                if (_isProcessing && _scrollType != ScrollType.None)
                 {
+                    LogHelper.LogWithTimestamp("処理中のため次のリクエストをスキップ", LogHelper.Categories.ThumbnailQueue);
                     return;
                 }
 
-                // 高優先度リストから取得を試みる
-                if (_highPriorityRequests.Count > 0)
+                // スクロール状態に応じた処理
+                if (_scrollType == ScrollType.None)
                 {
-                    nextRequest = _highPriorityRequests.PopFront();
-                    LogHelper.LogWithTimestamp($"高優先度キューからリクエストを取得: {nextRequest.StartIndex}～{nextRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    // スクロール停止時は高優先度を優先
+                    if (_highPriorityRequests.Count > 0)
+                    {
+                        nextRequest = _highPriorityRequests.PopFront();
+                        LogHelper.LogWithTimestamp($"スクロール停止中：高優先度リクエストを取得: {nextRequest.StartIndex}～{nextRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    }
+                    else if (_normalPriorityRequests.Count > 0)
+                    {
+                        nextRequest = _normalPriorityRequests.PopFront();
+                        LogHelper.LogWithTimestamp($"スクロール停止中：通常優先度リクエストを取得: {nextRequest.StartIndex}～{nextRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    }
                 }
-                // 高優先度リストが空なら通常リストから取得
-                else if (_normalPriorityRequests.Count > 0)
+                else
                 {
-                    nextRequest = _normalPriorityRequests.PopFront();
-                    LogHelper.LogWithTimestamp($"通常キューからリクエストを取得: {nextRequest.StartIndex}～{nextRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    // スクロール中は高優先度のみ処理
+                    if (_highPriorityRequests.Count > 0)
+                    {
+                        nextRequest = _highPriorityRequests.PopFront();
+                        LogHelper.LogWithTimestamp($"スクロール中：高優先度リクエストを取得: {nextRequest.StartIndex}～{nextRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                    }
                 }
 
                 // 処理するリクエストがあれば処理開始
@@ -167,6 +180,7 @@ namespace Illustra.Helpers
                 {
                     _currentRequest = nextRequest;
                     _isProcessing = true;
+                    LogHelper.LogWithTimestamp($"処理開始: {nextRequest.StartIndex}～{nextRequest.EndIndex} (高優先度: {nextRequest.IsHighPriority})", LogHelper.Categories.ThumbnailQueue);
                 }
             }
 
@@ -196,11 +210,16 @@ namespace Illustra.Helpers
                 // スクロール中の処理制御
                 bool isScrolling = _scrollType != ScrollType.None;
 
-                // スクロールバードラッグ時のみ通常優先度リクエストをスキップ
-                if (_scrollType == ScrollType.ScrollBar && !request.IsHighPriority)
+                // スクロール状態に応じた処理制御
+                if (_scrollType == ScrollType.ScrollBar)
                 {
-                    LogHelper.LogWithTimestamp($"スクロールバードラッグ中のため処理をスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
-                    return;
+                    // スクロールバードラッグ中は通常優先度をスキップし、高優先度は処理
+                    if (!request.IsHighPriority)
+                    {
+                        LogHelper.LogWithTimestamp($"スクロールバードラッグ中のため通常優先度リクエストをスキップ: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                        return;
+                    }
+                    LogHelper.LogWithTimestamp($"スクロールバードラッグ中の高優先度リクエストを処理: {request.StartIndex}～{request.EndIndex}", LogHelper.Categories.ThumbnailQueue);
                 }
 
                 // バッチ処理の実装 - スクロール方法に応じてバッチサイズを調整
@@ -483,11 +502,43 @@ namespace Illustra.Helpers
         /// スクロール状態を設定します
         /// </summary>
         /// <param name="scrollType">スクロールタイプ</param>
-        public void SetScrolling(ScrollType scrollType)
+        public void SetScrollType(ScrollType scrollType)
         {
             lock (_queueLock)
             {
+                var oldScrollType = _scrollType;
                 _scrollType = scrollType;
+
+                // スクロール状態変更のログ出力
+                var scrollStateText = scrollType switch
+                {
+                    ScrollType.ScrollBar => "スクロールバードラッグ",
+                    ScrollType.Wheel => "ホイールスクロール",
+                    ScrollType.None => "スクロール停止",
+                    _ => "不明"
+                };
+
+                // 現在の処理範囲と保留中のリクエストの範囲をログ出力
+                LogHelper.LogWithTimestamp($"[スクロール状態変更] {scrollStateText}", LogHelper.Categories.ThumbnailQueue);
+
+                if (_currentRequest != null)
+                {
+                    LogHelper.LogWithTimestamp($"[処理範囲] 現在処理中: {_currentRequest.StartIndex}～{_currentRequest.EndIndex}", LogHelper.Categories.ThumbnailQueue);
+                }
+
+                if (_highPriorityRequests.Count > 0)
+                {
+                    var firstHigh = _highPriorityRequests.PeekFront();
+                    var lastHigh = _highPriorityRequests.PeekBack();
+                    LogHelper.LogWithTimestamp($"[処理範囲] 高優先度待機中: {firstHigh.StartIndex}～{lastHigh.EndIndex} ({_highPriorityRequests.Count}件)", LogHelper.Categories.ThumbnailQueue);
+                }
+
+                if (_normalPriorityRequests.Count > 0)
+                {
+                    var firstNormal = _normalPriorityRequests.PeekFront();
+                    var lastNormal = _normalPriorityRequests.PeekBack();
+                    LogHelper.LogWithTimestamp($"[処理範囲] 通常優先度待機中: {firstNormal.StartIndex}～{lastNormal.EndIndex} ({_normalPriorityRequests.Count}件)", LogHelper.Categories.ThumbnailQueue);
+                }
 
                 // スクロールバードラッグ時のみ通常優先度キューをクリア
                 if (scrollType == ScrollType.ScrollBar)
@@ -495,13 +546,21 @@ namespace Illustra.Helpers
                     _normalPriorityRequests.Clear();
                     LogHelper.LogWithTimestamp("スクロールバードラッグ中のため通常優先度キューをクリア", LogHelper.Categories.ThumbnailQueue);
                 }
-            }
-        }
+                // スクロール停止時の処理
+                else if (scrollType == ScrollType.None && oldScrollType != ScrollType.None)
+                {
+                    // 処理中のリクエストがあればキャンセル
+                    if (_isProcessing)
+                    {
+                        _isProcessing = false;
+                        LogHelper.LogWithTimestamp("スクロール停止：処理中フラグをリセット", LogHelper.Categories.ThumbnailQueue);
+                    }
 
-        // 既存のSetScrollingメソッドをオーバーロードとして残す（後方互換性のため）
-        public void SetScrolling(bool isScrolling)
-        {
-            SetScrolling(isScrolling ? ScrollType.Wheel : ScrollType.None);
+                    // 次のリクエストの処理を開始（高優先度が優先される）
+                    ProcessNextRequestIfAvailable();
+                    LogHelper.LogWithTimestamp("スクロール停止：次のリクエストの処理を開始", LogHelper.Categories.ThumbnailQueue);
+                }
+            }
         }
     }
 

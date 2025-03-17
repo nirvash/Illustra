@@ -254,28 +254,47 @@
         </Grid>
 
         <ListView x:Name="ThumbnailItemsControl"
-                  Grid.Row="1"
-                  ItemsSource="{Binding FilteredItems}"
-                  SelectionMode="Extended"
-                  IsSynchronizedWithCurrentItem="True"
-                  Loaded="ThumbnailItemsControl_Loaded"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.CanContentScroll="True"
-                  ScrollViewer.PanningMode="VerticalOnly"
-                  ScrollViewer.IsDeferredScrollingEnabled="False"
-                  VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling"
-                  VirtualizingPanel.ScrollUnit="Pixel"
-                  BorderThickness="0"
-                  AllowDrop="True"
-                  dd:DragDrop.IsDragSource="True"
-                  dd:DragDrop.IsDropTarget="True"
-                  KeyboardNavigation.TabNavigation="None"
-                  IsTabStop="True"
-                  TabIndex="3"
-                  FocusVisualStyle="{x:Null}"
-                  PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
+                           Grid.Row="1"
+                           ItemsSource="{Binding FilteredItems}"
+                           SelectionMode="Extended"
+                           IsSynchronizedWithCurrentItem="True"
+                           Loaded="ThumbnailItemsControl_Loaded"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto"
+                           ScrollViewer.CanContentScroll="True"
+                           ScrollViewer.PanningMode="VerticalOnly"
+                           ScrollViewer.IsDeferredScrollingEnabled="False"
+                           VirtualizingPanel.IsVirtualizing="True"
+                           VirtualizingPanel.VirtualizationMode="Recycling"
+                           VirtualizingPanel.ScrollUnit="Pixel"
+                           BorderThickness="0"
+                           AllowDrop="True"
+                           dd:DragDrop.IsDragSource="True"
+                           dd:DragDrop.IsDropTarget="True"
+                           KeyboardNavigation.TabNavigation="None"
+                           IsTabStop="True"
+                           TabIndex="3"
+                           FocusVisualStyle="{x:Null}"
+                           PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
+                    <ListView.Template>
+                        <ControlTemplate TargetType="ListView">
+                            <Border BorderThickness="{TemplateBinding BorderThickness}"
+                                    BorderBrush="{TemplateBinding BorderBrush}">
+                                <ScrollViewer x:Name="ScrollViewer"
+                                            Focusable="False">
+                                    <ScrollViewer.Resources>
+                                        <Style TargetType="ScrollBar">
+                                            <EventSetter Event="Thumb.DragStarted"
+                                                       Handler="ScrollBar_DragStarted"/>
+                                            <EventSetter Event="Thumb.DragCompleted"
+                                                       Handler="ScrollBar_DragCompleted"/>
+                                        </Style>
+                                    </ScrollViewer.Resources>
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </ControlTemplate>
+                    </ListView.Template>
             <dd:DragDrop.DragAdornerTemplate>
                 <DataTemplate>
                     <Border BorderBrush="#AA000000"

@@ -99,6 +99,14 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
+    /// スクロールタイプを設定します
+    /// </summary>
+    public void SetScrollType(ScrollType scrollType)
+    {
+        _requestQueue.SetScrollType(scrollType);
+    }
+
+    /// <summary>
     /// サムネイルのサイズを設定します
     /// </summary>
     public int ThumbnailSize

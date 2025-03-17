@@ -84,7 +84,8 @@ namespace Illustra.Views
                 if (_viewModel.SelectedItems.Any())
                 {
                     var selectedItem = _viewModel.SelectedItems.First();
-                    System.Diagnostics.Debug.WriteLine($"[選択更新] アイテムを選択: {(selectedItem as FileNodeModel)?.FullPath ?? "不明"}");
+                    var nodeIndex = _viewModel.Items.IndexOf(selectedItem);
+                    System.Diagnostics.Debug.WriteLine($"[選択更新] アイテムを選択: [{nodeIndex}] {(selectedItem as FileNodeModel)?.FullPath ?? "不明"}");
                 }
             }
             catch (Exception ex)
@@ -992,7 +993,9 @@ namespace Illustra.Views
 
                     if (matchingItem != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[選択] フィルタリングされたアイテムから一致するアイテムを見つけました: {matchingItem.FullPath}");
+                        // アイテムのインデックスを取得
+                        int selectedIndex = filteredItems.IndexOf(matchingItem);
+                        LogHelper.LogWithTimestamp($"[選択] インデックス: {selectedIndex}, ファイル: {matchingItem.FullPath}", LogHelper.Categories.ThumbnailQueue);
 
                         if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
                         {
@@ -1005,8 +1008,7 @@ namespace Illustra.Views
                         // FileSelectedEvent を発行 - 同期メソッドを使用
                         _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
 
-                        System.Diagnostics.Debug.WriteLine($"[選択更新] アイテムを選択: {filePath}");
-                        System.Diagnostics.Debug.WriteLine($"[フォルダ切替] アイテム選択完了: {filePath}");
+                        LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
                     }
                     else
                     {
@@ -1039,7 +1041,8 @@ namespace Illustra.Views
                                 // FileSelectedEvent を発行 - 同期メソッドを使用
                                 _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
 
-                                System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: {filePath}");
+                                var index = _viewModel.Items.IndexOf(matchingItem);
+                                System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
                             }
                             else
                             {
@@ -1127,10 +1130,16 @@ namespace Illustra.Views
             _scrollStopTimer.Stop();
             _scrollStopTimer.Start();
 
-            // 軽量サムネイル読み込み処理
             try
             {
-                // 既存のキャンセルトークンをキャンセル
+                // ScrollViewerを取得
+                var scrollViewer = sender as ScrollViewer;
+                if (scrollViewer == null) return;
+
+                // スクロール位置から表示範囲を取得（小さめのバッファを使用）
+                (int firstIndex, int lastIndex) = GetVisibleRangeWithBuffer(scrollViewer, bufferSize: 5);
+
+                // 現在の処理をキャンセル
                 if (_thumbnailLoadCts != null)
                 {
                     _thumbnailLoadCts.Cancel();
@@ -1139,25 +1148,19 @@ namespace Illustra.Views
 
                 // 新しいキャンセルトークンを作成
                 _thumbnailLoadCts = new CancellationTokenSource();
-                var cancellationToken = _thumbnailLoadCts.Token;
 
-                // ScrollViewerを取得
-                var scrollViewer = sender as ScrollViewer;
-                if (scrollViewer != null)
-                {
-                    // 軽量サムネイル読み込み処理を実行
-                    await LoadVisibleThumbnailsLightAsync(scrollViewer, cancellationToken);
-                }
+                // 表示範囲のサムネイルを読み込む（低優先度）
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndex, lastIndex, _thumbnailLoadCts.Token, isHighPriority: false);
             }
             catch (OperationCanceledException)
             {
                 // キャンセルは正常な動作として扱う
-                LogHelper.LogScrollTracking("[スクロール中] 軽量サムネイル読み込みがキャンセルされました");
+                LogHelper.LogScrollTracking("[スクロール中] サムネイル読み込みがキャンセルされました");
             }
             catch (Exception ex)
             {
                 // その他の例外はログに記録
-                LogHelper.LogError($"[スクロール中] 軽量サムネイル読み込み中にエラーが発生しました: {ex.Message}", ex);
+                LogHelper.LogError($"[スクロール中] サムネイル読み込み中にエラーが発生しました: {ex.Message}", ex);
             }
         }
 
@@ -3194,6 +3197,82 @@ namespace Illustra.Views
             return _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
         }
 
+        /// <summary>
+        /// スクロールビューアの表示範囲内のアイテムインデックスを取得します。
+        /// </summary>
+        private (int firstVisibleIndex, int lastVisibleIndex) GetVisibleIndexRange(ScrollViewer scrollViewer)
+        {
+            // 可視性の直接チェックで表示範囲を取得
+            int firstVisibleIndex = 0;
+            int lastVisibleIndex = 0;
+            bool foundFirst = false;
+
+            // コンテナの可視性をチェックして表示範囲を特定
+            for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
+            {
+                var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+                if (container != null && container.IsVisible)
+                {
+                    if (!foundFirst)
+                    {
+                        firstVisibleIndex = i;
+                        foundFirst = true;
+                    }
+                    lastVisibleIndex = i;
+                }
+                else if (foundFirst)
+                {
+                    // 可視範囲を超えたら終了
+                    break;
+                }
+            }
+
+            // 直接チェックで見つからなかった場合は計算方式にフォールバック
+            if (!foundFirst)
+            {
+                // 位置ベースでの計算による表示範囲の取得
+                double viewportTop = scrollViewer.VerticalOffset;
+                double viewportBottom = viewportTop + scrollViewer.ViewportHeight;
+
+                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
+                int itemsPerRow = GetItemsPerRow(panel);
+                if (itemsPerRow <= 0) itemsPerRow = 1;
+
+                double itemHeight = _thumbnailLoader.ThumbnailSize + 40;
+                int firstVisibleRow = Math.Max(0, (int)(viewportTop / itemHeight));
+                int lastVisibleRow = Math.Min((int)(ThumbnailItemsControl.Items.Count / itemsPerRow),
+                                          (int)(viewportBottom / itemHeight) + 1);
+
+                firstVisibleIndex = firstVisibleRow * itemsPerRow;
+                lastVisibleIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1,
+                                        (lastVisibleRow + 1) * itemsPerRow - 1);
+
+                LogHelper.LogWithTimestamp($"[表示範囲] 計算方式にフォールバック: {firstVisibleIndex}～{lastVisibleIndex}",
+                    LogHelper.Categories.ThumbnailQueue);
+            }
+            else
+            {
+                LogHelper.LogWithTimestamp($"[表示範囲] 可視性チェックで検出: {firstVisibleIndex}～{lastVisibleIndex}",
+                    LogHelper.Categories.ThumbnailQueue);
+            }
+
+            return (firstVisibleIndex, lastVisibleIndex);
+        }
+
+        /// <summary>
+        /// スクロールビューアの表示範囲内のアイテムインデックスをバッファ付きで取得します。
+        /// </summary>
+        private (int firstVisibleIndex, int lastVisibleIndex) GetVisibleRangeWithBuffer(ScrollViewer scrollViewer, int bufferSize)
+        {
+            var (first, last) = GetVisibleIndexRange(scrollViewer);
+
+            // バッファを追加
+            int firstWithBuffer = Math.Max(0, first - bufferSize);
+            int lastWithBuffer = Math.Min(ThumbnailItemsControl.Items.Count - 1, last + bufferSize);
+
+            return (firstWithBuffer, lastWithBuffer);
+        }
+
         private void LogWithTimestamp(string message)
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
@@ -3209,60 +3288,39 @@ namespace Illustra.Views
                 // スクロール停止時の処理
                 _isScrolling = false;
 
+                // サムネイル処理キューのスクロール状態を通常に戻す
+                _thumbnailLoader.SetScrollType(ScrollType.None);
+
                 // アイテムがない場合は何もしない
                 if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
                 {
                     LogHelper.LogScrollTracking("[スクロール停止] アイテムが存在しないため処理をスキップします");
-
-                    // ViewModelのFilteredItemsをチェック
-                    int filteredItemsCount = 0;
-                    try
-                    {
-                        filteredItemsCount = _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.LogError($"[スクロール停止] FilteredItemsの取得中にエラーが発生しました: {ex.Message}", ex);
-                    }
-
-                    if (filteredItemsCount > 0)
-                    {
-                        LogHelper.LogScrollTracking($"[スクロール停止] ViewModelには{filteredItemsCount}件のアイテムがありますが、UIに反映されていません");
-
-                        // コレクションビューの更新を強制
-                        try
-                        {
-                            /*
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                var view = CollectionViewSource.GetDefaultView(_viewModel.FilteredItems);
-                                view.Refresh();
-                                ThumbnailItemsControl.UpdateLayout();
-                            }, DispatcherPriority.Normal);
-
-                            await Task.Delay(50); // 少し待機
-
-                            // 再度確認
-                            if (ThumbnailItemsControl.Items.Count > 0)
-                            {
-                                LogHelper.LogScrollTracking($"[スクロール停止] 更新後: {ThumbnailItemsControl.Items.Count}件のアイテムが読み込まれました");
-                                // 再帰的に呼び出して処理を続行
-                                await Task.Delay(10);
-                                ScrollStopTimer_Tick(sender, e);
-                                return;
-                            }
-                            */
-                        }
-                        catch (Exception ex)
-                        {
-                            LogHelper.LogError($"[スクロール停止] コレクションビューの更新中にエラーが発生しました: {ex.Message}", ex);
-                        }
-                    }
-
                     return;
                 }
 
-                // 以下、既存の処理...
+                // ScrollViewerを取得
+                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                if (scrollViewer == null) return;
+
+                // 表示範囲を取得（大きめのバッファを使用）
+                (int firstIndex, int lastIndex) = GetVisibleRangeWithBuffer(scrollViewer, bufferSize: 30);
+
+                // 表示範囲のサムネイルを高優先度で読み込む
+                if (_thumbnailLoadCts != null)
+                {
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
+                }
+
+                _thumbnailLoadCts = new CancellationTokenSource();
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndex, lastIndex, _thumbnailLoadCts.Token, isHighPriority: true);
+
+                LogHelper.LogScrollTracking($"[スクロール停止] 表示範囲のサムネイルを高優先度で読み込み完了: {firstIndex}～{lastIndex}");
+            }
+            catch (OperationCanceledException)
+            {
+                // キャンセルは正常な動作として扱う
+                LogHelper.LogScrollTracking("[スクロール停止] サムネイル読み込みがキャンセルされました");
             }
             catch (Exception ex)
             {
@@ -3279,11 +3337,13 @@ namespace Illustra.Views
             return _thumbnailLoader.CreateThumbnailAsync(index, cancellationToken);
         }
 
-        // スクロールバードラッグ開始時
+        // スクロールバードラッグ開始時（高速スクロール用）
         private void ScrollBar_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
         {
-            // _thumbnailRequestQueueが実装されるまでコメントアウト
-            // _thumbnailRequestQueue.SetScrolling(ThumbnailRequestQueue.ScrollType.ScrollBar);
+            LogHelper.LogWithTimestamp("[スクロール状態] スクロールバードラッグ開始", LogHelper.Categories.ThumbnailQueue);
+
+            // サムネイル処理キューにスクロールバードラッグ状態を設定
+            _thumbnailLoader.SetScrollType(ScrollType.ScrollBar);
 
             // スクロール中フラグを設定
             _isScrolling = true;
@@ -3293,9 +3353,27 @@ namespace Illustra.Views
             _scrollStopTimer.Start();
         }
 
-        // ホイールスクロール時
+        // スクロールバードラッグ完了時
+        private void ScrollBar_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            LogHelper.LogWithTimestamp("[スクロール状態] スクロールバードラッグ完了", LogHelper.Categories.ThumbnailQueue);
+
+            // サムネイル処理キューのスクロール状態を通常に戻す
+            _thumbnailLoader.SetScrollType(ScrollType.None);
+
+            // スクロール停止処理を開始
+            _scrollStopTimer.Stop();
+            _scrollStopTimer.Start();
+        }
+
+        // ホイールスクロール時（低速スクロール用）
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            LogHelper.LogWithTimestamp("[スクロール状態] マウスホイールスクロール開始", LogHelper.Categories.ThumbnailQueue);
+
+            // サムネイル処理キューにホイールスクロール状態を設定
+            _thumbnailLoader.SetScrollType(ScrollType.Wheel);
+
             // スクロール中フラグを設定
             _isScrolling = true;
 
