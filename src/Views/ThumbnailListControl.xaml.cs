@@ -551,7 +551,8 @@ namespace Illustra.Views
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
                     if (lastSelected != null)
                     {
-                        _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(lastSelected.FullPath);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath, lastSelected.Rating);
+                        _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
                         LoadFilePropertiesAsync(lastSelected.FullPath);
                     }
                 }
@@ -847,7 +848,8 @@ namespace Illustra.Views
                             _viewModel.SelectedItems.Clear();
                             _viewModel.SelectedItems.Add(selectedItem);
                             LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 最初のアイテムを選択しました: {selectedItem.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                            _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedItem.FullPath);
+                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedItem.FullPath, selectedItem.Rating);
+                            _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                         }
                     }
 
@@ -1006,7 +1008,9 @@ namespace Illustra.Views
                         ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                         // FileSelectedEvent を発行 - 同期メソッドを使用
-                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
+                        var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
 
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
                     }
@@ -1039,8 +1043,9 @@ namespace Illustra.Views
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                                 // FileSelectedEvent を発行 - 同期メソッドを使用
-                                _eventAggregator.GetEvent<FileSelectedEvent>().Publish(filePath);
-
+                                var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
+                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                                _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                                 var index = _viewModel.Items.IndexOf(matchingItem);
                                 System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
                             }

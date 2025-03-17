@@ -20,9 +20,9 @@ namespace Illustra.Views
     public partial class PropertyPanelControl : UserControl
     {
         private IEventAggregator? _eventAggregator;
-        private string _currentFilePath = string.Empty;
-        private FileNodeModel? _currentFileNode;
-        private readonly DatabaseManager _db = new();
+        private SelectedFileModel? _selectedFile;
+
+        private DatabaseManager _db = null;
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
 
@@ -44,7 +44,7 @@ namespace Illustra.Views
             if (d is PropertyPanelControl control)
             {
                 control.DataContext = e.NewValue;
-                control.UpdatePropertiesDisplay();
+                control.UpdatePropertiesDisplayAsync();
             }
         }
 
@@ -55,6 +55,8 @@ namespace Illustra.Views
             InitializeComponent();
             ImageProperties = new ImagePropertiesModel();
             DataContext = ImageProperties;
+
+            _db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             Loaded += PropertyPanelControl_Loaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
@@ -70,7 +72,7 @@ namespace Illustra.Views
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
         {
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected);
+            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread);
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderChanged);
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
@@ -78,18 +80,43 @@ namespace Illustra.Views
 
         }
 
-        private void OnFileSelected(string filePath)
+        private async void OnFileSelected(SelectedFileModel selectedFile)
         {
-            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath) && _currentFilePath != filePath)
+            if (selectedFile == null
+                || string.IsNullOrEmpty(selectedFile.FullPath)
+                || !File.Exists(selectedFile.FullPath))
+                return;
+
+            if (_selectedFile == null || !_selectedFile.FullPath.Equals(selectedFile.FullPath))
             {
-                _currentFilePath = filePath;
-                _ = LoadFilePropertiesAsync(filePath); // ToDo: プロパティが表示されていない
-                _ = LoadFileNodeAsync(filePath);
+                await LoadFilePropertiesAsync(selectedFile.FullPath);
+
+                _selectedFile = selectedFile;
+                void syncRating()
+                {
+                    ImageProperties.Rating = _selectedFile.Rating;
+                    _ = UpdateRatingStars();
+                }
+
+                if (ImageProperties != null)
+                {
+                    ImageProperties.Rating = selectedFile.Rating;
+                    _selectedFile.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(SelectedFileModel.Rating))
+                        {
+                            syncRating();
+                        }
+                    };
+                }
+                syncRating();
+
                 Visibility = Visibility.Visible;
             }
-            else if (string.IsNullOrEmpty(filePath))
+            else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
             {
-                _currentFilePath = string.Empty;
+                // ファイルが選択されていない場合はプロパティパネルを非表示にする
+                _selectedFile.FullPath = string.Empty;
                 ImageProperties = new ImagePropertiesModel();
                 DataContext = ImageProperties;
                 Visibility = Visibility.Collapsed;
@@ -109,33 +136,11 @@ namespace Illustra.Views
             }
         }
 
-        private async Task LoadFileNodeAsync(string filePath)
-        {
-            try
-            {
-                _currentFileNode = await _db.GetFileNodeAsync(filePath);
-                if (_currentFileNode != null)
-                {
-                    // FileNodeのRatingをImagePropertiesに反映
-                    if (ImageProperties != null)
-                    {
-                        ImageProperties.Rating = _currentFileNode.Rating;
-                    }
-                    await UpdateRatingStars();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ファイルノードの読み込み中にエラーが発生しました：{ex.Message}", "エラー",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         private async Task UpdateRatingStars(bool updateDb = false)
         {
             // PropertiesGridはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
-            if (_currentFileNode != null && PropertiesGrid != null)
+            if (_selectedFile != null && PropertiesGrid != null)
             {
                 var buttonList = FindButtonsInVisualTree(PropertiesGrid);
 
@@ -147,10 +152,10 @@ namespace Illustra.Views
                         if (starControl != null)
                         {
                             // レーティングに応じて塗りつぶし状態を設定
-                            starControl.IsFilled = rating <= _currentFileNode.Rating;
+                            starControl.IsFilled = rating <= _selectedFile.Rating;
 
                             // レーティング値に応じた色を設定（空白時は透明）
-                            if (rating <= _currentFileNode.Rating)
+                            if (rating <= _selectedFile.Rating)
                             {
                                 starControl.StarFill = RatingHelper.GetRatingColor(rating);
                                 starControl.TextColor = RatingHelper.GetTextColor(rating);
@@ -167,7 +172,8 @@ namespace Illustra.Views
                 if (updateDb)
                 {
                     // DBに保存
-                    await _db.UpdateRatingAsync(_currentFileNode.FullPath, _currentFileNode.Rating);
+                    // 保存はサービスか何かで実行させたほうがよい
+                    await _db.UpdateRatingAsync(_selectedFile.FullPath, _selectedFile.Rating);
                 }
             }
         }
@@ -229,29 +235,23 @@ namespace Illustra.Views
 
         private async void RatingStar_Click(object sender, RoutedEventArgs e)
         {
-            if (_currentFileNode == null || !(sender is Button button) ||
+            if (_selectedFile == null || !(sender is Button button) ||
                 !int.TryParse(button.Tag?.ToString(), out int rating))
                 return;
 
-            if (_currentFileNode.Rating == rating)
+            if (_selectedFile.Rating == rating)
             {
                 // 同じ星をクリックした場合はレーティングをクリア
-                _currentFileNode.Rating = 0;
+                _selectedFile.Rating = 0;
             }
             else
             {
-                _currentFileNode.Rating = rating;
-            }
-
-            // ImagePropertiesのRatingも更新
-            if (ImageProperties != null)
-            {
-                ImageProperties.Rating = _currentFileNode.Rating;
+                _selectedFile.Rating = rating;
             }
 
             // レーティング変更イベントを発行
             _eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
-                new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = _currentFileNode.Rating });
+                new RatingChangedEventArgs { FilePath = _selectedFile.FullPath, Rating = _selectedFile.Rating });
 
             // UIを更新
             await UpdateRatingStars(true);
@@ -263,14 +263,9 @@ namespace Illustra.Views
         // 外部でレーティングが変更された場合の処理
         private async void OnRatingChanged(RatingChangedEventArgs args)
         {
-            if (args.FilePath == _currentFilePath && _currentFileNode != null)
+            if (args.FilePath == _selectedFile?.FullPath && _selectedFile != null)
             {
-                _currentFileNode.Rating = args.Rating;
-                // ImagePropertiesのRatingも更新
-                if (ImageProperties != null)
-                {
-                    ImageProperties.Rating = args.Rating;
-                }
+                _selectedFile.Rating = args.Rating;
                 await UpdateRatingStars();
             }
         }
@@ -293,14 +288,27 @@ namespace Illustra.Views
             }
         }
 
-        private void UpdatePropertiesDisplay()
+        private async Task UpdatePropertiesDisplayAsync()
         {
-            if (ImageProperties != null)
+            if (ImageProperties == null || _selectedFile == null)
+                return;
+
+            // ファイルが実際に存在する場合のみレーティングを表示
+            if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
             {
-                // ファイルが実際に存在する場合のみレーティングを表示
-                if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
+                try
                 {
-                    _ = LoadFileNodeAsync(ImageProperties.FilePath);
+                    // RatingをImagePropertiesに反映
+                    if (ImageProperties != null)
+                    {
+                        ImageProperties.Rating = _selectedFile.Rating;
+                    }
+                    await UpdateRatingStars();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"ファイルノードの読み込み中にエラーが発生しました：{ex.Message}", "エラー",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }

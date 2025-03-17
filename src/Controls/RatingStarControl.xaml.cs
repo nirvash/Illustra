@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Illustra.Helpers;
 
 namespace Illustra.Controls
 {
@@ -106,6 +107,21 @@ namespace Illustra.Controls
         {
             if (d is RatingStarControl control)
             {
+                if (e.Property == RatingValueProperty)
+                {
+                    // RatingValueが変更された場合、StarFillとTextColorを更新
+                    int rating = (int)e.NewValue;
+                    if (rating > 0)
+                    {
+                        control.StarFill = RatingHelper.GetRatingColor(rating);
+                        control.TextColor = RatingHelper.GetTextColor(rating);
+                    }
+                    else
+                    {
+                        control.StarFill = Brushes.Transparent;
+                        control.TextColor = RatingHelper.GetTextColor(0);
+                    }
+                }
                 control.UpdateVisualState();
             }
         }

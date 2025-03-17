@@ -127,8 +127,7 @@
                                         <controls:RatingStarControl RatingValue="1"
                                                                     Height="18"
                                                                     Width="18"
-                                                                    IsFilled="False"
-                                                                    TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}}"/>
                                 </Button>
                                 <Button x:Name="RatingStar2"
                                         Style="{StaticResource RatingStarButton}"
@@ -137,8 +136,7 @@
                                         <controls:RatingStarControl RatingValue="2"
                                                                     Height="18"
                                                                     Width="18"
-                                                                    IsFilled="False"
-                                                                    TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}}"/>
                                 </Button>
                                 <Button x:Name="RatingStar3"
                                         Style="{StaticResource RatingStarButton}"
@@ -147,8 +145,7 @@
                                         <controls:RatingStarControl RatingValue="3"
                                                                     Height="18"
                                                                     Width="18"
-                                                                    IsFilled="False"
-                                                                    TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}}"/>
                                 </Button>
                                 <Button x:Name="RatingStar4"
                                         Style="{StaticResource RatingStarButton}"
@@ -157,8 +154,7 @@
                                         <controls:RatingStarControl RatingValue="4"
                                                                     Height="18"
                                                                     Width="18"
-                                                                    IsFilled="False"
-                                                                    TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}}"/>
                                 </Button>
                                 <Button x:Name="RatingStar5"
                                         Style="{StaticResource RatingStarButton}"
@@ -167,8 +163,7 @@
                                         <controls:RatingStarControl RatingValue="5"
                                                                     Height="18"
                                                                     Width="18"
-                                                                    IsFilled="False"
-                                                                    TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}}"/>
                                 </Button>
                         </StackPanel>
 

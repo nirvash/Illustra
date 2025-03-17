@@ -1,6 +1,7 @@
 using Prism.Events;
 using System.Windows.Input;
 using System.Collections.Generic;
+using Illustra.Models;
 
 namespace Illustra.Events
 {
@@ -31,7 +32,7 @@ namespace Illustra.Events
     /// <summary>
     /// ファイルが選択されたときにトリガーされるイベント
     /// </summary>
-    public class FileSelectedEvent : PubSubEvent<string> { }
+    public class FileSelectedEvent : PubSubEvent<SelectedFileModel> { }
 
     /// <summary>
     /// お気に入りに追加するイベント
