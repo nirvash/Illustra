@@ -548,7 +548,35 @@ namespace Illustra.Models
                 if (exif != null)
                 {
                     // ユーザーコメント
-                    properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+                    // ユーザーコメント
+                    try
+                    {
+                        var bytes = exif.GetByteArray(ExifDirectoryBase.TagUserComment);
+                        if (bytes != null && bytes.Length > 8)
+                        {
+                            // 最初の8バイトがエンコーディング識別子
+                            var encodingStr = System.Text.Encoding.ASCII.GetString(bytes.Take(8).ToArray());
+                            if (encodingStr.StartsWith("ASCII"))
+                            {
+                                // ASCIIエンコーディング情報がある場合はUTF-8としてデコード
+                                properties.UserComment = System.Text.Encoding.UTF8.GetString(bytes.Skip(8).ToArray());
+                            }
+                            else
+                            {
+                                // その他の場合は既存の方式で取得
+                                properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+                            }
+                        }
+                        else
+                        {
+                            // バイトデータが取得できない場合は既存の方式で取得
+                            properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+                    }
 
                     // 撮影日時
                     exif.TryGetDateTime(ExifDirectoryBase.TagDateTimeOriginal, out DateTime dateTime);
