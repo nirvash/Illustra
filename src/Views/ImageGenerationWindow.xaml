@@ -5,20 +5,26 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="{DynamicResource String_ImageGeneration_Title}"
-        Height="200"
+        Height="350"
         Width="500"
+        MinHeight="250"
+        MinWidth="300"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
-        Topmost="True"
+        Topmost="False"
         WindowStyle="ToolWindow"
         Closing="Window_Closing">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- サーバURL設定 -->
             <RowDefinition Height="10"/>
+            <RowDefinition Height="Auto"/> <!-- Reforgeパス設定 -->
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/> <!-- ★ タグ入力欄を可変サイズに変更 -->
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>  <!-- 生成ボタン -->
         </Grid.RowDefinitions>
 
         <!-- サーバURL設定 -->
@@ -39,7 +45,7 @@
         </Grid>
 
         <!-- Reforgeパス設定 -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Visibility="Collapsed">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -61,5 +67,36 @@
                     Padding="10,0"
                     Click="BrowseButton_Click"/>
         </Grid>
+
+        <!-- タグ入力 -->
+        <Grid Grid.Row="4" VerticalAlignment="Stretch" MinHeight="100"  >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                      Text="{DynamicResource String_ImageGeneration_Tags}"
+                      VerticalAlignment="Top"
+                      Margin="0,5,10,0"/>
+
+            <TextBox Grid.Column="1"
+                     x:Name="TagsTextBox"
+                     Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="100"
+                     Margin="0,0,0,10"
+                     VerticalAlignment="Stretch"
+                     VerticalScrollBarVisibility="Auto"/>
+        </Grid>
+
+        <!-- 生成ボタン -->
+        <Button Grid.Row="6"
+                Content="{DynamicResource String_ImageGeneration_Generate}"
+                HorizontalAlignment="Right"
+                MinWidth="100"
+                Padding="20,5"
+                Click="GenerateButton_Click"/>
     </Grid>
 </Window>

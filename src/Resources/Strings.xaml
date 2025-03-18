@@ -35,6 +35,8 @@
     <system:String x:Key="String_ImageGeneration_ServerUrl">Server URL:</system:String>
     <system:String x:Key="String_ImageGeneration_ReforgePath">Reforge Path:</system:String>
     <system:String x:Key="String_ImageGeneration_Browse">Browse...</system:String>
+    <system:String x:Key="String_ImageGeneration_Tags">Tags:</system:String>
+    <system:String x:Key="String_ImageGeneration_Generate">Generate</system:String>
 
     <!-- Menu Items -->
     <system:String x:Key="String_Menu_Exit">Exit</system:String>

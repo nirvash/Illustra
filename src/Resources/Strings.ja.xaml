@@ -32,6 +32,8 @@
     <system:String x:Key="String_ImageGeneration_ServerUrl">サーバーURL:</system:String>
     <system:String x:Key="String_ImageGeneration_ReforgePath">Reforgeパス:</system:String>
     <system:String x:Key="String_ImageGeneration_Browse">参照...</system:String>
+    <system:String x:Key="String_ImageGeneration_Tags">タグ:</system:String>
+    <system:String x:Key="String_ImageGeneration_Generate">生成</system:String>
 
     <!-- Menu Items -->
     <system:String x:Key="String_Menu_Exit">終了</system:String>
