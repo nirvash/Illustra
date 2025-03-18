@@ -1,23 +1,21 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Media;
-using Prism.Events;
-using Prism.Ioc;
 using Illustra.Models;
 using Illustra.Events;
 using Illustra.Helpers;
-using System.Diagnostics;
 using Illustra.Controls;
 using System.Windows.Input;
-using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using System.Text;
+using System.Reflection;
 
 namespace Illustra.Views
 {
-    public partial class PropertyPanelControl : UserControl
+    public partial class PropertyPanelControl : UserControl, INotifyPropertyChanged
     {
         private IEventAggregator? _eventAggregator;
         private SelectedFileModel? _selectedFile;
@@ -25,6 +23,24 @@ namespace Illustra.Views
         private DatabaseManager _db = null;
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
+        private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public bool CanEditExif
+        {
+            get
+            {
+                if (ImageProperties?.FilePath == null) return false;
+                string ext = Path.GetExtension(ImageProperties.FilePath).ToLower();
+                return EXIF_SUPPORTED_FORMATS.Contains(ext);
+            }
+        }
 
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(
@@ -45,6 +61,7 @@ namespace Illustra.Views
             {
                 control.DataContext = e.NewValue;
                 control.UpdatePropertiesDisplayAsync();
+                control.OnPropertyChanged(nameof(CanEditExif));
             }
         }
 
@@ -284,6 +301,86 @@ namespace Illustra.Views
                 {
                     MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
                         MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private async Task SaveUserComment(string filePath, string comment)
+        {
+
+            try
+            {
+                using var image = await SixLabors.ImageSharp.Image.LoadAsync(filePath);
+
+                // ExifProfile が存在しない場合は新規作成
+                if (image.Metadata.ExifProfile == null)
+                {
+                    image.Metadata.ExifProfile = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
+                }
+
+                //  UTF-16BEエンコーディングでユーザーコメントを設定
+                ExifProfileExtensions.SetUtf16BEUserComment(image.Metadata.ExifProfile, comment);
+                //ExifProfileExtensions.SetUserComment(image.Metadata.ExifProfile, comment, EncodedString.CharacterCode.Unicode);
+
+                // ファイル拡張子に基づいて適切なエンコーダーを取得
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
+
+                // 同じファイルに上書き保存
+                using var fileStream = File.Create(filePath);
+                await image.SaveAsync(fileStream, GetEncoder(extension));
+
+                // 保存成功メッセージを表示
+                MessageBox.Show("プロンプトが保存されました。", "保存完了",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"プロンプトの保存中にエラーが発生しました：{ex.Message}", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
+        }
+
+        // ファイル拡張子に基づいて適切なエンコーダーを返すヘルパーメソッド
+        private SixLabors.ImageSharp.Formats.IImageEncoder GetEncoder(string extension)
+        {
+            switch (extension)
+            {
+                case ".jpg":
+                case ".jpeg":
+                    return new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder();
+                case ".png":
+                    return new SixLabors.ImageSharp.Formats.Png.PngEncoder();
+                case ".webp":
+                    return new SixLabors.ImageSharp.Formats.Webp.WebpEncoder();
+                default:
+                    return new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder(); // デフォルトはJPEG
+            }
+        }
+
+        private async void EditOriginalPrompt_Click(object sender, RoutedEventArgs e)
+        {
+            if (ImageProperties != null && CanEditExif)
+            {
+                var dialog = new EditPromptDialog(ImageProperties.UserComment)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (dialog.ShowDialog() == true && dialog.IsSaved)
+                {
+                    try
+                    {
+                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+
+                        // 保存成功後にプロパティを再読み込み
+                        // これにより LoadFilePropertiesAsync が呼ばれ、EXIFデータが再読み込みされる
+                        await LoadFilePropertiesAsync(ImageProperties.FilePath);
+                    }
+                    catch
+                    {
+                        // エラーは SaveUserComment 内で処理済み
+                    }
                 }
             }
         }

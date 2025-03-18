@@ -6,6 +6,7 @@
     <!-- Common -->
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>
+    <system:String x:Key="String_Common_Save">Save</system:String>
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
     <system:String x:Key="String_Common_Copy">Copy</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
@@ -115,7 +116,9 @@
     <system:String x:Key="String_Property_LoRA">LoRA</system:String>
     <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
     <system:String x:Key="String_Property_CopyOriginalPrompt">Copy Original Prompt</system:String>
+    <system:String x:Key="String_Property_EditOriginalPrompt">Edit Original Prompt</system:String>
     <system:String x:Key="String_Property_Comment">Comment</system:String>
+    <system:String x:Key="String_Dialog_EditPrompt">Edit Prompt</system:String>
 
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String>

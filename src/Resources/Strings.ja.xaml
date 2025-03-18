@@ -5,6 +5,7 @@
     <!-- Common -->
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>
+    <system:String x:Key="String_Common_Save">保存</system:String>
     <system:String x:Key="String_Common_Cancel">キャンセル</system:String>
     <system:String x:Key="String_Common_Copy">コピー</system:String>
     <system:String x:Key="String_Common_Information">情報</system:String>
@@ -112,7 +113,9 @@
     <system:String x:Key="String_Property_LoRA">LoRA</system:String>
     <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
     <system:String x:Key="String_Property_CopyOriginalPrompt">元のプロンプトをコピー</system:String>
+    <system:String x:Key="String_Property_EditOriginalPrompt">元のプロンプトを編集</system:String>
     <system:String x:Key="String_Property_Comment">コメント</system:String>
+    <system:String x:Key="String_Dialog_EditPrompt">プロンプトの編集</system:String>
 
     <!-- Tag Filtering -->
     <system:String x:Key="String_TagFilter_Title">タグフィルタ</system:String>
