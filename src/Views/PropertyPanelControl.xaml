@@ -13,6 +13,8 @@
                 <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
                 <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
                 <helpers:NumberToVisibilityConverter x:Key="NumberToVisibilityConverter"/>
+                <helpers:AndMultiValueConverter x:Key="AndMultiValueConverter"/>
+                <helpers:BooleanInverseConverter x:Key="BooleanInverseConverter"/>
                 <Style x:Key="NormalTagTextBoxStyle"
                        TargetType="TextBox">
                         <Setter Property="IsReadOnly"
@@ -98,6 +100,7 @@
                 <Grid x:Name="PropertiesGrid"
                       Margin="10,10,5,10">
                         <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -458,8 +461,25 @@
                                 </StackPanel>
                         </Expander>
 
+                        <!-- プロンプト追加ボタン -->
+                        <Button Grid.Row="4"
+                               Content="{DynamicResource String_Property_AddPrompt}"
+                               HorizontalAlignment="Left"
+                               Padding="10,5"
+                               Margin="0,0,0,10"
+                               Click="AddPrompt_Click">
+                            <Button.Visibility>
+                                <MultiBinding Converter="{StaticResource AndMultiValueConverter}">
+                                    <Binding Path="HasStableDiffusionData"
+                                             Converter="{StaticResource BooleanInverseConverter}"/>
+                                    <Binding Path="CanEditExif"
+                                             RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                </MultiBinding>
+                            </Button.Visibility>
+                        </Button>
+
                         <!-- コメント -->
-                        <Grid Grid.Row="4"
+                        <Grid Grid.Row="5"
                               Margin="0,0,0,5">
                                 <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>

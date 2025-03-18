@@ -117,6 +117,7 @@
     <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
     <system:String x:Key="String_Property_CopyOriginalPrompt">Copy Original Prompt</system:String>
     <system:String x:Key="String_Property_EditOriginalPrompt">Edit Original Prompt</system:String>
+    <system:String x:Key="String_Property_AddPrompt">Add Prompt</system:String>
     <system:String x:Key="String_Property_Comment">Comment</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">Edit Prompt</system:String>
 

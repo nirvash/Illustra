@@ -114,6 +114,7 @@
     <system:String x:Key="String_Property_NegativePrompt">Negative Prompt</system:String>
     <system:String x:Key="String_Property_CopyOriginalPrompt">元のプロンプトをコピー</system:String>
     <system:String x:Key="String_Property_EditOriginalPrompt">元のプロンプトを編集</system:String>
+    <system:String x:Key="String_Property_AddPrompt">プロンプトを追加</system:String>
     <system:String x:Key="String_Property_Comment">コメント</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">プロンプトの編集</system:String>
 

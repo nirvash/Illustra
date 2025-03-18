@@ -36,7 +36,7 @@ namespace Illustra.Views
         {
             get
             {
-                if (ImageProperties?.FilePath == null) return false;
+                if (string.IsNullOrEmpty(ImageProperties?.FilePath)) return false;
                 string ext = Path.GetExtension(ImageProperties.FilePath).ToLower();
                 return EXIF_SUPPORTED_FORMATS.Contains(ext);
             }
@@ -52,16 +52,40 @@ namespace Illustra.Views
         public ImagePropertiesModel? ImageProperties
         {
             get => (ImagePropertiesModel?)GetValue(ImagePropertiesProperty);
-            set => SetValue(ImagePropertiesProperty, value);
+            set
+            {
+                SetValue(ImagePropertiesProperty, value);
+                OnPropertyChanged(nameof(CanEditExif));
+            }
         }
 
         private static void OnImagePropertiesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is PropertyPanelControl control)
             {
+                // 古いImagePropertiesのイベントハンドラを解除
+                if (e.OldValue is ImagePropertiesModel oldModel)
+                {
+                    oldModel.PropertyChanged -= control.OnImagePropertiesPropertyChanged;
+                }
+
+                // 新しいImagePropertiesのイベントハンドラを設定
+                if (e.NewValue is ImagePropertiesModel newModel)
+                {
+                    newModel.PropertyChanged += control.OnImagePropertiesPropertyChanged;
+                }
+
                 control.DataContext = e.NewValue;
                 control.UpdatePropertiesDisplayAsync();
                 control.OnPropertyChanged(nameof(CanEditExif));
+            }
+        }
+
+        private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ImagePropertiesModel.FilePath))
+            {
+                OnPropertyChanged(nameof(CanEditExif));
             }
         }
 
@@ -355,6 +379,32 @@ namespace Illustra.Views
                     return new SixLabors.ImageSharp.Formats.Webp.WebpEncoder();
                 default:
                     return new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder(); // デフォルトはJPEG
+            }
+        }
+
+        private async void AddPrompt_Click(object sender, RoutedEventArgs e)
+        {
+            if (ImageProperties != null && CanEditExif)
+            {
+                var dialog = new EditPromptDialog(string.Empty)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (dialog.ShowDialog() == true && dialog.IsSaved)
+                {
+                    try
+                    {
+                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+
+                        // 保存成功後にプロパティを再読み込み
+                        await LoadFilePropertiesAsync(ImageProperties.FilePath);
+                    }
+                    catch
+                    {
+                        // エラーは SaveUserComment 内で処理済み
+                    }
+                }
             }
         }
 
