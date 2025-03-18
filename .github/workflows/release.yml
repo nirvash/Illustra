@@ -31,6 +31,7 @@ jobs:
       - name: Configure NuGet source for GitHub Packages
         shell: bash
         run: |
+          dotnet nuget remove source "github" || true
           dotnet nuget add source "https://nuget.pkg.github.com/nirvash/index.json" \
             --name "github" \
             --username "x-access-token" \
