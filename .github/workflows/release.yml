@@ -22,6 +22,10 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Set up authentication for GitHub Packages
+        run: |
+          echo "NUGET_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+
       - name: Restore dependencies
         run: dotnet restore src/Illustra.csproj
 
