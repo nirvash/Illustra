@@ -47,7 +47,6 @@ public class ThumbnailLoaderHelper
     private string _currentFolderPath = string.Empty;
     private readonly ItemsControl _thumbnailListBox;
     private int _thumbnailSize = 120;
-    private ObservableCollection<FileNodeModel> _viewModelItems;
     private AppSettingsModel _appSettings;
     private readonly ThumbnailListControl _control;
     private readonly MainViewModel _viewModel;
@@ -151,7 +150,6 @@ public class ThumbnailLoaderHelper
         _control = control ?? throw new ArgumentNullException(nameof(control));
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _db = db ?? throw new ArgumentNullException(nameof(db));
-        _viewModelItems = viewModel.Items ?? throw new ArgumentNullException(nameof(viewModel.Items));
         _thumbnailProcessor = thumbnailProcessor ?? throw new ArgumentNullException(nameof(thumbnailProcessor));
         _requestQueue = new ThumbnailRequestQueue(_thumbnailProcessor);
 
@@ -412,7 +410,7 @@ public class ThumbnailLoaderHelper
             var dummyImage = GetDummyImage();
 
             // すべてのノードのサムネイル状態をリセット
-            var fileNodes = _viewModelItems.Cast<FileNodeModel>().ToList();
+            var fileNodes = _viewModel.Items.Cast<FileNodeModel>().ToList();
             foreach (var node in fileNodes)
             {
                 node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
@@ -738,185 +736,15 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// スクロールイベントに応じたサムネイルのロード処理
-    /// </summary>
-    public async Task OnScrollChangedAsync(int startIndex, int endIndex)
-    {
-        Debug.WriteLine($"[スクロール変更] OnScrollChangedAsync メソッドが呼ばれました: ({startIndex} - {endIndex})");
-
-        // 表示範囲のサムネイルを優先的にロード
-        await LoadVisibleThumbnailsAsync(startIndex, endIndex);
-
-        // スクロール停止を検知するための遅延
-        await Task.Delay(200); // 200msの遅延でスクロール停止を検知
-
-        // スクロールが停止したと判断したら先読みを開始
-        await PreloadThumbnailsAsync(startIndex, endIndex);
-    }
-
-    /// <summary>
-    /// 表示範囲のサムネイルをロード
-    /// </summary>
-    private async Task LoadVisibleThumbnailsAsync(int startIndex, int endIndex)
-    {
-        // 表示範囲のサムネイルをロードするロジック
-        // ここに既存の表示範囲のサムネイルロード処理を実装
-    }
-
-    /// <summary>
-    /// 先読みのサムネイルをロード
-    /// </summary>
-    private async Task PreloadThumbnailsAsync(int startIndex, int endIndex)
-    {
-        Debug.WriteLine($"[先読み] PreloadThumbnailsAsync メソッドが呼ばれました: ({startIndex} - {endIndex})");
-
-        // 現在の表示範囲をログに出力
-        Debug.WriteLine($"[表示範囲] 現在の表示範囲: {startIndex} - {endIndex}");
-
-
-        // キャンセルトークンを取得
-        var cancellationToken = _thumbnailLoadCts?.Token ?? CancellationToken.None;
-
-        try
-        {
-            await _thumbnailLoadingSemaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var filteredNodes = _viewModel.FilteredItems.Cast<FileNodeModel>().ToArray();
-                // 先読み範囲を設定
-                int preloadStartIndex = Math.Max(0, endIndex + 1);
-                int preloadEndIndex = Math.Min(filteredNodes.Length - 1, endIndex + 72); // 72個先まで先読み
-                for (int i = preloadStartIndex; i <= preloadEndIndex; i++)
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        Debug.WriteLine($"[CANCELLED] 先読み処理がキャンセルされました ({preloadStartIndex} - {preloadEndIndex})");
-                        return;
-                    }
-
-                    var fileNode = filteredNodes[i];
-                    if (fileNode != null &&
-                        (fileNode.ThumbnailInfo == null ||
-                         fileNode.ThumbnailInfo.State != ThumbnailState.Loaded))
-                    {
-                        try
-                        {
-                            var thumbnailInfo = await Task.Run(() => GetOrCreateThumbnail(fileNode.FullPath, cancellationToken), cancellationToken);
-                            if (!cancellationToken.IsCancellationRequested)
-                            {
-                                fileNode.ThumbnailInfo = thumbnailInfo;
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            Debug.WriteLine($"[CANCELLED] 先読み処理がキャンセルされました: {fileNode.FullPath}");
-                            continue;
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"[ERROR] 先読み中にエラーが発生しました: {ex.Message}");
-                            if (!cancellationToken.IsCancellationRequested)
-                            {
-                                fileNode.ThumbnailInfo = new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
-                            }
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                _thumbnailLoadingSemaphore.Release();
-            }
-        }
-        finally
-        {
-            // 必要に応じてキャンセルトークンを破棄
-        }
-    }
-
-    /// <summary>
-    /// 指定された範囲のサムネイルを並列で読み込みます
-    /// </summary>
-    /// <param name="firstIndex">開始インデックス</param>
-    /// <param name="lastIndex">終了インデックス</param>
-    /// <param name="parallelism">並列度（同時に読み込むサムネイル数）</param>
-    /// <returns>非同期タスク</returns>
-    public async Task LoadThumbnailsInParallelAsync(int firstIndex, int lastIndex, int parallelism = 4)
-    {
-        // インデックスの範囲チェック
-        if (firstIndex < 0 || lastIndex >= _viewModel.Items.Count || firstIndex > lastIndex)
-            return;
-
-        // 読み込み対象のインデックスリストを作成
-        var indicesToLoad = new List<int>();
-        for (int i = firstIndex; i <= lastIndex; i++)
-        {
-            indicesToLoad.Add(i);
-        }
-
-        // 中央から外側に向かって読み込むように並べ替え
-        int centerIndex = (firstIndex + lastIndex) / 2;
-        indicesToLoad = indicesToLoad
-            .OrderBy(i => Math.Abs(i - centerIndex))
-            .ToList();
-
-        // 並列処理用のセマフォを作成
-        using (var semaphore = new SemaphoreSlim(parallelism))
-        {
-            var tasks = new List<Task>();
-
-            foreach (var index in indicesToLoad)
-            {
-                // セマフォを取得（並列数を制限）
-                await semaphore.WaitAsync();
-
-                // 各サムネイルの読み込みをタスクとして開始
-                var task = Task.Run(async () =>
-                {
-                    try
-                    {
-                        // サムネイル読み込み処理
-                        if (index < _viewModel.Items.Count)
-                        {
-                            var item = _viewModel.Items[index] as FileNodeModel;
-                            if (item != null)
-                            {
-                                // 既存のサムネイル読み込みロジックを呼び出す
-                                await LoadSingleThumbnailAsync(item);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        // 処理が完了したらセマフォを解放
-                        semaphore.Release();
-                    }
-                });
-
-                tasks.Add(task);
-            }
-
-            // すべてのタスクが完了するのを待機
-            await Task.WhenAll(tasks);
-        }
-    }
-
-    // 単一サムネイルを読み込むプライベートメソッド（既存のロジックを再利用）
-    private async Task LoadSingleThumbnailAsync(FileNodeModel item)
-    {
-        // 既存のサムネイル読み込みロジックをここに実装
-        // 現在のLoadMoreThumbnailsAsyncメソッドから、単一アイテムの読み込み部分を抽出
-    }
-
-    /// <summary>
     /// 指定されたFileNodeModelのサムネイルを非同期で作成します
     /// </summary>
     public async Task CreateThumbnailAsync(int index, CancellationToken cancellationToken)
     {
-        if (index < 0 || index >= _viewModelItems.Count)
+        var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+        if (index < 0 || index >= filteredItems.Count)
             return;
 
-        var fileNode = _viewModelItems[index];
+        var fileNode = filteredItems[index];
         if (fileNode == null)
             return;
 
@@ -1251,27 +1079,6 @@ public class ThumbnailLoaderHelper
         }
     }
 
-    private async void EnrichFileNodeWithDatabaseInfo(FileNodeModel fileNode)
-    {
-        try
-        {
-            // データベースからファイルノードを取得
-            var dbNode = await _db.GetFileNodeAsync(fileNode.FullPath);
-
-            if (dbNode != null)
-            {
-                // データベースから取得した情報を設定
-                fileNode.Rating = dbNode.Rating;
-                // その他のプロパティがあれば設定
-                // fileNode.Tags = dbNode.Tags;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogHelper.LogError($"DBからの情報取得エラー ({fileNode.FullPath}): {ex.Message}", ex, "ThumbnailLoader");
-        }
-    }
-
     // イベント発火時にUIスレッドで処理するように修正
     private void InvokeScrollToItemRequested(FileNodeModel item)
     {
@@ -1291,36 +1098,6 @@ public class ThumbnailLoaderHelper
         // UIスレッドで実行
         var args = new ScrollToItemRequestEventArgs(item);
         ScrollToItemRequested?.Invoke(this, args);
-    }
-
-    private ThumbnailInfo GetOrCreateThumbnail(string? imagePath, CancellationToken cancellationToken)
-    {
-        if (imagePath == null)
-        {
-            return new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
-        }
-
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var thumbnail = ThumbnailHelper.CreateThumbnailOptimized(imagePath, _thumbnailSize - 2, _thumbnailSize - 2, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            return new ThumbnailInfo(thumbnail, ThumbnailState.Loaded);
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
-            throw;
-        }
-        catch (Exception)
-        {
-            Debug.WriteLine($"[ERROR] サムネイルの作成中にエラーが発生しました: {imagePath}");
-            var errorImage = GetErrorImage();
-            return new ThumbnailInfo(errorImage, ThumbnailState.Error);
-        }
     }
 
     /// <summary>

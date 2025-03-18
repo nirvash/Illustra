@@ -1067,64 +1067,6 @@ namespace Illustra.Views
             });
         }
 
-        /// <summary>
-        /// スクロール中の並列サムネイル読み込みを行います
-        /// </summary>
-        private async Task LoadVisibleThumbnailsInParallelAsync(ScrollViewer scrollViewer, bool includePreload = false)
-        {
-            try
-            {
-                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
-                int firstIndexToLoad = 0;
-                int lastIndexToLoad = 0;
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-                {
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                    if (container != null && container.IsVisible)
-                    {
-                        if (firstIndexToLoad == 0)
-                        {
-                            firstIndexToLoad = i;
-                        }
-                        lastIndexToLoad = i;
-                    }
-                    else if (firstIndexToLoad > 0)
-                    {
-                        // 可視範囲を超えたら終了
-                        break;
-                    }
-                }
-
-                // 先読みバッファサイズ（スクロール停止時のみ適用）
-                int bufferSize = includePreload ? 30 : 0;
-                firstIndexToLoad = Math.Max(0, firstIndexToLoad - bufferSize);
-                lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndexToLoad + bufferSize);
-
-                // スクロール中は表示範囲のみ、停止時は先読み範囲も含めてログ出力
-                if (!includePreload)
-                {
-                    Debug.WriteLine($"[スクロール中] 表示範囲のみ並列読み込み: {firstIndexToLoad}～{lastIndexToLoad}");
-                }
-                else
-                {
-                    Debug.WriteLine($"[サムネイル読み込み] 範囲: {firstIndexToLoad}～{lastIndexToLoad} (先読みバッファ: {bufferSize})");
-                }
-
-                // 並列度の設定（同時に読み込むサムネイル数）
-                int parallelism = 4;
-
-                // 並列読み込みを実行
-                await _thumbnailLoader.LoadThumbnailsInParallelAsync(firstIndexToLoad, lastIndexToLoad, parallelism);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"LoadVisibleThumbnailsInParallelAsync エラー: {ex.Message}");
-            }
-        }
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
@@ -1169,55 +1111,6 @@ namespace Illustra.Views
             }
         }
 
-        // スクロール中の軽量版サムネイル読み込み処理
-        private async Task LoadVisibleThumbnailsLightAsync(ScrollViewer scrollViewer, CancellationToken cancellationToken)
-        {
-            try
-            {
-                // アイテムがない場合は何もしない
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                {
-                    LogHelper.LogScrollTracking("[スクロール中] アイテムが存在しないため軽量サムネイル読み込みをスキップします");
-                    return;
-                }
-
-                // スクロール位置から表示範囲を計算
-                double viewportTop = scrollViewer.VerticalOffset;
-                double viewportBottom = scrollViewer.VerticalOffset + scrollViewer.ViewportHeight;
-                double itemHeight = 150; // 推定アイテム高さ
-
-                // パネルからアイテム数/行を取得
-                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                int itemsPerRow = GetItemsPerRow(panel);
-                if (itemsPerRow <= 0) itemsPerRow = 1;
-
-                // 表示範囲内の行を計算
-                int firstVisibleRow = Math.Max(0, (int)(viewportTop / itemHeight));
-                int lastVisibleRow = Math.Min((int)(ThumbnailItemsControl.Items.Count / itemsPerRow),
-                                             (int)(viewportBottom / itemHeight) + 1);
-
-                // 行からアイテムのインデックスを計算
-                int firstVisibleIndex = firstVisibleRow * itemsPerRow;
-                int lastVisibleIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1,
-                                             (lastVisibleRow + 1) * itemsPerRow - 1);
-
-                // 小さいバッファで読み込み（スクロール中は最小限）
-                int bufferSize = 5;
-                int firstIndexToLoad = Math.Max(0, firstVisibleIndex - bufferSize);
-                int lastIndexToLoad = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastVisibleIndex + bufferSize);
-
-                // キューを使用してサムネイルを読み込む（スクロール中は通常優先度）
-                await _thumbnailLoader.LoadThumbnailsWithQueueAsync(firstIndexToLoad, lastIndexToLoad, cancellationToken, isHighPriority: false);
-            }
-            catch (OperationCanceledException)
-            {
-                LogHelper.LogScrollTracking("[スクロール中] 軽量サムネイル読み込みがキャンセルされました");
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"[スクロール中] 軽量サムネイル読み込み中にエラーが発生しました: {ex.Message}", ex);
-            }
-        }
 
         private async Task ProcessThumbnailLoadQueue()
         {
@@ -1252,6 +1145,7 @@ namespace Illustra.Views
                 LogWithTimestamp($"[サムネイルロードキュー] エラー: {ex.Message}");
             }
         }
+
         private async Task LoadVisibleThumbnailsAsync(ScrollViewer scrollViewer, bool includePreload = false, CancellationToken cancellationToken = default)
         {
             try
@@ -1957,10 +1851,12 @@ namespace Illustra.Views
                             }).Task;  // Task を取得して await
 
                             // サムネイル生成をトリガー
-                            var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
+                            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                            var index = filteredItems.IndexOf(fileNode);
                             if (index >= 0)
                             {
-                                await _thumbnailLoader.LoadMoreThumbnailsAsync(index, index, CancellationToken.None, true);
+                                // フィルタされたアイテムのインデックスで明示的にサムネイル生成を要求
+                                await _thumbnailLoader.CreateThumbnailAsync(index, CancellationToken.None);
                             }
                         });
                     }

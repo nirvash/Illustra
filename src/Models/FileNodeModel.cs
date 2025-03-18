@@ -284,10 +284,13 @@ namespace Illustra.Models
                 // 状態が変更されたら、HasThumbnailとIsLoadingThumbnailを更新
                 HasThumbnail = _thumbnailInfo?.State == ThumbnailState.Loaded;
                 IsLoadingThumbnail = _thumbnailInfo?.State == ThumbnailState.Loading;
+                OnPropertyChanged(nameof(ThumbnailInfo));
             }
-
-            // ThumbnailInfoの変更を通知
-            OnPropertyChanged(nameof(ThumbnailInfo));
+            else if (e.PropertyName == nameof(ThumbnailInfo.Image))
+            {
+                // 画像が変更されたら明示的に通知
+                OnPropertyChanged(nameof(ThumbnailInfo));
+            }
         }
     }
 
