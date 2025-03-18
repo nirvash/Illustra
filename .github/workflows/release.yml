@@ -36,7 +36,7 @@ jobs:
             --username "x-access-token" \
             --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text \
-            --configfile "${{ github.workspace }}/NuGet.config" \
+            --configfile "${{ github.workspace }}/src/nuget.config" \
 
       - name: Restore dependencies
         shell: bash
