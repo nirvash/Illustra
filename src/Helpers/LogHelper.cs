@@ -22,6 +22,7 @@ namespace Illustra.Helpers
             public const string Database = "DATABASE";
             public const string UI = "UI";
             public const string Navigation = "NAVIGATION";
+            public const string ImageCache = "IMAGE_CACHE";
 
             // 解析用の特別なカテゴリ
             public const string Analysis = "ANALYSIS";

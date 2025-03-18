@@ -5,6 +5,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.Windows.Media;
+using System.IO;
 using Prism.Events;
 using Prism.Ioc;
 using Illustra.Helpers;
@@ -541,16 +542,36 @@ namespace Illustra.Views
                 ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
             }
         }
-
         private void LoadAndDisplayImage(string filePath)
         {
             try
             {
+/*              キャッシュ動作の解析用ログ
+                var viewModel = Parent?.GetViewModel();
+                if (viewModel != null)
+                {
+                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
+                    bool isFromCache = _imageCache.HasImage(filePath);
+
+                    // キャッシュされているファイルのインデックスを取得
+                    var cachedIndexes = _imageCache.CachedItems.Keys
+                        .Select(p => files.FindIndex(f => f.FullPath == p))
+                        .Where(i => i >= 0)
+                        .OrderBy(i => i);
+
+                    // キャッシュの状態を詳細にログ出力
+                    LogHelper.LogWithTimestamp(
+                        $"Loading image [index: {currentIndex}] from {(isFromCache ? "cache" : "disk")}\n" +
+                        $"Cached indexes: [{string.Join(", ", cachedIndexes)}]",
+                        LogHelper.Categories.ImageCache);
+                }
+*/
                 ImageSource = _imageCache.GetImage(filePath);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"画像の読み込み中にエラーが発生: {ex.Message}");
+                LogHelper.LogError($"画像の読み込み中にエラーが発生: {ex.Message}", ex);
                 throw;
             }
         }
@@ -577,7 +598,29 @@ namespace Illustra.Views
                     var currentIndex = files.FindIndex(f => f.FullPath == filePath);
                     if (currentIndex >= 0)
                     {
+                        // キャッシュ更新前のインデックスを取得
+                        var cachedIndexesBefore = _imageCache.CachedItems.Keys
+                            .Select(p => files.FindIndex(f => f.FullPath == p))
+                            .Where(i => i >= 0)
+                            .OrderBy(i => i);
+
+                        LogHelper.LogWithTimestamp(
+                            $"UpdateCache: Current index = {currentIndex}\n" +
+                            $"Cached indexes before: [{string.Join(", ", cachedIndexesBefore)}]",
+                            LogHelper.Categories.ImageCache);
+
                         _imageCache.UpdateCache(files, currentIndex);
+
+                        // キャッシュ更新後のインデックスを取得
+                        var cachedIndexesAfter = _imageCache.CachedItems.Keys
+                            .Select(p => files.FindIndex(f => f.FullPath == p))
+                            .Where(i => i >= 0)
+                            .OrderBy(i => i);
+
+                        LogHelper.LogWithTimestamp(
+                            $"UpdateCache: After update - Current index = {currentIndex}\n" +
+                            $"Cached indexes after: [{string.Join(", ", cachedIndexesAfter)}]",
+                            LogHelper.Categories.ImageCache);
                     }
                 }
 

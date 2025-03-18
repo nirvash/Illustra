@@ -91,9 +91,14 @@ public class ThumbnailLoaderHelper
     public void SetFullscreenMode(bool isFullscreen)
     {
         _isFullscreenMode = isFullscreen;
+        LogHelper.LogWithTimestamp(
+            $"フルスクリーンモード {(isFullscreen ? "開始" : "終了")} - サムネイル生成を{(isFullscreen ? "抑制" : "再開")}します",
+            LogHelper.Categories.ThumbnailLoader);
+
         if (!isFullscreen)
         {
             // 全画面モード解除時は見えている範囲のサムネイルを再生成
+            LogHelper.LogWithTimestamp("フルスクリーン解除によりサムネイル再生成を開始します", LogHelper.Categories.ThumbnailLoader);
             _ = LoadInitialThumbnailsAsync();
         }
     }
@@ -918,6 +923,13 @@ public class ThumbnailLoaderHelper
         // 既に処理中または処理済みの場合はスキップ
         if (fileNode.ThumbnailInfo.IsLoadingThumbnail || fileNode.ThumbnailInfo.HasThumbnail)
             return;
+
+        // フルスクリーンモード時はサムネイル作成を抑制
+        if (_isFullscreenMode)
+        {
+            LogHelper.LogWithTimestamp($"フルスクリーンモードのためサムネイル作成を抑制: [{index}]{Path.GetFileName(fileNode.FullPath)}", LogHelper.Categories.ThumbnailLoader);
+            return;
+        }
 
         string fileName = System.IO.Path.GetFileName(fileNode.FullPath);
         LogHelper.LogWithTimestamp($"開始: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
