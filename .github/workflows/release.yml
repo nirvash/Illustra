@@ -10,6 +10,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      packages: read
       issues: read # 既知の問題を取得するための権限
 
     steps:
