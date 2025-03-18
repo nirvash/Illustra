@@ -10,6 +10,7 @@ using MetadataExtractor.Formats.Exif;
 using SkiaSharp;
 using Illustra.Helpers;
 using StableDiffusionTools;
+using System.Diagnostics;
 
 namespace Illustra.Models
 {
@@ -548,7 +549,6 @@ namespace Illustra.Models
                 if (exif != null)
                 {
                     // ユーザーコメント
-                    // ユーザーコメント
                     try
                     {
                         var bytes = exif.GetByteArray(ExifDirectoryBase.TagUserComment);
@@ -556,10 +556,15 @@ namespace Illustra.Models
                         {
                             // 最初の8バイトがエンコーディング識別子
                             var encodingStr = System.Text.Encoding.ASCII.GetString(bytes.Take(8).ToArray());
-                            if (encodingStr.StartsWith("ASCII"))
+                            if (encodingStr.StartsWith("ASCII") || encodingStr.StartsWith("\0"))
                             {
                                 // ASCIIエンコーディング情報がある場合はUTF-8としてデコード
                                 properties.UserComment = System.Text.Encoding.UTF8.GetString(bytes.Skip(8).ToArray());
+                            }
+                            else if (encodingStr.StartsWith("UNICODE"))
+                            {
+                                // UNICODEエンコーディング情報がある場合はUTF-16としてデコード
+                                properties.UserComment = System.Text.Encoding.Unicode.GetString(bytes.Skip(8).ToArray());
                             }
                             else
                             {

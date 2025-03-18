@@ -444,12 +444,17 @@
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
 
-                                        <!-- コピーボタン -->
-                                        <Button Content="{DynamicResource String_Property_CopyOriginalPrompt}"
-                                                Margin="0,10,0,0"
-                                                Padding="10,5"
-                                                HorizontalAlignment="Left"
-                                                Click="CopyOriginalText_Click"/>
+                                        <!-- コピー/編集ボタン -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Button Content="{DynamicResource String_Property_CopyOriginalPrompt}"
+                                                    Margin="0,0,10,0"
+                                                    Padding="10,5"
+                                                    Click="CopyOriginalText_Click"/>
+                                            <Button Content="{DynamicResource String_Property_EditOriginalPrompt}"
+                                                    Padding="10,5"
+                                                    Click="EditOriginalPrompt_Click"
+                                                    Visibility="{Binding CanEditExif, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
                                 </StackPanel>
                         </Expander>
 

@@ -47,6 +47,7 @@
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
     <PackageReference Include="Prism.Core" Version="9.0.537" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
