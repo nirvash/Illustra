@@ -24,10 +24,12 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Set up authentication for GitHub Packages
+        shell: bash
         run: |
           echo "NUGET_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
       - name: Configure NuGet source for GitHub Packages
+        shell: bash
         run: |
           dotnet nuget add source "https://nuget.pkg.github.com/nirvash/index.json" \
             --name "github" \
@@ -37,6 +39,7 @@ jobs:
             --configfile "${{ github.workspace }}/NuGet.config" \
 
       - name: Restore dependencies
+        shell: bash
         run: dotnet restore src/Illustra.csproj
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
