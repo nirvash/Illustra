@@ -27,6 +27,16 @@ jobs:
         run: |
           echo "NUGET_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
+      - name: Check if NUGET_AUTH_TOKEN is set (safe)
+        run: |
+          if [ -z "$NUGET_AUTH_TOKEN" ]; then
+            echo "❌ NUGET_AUTH_TOKEN is NOT set!"
+            exit 1
+          else
+            echo "✅ NUGET_AUTH_TOKEN is set (value is hidden)"
+          fi
+        shell: bash
+
       - name: Restore dependencies
         run: dotnet restore src/Illustra.csproj
 
