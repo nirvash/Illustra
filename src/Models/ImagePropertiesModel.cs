@@ -11,6 +11,7 @@ using SkiaSharp;
 using Illustra.Helpers;
 using StableDiffusionTools;
 using System.Diagnostics;
+using System.Text;
 
 namespace Illustra.Models
 {
@@ -525,6 +526,29 @@ namespace Illustra.Models
 
             return properties;
         }
+        static string DetectAndDecodeUtf16(byte[] data)
+        {
+            Encoding encoding;
+
+            // 🔹 BOM でエンディアンを判定
+            if (data.Length >= 2 && data[0] == 0xFE && data[1] == 0xFF)
+            {
+                encoding = Encoding.BigEndianUnicode;
+                data = data.Skip(2).ToArray(); // BOM を除去
+            }
+            else if (data.Length >= 2 && data[0] == 0xFF && data[1] == 0xFE)
+            {
+                encoding = Encoding.Unicode; // UTF-16LE
+                data = data.Skip(2).ToArray(); // BOM を除去
+            }
+            else
+            {
+                // BOM がない場合、Exif の仕様に従い UTF-16BE とみなす
+                encoding = Encoding.BigEndianUnicode;
+            }
+
+            return encoding.GetString(data);
+        }
 
         private static void ReadExifData(string filePath, ImagePropertiesModel properties)
         {
@@ -556,15 +580,15 @@ namespace Illustra.Models
                         {
                             // 最初の8バイトがエンコーディング識別子
                             var encodingStr = System.Text.Encoding.ASCII.GetString(bytes.Take(8).ToArray());
-                            if (encodingStr.StartsWith("ASCII") || encodingStr.StartsWith("\0"))
+                            if (encodingStr.StartsWith("ASCII") || encodingStr.Equals("\0\0\0\0\0\0\0\0"))
                             {
                                 // ASCIIエンコーディング情報がある場合はUTF-8としてデコード
                                 properties.UserComment = System.Text.Encoding.UTF8.GetString(bytes.Skip(8).ToArray());
                             }
                             else if (encodingStr.StartsWith("UNICODE"))
                             {
-                                // UNICODEエンコーディング情報がある場合はUTF-16としてデコード
-                                properties.UserComment = System.Text.Encoding.Unicode.GetString(bytes.Skip(8).ToArray());
+                                // UNICODEエンコーディング情報がある場合はUTF-16としてデコード(BOMなしの場合はUTF-16BE)
+                                properties.UserComment = DetectAndDecodeUtf16(bytes.Skip(8).ToArray());
                             }
                             else
                             {

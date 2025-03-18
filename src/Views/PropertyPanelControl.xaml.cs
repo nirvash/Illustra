@@ -305,21 +305,6 @@ namespace Illustra.Views
             }
         }
 
-        public static EncodedString CreateAsciiPrefixedEncodedString(string text)
-        {
-            // UTF-8 でエンコード（Exif に ASCII のまま書き込みたいので手動で処理）
-            byte[] utf8Bytes = Encoding.UTF8.GetBytes(text);
-
-            // ASCII プレフィックスを追加（Exif の仕様に合わせる）
-            byte[] prefix = Encoding.ASCII.GetBytes("ASCII\0\0\0");
-            byte[] userCommentData = new byte[prefix.Length + utf8Bytes.Length];
-            Buffer.BlockCopy(prefix, 0, userCommentData, 0, prefix.Length);
-            Buffer.BlockCopy(utf8Bytes, 0, userCommentData, prefix.Length, utf8Bytes.Length);
-
-            // `CharacterCode.Undefined` を使用して EncodedString を作成
-            return new EncodedString(EncodedString.CharacterCode.Undefined, Encoding.ASCII.GetString(utf8Bytes));
-        }
-
         private async Task SaveUserComment(string filePath, string comment)
         {
 
@@ -333,9 +318,9 @@ namespace Illustra.Views
                     image.Metadata.ExifProfile = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
                 }
 
-                // 日本語コメント対策
-                var encodedString = CreateAsciiPrefixedEncodedString(comment);
-                image.Metadata.ExifProfile.SetValue<EncodedString>(ExifTag.UserComment, encodedString);
+                //  UTF-16BEエンコーディングでユーザーコメントを設定
+                ExifProfileExtensions.SetUtf16BEUserComment(image.Metadata.ExifProfile, comment);
+                //ExifProfileExtensions.SetUserComment(image.Metadata.ExifProfile, comment, EncodedString.CharacterCode.Unicode);
 
                 // ファイル拡張子に基づいて適切なエンコーダーを取得
                 var extension = Path.GetExtension(filePath).ToLowerInvariant();
