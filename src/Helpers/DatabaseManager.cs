@@ -16,7 +16,8 @@ namespace Illustra.Helpers
         private readonly IDataProvider _dataProvider;
         private readonly string _dbPath;
         private readonly DatabaseAccess _dbAccess;
-        private const int CurrentSchemaVersion = 8; // スキーマバージョンを定義
+        private const int CurrentSchemaVersion = 9; // スキーマバージョンを定義
+        // 8 -> 9: FileNodeModelに LastCheckedTime を追加
 
         public DatabaseManager()
         {
@@ -87,25 +88,46 @@ namespace Illustra.Helpers
 
             // スキーマバージョンを確認
             int schemaVersion = GetSchemaVersion(db);
-            if (schemaVersion != CurrentSchemaVersion)
+            if (schemaVersion < 8)
             {
-                // テーブルを削除して再作成
-                db.DropTable<FileNodeModel>(throwExceptionIfNotExists: false);
-
-                db.CreateTable<FileNodeModel>();
-
-                // FileNodeModel テーブルの作成
-                db.Execute(@"
-                    CREATE INDEX idx_FolderPath ON FileNodeModel(FolderPath);
-                    CREATE INDEX idx_FileName ON FileNodeModel(FileName);
-                    CREATE INDEX idx_CreationTime ON FileNodeModel(CreationTime);
-                    CREATE INDEX idx_LastModified ON FileNodeModel(LastModified);
-                    CREATE INDEX idx_Rating ON FileNodeModel(Rating);");
-                Debug.WriteLine("Created new FileNodeModel table");
-
-                // スキーマバージョンを更新
-                SetSchemaVersion(db, CurrentSchemaVersion);
+                CreateCurrentSchemaTables(db);
             }
+            else if (schemaVersion == 8)
+            {
+                AlterSchemaFrom8to9(db);
+            }
+        }
+
+        private void AlterSchemaFrom8to9(DataConnection db)
+        {
+            db.Execute(@"ALTER TABLE FileNodeModel ADD COLUMN LastCheckedTime DateTime2;");
+            db.Execute(@"CREATE INDEX IF NOT EXISTS idx_LastCheckedTime ON FileNodeModel(LastCheckedTime);");
+            Debug.WriteLine("Migrated FileNodeModel table (version 8 to 9)");
+
+            // ここは 9 を指定。次の更新では最新ではなくなるので注意
+            SetSchemaVersion(db, 9);
+        }
+
+        private void CreateCurrentSchemaTables(DataConnection db)
+        {
+            // 既存のテーブルを削除して新規作成
+            db.DropTable<FileNodeModel>(throwExceptionIfNotExists: false);
+            db.CreateTable<FileNodeModel>();
+
+            // FileNodeModel テーブルの作成
+            db.Execute(@"
+                CREATE INDEX idx_FolderPath ON FileNodeModel(FolderPath);
+                CREATE INDEX idx_FileName ON FileNodeModel(FileName);
+                CREATE INDEX idx_CreationTime ON FileNodeModel(CreationTime);
+                CREATE INDEX idx_LastModified ON FileNodeModel(LastModified);
+                CREATE INDEX idx_Rating ON FileNodeModel(Rating);
+                CREATE INDEX idx_LastCheckedTime ON FileNodeModel(LastCheckedTime);
+            ");
+
+            Debug.WriteLine("Created new FileNodeModel table");
+
+            // カレントのスキーマバージョンを指定
+            SetSchemaVersion(db, CurrentSchemaVersion);
         }
 
         private int GetSchemaVersion(DataConnection db)
