@@ -51,6 +51,7 @@ namespace Illustra.Views
         private bool _isSlideshowActive = false;
         private readonly DispatcherTimer _slideshowTimer;
         public new ThumbnailListControl? Parent { get; set; }
+        private DatabaseManager? _dbManager;
 
         private ImagePropertiesModel _properties = new();
         public ImagePropertiesModel Properties
@@ -63,9 +64,6 @@ namespace Illustra.Views
                     var oldProperties = _properties;
                     _properties = value;
 
-                    // 明示的に変更を通知
-                    OnPropertyChanged(nameof(Properties));
-
                     // Ratingプロパティの変更を監視するためのハンドラーを設定
                     if (oldProperties != null)
                     {
@@ -75,6 +73,9 @@ namespace Illustra.Views
                     {
                         _properties.PropertyChanged += Properties_PropertyChanged;
                     }
+                    // 明示的に変更を通知
+                    OnPropertyChanged(nameof(Properties));
+                    OnPropertyChanged(nameof(Properties.Rating));
                 }
             }
         }
@@ -110,6 +111,7 @@ namespace Illustra.Views
 
             // キャッシュの初期化
             _imageCache = new WindowBasedImageCache();
+            _dbManager = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             // スライドショータイマーの初期化
             var viewerSettings = ViewerSettingsHelper.LoadSettings();
@@ -121,12 +123,6 @@ namespace Illustra.Views
             {
                 NavigateToNextImage();
             };
-
-            // キャッシュから画像を読み込み（なければ新規作成）
-            LoadAndDisplayImage(filePath);
-
-            // プロパティの読み込み
-            LoadImagePropertiesAsync(filePath);
 
             // イベントの購読
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
@@ -204,7 +200,7 @@ namespace Illustra.Views
             Loaded += (s, e) => OnWindowLoaded();
         }
 
-        private async void LoadImagePropertiesAsync(string filePath)
+        private async Task LoadImagePropertiesAsync(string filePath)
         {
             try
             {
@@ -212,27 +208,31 @@ namespace Illustra.Views
                 var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
 
                 // データベースからレーティングを読み込んで設定
-                var dbManager = new DatabaseManager();
-                var fileNode = await dbManager.GetFileNodeAsync(filePath);
+                var fileNode = await _dbManager.GetFileNodeAsync(filePath);
                 if (fileNode != null)
                 {
                     newProperties.Rating = fileNode.Rating;
                 }
 
-                Properties = newProperties;  // このセッターで PropertyChanged が発火する
-                _currentFilePath = filePath;
-                FileName = System.IO.Path.GetFileName(filePath);
-
-                // PropertyPanelControlにプロパティを設定
-                if (PropertyPanelControl != null)
+                // プロパティの更新はUIスレッドで行う
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    PropertyPanelControl.ImageProperties = Properties;
-                    PropertyPanelControl.DataContext = Properties;
-                }
+                    // まず新しいプロパティインスタンスをセット（これによりPropertyChangedイベントハンドラが設定される）
+                    Properties = newProperties;
+                    _currentFilePath = filePath;
+                    FileName = System.IO.Path.GetFileName(filePath);
 
-                OnPropertyChanged(nameof(ImageSource));
-                OnPropertyChanged(nameof(FileName));
-                OnPropertyChanged(nameof(Properties));
+                    // PropertyPanelControlにプロパティを設定
+                    if (PropertyPanelControl != null)
+                    {
+                        PropertyPanelControl.ImageProperties = Properties;
+                        PropertyPanelControl.DataContext = Properties;
+                    }
+
+                    OnPropertyChanged(nameof(ImageSource));
+                    OnPropertyChanged(nameof(FileName));
+                    OnPropertyChanged(nameof(Properties));
+                });
             }
             catch (Exception ex)
             {
@@ -243,6 +243,15 @@ namespace Illustra.Views
 
         private async void OnWindowLoaded()
         {
+            // キャッシュから画像を読み込み（なければ新規作成）
+            LoadAndDisplayImage(_currentFilePath);
+
+            // プロパティの読み込み
+            await LoadImagePropertiesAsync(_currentFilePath);
+
+            // プロパティパネルにプロパティを設定
+            PropertyPanelControl.OnFileSelected(new SelectedFileModel("", _currentFilePath, Properties.Rating));
+
             // フルスクリーン状態を設定
             if (_isFullScreen)
             {
@@ -519,7 +528,7 @@ namespace Illustra.Views
             string? previousFilePath = Parent.GetPreviousImage(_currentFilePath);
             if (!string.IsNullOrEmpty(previousFilePath))
             {
-                SwitchToImage(previousFilePath);
+                _ = SwitchToImage(previousFilePath);
             }
         }
 
@@ -532,7 +541,7 @@ namespace Illustra.Views
             string? nextFilePath = Parent.GetNextImage(_currentFilePath);
             if (!string.IsNullOrEmpty(nextFilePath))
             {
-                SwitchToImage(nextFilePath);
+                _ = SwitchToImage(nextFilePath);
             }
             else if (_isSlideshowActive)
             {
@@ -546,27 +555,27 @@ namespace Illustra.Views
         {
             try
             {
-/*              キャッシュ動作の解析用ログ
-                var viewModel = Parent?.GetViewModel();
-                if (viewModel != null)
-                {
-                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
-                    bool isFromCache = _imageCache.HasImage(filePath);
+                /*              キャッシュ動作の解析用ログ
+                                var viewModel = Parent?.GetViewModel();
+                                if (viewModel != null)
+                                {
+                                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
+                                    bool isFromCache = _imageCache.HasImage(filePath);
 
-                    // キャッシュされているファイルのインデックスを取得
-                    var cachedIndexes = _imageCache.CachedItems.Keys
-                        .Select(p => files.FindIndex(f => f.FullPath == p))
-                        .Where(i => i >= 0)
-                        .OrderBy(i => i);
+                                    // キャッシュされているファイルのインデックスを取得
+                                    var cachedIndexes = _imageCache.CachedItems.Keys
+                                        .Select(p => files.FindIndex(f => f.FullPath == p))
+                                        .Where(i => i >= 0)
+                                        .OrderBy(i => i);
 
-                    // キャッシュの状態を詳細にログ出力
-                    LogHelper.LogWithTimestamp(
-                        $"Loading image [index: {currentIndex}] from {(isFromCache ? "cache" : "disk")}\n" +
-                        $"Cached indexes: [{string.Join(", ", cachedIndexes)}]",
-                        LogHelper.Categories.ImageCache);
-                }
-*/
+                                    // キャッシュの状態を詳細にログ出力
+                                    LogHelper.LogWithTimestamp(
+                                        $"Loading image [index: {currentIndex}] from {(isFromCache ? "cache" : "disk")}\n" +
+                                        $"Cached indexes: [{string.Join(", ", cachedIndexes)}]",
+                                        LogHelper.Categories.ImageCache);
+                                }
+                */
                 ImageSource = _imageCache.GetImage(filePath);
             }
             catch (Exception ex)
@@ -577,7 +586,7 @@ namespace Illustra.Views
         }
 
         // 新しい画像を読み込む
-        private void SwitchToImage(string filePath)
+        private async Task SwitchToImage(string filePath)
         {
             try
             {
@@ -588,7 +597,7 @@ namespace Illustra.Views
                 LoadAndDisplayImage(filePath);
 
                 // 3. 画像のプロパティを読み込み
-                LoadImagePropertiesAsync(filePath);
+                await LoadImagePropertiesAsync(filePath);
 
                 // 4. 前後の画像をキャッシュ
                 var viewModel = Parent?.GetViewModel();
@@ -936,7 +945,7 @@ namespace Illustra.Views
                 // 次の画像があれば表示、なければビューアを閉じる
                 if (!string.IsNullOrEmpty(nextFilePath))
                 {
-                    SwitchToImage(nextFilePath);
+                    _ = SwitchToImage(nextFilePath);
                 }
                 else
                 {
@@ -964,7 +973,7 @@ namespace Illustra.Views
                 if (files.Any())
                 {
                     // 先頭の画像に切り替え
-                    SwitchToImage(files.First().FullPath);
+                    _ = SwitchToImage(files.First().FullPath);
                 }
             }
         }
@@ -981,7 +990,7 @@ namespace Illustra.Views
                 if (files.Any())
                 {
                     // 末尾の画像に切り替え
-                    SwitchToImage(files.Last().FullPath);
+                    _ = SwitchToImage(files.Last().FullPath);
                 }
             }
         }

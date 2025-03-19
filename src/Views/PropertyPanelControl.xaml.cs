@@ -76,7 +76,7 @@ namespace Illustra.Views
                 }
 
                 control.DataContext = e.NewValue;
-                control.UpdatePropertiesDisplayAsync();
+                // control.UpdatePropertiesDisplayAsync(); // ファイル切り替え時に選択前の _selectedFile を使用してしまうので、ここでは呼ばない
                 control.OnPropertyChanged(nameof(CanEditExif));
             }
         }
@@ -121,18 +121,20 @@ namespace Illustra.Views
 
         }
 
-        private async void OnFileSelected(SelectedFileModel selectedFile)
+
+        public async void OnFileSelected(SelectedFileModel selectedFile)
         {
             if (selectedFile == null
                 || string.IsNullOrEmpty(selectedFile.FullPath)
                 || !File.Exists(selectedFile.FullPath))
                 return;
 
+            // 選択されたファイルが現在の選択と異なる場合、または選択がnullの場合
             if (_selectedFile == null || !_selectedFile.FullPath.Equals(selectedFile.FullPath))
             {
-                await LoadFilePropertiesAsync(selectedFile.FullPath);
-
                 _selectedFile = selectedFile;
+                await LoadFilePropertiesAsync(selectedFile.FullPath, selectedFile.Rating);
+
                 void syncRating()
                 {
                     ImageProperties.Rating = _selectedFile.Rating;
@@ -164,12 +166,14 @@ namespace Illustra.Views
             }
         }
 
-        private async Task LoadFilePropertiesAsync(string filePath)
+        private async Task LoadFilePropertiesAsync(string filePath, int rating)
         {
             try
             {
                 var fileInfo = new FileInfo(filePath);
-                ImageProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                newProperties.Rating = rating;
+                ImageProperties = newProperties;
             }
             catch (Exception)
             {
@@ -398,7 +402,7 @@ namespace Illustra.Views
                         await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
 
                         // 保存成功後にプロパティを再読み込み
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath);
+                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
                     }
                     catch
                     {
@@ -425,7 +429,7 @@ namespace Illustra.Views
 
                         // 保存成功後にプロパティを再読み込み
                         // これにより LoadFilePropertiesAsync が呼ばれ、EXIFデータが再読み込みされる
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath);
+                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
                     }
                     catch
                     {
