@@ -100,11 +100,13 @@ namespace Illustra.Views
 
             try
             {
-                var endpoint = $"{ServerUrl.TrimEnd('/')}/grimoire/api/set_prompt";
+                var endpoint = $"{ServerUrl.TrimEnd('/')}/grimoire/set_prompt";
                 var requestData = new
                 {
                     prompt = Tags,
-                    request_id = ++_requestId
+                    request_id = ++_requestId,
+                    set_prompt = true,
+                    action = "generate",
                 };
 
                 var content = new StringContent(
