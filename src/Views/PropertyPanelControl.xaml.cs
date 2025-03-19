@@ -138,7 +138,7 @@ namespace Illustra.Views
                 void syncRating()
                 {
                     ImageProperties.Rating = _selectedFile.Rating;
-                    _ = UpdateRatingStars();
+                    UpdateRatingStars();
                 }
 
                 if (ImageProperties != null)
@@ -181,7 +181,7 @@ namespace Illustra.Views
             }
         }
 
-        private async Task UpdateRatingStars(bool updateDb = false)
+        private void UpdateRatingStars()
         {
             // PropertiesGridはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
@@ -212,13 +212,6 @@ namespace Illustra.Views
                             }
                         }
                     }
-                }
-
-                if (updateDb)
-                {
-                    // DBに保存
-                    // 保存はサービスか何かで実行させたほうがよい
-                    await _db.UpdateRatingAsync(_selectedFile.FullPath, _selectedFile.Rating);
                 }
             }
         }
@@ -294,12 +287,12 @@ namespace Illustra.Views
                 _selectedFile.Rating = rating;
             }
 
-            // レーティング変更イベントを発行
+            // レーティング変更イベントを発行. レーティングの永続化は受信先で行う
             _eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
                 new RatingChangedEventArgs { FilePath = _selectedFile.FullPath, Rating = _selectedFile.Rating });
 
             // UIを更新
-            await UpdateRatingStars(true);
+            UpdateRatingStars();
 
             // 非同期操作を待機
             await Task.CompletedTask;
@@ -311,7 +304,7 @@ namespace Illustra.Views
             if (args.FilePath == _selectedFile?.FullPath && _selectedFile != null)
             {
                 _selectedFile.Rating = args.Rating;
-                await UpdateRatingStars();
+                UpdateRatingStars();
             }
         }
 
@@ -454,7 +447,7 @@ namespace Illustra.Views
                     {
                         ImageProperties.Rating = _selectedFile.Rating;
                     }
-                    await UpdateRatingStars();
+                    UpdateRatingStars();
                 }
                 catch (Exception ex)
                 {

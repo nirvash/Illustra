@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Illustra.Views;
 using System.Linq;
 using System.IO;
+using Illustra.Events;
 
 namespace Illustra.ViewModels
 {
@@ -18,6 +19,8 @@ namespace Illustra.ViewModels
         private bool _sortAscending;
         public BulkObservableCollection<FileNodeModel> Items { get; } = new();
         private ICollectionView _filteredItems;
+        private IEventAggregator _eventAggregator = null!;
+        private DatabaseManager _db = null!;
 
         public bool SortByDate
         {
@@ -55,12 +58,29 @@ namespace Illustra.ViewModels
             _filteredItems = CollectionViewSource.GetDefaultView(Items);
             _filteredItems.Filter = FilterItems;
 
+            _db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
+
             // SelectedItemsの変更通知を設定
             _selectedItems.CollectionChanged += (s, e) =>
             {
                 OnPropertyChanged(nameof(SelectedItems));
                 UpdateLastSelectedFlag();
             };
+        }
+
+        // レーティングをデータベースに永続化する
+        private void OnRatingChanged(RatingChangedEventArgs args)
+        {
+            // 変更されたアイテムを取得
+            var item = Items.FirstOrDefault(x => x.FullPath.Equals(args.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (item != null)
+            {
+                // UI 側で直接モデルのレーティングを更新してるケースがあるため、ここで変更がなくても永続化が必要
+                item.Rating = args.Rating;
+                _ = _db.UpdateRatingAsync(item);
+            }
         }
 
         private readonly ObservableCollection<FileNodeModel> _selectedItems = new();

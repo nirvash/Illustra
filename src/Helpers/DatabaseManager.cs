@@ -175,115 +175,36 @@ namespace Illustra.Helpers
             return result;
         }
 
-        public async Task UpdateRatingAsync(string fullPath, int rating)
+        public async Task UpdateRatingAsync(FileNodeModel fileNode)
         {
             await _dbAccess.WriteAsync(async db =>
             {
-                await db.GetTable<FileNodeModel>()
-                        .Where(fn => fn.FullPath == fullPath)
-                        .Set(fn => fn.Rating, rating)
+                // 最後にチェックした時刻を設定
+                fileNode.LastCheckedTime = DateTime.Now;
+
+                if (fileNode.Rating <= 0)
+                {
+                    // 1. `DeleteAsync` を実行
+                    int affectedRows = await db.GetTable<FileNodeModel>()
+                        .Where(fn => fn.FullPath == fileNode.FullPath)
+                        .DeleteAsync();
+                }
+                else
+                {
+                    // 1. `UpdateAsync` を実行し、更新された行数を取得
+                    int affectedRows = await db.GetTable<FileNodeModel>()
+                        .Where(fn => fn.FullPath == fileNode.FullPath)
+                        .Set(fn => fn.Rating, fileNode.Rating)
+                        .Set(fn => fn.LastCheckedTime, fileNode.LastCheckedTime)
                         .UpdateAsync();
-            });
-        }
 
-        public async Task SaveFileNodesBatchAsync(IEnumerable<FileNodeModel> fileNodes)
-        {
-            await _dbAccess.WriteAsync(async db =>
-            {
-                try
-                {
-                    await db.BulkCopyAsync(fileNodes);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"SaveFileNodesBatchAsync中にエラーが発生しました: {ex.Message}");
-                    throw;
+                    // 2. 更新された行が 0 の場合は `InsertAsync` を実行
+                    if (affectedRows == 0)
+                    {
+                        await db.InsertAsync(fileNode);
+                    }
                 }
             });
-        }
-
-        public async Task<List<FileNodeModel>> GetOrCreateFileNodesAsync(string folderPath, Func<string, bool> fileFilter, CancellationToken cancellationToken = default)
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-
-            try
-            {
-                // 既存のファイルノードを取得
-                var existingNodes = await GetFileNodesAsync(folderPath, cancellationToken);
-                var existingNodeDict = existingNodes.ToDictionary(n => n.FullPath, n => n);
-
-                // キャンセル確認
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // ディレクトリからファイルパスを列挙
-                var filePaths = Directory.EnumerateFiles(folderPath).Where(FileHelper.IsImageFile).ToList();
-                var newNodes = new List<FileNodeModel>(filePaths.Count);
-                Debug.WriteLine($"ファイル '{folderPath}: ファイル列挙 {sw.ElapsedMilliseconds} ms");
-
-                // 最新のファイルノードを作成
-                foreach (var filePath in filePaths)
-                {
-                    try
-                    {
-                        var node = new FileNodeModel(filePath);
-                        newNodes.Add(node);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"ファイル '{filePath}' のノード作成中にエラー: {ex.Message}");
-                    }
-                }
-                Debug.WriteLine($"ファイル '{folderPath}: ファイルノードを作成 {sw.ElapsedMilliseconds} ms");
-
-                // Note: Write操作のキャンセルサポートは将来の検討課題とする
-                // 現在はWrite操作開始後のキャンセルは許可しない設計
-                await _dbAccess.WriteWithTransactionAsync(async db =>
-                {
-                    // DB上から該当フォルダのレコードを削除
-                    await db.GetTable<FileNodeModel>()
-                           .Where(fn => fn.FolderPath == folderPath)
-                           .DeleteAsync();
-
-                    // 既存ノードのレーティングを維持
-                    foreach (var node in newNodes)
-                    {
-                        if (existingNodeDict.TryGetValue(node.FullPath, out var existingNode))
-                        {
-                            if (node.Rating != existingNode.Rating)
-                            {
-                                node.Rating = existingNode.Rating;
-                            }
-                        }
-                    }
-
-                    // 新規ノードをバッチ保存
-                    if (newNodes.Count > 0)
-                    {
-                        await db.BulkCopyAsync(newNodes);
-                    }
-                });
-
-                Debug.WriteLine($"ファイル '{folderPath}: バッチ保存 {sw.ElapsedMilliseconds} ms");
-                sw.Stop();
-
-                return newNodes;
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine($"GetOrCreateFileNodesAsync was cancelled for folder: {folderPath}");
-                throw;
-            }
-            catch (SqliteException ex)
-            {
-                Debug.WriteLine($"GetOrCreateFileNodesAsync中にSQLエラーが発生しました: {ex.Message}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"GetOrCreateFileNodesAsync中にエラーが発生しました: {ex.Message}");
-                throw;
-            }
         }
 
         public async Task<FileNodeModel> HandleFileRenamedAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)

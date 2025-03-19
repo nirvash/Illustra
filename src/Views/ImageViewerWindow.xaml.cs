@@ -414,11 +414,7 @@ namespace Illustra.Views
                 // レーティングを更新
                 Properties.Rating = rating;
 
-                // データベースを更新
-                var dbManager = new DatabaseManager();
-                await dbManager.UpdateRatingAsync(_currentFilePath, rating);
-
-                // イベントを発行して他の画面に通知
+                // レーティング変更イベントを発行. レーティングの永続化は受信先で行う
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
                     new RatingChangedEventArgs { FilePath = _currentFilePath, Rating = rating });

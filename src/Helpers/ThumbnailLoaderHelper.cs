@@ -236,9 +236,7 @@ public class ThumbnailLoaderHelper
             LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードにDBの情報を設定しました", LogHelper.Categories.ThumbnailLoader);
             LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードを作成しました", LogHelper.Categories.ThumbnailLoader);
 
-            // データベースのレコードを更新 (TODO: レーティングが設定されたときノードのみ追加でよい)
-            await _db.DeleteFolderFileNodesAsync(folderPath);
-            await _db.SaveFileNodesBatchAsync(fileNodes);
+            // レーティングが設定されたときにノードを更新するのでここでのDB更新は不要になった
 
             // ソート条件に基づいてノードをソート
             if (fileNodes.Count > 0)
