@@ -62,6 +62,7 @@ namespace Illustra
 
             // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
             containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
+            containerRegistry.RegisterSingleton<ImageGenerationWindowViewModel>();
 
             containerRegistry.RegisterSingleton<DatabaseManager>();
         }

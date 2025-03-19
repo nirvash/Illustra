@@ -65,7 +65,7 @@ namespace Illustra.Views
 
         public event EventHandler CancelRequested;
         public event EventHandler StartRequested;
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
         {

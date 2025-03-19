@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:Illustra.Controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_ImageGeneration_Title}"
         Height="350"
@@ -68,27 +69,44 @@
                     Click="BrowseButton_Click"/>
         </Grid>
 
-        <!-- タグ入力 -->
-        <Grid Grid.Row="4" VerticalAlignment="Stretch" MinHeight="100"  >
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- プロンプト編集エリア -->
+        <Grid Grid.Row="4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock Grid.Column="0"
-                      Text="{DynamicResource String_ImageGeneration_Tags}"
-                      VerticalAlignment="Top"
-                      Margin="0,5,10,0"/>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="1"
-                     x:Name="TagsTextBox"
-                     Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     MinHeight="100"
-                     Margin="0,0,0,10"
-                     VerticalAlignment="Stretch"
-                     VerticalScrollBarVisibility="Auto"/>
+                <TextBlock Text="{DynamicResource String_ImageGeneration_Tags}"
+                          Margin="0,5,0,5"
+                          VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1"
+                           Orientation="Horizontal"
+                           Margin="10,0,0,0">
+                    <Button Content="✚"
+                            Command="{Binding AddEditorCommand}"
+                            ToolTip="Add Editor"
+                            Style="{DynamicResource EditorControlButtonStyle}"/>
+                    <Button Content="✖"
+                            Command="{Binding CloseEditorCommand}"
+                            CommandParameter="{Binding ActiveEditor}"
+                            ToolTip="Close Editor"
+                            Style="{DynamicResource EditorControlButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+
+            <controls:PromptEditorControl Grid.Row="1"
+                                        x:Name="PromptEditor"
+                                        DataContext="{Binding ActiveEditor}"
+                                        MinHeight="100"
+                                        Margin="0,0,0,10"
+                                        VerticalAlignment="Stretch"/>
         </Grid>
 
         <!-- 生成ボタン -->

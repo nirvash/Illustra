@@ -15,17 +15,24 @@
     <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
-  </PropertyGroup>  <!-- デバッグビルド設定 -->
+    <SuppressNETCoreSdkUnsupportedWarning>true</SuppressNETCoreSdkUnsupportedWarning>
+  </PropertyGroup>
+
+  <!-- デバッグビルド設定 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>  <!-- リリースビルド設定 -->
+  </PropertyGroup>
+
+  <!-- リリースビルド設定 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
-  </PropertyGroup>  <!-- リソースファイルの設定 -->
+  </PropertyGroup>
+
+  <!-- リソースファイルの設定 -->
   <PropertyGroup>    <!-- アセンブリの情報バージョンにGitリビジョン（コミットハッシュ）を含めるかどうか -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -47,7 +54,9 @@
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
     <PackageReference Include="Prism.Core" Version="9.0.537" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7-custom1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7-custom1">
+      <NoWarn>NU1903</NoWarn>
+    </PackageReference>
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />

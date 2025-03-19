@@ -8,7 +8,7 @@ namespace Illustra.ViewModels
     public class MainWindowViewModel : BindableBase
     {
         private string _statusMessage = "";
-
+        private readonly IContainerProvider _containerProvider;
         public string StatusMessage
         {
             get => _statusMessage;
@@ -20,8 +20,9 @@ namespace Illustra.ViewModels
         public DelegateCommand OpenAdvancedSettingsCommand { get; }
         public DelegateCommand OpenImageGenerationWindowCommand { get; }
 
-        public MainWindowViewModel()
+        public MainWindowViewModel(IContainerProvider containerProvider)
         {
+            _containerProvider = containerProvider;
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
             OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
             OpenAdvancedSettingsCommand = new DelegateCommand(ExecuteOpenAdvancedSettings);
@@ -67,7 +68,8 @@ namespace Illustra.ViewModels
         private void ExecuteOpenImageGenerationWindow()
         {
             // 画像生成画面をモードレスダイアログとして表示
-            var imageGenerationWindow = new ImageGenerationWindow
+            var viewModel = _containerProvider.Resolve<ImageGenerationWindowViewModel>();
+            var imageGenerationWindow = new ImageGenerationWindow(viewModel)
             {
                 Owner = Application.Current.MainWindow
             };
