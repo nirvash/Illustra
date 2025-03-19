@@ -157,6 +157,7 @@
                               HorizontalAlignment="Stretch"
                               Background="#FFCCCCCC"
                               Focusable="False"
+                              Cursor="SizeNS"
                               KeyboardNavigation.TabNavigation="None"/>
 
                 <!-- フォルダツリーコントロール -->
@@ -174,6 +175,7 @@
                           VerticalAlignment="Stretch"
                           Background="#FFCCCCCC"
                           Focusable="False"
+                          Cursor="SizeWE"
                           KeyboardNavigation.TabNavigation="None"/>
 
             <!-- 右側：メインコンテンツエリア -->
@@ -197,6 +199,7 @@
                               HorizontalAlignment="Stretch"
                               Background="#FFCCCCCC"
                               Focusable="False"
+                              Cursor="SizeNS"
                               KeyboardNavigation.TabNavigation="None"/>
 
                 <!-- プロパティペイン -->
