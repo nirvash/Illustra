@@ -104,11 +104,18 @@
                               Checked="DeveloperModeCheckBox_CheckedChanged"
                               Unchecked="DeveloperModeCheckBox_CheckedChanged"/>
 
+                    <!-- データベース整理ボタン -->
+                    <Button Content="{DynamicResource String_Settings_Developer_CleanDatabase}"
+                            Margin="0,5,0,5"
+                            Padding="10,3"
+                            HorizontalAlignment="Left"
+                            Click="CleanupDatabase_Click"/>
+
                     <!-- 開発者モードが有効な場合のみ表示されるログカテゴリ設定 -->
                     <Expander Header="ログカテゴリ設定"
-                              Margin="10,5,0,0"
-                              x:Name="LogCategoriesExpander"
-                              Visibility="Collapsed">
+                             Margin="10,5,0,0"
+                             x:Name="LogCategoriesExpander"
+                             Visibility="Collapsed">
                         <ScrollViewer MaxHeight="200"
                                       VerticalScrollBarVisibility="Auto">
                             <StackPanel x:Name="LogCategoriesPanel"

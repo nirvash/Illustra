@@ -8,6 +8,7 @@
     <system:String x:Key="String_Common_Ok">OK</system:String>
     <system:String x:Key="String_Common_Save">Save</system:String>
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
+    <system:String x:Key="String_Common_Start">Start</system:String>
     <system:String x:Key="String_Common_Copy">Copy</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
     <system:String x:Key="String_Menu_CopyText">Copy text</system:String>
@@ -70,6 +71,17 @@
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanDatabase">Clean Database</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupDatabase">Database Cleanup</system:String>
+    <system:String x:Key="String_Settings_Developer_PreparingCleanup">Press Start to clean up database.</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupComplete" xml:space="preserve">Cleanup completed.&#x0a;Unnecessary items: {0} items&#x0a;Missing files: {1} items</system:String>
+    <system:String x:Key="String_Settings_Developer_DeletingEntries">Deleting unnecessary items...</system:String>
+    <system:String x:Key="String_Settings_Developer_CheckingFiles">Checking file existence...</system:String>
+    <system:String x:Key="String_Settings_Developer_CheckingFilesProgress">Checking file existence... ({0}/{1})</system:String>
+    <system:String x:Key="String_Settings_Developer_CleaningDatabase">Cleaning up database...</system:String>
+    <system:String x:Key="String_Settings_Developer_OptimizingDatabase">Optimizing database...</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupError">An error occurred during cleanup.</system:String>
+    <system:String x:Key="String_Common_Cancelled">Operation cancelled.</system:String>
 
     <!-- Startup Settings -->
     <system:String x:Key="String_Settings_Startup_Section">Startup</system:String>

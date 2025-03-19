@@ -352,7 +352,7 @@ namespace Illustra.Views
             }
         }
 
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        private async void OnFolderSelected(FolderSelectedEventArgs args)
         {
             Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.Path}");
             string folderPath = args.Path;
@@ -384,7 +384,7 @@ namespace Illustra.Views
             _fileSystemMonitor.StartMonitoring(folderPath);
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            LoadFileNodes(folderPath, args.InitialSelectedFilePath);
+            await LoadFileNodesAsync(folderPath, args.InitialSelectedFilePath);
 
             // ソート条件の適用はOnFileNodesLoadedで行う
         }
@@ -2139,7 +2139,7 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたフォルダのファイルノードを読み込みます
         /// </summary>
-        public async Task LoadFileNodes(string path, string? initialSelectedFilePath = null)
+        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null)
         {
             try
             {

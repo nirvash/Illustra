@@ -323,27 +323,95 @@ namespace Illustra.Helpers
                         .DeleteAsync();
             });
         }
-    }
 
-    public class MySettings : ILinqToDBSettings
-    {
-        private readonly string _connectionString;
-
-        public MySettings(string connectionString)
+        /// <summary>
+        /// データベースのクリーンアップを実行します
+        /// </summary>
+        /// <param name="progressCallback">進捗状況を報告するコールバック</param>
+        /// <param name="cancellationToken">キャンセルトークン</param>
+        /// <returns>クリーンアップされたエントリ数</returns>
+        public async Task<(int deletedZeroRating, int deletedMissing)> CleanupDatabaseAsync(
+            Action<string, double> progressCallback,
+            CancellationToken cancellationToken)
         {
-            _connectionString = connectionString;
+            var deletedZeroRating = 0;
+            var deletedMissing = 0;
+            await _dbAccess.WriteAsync(async db =>
+            {
+                // Rating = 0のエントリを削除
+                progressCallback(App.Current.Resources["String_Settings_Developer_DeletingEntries"] as string, 0);
+                deletedZeroRating = await db.GetTable<FileNodeModel>()
+                    .Where(fn => fn.Rating == 0)
+                    .DeleteAsync(cancellationToken);
+
+                // LastCheckedTimeがNullまたは3日以前のエントリを確認
+                progressCallback(App.Current.Resources["String_Settings_Developer_CheckingFiles"] as string, 0);
+                var oldEntries = await db.GetTable<FileNodeModel>()
+                    .Where(fn => fn.LastCheckedTime == null ||
+                           fn.LastCheckedTime < DateTime.Now.AddDays(-3))
+                    .ToListAsync(cancellationToken);
+
+                int totalFiles = oldEntries.Count;
+                int processedFiles = 0;
+
+                foreach (var entry in oldEntries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    processedFiles++;
+
+                    var progress = (double)processedFiles / totalFiles;
+                    progressCallback(
+                        string.Format(
+                            App.Current.Resources["String_Settings_Developer_CheckingFilesProgress"] as string,
+                            processedFiles,
+                            totalFiles),
+                        progress);
+
+                    if (!File.Exists(entry.FullPath))
+                    {
+                        // ファイルが存在しない場合は削除
+                        await db.GetTable<FileNodeModel>()
+                            .Where(fn => fn.FullPath == entry.FullPath)
+                            .DeleteAsync(cancellationToken);
+                        deletedMissing++;
+                    }
+                    else
+                    {
+                        // ファイルが存在する場合はLastCheckedTimeを更新
+                        entry.LastCheckedTime = DateTime.Now;
+                        await db.UpdateAsync(entry);
+                    }
+                }
+
+                progressCallback(App.Current.Resources["String_Settings_Developer_CleanupComplete"] as string, 1.0);
+
+                // データベースの最適化を実行
+                progressCallback(App.Current.Resources["String_Settings_Developer_OptimizingDatabase"] as string, 1.0);
+                await db.ExecuteAsync("VACUUM;");
+            }, cancellationToken);
+            return (deletedZeroRating, deletedMissing);
         }
 
-        public IEnumerable<IDataProviderSettings> DataProviders => Enumerable.Empty<IDataProviderSettings>();
-
-        public string DefaultConfiguration => "SQLite";
-        public string DefaultDataProvider => "SQLite";
-
-        public IEnumerable<IConnectionStringSettings> ConnectionStrings
+        public class MySettings : ILinqToDBSettings
         {
-            get
+            private readonly string _connectionString;
+
+            public MySettings(string connectionString)
             {
-                yield return new ConnectionStringSettings("SQLite", "SQLite", _connectionString);
+                _connectionString = connectionString;
+            }
+
+            public IEnumerable<IDataProviderSettings> DataProviders => Enumerable.Empty<IDataProviderSettings>();
+
+            public string DefaultConfiguration => "SQLite";
+            public string DefaultDataProvider => "SQLite";
+
+            public IEnumerable<IConnectionStringSettings> ConnectionStrings
+            {
+                get
+                {
+                    yield return new ConnectionStringSettings("SQLite", "SQLite", _connectionString);
+                }
             }
         }
     }

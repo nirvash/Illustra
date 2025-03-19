@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.ComponentModel;
+using System.Threading;
 using Illustra.Helpers;
 using System.Windows.Controls;
 using Illustra.Models;
@@ -112,7 +113,7 @@ namespace Illustra.Views
 
         private AppSettingsModel _settings;
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -204,6 +205,69 @@ namespace Illustra.Views
             {
                 LogHelper.SetCategoryEnabled(categoryName, checkBox.IsChecked ?? false);
             }
+        }
+
+        private async void CleanupDatabase_Click(object sender, RoutedEventArgs e)
+        {
+            var progressDialog = new ProgressDialog()
+            {
+                Owner = this,
+                WindowTitle = (string)FindResource("String_Settings_Developer_CleanupDatabase"),
+                Message = (string)FindResource("String_Settings_Developer_PreparingCleanup")
+            };
+
+            var cancellationTokenSource = new CancellationTokenSource();
+            progressDialog.CancelRequested += (s, e) => cancellationTokenSource.Cancel();
+            progressDialog.StartRequested += async (s, e) =>
+            {
+                try
+                {
+                    var dbManager = new DatabaseManager();
+                    progressDialog.IsIndeterminate = false;
+                    var (deletedZeroRating, deletedMissing) = await Task.Run(() =>
+                        dbManager.CleanupDatabaseAsync(progressDialog.UpdateProgress,
+                                                       cancellationTokenSource.Token
+                    ));
+
+                    await progressDialog.Dispatcher.InvokeAsync(() => progressDialog.Close());
+
+                    MessageBox.Show(
+                        this,
+                        string.Format(
+                            (string)FindResource("String_Settings_Developer_CleanupComplete"),
+                            deletedZeroRating,
+                            deletedMissing
+                        ),
+                        (string)FindResource("String_Common_Information"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information
+                    );
+                }
+                catch (OperationCanceledException)
+                {
+                    progressDialog.Close();
+                    MessageBox.Show(
+                        this,
+                        (string)FindResource("String_Common_Cancelled"),
+                        (string)FindResource("String_Common_Information"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information
+                    );
+                }
+                catch (Exception ex)
+                {
+                    progressDialog.Close();
+                    MessageBox.Show(
+                        this,
+                        $"{FindResource("String_Settings_Developer_CleanupError")}\n{ex.Message}",
+                        (string)FindResource("String_Error"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+                }
+            };
+
+            progressDialog.Show();
         }
 
         private void OKButton_Click(object sender, RoutedEventArgs e)

@@ -7,6 +7,7 @@
     <system:String x:Key="String_Common_Ok">OK</system:String>
     <system:String x:Key="String_Common_Save">保存</system:String>
     <system:String x:Key="String_Common_Cancel">キャンセル</system:String>
+    <system:String x:Key="String_Common_Start">開始</system:String>
     <system:String x:Key="String_Common_Copy">コピー</system:String>
     <system:String x:Key="String_Common_Information">情報</system:String>
     <system:String x:Key="String_Menu_CopyText">テキストをコピー</system:String>
@@ -67,6 +68,17 @@
     <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
     <system:String x:Key="String_Settings_Developer_Section">開発者オプション</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanDatabase">データベース整理</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupDatabase">データベース整理</system:String>
+    <system:String x:Key="String_Settings_Developer_PreparingCleanup">データベースの整理を行います。</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupComplete" xml:space="preserve">クリーンアップが完了しました。&#x0a;不要なエントリ：{0}件&#x0a;存在しないファイル：{1}件</system:String>
+    <system:String x:Key="String_Settings_Developer_DeletingEntries">不要な項目を削除しています...</system:String>
+    <system:String x:Key="String_Settings_Developer_CheckingFiles">ファイルの存在を確認しています...</system:String>
+    <system:String x:Key="String_Settings_Developer_CheckingFilesProgress">ファイルの存在を確認しています... ({0}/{1})</system:String>
+    <system:String x:Key="String_Settings_Developer_CleaningDatabase">データベースをクリーンアップ中...</system:String>
+    <system:String x:Key="String_Settings_Developer_OptimizingDatabase">データベースを最適化中...</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupError">クリーンアップ中にエラーが発生しました。</system:String>
+    <system:String x:Key="String_Common_Cancelled">処理がキャンセルされました。</system:String>
 
     <!-- Startup Settings -->
     <system:String x:Key="String_Settings_Startup_Section">スタートアップ</system:String>
