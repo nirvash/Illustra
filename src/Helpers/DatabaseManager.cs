@@ -361,6 +361,16 @@ namespace Illustra.Helpers
             });
         }
 
+        public async Task DeleteFolderFileNodesAsync(string folderPath)
+        {
+            await _dbAccess.WriteAsync(async db =>
+            {
+                await db.GetTable<FileNodeModel>()
+                        .Where(fn => fn.FolderPath == folderPath)
+                        .DeleteAsync();
+            });
+        }
+
         public async Task DeleteFileNodeAsync(string fullPath)
         {
             await _dbAccess.WriteAsync(async db =>

@@ -115,6 +115,7 @@ namespace Illustra.Models
         private string _folderPath = string.Empty;
 
         private ThumbnailInfo _thumbnailInfo;
+        [LinqToDB.Mapping.NotColumn]
         public ThumbnailInfo ThumbnailInfo
         {
             get => _thumbnailInfo;
@@ -188,6 +189,7 @@ namespace Illustra.Models
         }
 
         private bool _isLastSelected;
+        [LinqToDB.Mapping.NotColumn]
         public bool IsLastSelected
         {
             get => _isLastSelected;

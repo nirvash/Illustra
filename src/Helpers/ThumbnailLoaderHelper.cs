@@ -223,8 +223,6 @@ public class ThumbnailLoaderHelper
             sw.Stop();
             LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ソート処理: {sw.ElapsedMilliseconds}ms", LogHelper.Categories.ThumbnailLoader);
 
-            // 以下、既存の処理...
-
             // ファイルノードを作成
             LogHelper.LogWithTimestamp("ファイルノードの作成を開始", LogHelper.Categories.ThumbnailLoader);
             LogHelper.LogWithTimestamp($"{files.Count}件のファイルからノードを作成します", LogHelper.Categories.ThumbnailLoader);
@@ -237,6 +235,10 @@ public class ThumbnailLoaderHelper
             LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードをDBから取得しました", LogHelper.Categories.ThumbnailLoader);
             LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードにDBの情報を設定しました", LogHelper.Categories.ThumbnailLoader);
             LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードを作成しました", LogHelper.Categories.ThumbnailLoader);
+
+            // データベースのレコードを更新 (TODO: レーティングが設定されたときノードのみ追加でよい)
+            await _db.DeleteFolderFileNodesAsync(folderPath);
+            await _db.SaveFileNodesBatchAsync(fileNodes);
 
             // ソート条件に基づいてノードをソート
             if (fileNodes.Count > 0)
