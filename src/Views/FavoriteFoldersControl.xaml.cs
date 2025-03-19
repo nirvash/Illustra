@@ -97,8 +97,7 @@ namespace Illustra.Views
                     e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
                         ? DragDropEffects.Copy
                         : DragDropEffects.Move;
-                    e.DropTargetHintAdorner = DropTargetAdorners.Highlight;
-                    e.DropTargetHintState = DropHintState.Active;
+                    e.DropTargetAdorner = DropTargetAdorners.Highlight;
                 }
                 catch (Exception)
                 {
