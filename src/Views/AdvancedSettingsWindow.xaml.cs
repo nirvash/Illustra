@@ -5,10 +5,11 @@ using System.Threading;
 using Illustra.Helpers;
 using System.Windows.Controls;
 using Illustra.Models;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class AdvancedSettingsWindow : Window, INotifyPropertyChanged
+    public partial class AdvancedSettingsWindow : MetroWindow, INotifyPropertyChanged
     {
         private double _mouseWheelMultiplier;
         public double MouseWheelMultiplier

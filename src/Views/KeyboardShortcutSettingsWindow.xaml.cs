@@ -1,10 +1,11 @@
 using System.Windows;
 using Illustra.ViewModels;
+using MahApps.Metro.Controls;
 using Prism.Ioc;
 
 namespace Illustra.Views
 {
-    public partial class KeyboardShortcutSettingsWindow : Window
+    public partial class KeyboardShortcutSettingsWindow : MetroWindow
     {
         private readonly KeyboardShortcutSettingsViewModel _viewModel;
 

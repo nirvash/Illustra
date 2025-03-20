@@ -25,7 +25,6 @@
             </ComboBox>
 
             <TextBlock Text="{DynamicResource String_Settings_LanguageDescription}"
-                      Foreground="Gray"
                       TextWrapping="Wrap"
                       Margin="0,0,0,20"/>
         </StackPanel>

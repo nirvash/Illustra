@@ -60,6 +60,9 @@
     <system:String x:Key="String_Settings_MouseWheelMultiplier">マウスホイールの速度</system:String>
     <system:String x:Key="String_Settings_Language">言語</system:String>
     <system:String x:Key="String_Menu_Settings_Advanced">詳細設定</system:String>
+    <system:String x:Key="String_Menu_Settings_Appearance">外観設定</system:String>
+    <system:String x:Key="String_Menu_Settings_Theme_Light">ライトテーマ</system:String>
+    <system:String x:Key="String_Menu_Settings_Theme_Dark">ダークテーマ</system:String>
     <system:String x:Key="String_Settings_Slideshow_Section">スライドショー</system:String>
     <system:String x:Key="String_Settings_Slideshow_Interval">再生間隔:</system:String>
     <system:String x:Key="String_Settings_Slideshow_Seconds">秒</system:String>

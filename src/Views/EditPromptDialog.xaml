@@ -1,14 +1,16 @@
-<Window x:Class="Illustra.Views.EditPromptDialog"
+<mahcontrols:MetroWindow x:Class="Illustra.Views.EditPromptDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Illustra.Views"
+        xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_Dialog_EditPrompt}"
         Height="400"
         Width="600"
         WindowStartupLocation="CenterOwner"
+        WindowTransitionsEnabled="False"
         ResizeMode="CanResize">
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -40,4 +42,4 @@
                     Click="Save_Click"/>
         </StackPanel>
     </Grid>
-</Window>
+</mahcontrols:MetroWindow>

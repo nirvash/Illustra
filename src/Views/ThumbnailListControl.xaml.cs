@@ -272,6 +272,24 @@ namespace Illustra.Views
 
             // ItemContainerGenerator.StatusChangedイベントを登録
             ThumbnailItemsControl.ItemContainerGenerator.StatusChanged += ThumbnailItemsControl_StatusChanged;
+
+            // ListView の ScrollViewer を取得
+            if (ThumbnailItemsControl.Template.FindName("ScrollViewer", ThumbnailItemsControl) is ScrollViewer scrollViewer)
+            {
+                // ScrollBar を取得してイベントを追加
+                if (scrollViewer.Template.FindName("PART_VerticalScrollBar", scrollViewer) is ScrollBar verticalScrollBar)
+                {
+                    // `PART_Track` から `Thumb` を取得
+                    verticalScrollBar.ApplyTemplate();
+                    if (verticalScrollBar.Template.FindName("PART_Track", verticalScrollBar) is Track track &&
+                        track.Thumb is Thumb thumb)
+                    {
+                        // イベントを追加
+                        thumb.DragStarted += ScrollBar_DragStarted;
+                        thumb.DragCompleted += ScrollBar_DragCompleted;
+                    }
+                }
+            }
         }
 
         private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)

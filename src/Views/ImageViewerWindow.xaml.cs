@@ -1,26 +1,21 @@
-using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.Windows.Media;
-using System.IO;
-using Prism.Events;
-using Prism.Ioc;
 using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.Events;
 using System.Windows.Media.Animation;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
 using Illustra.Helpers.Interfaces;
 using Illustra.Functions;
+using MahApps.Metro.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace Illustra.Views
 {
-    public partial class ImageViewerWindow : Window, INotifyPropertyChanged
+    public partial class ImageViewerWindow : MetroWindow, INotifyPropertyChanged
     {
         // フルスクリーン切り替え前のウィンドウ状態を保存
         private WindowState _previousWindowState;
@@ -37,6 +32,7 @@ namespace Illustra.Views
                 if (_isFullScreen != value)
                 {
                     _isFullScreen = value;
+                    base.ShowTitleBar = !value; // フルスクリーン時はタイトルバーを非表示
                     OnPropertyChanged(nameof(IsFullScreen));
                     IsFullscreenChanged?.Invoke(this, EventArgs.Empty);
                 }
@@ -128,19 +124,7 @@ namespace Illustra.Views
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             eventAggregator?.GetEvent<RatingChangedEvent>()?.Subscribe(OnRatingChanged);
 
-            // タイトルバー自動非表示用のタイマー
-            _titleBarTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(2)
-            };
-            _titleBarTimer.Tick += (s, e) =>
-            {
-                _titleBarTimer.Stop();
-                if (_isFullScreen)
-                {
-                    TitleBar.Visibility = System.Windows.Visibility.Collapsed;
-                }
-            };
+            this.StateChanged += MainWindow_StateChanged;
 
             // マウスカーソル非表示用のタイマー
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -152,25 +136,6 @@ namespace Illustra.Views
 
             // ウィンドウの状態を復元
             var settings = ViewerSettingsHelper.LoadSettings();
-
-            // 画面外に出ないように調整
-            double screenWidth = SystemParameters.PrimaryScreenWidth;
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
-
-            // 位置が有効な値かつ画面内に収まるか確認
-            if (!double.IsNaN(settings.Left) && settings.Left >= 0 && settings.Left + settings.Width <= screenWidth)
-            {
-                Left = settings.Left;
-            }
-
-            if (!double.IsNaN(settings.Top) && settings.Top >= 0 && settings.Top + settings.Height <= screenHeight)
-            {
-                Top = settings.Top;
-            }
-
-            // サイズも画面サイズを超えないように設定
-            Width = Math.Min(settings.Width, screenWidth);
-            Height = Math.Min(settings.Height, screenHeight);
 
             // フルスクリーン設定を保存して、Loaded後に適用
             IsFullScreen = settings.IsFullScreen; // プロパティ経由で設定
@@ -199,6 +164,8 @@ namespace Illustra.Views
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
         }
+
+
 
         private async Task LoadImagePropertiesAsync(string filePath)
         {
@@ -251,24 +218,22 @@ namespace Illustra.Views
 
             // プロパティパネルにプロパティを設定
             PropertyPanelControl.OnFileSelected(new SelectedFileModel("", _currentFilePath, Properties.Rating));
+            /*
+                        // フルスクリーン状態を設定
+                        if (_isFullScreen)
+                        {
+                            this.ShowTitleBar = false; // フルスクリーン時はタイトルバーを非表示
+                            _previousWindowState = WindowState;
+                            _previousWindowStyle = WindowStyle;
 
-            // フルスクリーン状態を設定
-            if (_isFullScreen)
-            {
-                _previousWindowState = WindowState;
-                _previousWindowStyle = WindowStyle;
+                            // フルスクリーン状態にする
+                            WindowStyle = WindowStyle.None;
+                            WindowState = WindowState.Maximized;
 
-                // フルスクリーン状態にする
-                WindowStyle = WindowStyle.None;
-                WindowState = WindowState.Maximized;
-
-                // 確実に設定が有効になるように少し待つ
-                await Task.Delay(50);
-            }
-
-            // ボタンの表示状態を更新
-            UpdateButtonVisibility();
-
+                            // 確実に設定が有効になるように少し待つ
+                            await Task.Delay(50);
+                        }
+            */
             // フォーカスを確実に設定
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
@@ -512,6 +477,16 @@ namespace Illustra.Views
             SaveCurrentSettings();
         }
 
+        private void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            // プロパティパネルのサイズ変更時に幅を保存
+            if (PropertyPanel.Visibility == System.Windows.Visibility.Visible)
+            {
+                _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
+            }
+            SaveCurrentSettings();
+        }
+
         // 前回のプロパティパネル幅を保存するフィールド
         private double _lastPropertyPanelWidth = 250;
 
@@ -657,64 +632,25 @@ namespace Illustra.Views
             Close();
         }
 
-        private void Window_MouseMove(object sender, MouseEventArgs e)
+        private void MainWindow_StateChanged(object sender, System.EventArgs e)
         {
-            if (!_isFullScreen) return;
-
-            var position = e.GetPosition(this);
-            if (position.Y <= TITLE_BAR_SHOW_AREA)
+            if (this.WindowState == WindowState.Maximized && this.WindowStyle == WindowStyle.None)
             {
-                TitleBar.Visibility = Visibility.Visible;
-                _titleBarTimer.Stop();
-                _titleBarTimer.Start();
-            }
-            else
-            {
-                TitleBar.Visibility = Visibility.Collapsed;
-                _titleBarTimer.Stop();
-            }
-        }
-
-        private void UpdateButtonVisibility()
-        {
-            // フルスクリーンモードに応じてボタンの表示/非表示を切り替え
-            EnterFullScreenButton.Visibility = IsFullScreen ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
-        }
-
-        private void ToggleFullScreen()
-        {
-            if (!_isFullScreen)
-            {
-                // 現在の状態を保存
-                _previousWindowState = WindowState;
-                _previousWindowStyle = WindowStyle;
-
-                // フルスクリーンに切り替え
+                base.ShowTitleBar = false;
                 WindowStyle = WindowStyle.None;
                 WindowState = WindowState.Maximized;
                 IsFullScreen = true; // プロパティ経由で設定
-
-                // 状態変更をすぐに保存
-                SaveCurrentSettings(true, false);
             }
-            else
+            else if (this.WindowState == WindowState.Normal)
             {
-                // 保存していた状態に戻す
-                WindowStyle = _previousWindowStyle;
-                WindowState = _previousWindowState;
+                base.ShowTitleBar = true; // タイトルバーを表示
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                WindowState = WindowState.Normal;
                 IsFullScreen = false; // プロパティ経由で設定
-
-                // タイトルバーを非表示
-                TitleBar.Visibility = Visibility.Collapsed;
-                _titleBarTimer.Stop();
 
                 // マウスカーソルを表示状態に戻す
                 Mouse.OverrideCursor = Cursors.Arrow;
                 hideCursorTimer.Stop();
-
-                // 状態変更をすぐに保存
-                SaveCurrentSettings(true, true);
-
             }
 
             // フルスクリーン状態に応じた幅を読み込む
@@ -734,8 +670,27 @@ namespace Illustra.Views
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
             }
-            // ボタンの表示状態を更新
-            UpdateButtonVisibility();
+        }
+
+
+        private void ToggleFullScreen()
+        {
+            if (!_isFullScreen)
+            {
+                // フルスクリーンに切り替え
+                base.ShowTitleBar = false;
+                WindowStyle = WindowStyle.None;
+                WindowState = WindowState.Maximized;
+                IsFullScreen = true; // プロパティ経由で設定
+            }
+            else
+            {
+                // 保存していた状態に戻す
+                base.ShowTitleBar = true; // タイトルバーを表示
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                WindowState = WindowState.Normal;
+                IsFullScreen = false; // プロパティ経由で設定
+            }
         }
 
         // 現在のウィンドウ設定を保存する共通メソッド
@@ -747,10 +702,6 @@ namespace Illustra.Views
                 : _lastPropertyPanelWidth;
 
             var settings = ViewerSettingsHelper.LoadSettings();
-            settings.Left = _isFullScreen ? double.NaN : Left;
-            settings.Top = _isFullScreen ? double.NaN : Top;
-            settings.Width = _isFullScreen ? 800 : Width;
-            settings.Height = _isFullScreen ? 600 : Height;
             settings.IsFullScreen = _isFullScreen;
             settings.VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible;
 

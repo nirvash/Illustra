@@ -1,10 +1,11 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class ProgressDialog : Window, INotifyPropertyChanged
+    public partial class ProgressDialog : MetroWindow, INotifyPropertyChanged
     {
         private string _windowTitle = string.Empty;
         public string WindowTitle

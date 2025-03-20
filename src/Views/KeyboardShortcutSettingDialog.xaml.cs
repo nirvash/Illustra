@@ -1,10 +1,11 @@
 using System.Windows;
 using System.Windows.Input;
 using Illustra.ViewModels;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class KeyboardShortcutSettingDialog : Window
+    public partial class KeyboardShortcutSettingDialog : MetroWindow
     {
         private readonly KeyboardShortcutSettingDialogViewModel _viewModel;
 

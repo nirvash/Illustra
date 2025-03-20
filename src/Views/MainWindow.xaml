@@ -1,8 +1,9 @@
-﻿<Window x:Class="Illustra.Views.MainWindow"
+﻿<controls:MetroWindow x:Class="Illustra.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:prism="http://prismlibrary.com/"
@@ -97,12 +98,23 @@
             </MenuItem>
 
             <MenuItem Header="{DynamicResource String_Menu_Settings}">
-                <MenuItem Header="{DynamicResource String_Menu_Settings_Language}"
-                          Command="{Binding OpenLanguageSettingsCommand}"/>
-                <MenuItem Header="{DynamicResource String_Menu_Settings_Shortcuts}"
-                          Command="{Binding OpenShortcutSettingsCommand}"/>
                 <MenuItem Header="{DynamicResource String_Menu_Settings_Advanced}"
                           Command="{Binding OpenAdvancedSettingsCommand}"/>
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Shortcuts}"
+                          Command="{Binding OpenShortcutSettingsCommand}"/>
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Appearance}">
+                    <MenuItem Header="{DynamicResource String_Menu_Settings_Theme_Light}"
+                            IsCheckable="True"
+                            IsChecked="{Binding IsLightTheme, Mode=OneWay}"
+                            Command="{Binding SetLightThemeCommand}"/>
+                    <MenuItem Header="{DynamicResource String_Menu_Settings_Theme_Dark}"
+                            IsCheckable="True"
+                            IsChecked="{Binding IsDarkTheme, Mode=OneWay}"
+                            Command="{Binding SetDarkThemeCommand}"/>
+                </MenuItem>
+                <MenuItem Header="{DynamicResource String_Menu_Settings_Language}"
+                          Command="{Binding OpenLanguageSettingsCommand}"/>
+                <Separator/>
                 <MenuItem x:Name="ToggleCyclicNavigation"
                           Header="{DynamicResource String_Menu_Settings_CyclicNavigation}"
                           IsCheckable="True"
@@ -155,7 +167,6 @@
                               x:Name="FavoritesSplitter"
                               Height="3"
                               HorizontalAlignment="Stretch"
-                              Background="#FFCCCCCC"
                               Focusable="False"
                               Cursor="SizeNS"
                               KeyboardNavigation.TabNavigation="None"/>
@@ -173,7 +184,6 @@
                           Width="3"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Stretch"
-                          Background="#FFCCCCCC"
                           Focusable="False"
                           Cursor="SizeWE"
                           KeyboardNavigation.TabNavigation="None"/>
@@ -195,9 +205,8 @@
                 <!-- プロパティパネルとのグリッドスプリッター -->
                 <GridSplitter Grid.Row="1"
                               x:Name="PropertySplitter"
-                              Height="4"
+                              Height="3"
                               HorizontalAlignment="Stretch"
-                              Background="#FFCCCCCC"
                               Focusable="False"
                               Cursor="SizeNS"
                               KeyboardNavigation.TabNavigation="None"/>
@@ -224,16 +233,19 @@
             </Grid>
 
             <!-- ステータスバー -->
-            <Border Grid.Row="1"
+            <StatusBar Grid.Row="1"
                     Grid.ColumnSpan="3"
-                    Background="#F0F0F0"
-                    BorderBrush="LightGray"
+                    Background="{DynamicResource MahApps.Brushes.StatusBarBackground}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.StatusBarBorder}"
                     BorderThickness="0,1,0,0">
-                <TextBlock x:Name="StatusBar"
-                           Margin="5,2"
-                           Padding="2"
-                           Text="{Binding StatusMessage}"/>
-            </Border>
+                <StatusBarItem>
+                    <TextBlock x:Name="StatusBar"
+                            Margin="5,2"
+                            Padding="2"
+                            Text="{Binding StatusMessage}"
+                            Foreground="{DynamicResource MahApps.Brushes.StatusBarForeground}"/>
+                </StatusBarItem>
+            </StatusBar>
         </Grid>
     </Grid>
-</Window>
+</controls:MetroWindow>

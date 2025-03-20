@@ -1,10 +1,12 @@
-<Window x:Class="Illustra.Views.AdvancedSettingsWindow"
+<mahcontrols:MetroWindow x:Class="Illustra.Views.AdvancedSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         Title="{DynamicResource String_Menu_Settings_Advanced}"
         Icon="{StaticResource AppIcon}"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
+        WindowTransitionsEnabled="False"
         ResizeMode="NoResize">
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -142,4 +144,4 @@
                     Click="OKButton_Click"/>
         </Grid>
     </Grid>
-</Window>
+</mahcontrols:MetroWindow>
