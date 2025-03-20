@@ -1,10 +1,11 @@
 using System.Windows;
 using Illustra.ViewModels;
+using MahApps.Metro.Controls;
 using Prism.Ioc;
 
 namespace Illustra.Views
 {
-    public partial class LanguageSettingsWindow : Window
+    public partial class LanguageSettingsWindow : MetroWindow
     {
         private readonly LanguageSettingsViewModel _viewModel;
 

@@ -1,20 +1,22 @@
-<Window x:Class="Illustra.Views.KeyboardShortcutSettingDialog"
+<mahcontrols:MetroWindow x:Class="Illustra.Views.KeyboardShortcutSettingDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Illustra.ViewModels"
+        xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_KeyboardShortcutSettingDialog_Title}"
         Icon="{StaticResource AppIcon}"
         Height="280"
         Width="360"
         WindowStartupLocation="CenterOwner"
+        WindowTransitionsEnabled="False"
         ResizeMode="NoResize"
         PreviewKeyDown="Window_PreviewKeyDown"
         d:DataContext="{d:DesignInstance Type=vm:KeyboardShortcutSettingDialogViewModel}">
 
-    <Window.Resources>
+    <mahcontrols:MetroWindow.Resources>
         <Style TargetType="ToggleButton">
             <Setter Property="Width"
                     Value="70"/>
@@ -36,7 +38,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-    </Window.Resources>
+    </mahcontrols:MetroWindow.Resources>
 
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -133,4 +135,4 @@
                     Command="{Binding SaveCommand}"/>
         </Grid>
     </Grid>
-</Window>
+</mahcontrols:MetroWindow>

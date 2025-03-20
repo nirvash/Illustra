@@ -77,5 +77,8 @@ namespace Illustra.Models
         /// ログカテゴリの有効/無効設定
         /// </summary>
         public Dictionary<string, bool> LogCategories { get; set; } = new Dictionary<string, bool>();
+
+        // テーマ設定
+        public string Theme { get; set; } = "Light";
     }
 }

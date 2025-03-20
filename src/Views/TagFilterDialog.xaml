@@ -1,15 +1,17 @@
-<Window x:Class="Illustra.Views.TagFilterDialog"
+<mahcontrols:MetroWindow x:Class="Illustra.Views.TagFilterDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Illustra.Views"
+        xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_TagFilter_Title}"
         Icon="{StaticResource AppIcon}"
         Height="300"
         Width="450"
         WindowStartupLocation="CenterOwner"
+        WindowTransitionsEnabled="False"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
     <Grid Margin="10">
@@ -66,4 +68,4 @@
                     IsDefault="True"/>
         </StackPanel>
     </Grid>
-</Window>
+</mahcontrols:MetroWindow>

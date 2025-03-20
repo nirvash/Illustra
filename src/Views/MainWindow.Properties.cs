@@ -2,10 +2,11 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 using Illustra.Models;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class MainWindow
+    public partial class MainWindow : MetroWindow
     {
         private bool _isPromptFilterEnabled = false;
         private bool _isTagFilterEnabled = false;

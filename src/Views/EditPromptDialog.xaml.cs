@@ -1,8 +1,9 @@
 using System.Windows;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class EditPromptDialog : Window
+    public partial class EditPromptDialog : MetroWindow
     {
         public string PromptText { get; set; }
 

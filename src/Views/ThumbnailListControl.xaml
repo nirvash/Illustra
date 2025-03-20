@@ -92,6 +92,7 @@
                         IsSnapToTickEnabled="True"
                         VerticalAlignment="Center"
                         Focusable="False"
+                        Style="{DynamicResource FlatSlider}"
                         ValueChanged="ThumbnailSizeSlider_ValueChanged"
                         Thumb.DragCompleted="ThumbnailSizeSlider_DragCompleted"/>
             </StackPanel>
@@ -226,14 +227,6 @@
                                     BorderBrush="{TemplateBinding BorderBrush}">
                                 <ScrollViewer x:Name="ScrollViewer"
                                             Focusable="False">
-                                    <ScrollViewer.Resources>
-                                        <Style TargetType="ScrollBar">
-                                            <EventSetter Event="Thumb.DragStarted"
-                                                       Handler="ScrollBar_DragStarted"/>
-                                            <EventSetter Event="Thumb.DragCompleted"
-                                                       Handler="ScrollBar_DragCompleted"/>
-                                        </Style>
-                                    </ScrollViewer.Resources>
                                     <ItemsPresenter />
                                 </ScrollViewer>
                             </Border>
@@ -430,15 +423,13 @@
                                        VerticalAlignment="Bottom"
                                        HorizontalAlignment="Center"
                                        Margin="2,0,2,-20"
-                                       Background="#80FFFFFF"
                                        Padding="2"
                                        Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
                                        TextAlignment="Center"
                                        TextTrimming="CharacterEllipsis"/>
                             <!-- レーティング表示部分のみを更新 -->
-                            <Grid HorizontalAlignment="Right"
+                            <Grid HorizontalAlignment="Left"
                                   VerticalAlignment="Top"
-                                  Margin="0,2,2,0"
                                   Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                                 <!-- SVG星マーク -->
                                 <local:RatingStarControl

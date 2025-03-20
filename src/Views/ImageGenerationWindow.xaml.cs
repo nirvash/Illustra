@@ -7,10 +7,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Illustra.Helpers;
 using Illustra.Models;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class ImageGenerationWindow : Window, INotifyPropertyChanged
+    public partial class ImageGenerationWindow : MetroWindow, INotifyPropertyChanged
     {
         private string _serverUrl = string.Empty;
         public string ServerUrl

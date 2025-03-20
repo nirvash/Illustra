@@ -12,6 +12,7 @@ using Illustra.ViewModels;
 using System.Collections.Generic;
 using DryIoc.ImTools;
 using Illustra.Models;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
@@ -19,7 +20,7 @@ namespace Illustra.Views
     /// MainWindow.xaml の相互作用ロジック
     /// このクラスはpartialクラスとして実装されており、プロパティの定義はMainWindow.Properties.csに分離されています。
     /// </summary>
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : MetroWindow, INotifyPropertyChanged
     {
         private readonly IEventAggregator _eventAggregator;
         private AppSettingsModel _appSettings;

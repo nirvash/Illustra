@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
     /// <summary>
     /// タグフィルタダイアログの相互作用ロジック
     /// </summary>
-    public partial class TagFilterDialog : Window
+    public partial class TagFilterDialog : MetroWindow
     {
         public List<string> TagFilters { get; private set; } = new List<string>();
         private List<Grid> _tagInputGrids = new List<Grid>();

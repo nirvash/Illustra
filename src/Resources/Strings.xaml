@@ -63,6 +63,9 @@
     <system:String x:Key="String_Settings_MouseWheelMultiplier">Mouse Wheel Speed</system:String>
     <system:String x:Key="String_Settings_Language">Language</system:String>
     <system:String x:Key="String_Menu_Settings_Advanced">Advanced Settings</system:String>
+    <system:String x:Key="String_Menu_Settings_Appearance">Appearance</system:String>
+    <system:String x:Key="String_Menu_Settings_Theme_Light">Light Theme</system:String>
+    <system:String x:Key="String_Menu_Settings_Theme_Dark">Dark Theme</system:String>
     <system:String x:Key="String_Settings_Slideshow_Section">Slideshow</system:String>
     <system:String x:Key="String_Settings_Slideshow_Interval">Interval:</system:String>
     <system:String x:Key="String_Settings_Slideshow_Seconds">seconds</system:String>

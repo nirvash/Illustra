@@ -316,16 +316,7 @@ namespace Illustra.ViewModels
             try
             {
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                var extension = Path.GetExtension(filePath).ToLowerInvariant();
-                if (extension == ".jpg" || extension == ".jpeg" || extension == ".png")
-                {
-                    _promptCache[filePath] = !string.IsNullOrEmpty(properties?.UserComment) &&
-                                                (properties?.HasStableDiffusionData ?? false);
-                }
-                else
-                {
-                    _promptCache[filePath] = false;
-                }
+                _promptCache[filePath] = properties.HasStableDiffusionData;
             }
             catch
             {

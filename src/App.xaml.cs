@@ -15,6 +15,7 @@ using LinqToDB.Data;
 using LinqToDB.DataProvider;
 using System.Diagnostics;
 using Illustra.Events;
+using ControlzEx.Theming;
 
 namespace Illustra
 {
@@ -94,35 +95,68 @@ namespace Illustra
 
             // データベースの初期化
             InitializeDatabase();
+            //            ThemeManager.Current.ChangeTheme(this, "Dark.Green");
 
-            // AppSettingsから循環移動の設定を読み込む
+            // 設定を読み込む
             var settings = SettingsHelper.GetSettings();
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
+
+            // 保存されたテーマを適用
+            ChangeTheme(settings.Theme);
 
             // ログカテゴリ設定を読み込む
             LogHelper.LoadCategorySettings();
         }
 
+        public void ChangeTheme(string theme)
+        {
+            ResourceDictionary newTheme = new ResourceDictionary();
+            switch (theme)
+            {
+                case "Dark":
+                    newTheme.Source = new Uri("Themes/Dark.xaml", UriKind.Relative);
+                    break;
+                default:
+                    newTheme.Source = new Uri("Themes/Light.xaml", UriKind.Relative);
+                    break;
+            }
 
+            // 既存の辞書を削除せずに、新しいテーマを追加して入れ替える
+            var oldTheme = Resources.MergedDictionaries
+                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Themes/"));
+            if (oldTheme != null)
+            {
+                Resources.MergedDictionaries.Remove(oldTheme);
+            }
+            Resources.MergedDictionaries.Add(newTheme);
+        }
         public void UpdateResourceDictionaries()
         {
-            // 現在のカルチャに基づいてリソースディクショナリを更新
             var currentCulture = Thread.CurrentThread.CurrentUICulture;
-
-            // デバッグ情報
             System.Diagnostics.Debug.WriteLine($"現在の言語: {currentCulture.Name}, TwoLetterISOLanguageName: {currentCulture.TwoLetterISOLanguageName}");
 
-            // リソースディクショナリをクリア
-            Resources.MergedDictionaries.Clear();
+            // `MahApps.Metro` のテーマを削除しないようにする
+            var existingThemeDictionaries = Resources.MergedDictionaries
+                .Where(d => d.Source != null && d.Source.OriginalString.Contains("MahApps.Metro"))
+                .ToList();
+
+            // 言語リソースのみ削除
+            var oldLangDictionaries = Resources.MergedDictionaries
+                .Where(d => d.Source != null && d.Source.OriginalString.Contains("Resources/Strings"))
+                .ToList();
+
+            foreach (var dict in oldLangDictionaries)
+            {
+                Resources.MergedDictionaries.Remove(dict);
+            }
 
             try
             {
-                // 言語に応じたリソースを読み込む
+                // 言語リソースを読み込む
                 var resourceDictionary = new ResourceDictionary();
 
                 if (currentCulture.TwoLetterISOLanguageName == "ja")
                 {
-                    // 日本語のリソースを読み込む
                     try
                     {
                         resourceDictionary.Source = new Uri("/Illustra;component/Resources/Strings.ja.xaml", UriKind.Relative);
@@ -131,37 +165,31 @@ namespace Illustra
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"日本語リソース読み込みエラー: {ex.Message}");
-                        // 日本語リソースが読み込めない場合は英語リソースを試す
                         resourceDictionary.Source = new Uri("/Illustra;component/Resources/Strings.xaml", UriKind.Relative);
                     }
                 }
                 else
                 {
-                    // 英語のリソースを読み込む
                     resourceDictionary.Source = new Uri("/Illustra;component/Resources/Strings.xaml", UriKind.Relative);
                     System.Diagnostics.Debug.WriteLine("英語リソースを読み込みました");
                 }
 
-                // リソースディクショナリを追加
+                // 言語リソースを追加（テーマリソースは維持）
                 Resources.MergedDictionaries.Add(resourceDictionary);
 
+                // `MahApps.Metro` のテーマを再適用（念のため）
+                foreach (var dict in existingThemeDictionaries)
+                {
+                    if (!Resources.MergedDictionaries.Contains(dict))
+                    {
+                        Resources.MergedDictionaries.Add(dict);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                // リソース読み込みエラーの場合はログに記録
                 System.Diagnostics.Debug.WriteLine($"リソース読み込みエラー: {ex.Message}");
-
-                // Prismの標準的なダイアログサービスを使用
-                try
-                {
-                    // 現在のPrismバージョンでは直接MessageBoxを使用する方が簡単
-                    MessageBox.Show(ex.ToString(), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                catch (Exception dialogEx)
-                {
-                    // 最終的なフォールバック
-                    System.Diagnostics.Debug.WriteLine($"ダイアログ表示エラー: {dialogEx.Message}");
-                }
+                MessageBox.Show(ex.ToString(), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

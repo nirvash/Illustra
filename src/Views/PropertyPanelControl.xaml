@@ -349,11 +349,13 @@
                                                                         Margin="0,0,5,5"
                                                                         CornerRadius="3">
                                                                         <TextBox Text="{Binding Path=., Mode=OneWay}"
+                                                                                 Foreground="Black"
                                                                                  Style="{StaticResource NormalTagTextBoxStyle}"
                                                                                  IsReadOnlyCaretVisible="True"
                                                                                  VerticalAlignment="Center"
                                                                                  MinWidth="20"
                                                                                  Tag="{Binding Path=.}"
+
                                                                                  PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
                                                                                  Loaded="Tag_Loaded">
                                                                                 <TextBox.ContextMenu>
@@ -395,6 +397,7 @@
                                                                         Margin="0,0,5,5"
                                                                         CornerRadius="3">
                                                                         <TextBox Text="{Binding Path=.}"
+                                                                                Foreground="Black"
                                                                                 Style="{StaticResource LoRATagTextBoxStyle}"
                                                                                 IsReadOnlyCaretVisible="True"
                                                                                 VerticalAlignment="Center"
@@ -438,6 +441,7 @@
                                                                         Margin="0,0,5,5"
                                                                         CornerRadius="3">
                                                                         <TextBox Text="{Binding Path=.}"
+                                                                                 Foreground="Black"
                                                                                  Style="{StaticResource NegativeTagTextBoxStyle}"
                                                                                  IsReadOnlyCaretVisible="True"
                                                                                  VerticalAlignment="Center"

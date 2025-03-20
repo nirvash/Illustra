@@ -1,0 +1,56 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Taupe.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+  <!-- 基本カラー -->
+    <Color x:Key="GrayPrimaryColor">#444444</Color>  <!-- メインの灰色 -->
+    <Color x:Key="GrayDarkColor">#222222</Color>  <!-- ダークな灰色 -->
+    <Color x:Key="GrayLightColor">#888888</Color>  <!-- 明るい灰色 -->
+    <Color x:Key="GrayHighlightColor">#777777</Color>  <!-- ハイライト -->
+
+    <!-- アクセントカラーの設定 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.AccentBrush" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayDarkColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayLightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent4" Color="{StaticResource GrayHighlightColor}" />
+
+    <!-- ウィンドウタイトルバー -->
+    <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.WindowTitleNonActive" Color="{StaticResource GrayDarkColor}" />
+
+    <!-- ダークテーマ用のステータスバー設定 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBackground" Color="#444444" />
+    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarForeground" Color="White" />
+    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBorder" Color="#666666" />
+
+    <!-- スライダーの背景（スライドバー全体） -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderTrackBackground" Color="#444444" />
+
+    <!-- スライダーの進捗部分 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderTrackForeground" Color="#777777" />
+
+    <!-- スライダーの枠 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderBorder" Color="#666666" />
+
+    <!-- スライダーのつまみ（Thumb） -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBackground" Color="#888888" />
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBorder" Color="#AAAAAA" />
+
+    <!-- ボーダー（枠）や GlowBrush -->
+    <SolidColorBrush x:Key="MahApps.Brushes.BorderBrush" Color="{StaticResource GrayDarkColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.GlowBrush" Color="{StaticResource GrayLightColor}" />
+
+    <!-- コントロールの背景 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Control.Background" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Control.Foreground" Color="White" />
+
+    <!-- ボタンのスタイル -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.Background" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.Foreground" Color="White" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.BorderBrush" Color="{StaticResource GrayDarkColor}" />
+
+</ResourceDictionary>

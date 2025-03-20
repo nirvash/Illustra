@@ -1,8 +1,9 @@
 using System.Windows;
+using MahApps.Metro.Controls;
 
 namespace Illustra.Views
 {
-    public partial class VersionInfoDialog : Window
+    public partial class VersionInfoDialog : MetroWindow
     {
         public VersionInfoDialog(string versionInfo)
         {
