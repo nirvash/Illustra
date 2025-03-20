@@ -57,10 +57,6 @@ public class ThumbnailLoaderHelper
     private CancellationTokenSource? _thumbnailLoadCts;
     private readonly ThumbnailRequestQueue _requestQueue;
     private readonly IThumbnailProcessorService _thumbnailProcessor;
-
-    private bool _lastSortByDate = true;
-    private bool _lastSortAscending = true;
-
     public event EventHandler<FileNodesLoadedEventArgs>? FileNodesLoaded;
     public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
     public event EventHandler<ThumbnailLoadEventArgs>? ThumbnailsLoaded;
@@ -72,16 +68,18 @@ public class ThumbnailLoaderHelper
 
     private volatile bool _isFullscreenMode = false;
 
+    private bool _sortByDate = true;
     public bool SortByDate
     {
-        get => _lastSortByDate;
-        set => _lastSortByDate = value;
+        get => _sortByDate;
+        set => _sortByDate = value;
     }
 
+    private bool _sortAscending = true;
     public bool SortAscending
     {
-        get => _lastSortAscending;
-        set => _lastSortAscending = value;
+        get => _sortAscending;
+        set => _sortAscending = value;
     }
 
     /// <summary>
@@ -216,13 +214,6 @@ public class ThumbnailLoaderHelper
             sw.Stop();
             LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ファイル取得: {sw.ElapsedMilliseconds}ms - {files.Count}件のファイルを取得", LogHelper.Categories.ThumbnailLoader);
 
-            // ファイル一覧をソート
-            LogHelper.LogWithTimestamp("ファイル一覧を名前順にソートします", LogHelper.Categories.ThumbnailLoader);
-            sw.Restart();
-            files.Sort((a, b) => string.Compare(a, b, StringComparison.OrdinalIgnoreCase));
-            sw.Stop();
-            LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ソート処理: {sw.ElapsedMilliseconds}ms", LogHelper.Categories.ThumbnailLoader);
-
             // ファイルノードを作成
             LogHelper.LogWithTimestamp("ファイルノードの作成を開始", LogHelper.Categories.ThumbnailLoader);
             LogHelper.LogWithTimestamp($"{files.Count}件のファイルからノードを作成します", LogHelper.Categories.ThumbnailLoader);
@@ -241,14 +232,7 @@ public class ThumbnailLoaderHelper
             // ソート条件に基づいてノードをソート
             if (fileNodes.Count > 0)
             {
-                if (SortByDate != _lastSortByDate || SortAscending != _lastSortAscending)
-                {
-                    SortFileNodes(fileNodes);
-                }
-                else
-                {
-                    LogHelper.LogWithTimestamp("ファイルノードはすでにソート済みです", LogHelper.Categories.ThumbnailLoader);
-                }
+                SortFileNodes(fileNodes);
             }
 
             // ViewModelのItemsを更新
