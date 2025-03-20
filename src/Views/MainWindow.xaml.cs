@@ -89,7 +89,7 @@ namespace Illustra.Views
             // バージョン情報をタイトルに追加
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
-            Title += $" {versionString}";
+            Title = $"{(string)FindResource("String_AppName")} {versionString}";
 
             // メニュー項目のクリックイベントハンドラを設定
             var languageMenuItem = FindName("LanguageMenuItem") as MenuItem;
@@ -532,11 +532,6 @@ namespace Illustra.Views
             FilterRating3MenuItem.IsChecked = _currentRatingFilter == 3;
             FilterRating4MenuItem.IsChecked = _currentRatingFilter == 4;
             FilterRating5MenuItem.IsChecked = _currentRatingFilter == 5;
-
-            // メニュー項目の状態を更新
-            FilterTagMenuItem.Header = IsTagFilterEnabled
-                ? $"{FindResource("String_Menu_Filter_Tag")} ✓"
-                : FindResource("String_Menu_Filter_Tag");
 
             // フィルタクリアメニューの有効/無効を更新
             FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled;

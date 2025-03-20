@@ -12,7 +12,8 @@
         Height="250"
         Width="400"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        WindowTransitionsEnabled="False"
+        ResizeMode="NoResize">
 
     <Grid>
         <Grid.RowDefinitions>

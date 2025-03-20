@@ -22,6 +22,13 @@
     <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle" Color="{StaticResource GrayPrimaryColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.WindowTitleNonActive" Color="{StaticResource GrayDarkColor}" />
 
+    <!-- サムネイルの通常枠 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.CustomBackground" Color="#333333" />
+    <SolidColorBrush x:Key="MahApps.Brushes.CustomBorder" Color="#555555" />
+
+    <!-- 主張を弱めるテキスト用 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.TextForegroundMuted" Color="#AAAAAA" />
+
     <!-- ダークテーマ用のステータスバー設定 -->
     <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBackground" Color="#444444" />
     <SolidColorBrush x:Key="MahApps.Brushes.StatusBarForeground" Color="White" />

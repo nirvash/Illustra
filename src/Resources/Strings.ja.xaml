@@ -70,6 +70,7 @@
     <system:String x:Key="String_Settings_MouseWheel_InvalidValue">マウスホイールの速度は0より大きい値を入力してください。</system:String>
     <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
     <system:String x:Key="String_Settings_Developer_Section">開発者オプション</system:String>
+    <system:String x:Key="String_Settings_Developer_LogCategories">ログカテゴリ設定</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
     <system:String x:Key="String_Settings_Developer_CleanDatabase">データベース整理</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">データベース整理</system:String>
@@ -207,6 +208,7 @@
     <system:String x:Key="String_Function_IncreaseSlideshowInterval">スライドショー間隔を増やす</system:String>
     <system:String x:Key="String_Function_DecreaseSlideshowInterval">スライドショー間隔を減らす</system:String>
     <system:String x:Key="String_Function_CloseViewer">ビューワーを閉じる</system:String>
+    <system:String x:Key="String_Function_FullScreen">フルスクリーン</system:String>
     <system:String x:Key="String_Function_PreviousImage">前の画像</system:String>
     <system:String x:Key="String_Function_NextImage">次の画像</system:String>
 

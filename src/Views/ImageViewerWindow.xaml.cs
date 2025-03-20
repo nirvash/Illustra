@@ -672,7 +672,13 @@ namespace Illustra.Views
             }
         }
 
+        // フルスクリーン切り替えボタンのクリックイベント
+        private void ToggleFullScreen_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleFullScreen();
+        }
 
+        // キーショートカットからのフルスクリーン切り替え
         private void ToggleFullScreen()
         {
             if (!_isFullScreen)

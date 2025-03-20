@@ -73,6 +73,7 @@
     <system:String x:Key="String_Settings_MouseWheel_InvalidValue">Please enter a value greater than 0 for the mouse wheel speed.</system:String>
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
+    <system:String x:Key="String_Settings_Developer_LogCategories">Log Categories</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
     <system:String x:Key="String_Settings_Developer_CleanDatabase">Clean Database</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">Database Cleanup</system:String>
@@ -196,6 +197,7 @@
     <system:String x:Key="String_Function_IncreaseSlideshowInterval">Increase Slideshow Interval</system:String>
     <system:String x:Key="String_Function_DecreaseSlideshowInterval">Decrease Slideshow Interval</system:String>
     <system:String x:Key="String_Function_CloseViewer">Close Viewer</system:String>
+    <system:String x:Key="String_Function_FullScreen">Full Screen</system:String>
     <system:String x:Key="String_Function_PreviousImage">Previous Image</system:String>
     <system:String x:Key="String_Function_NextImage">Next Image</system:String>
 

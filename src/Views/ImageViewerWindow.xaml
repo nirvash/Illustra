@@ -8,10 +8,8 @@
         xmlns:controls="clr-namespace:Illustra.Controls"
         xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
-        Title="{Binding FileName}"
         Height="600"
         Width="800"
-        Icon="{StaticResource AppIcon}"
         SaveWindowPosition="True"
         IgnoreTaskbarOnMaximize="True"
         WindowTransitionsEnabled="False"
@@ -36,6 +34,29 @@
                            BeginTime="0:0:1"/>
         </Storyboard>
     </mahcontrols:MetroWindow.Resources>
+
+    <!-- アイコンサイズを変更 -->
+    <mahcontrols:MetroWindow.TitleTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{StaticResource AppIcon}"
+                       Width="16" Height="16" Margin="5,0,0,0"/>
+                <TextBlock Text="{Binding FileName, RelativeSource={RelativeSource AncestorType=Window}}"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           Margin="5,0,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </mahcontrols:MetroWindow.TitleTemplate>
+
+    <mahcontrols:MetroWindow.RightWindowCommands>
+        <mahcontrols:WindowCommands>
+            <Button Content="⛶"
+                    ToolTip="{DynamicResource String_Function_FullScreen}"
+                    Click="ToggleFullScreen_Click"
+                    Margin="5, 0, 10, 0" />
+        </mahcontrols:WindowCommands>
+    </mahcontrols:MetroWindow.RightWindowCommands>
 
     <Grid x:Name="MainGrid"
         MouseMove="MainGrid_MouseMove">

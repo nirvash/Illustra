@@ -114,7 +114,7 @@
                             Click="CleanupDatabase_Click"/>
 
                     <!-- 開発者モードが有効な場合のみ表示されるログカテゴリ設定 -->
-                    <Expander Header="ログカテゴリ設定"
+                    <Expander Header="{DynamicResource String_Settings_Developer_LogCategories}"
                              Margin="10,5,0,0"
                              x:Name="LogCategoriesExpander"
                              Visibility="Collapsed">
