@@ -460,7 +460,7 @@
                                             <Button Content="{DynamicResource String_Property_EditOriginalPrompt}"
                                                     Padding="10,5"
                                                     Click="EditOriginalPrompt_Click"
-                                                    Visibility="{Binding CanEditExif, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    Visibility="{Binding CanEditExif, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </StackPanel>
                                 </StackPanel>
                         </Expander>
