@@ -12,10 +12,10 @@
     <Color x:Key="GrayHighlightColor">#777777</Color>  <!-- ハイライト -->
 
     <!-- アクセントカラーの設定 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayLightColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.AccentBrush" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayDarkColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayLightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayHighlightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayHighlightColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.Accent4" Color="{StaticResource GrayHighlightColor}" />
 
     <!-- ウィンドウタイトルバー -->
@@ -60,4 +60,6 @@
     <SolidColorBrush x:Key="MahApps.Brushes.Button.Foreground" Color="White" />
     <SolidColorBrush x:Key="MahApps.Brushes.Button.BorderBrush" Color="{StaticResource GrayDarkColor}" />
 
+    <!-- フォルダツリーの選択時のハイライト色 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Selected.Background" Color="{StaticResource GrayLightColor}" />
 </ResourceDictionary>

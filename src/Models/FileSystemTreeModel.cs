@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Illustra.Events;
 using Illustra.Helpers;
 
 namespace Illustra.Models
@@ -83,6 +84,10 @@ namespace Illustra.Models
                 {
                     // 特定のパスで初期化
                     ExpandPath(initialPath);
+
+                    // フォルダを展開した後、そのノードを画面内に表示
+                    var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                    eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(initialPath);
                 }
             }
             catch (Exception ex)

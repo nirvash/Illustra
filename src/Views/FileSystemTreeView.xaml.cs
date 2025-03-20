@@ -83,17 +83,6 @@ namespace Illustra.Views
                     break;
             }
 
-            // パスの存在確認
-            if (!string.IsNullOrEmpty(folderPath) && !Directory.Exists(folderPath))
-            {
-                folderPath = null;
-            }
-            _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
-            DataContext = _viewModel;
-            FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
-
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
-
             // 設定の更新を監視するためにお気に入り関連イベントを購読
             _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(path =>
             {
@@ -109,6 +98,19 @@ namespace Illustra.Views
             {
                 ScrollToSelectedItem();
             });
+
+
+            // パスの存在確認
+            if (!string.IsNullOrEmpty(folderPath) && !Directory.Exists(folderPath))
+            {
+                folderPath = null;
+            }
+            _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
+            DataContext = _viewModel;
+            FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
+
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
+
 
             // FileOperationHelperの初期化
             InitializeFileOperationHelper();
@@ -217,7 +219,7 @@ namespace Illustra.Views
                 {
                     // スクロールして選択アイテムを表示
                     // targetItem.BringIntoView();
-
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                     scrollViewer.ScrollToVerticalOffset(itemTopInHost - 20); // Margin 20
                 }
             }, DispatcherPriority.Background);
@@ -234,6 +236,8 @@ namespace Illustra.Views
 
             // レイアウトが落ち着くのも念のため待つ
             await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+            await Task.Delay(50); // 少し待つ（調整可）
+            await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
         }
 
         // TreeView内のScrollViewerを見つける補助メソッド
