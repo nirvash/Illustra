@@ -12,6 +12,7 @@ using Illustra.Helpers.Interfaces;
 using Illustra.Functions;
 using MahApps.Metro.Controls;
 using System.Windows.Controls.Primitives;
+using System.Threading.Tasks;
 
 namespace Illustra.Views
 {
@@ -32,7 +33,6 @@ namespace Illustra.Views
                 if (_isFullScreen != value)
                 {
                     _isFullScreen = value;
-                    base.ShowTitleBar = !value; // フルスクリーン時はタイトルバーを非表示
                     OnPropertyChanged(nameof(IsFullScreen));
                     IsFullscreenChanged?.Invoke(this, EventArgs.Empty);
                 }
@@ -136,9 +136,7 @@ namespace Illustra.Views
 
             // ウィンドウの状態を復元
             var settings = ViewerSettingsHelper.LoadSettings();
-
-            // フルスクリーン設定を保存して、Loaded後に適用
-            IsFullScreen = settings.IsFullScreen; // プロパティ経由で設定
+            // フルスクリーン状態やウィンドウ位置は MetroWindow が管理するので、ここでは設定しない
 
             // プロパティパネルの表示状態を設定
             PropertyPanel.Visibility = settings.VisiblePropertyPanel ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
@@ -218,22 +216,7 @@ namespace Illustra.Views
 
             // プロパティパネルにプロパティを設定
             PropertyPanelControl.OnFileSelected(new SelectedFileModel("", _currentFilePath, Properties.Rating));
-            /*
-                        // フルスクリーン状態を設定
-                        if (_isFullScreen)
-                        {
-                            this.ShowTitleBar = false; // フルスクリーン時はタイトルバーを非表示
-                            _previousWindowState = WindowState;
-                            _previousWindowStyle = WindowStyle;
 
-                            // フルスクリーン状態にする
-                            WindowStyle = WindowStyle.None;
-                            WindowState = WindowState.Maximized;
-
-                            // 確実に設定が有効になるように少し待つ
-                            await Task.Delay(50);
-                        }
-            */
             // フォーカスを確実に設定
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
@@ -297,7 +280,7 @@ namespace Illustra.Views
             // 各機能のショートカットをチェック
             if (shortcutHandler.IsShortcutMatch(FuncId.CloseViewer, e.Key))
             {
-                CloseViewer();
+                Close();
                 e.Handled = true;
             }
             else if (shortcutHandler.IsShortcutMatch(FuncId.ToggleFullScreen, e.Key))
@@ -458,33 +441,28 @@ namespace Illustra.Views
                 // カラムの幅を復元
                 MainGrid.ColumnDefinitions[1].Width = new System.Windows.GridLength(3);  // スプリッター
 
-                // 保存していた幅または設定から幅を取得
-                double panelWidth = _lastPropertyPanelWidth;
+                var settings = ViewerSettingsHelper.LoadSettings();
 
-                // 幅が0以下の場合は、設定から取得または既定値を使用
-                if (panelWidth <= 0)
-                {
-                    var settings = ViewerSettingsHelper.LoadSettings();
-                    panelWidth = _isFullScreen
-                        ? (settings.FullScreenPropertyColumnWidth > 0 ? settings.FullScreenPropertyColumnWidth : 250)
-                        : (settings.NormalPropertyColumnWidth > 0 ? settings.NormalPropertyColumnWidth : 250);
-                }
+                // 保存していた幅または設定から幅を取得
+                var panelWidth = _isFullScreen
+                    ? (settings.FullScreenPropertyColumnWidth > 0 ? settings.FullScreenPropertyColumnWidth : 250)
+                    : (settings.NormalPropertyColumnWidth > 0 ? settings.NormalPropertyColumnWidth : 250);
 
                 MainGrid.ColumnDefinitions[2].Width = new System.Windows.GridLength(panelWidth);
             }
 
-            // 設定を保存
-            SaveCurrentSettings();
+            // 設定を保存. この時点では ActualWidth に反映されていない
+            SaveCurrentSettings(false);
         }
 
-        private void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        private async void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             // プロパティパネルのサイズ変更時に幅を保存
             if (PropertyPanel.Visibility == System.Windows.Visibility.Visible)
             {
-                _lastPropertyPanelWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
+                await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                SaveCurrentSettings();
             }
-            SaveCurrentSettings();
         }
 
         // 前回のプロパティパネル幅を保存するフィールド
@@ -616,21 +594,9 @@ namespace Illustra.Views
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // クローズ処理を共通メソッドに委託
-            CloseViewer();
-        }
-
-        private void CloseViewer()
-        {
-            // フルスクリーン中は状態を保存してから閉じる
-            if (_isFullScreen)
-            {
-                // 設定を明示的に保存（共通メソッド使用）
-                SaveCurrentSettings();
-            }
-
             Close();
         }
+
 
         private void MainWindow_StateChanged(object sender, System.EventArgs e)
         {
@@ -639,13 +605,16 @@ namespace Illustra.Views
                 base.ShowTitleBar = false;
                 WindowStyle = WindowStyle.None;
                 WindowState = WindowState.Maximized;
+                // Topmost = true; // フルスクリーン時は常に最前面に表示
                 IsFullScreen = true; // プロパティ経由で設定
+                hideCursorTimer.Start();
             }
             else if (this.WindowState == WindowState.Normal)
             {
                 base.ShowTitleBar = true; // タイトルバーを表示
                 WindowStyle = WindowStyle.SingleBorderWindow;
                 WindowState = WindowState.Normal;
+                Topmost = false; // 通常時は最前面表示を解除
                 IsFullScreen = false; // プロパティ経由で設定
 
                 // マウスカーソルを表示状態に戻す
@@ -691,7 +660,7 @@ namespace Illustra.Views
             }
             else
             {
-                // 保存していた状態に戻す
+                // ウィンドウモードに戻す
                 base.ShowTitleBar = true; // タイトルバーを表示
                 WindowStyle = WindowStyle.SingleBorderWindow;
                 WindowState = WindowState.Normal;
@@ -700,26 +669,26 @@ namespace Illustra.Views
         }
 
         // 現在のウィンドウ設定を保存する共通メソッド
-        private void SaveCurrentSettings(bool isSwitchgingFullScreen = false, bool wasFullScreen = false)
+        private void SaveCurrentSettings(bool savePropertyWidth = true)
         {
-            // プロパティパネルの幅を取得（非表示の場合は前回保存した値を使用）
-            double propertyWidth = PropertyPanel.Visibility == Visibility.Visible
-                ? MainGrid.ColumnDefinitions[2].ActualWidth
-                : _lastPropertyPanelWidth;
-
             var settings = ViewerSettingsHelper.LoadSettings();
             settings.IsFullScreen = _isFullScreen;
             settings.VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible;
 
-            // フルスクリーン状態に応じて適切な幅を保存
-            var isFullScreenForSave = isSwitchgingFullScreen ? wasFullScreen : _isFullScreen;
-            if (isFullScreenForSave)
+            if (settings.VisiblePropertyPanel && savePropertyWidth)
             {
-                settings.FullScreenPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
-            }
-            else
-            {
-                settings.NormalPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
+                // プロパティパネルの幅を取得（非表示の場合は前回保存した値を使用）
+                double propertyWidth = MainGrid.ColumnDefinitions[2].ActualWidth;
+
+                // フルスクリーン状態に応じて適切な幅を保存
+                if (_isFullScreen)
+                {
+                    settings.FullScreenPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
+                }
+                else
+                {
+                    settings.NormalPropertyColumnWidth = propertyWidth > 0 ? propertyWidth : 250;
+                }
             }
             ViewerSettingsHelper.SaveSettings(settings);
         }
