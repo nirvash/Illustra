@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 using System.IO;
 using System.Windows.Media;
 using Illustra.Models;
@@ -101,6 +103,7 @@ namespace Illustra.Views
 
             Loaded += PropertyPanelControl_Loaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
+            IsVisibleChanged += PropertyPanelControl_IsVisibleChanged;
         }
 
         private void PropertyPanelControl_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -181,6 +184,7 @@ namespace Illustra.Views
             }
         }
 
+        // FindVisualChild を利用するため非表示状態では描画更新されない
         private void UpdateRatingStars()
         {
             // PropertiesGridはXAMLで定義されたコンポーネントで、
@@ -477,13 +481,25 @@ namespace Illustra.Views
             }
         }
 
+        private async void PropertyPanelControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is bool isVisible && isVisible)
+            {
+                // 表示完了するまで待つ
+                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Render);
+                UpdateRatingStars();
+            }
+        }
+
         private void OnFolderChanged(FolderSelectedEventArgs args)
         {
             // フォルダが変更された場合、タグフィルタをクリア
             _currentTagFilters = new List<string>();
+            _selectedFile = null;
             ImageProperties = new ImagePropertiesModel();
             DataContext = ImageProperties;
             UpdateAllTagsHighlight();
+            Visibility = Visibility.Collapsed;
         }
 
         private void Tag_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

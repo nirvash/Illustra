@@ -43,7 +43,7 @@ namespace Illustra.Controls
         // 星を塗りつぶすかどうか
         public static readonly DependencyProperty IsFilledProperty =
             DependencyProperty.Register("IsFilled", typeof(bool), typeof(RatingStarControl),
-                new PropertyMetadata(true, OnVisualPropertyChanged));
+                new PropertyMetadata(false, OnVisualPropertyChanged));
 
         public bool IsFilled
         {
@@ -76,7 +76,7 @@ namespace Illustra.Controls
         // 数字テキストの色
         public static readonly DependencyProperty TextColorProperty =
             DependencyProperty.Register("TextColor", typeof(Brush), typeof(RatingStarControl),
-                new PropertyMetadata(Brushes.White, OnVisualPropertyChanged));
+                new PropertyMetadata(RatingHelper.GetTextColor(0), OnVisualPropertyChanged));
 
         public Brush TextColor
         {
@@ -111,7 +111,9 @@ namespace Illustra.Controls
                 {
                     // RatingValueが変更された場合、StarFillとTextColorを更新
                     int rating = (int)e.NewValue;
-                    if (rating > 0)
+                    bool hasRating = rating > 0;
+                    control.IsFilled = hasRating;
+                    if (hasRating)
                     {
                         control.StarFill = RatingHelper.GetRatingColor(rating);
                         control.TextColor = RatingHelper.GetTextColor(rating);
@@ -159,8 +161,8 @@ namespace Illustra.Controls
             // StarPathがnullの場合は処理をスキップ
             if (StarPath == null) return;
 
-            // レーティング値に基づいて塗りつぶし状態を設定
-            StarPath.Fill = RatingValue > 0 ? StarFill : Brushes.Transparent;
+            // レーティング値とIsFilledの状態に基づいて塗りつぶし状態を設定
+            StarPath.Fill = (RatingValue > 0 && IsFilled) ? StarFill : Brushes.Transparent;
 
             // RatingTextがnullの場合は処理をスキップ
             if (RatingText == null) return;
