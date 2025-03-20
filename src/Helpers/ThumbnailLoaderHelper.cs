@@ -50,7 +50,7 @@ public class ThumbnailLoaderHelper
     private AppSettingsModel _appSettings;
     private readonly ThumbnailListControl _control;
     private readonly MainViewModel _viewModel;
-    private readonly Action<string> _selectCallback;
+    private readonly Action<string, bool> _selectCallback;
     private readonly DatabaseManager _db;
     private bool _isFileNodesLoadedEventFiring = false;
     private CancellationTokenSource? _folderLoadingCTS;
@@ -137,7 +137,7 @@ public class ThumbnailLoaderHelper
     /// </summary>
     public ThumbnailLoaderHelper(
         ItemsControl thumbnailListBox,
-        Action<string> selectCallback,
+        Action<string, bool> selectCallback,
         ThumbnailListControl control,
         MainViewModel viewModel,
         DatabaseManager db,

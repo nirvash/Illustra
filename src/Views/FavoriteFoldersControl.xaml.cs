@@ -209,11 +209,10 @@ namespace Illustra.Views
             }
         }
 
-        public void SaveAllData()
+        public void SetCurrentSettings()
         {
             // お気に入りフォルダの設定を保存
             _appSettings.FavoriteFolders = ConvertToPaths(_favoriteFolders);
-            SettingsHelper.SaveSettings(_appSettings);
         }
 
         private void FavoriteFoldersTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

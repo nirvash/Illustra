@@ -204,9 +204,9 @@ namespace Illustra.Views
                 Debug.WriteLine($"スプリッター位置の保存に失敗: {ex.Message}");
             }
 
-            FavoriteFolders.SaveAllData();
-            FolderTree.SaveAllData();
-            ThumbnailList.SaveAllData();
+            FavoriteFolders.SetCurrentSettings();
+            FolderTree.SetCurrentSettings();
+            ThumbnailList.SetCurrentSettings();
 
             // 設定を保存
             SettingsHelper.SaveSettings(_appSettings);

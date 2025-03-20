@@ -78,6 +78,9 @@ namespace Illustra.Models
         /// </summary>
         public Dictionary<string, bool> LogCategories { get; set; } = new Dictionary<string, bool>();
 
+        // スタートアップ時に最後に開いていたファイルを選択
+        public bool SelectLastFileOnStartup { get; set; } = false;
+
         // テーマ設定
         public string Theme { get; set; } = "Light";
     }

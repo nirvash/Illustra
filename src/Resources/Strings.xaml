@@ -93,6 +93,7 @@
     <system:String x:Key="String_Settings_Startup_LastOpened">Open last used folder</system:String>
     <system:String x:Key="String_Settings_Startup_Specified">Open specified folder:</system:String>
     <system:String x:Key="String_Settings_Startup_Browse">Browse...</system:String>
+    <system:String x:Key="String_Settings_Startup_SelectLastFile">Select last opened file on startup</system:String>
     <system:String x:Key="String_Settings_Language_Title">Language Settings</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">Main Key:</system:String>

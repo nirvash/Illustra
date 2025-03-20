@@ -102,9 +102,9 @@ namespace Illustra.Views
         }
 
 
-        public void SaveAllData()
+        public void SetCurrentSettings()
         {
-            var appSettings = ContainerLocator.Container.Resolve<AppSettingsModel>();
+            var appSettings = SettingsHelper.GetSettings();
             appSettings.LastFolderPath = _currentSelectedFilePath;
         }
     }

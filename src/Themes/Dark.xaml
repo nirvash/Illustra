@@ -5,18 +5,23 @@
         <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Taupe.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-  <!-- 基本カラー -->
+    <!-- 基本カラー -->
     <Color x:Key="GrayPrimaryColor">#444444</Color>  <!-- メインの灰色 -->
     <Color x:Key="GrayDarkColor">#222222</Color>  <!-- ダークな灰色 -->
-    <Color x:Key="GrayLightColor">#888888</Color>  <!-- 明るい灰色 -->
-    <Color x:Key="GrayHighlightColor">#777777</Color>  <!-- ハイライト -->
+    <Color x:Key="GrayLightColor">#AAAAAA</Color>  <!-- 明るい灰色 -->
+    <Color x:Key="GrayHighlightColor">#CCCCCC</Color>  <!-- ハイライト -->
 
     <!-- アクセントカラーの設定 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayLightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayHighlightColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.AccentBrush" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayHighlightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayHighlightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayLightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayLightColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.Accent4" Color="{StaticResource GrayHighlightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Highlight" Color="{StaticResource GrayHighlightColor}" />
+
+    <!-- コントロールの無効状態  -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Control.Disabled" Color="{StaticResource GrayDarkColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.CheckmarkFill" Color="{StaticResource GrayHighlightColor}" />
 
     <!-- ウィンドウタイトルバー -->
     <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle" Color="{StaticResource GrayPrimaryColor}" />
@@ -60,6 +65,10 @@
     <SolidColorBrush x:Key="MahApps.Brushes.Button.Foreground" Color="White" />
     <SolidColorBrush x:Key="MahApps.Brushes.Button.BorderBrush" Color="{StaticResource GrayDarkColor}" />
 
+    <!-- ラジオボタンなどのチェック -->
+    <SolidColorBrush x:Key="MahApps.Brushes.CheckBox.ForegroundChecked" Color="{StaticResource GrayHighlightColor}" />
+
     <!-- フォルダツリーの選択時のハイライト色 -->
     <SolidColorBrush x:Key="MahApps.Brushes.Selected.Background" Color="{StaticResource GrayLightColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Selected.Foreground" Color="{StaticResource GrayDarkColor}" />
 </ResourceDictionary>

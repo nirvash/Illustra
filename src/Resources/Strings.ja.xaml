@@ -90,6 +90,7 @@
     <system:String x:Key="String_Settings_Startup_LastOpened">前回開いたフォルダを開く</system:String>
     <system:String x:Key="String_Settings_Startup_Specified">指定したフォルダを開く：</system:String>
     <system:String x:Key="String_Settings_Startup_Browse">参照...</system:String>
+    <system:String x:Key="String_Settings_Startup_SelectLastFile">起動時に最後に開いていたファイルを選択</system:String>
     <system:String x:Key="String_Settings_Language_Title">言語設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_Title">キーボードショートカット設定</system:String>
     <system:String x:Key="String_Settings_Shortcuts_MainKey">メインキー:</system:String>

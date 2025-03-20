@@ -53,6 +53,20 @@ namespace Illustra.Views
             }
         }
 
+        private bool _selectLastFileOnStartup;
+        public bool SelectLastFileOnStartup
+        {
+            get => _selectLastFileOnStartup;
+            set
+            {
+                if (_selectLastFileOnStartup != value)
+                {
+                    _selectLastFileOnStartup = value;
+                    OnPropertyChanged(nameof(SelectLastFileOnStartup));
+                }
+            }
+        }
+
         private bool _startupModeNone;
         public bool StartupModeNone
         {
@@ -122,9 +136,9 @@ namespace Illustra.Views
 
         private void UpdateStartupMode(AppSettingsModel.StartupFolderMode mode)
         {
-            _startupModeNone = mode == AppSettingsModel.StartupFolderMode.None;
-            _startupModeLastOpened = mode == AppSettingsModel.StartupFolderMode.LastOpened;
-            _startupModeSpecified = mode == AppSettingsModel.StartupFolderMode.Specified;
+            StartupModeNone = mode == AppSettingsModel.StartupFolderMode.None;
+            StartupModeLastOpened = mode == AppSettingsModel.StartupFolderMode.LastOpened;
+            StartupModeSpecified = mode == AppSettingsModel.StartupFolderMode.Specified;
         }
 
         public AdvancedSettingsWindow()
@@ -141,6 +155,7 @@ namespace Illustra.Views
             // 起動モードの設定
             UpdateStartupMode(_settings.StartupMode);
             StartupFolderPath = _settings.StartupFolderPath;
+            SelectLastFileOnStartup = _settings.SelectLastFileOnStartup;
 
             // 開発者モードの状態に応じてログカテゴリ設定の表示/非表示を切り替え
             UpdateLogCategoriesVisibility();
@@ -304,6 +319,7 @@ namespace Illustra.Views
                                       AppSettingsModel.StartupFolderMode.Specified;
                 _settings.StartupFolderPath = StartupFolderPath;
                 _settings.MouseWheelMultiplier = MouseWheelMultiplier;
+                _settings.SelectLastFileOnStartup = SelectLastFileOnStartup;
 
                 SettingsHelper.SaveSettings(_settings);
 
