@@ -504,6 +504,21 @@ namespace Illustra.Views
             }
         }
 
+        private async Task LoadFilePropertiesAsync(string filePath, int rating)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                newProperties.Rating = rating;
+                Properties = newProperties;
+            }
+            catch (Exception)
+            {
+                // Ignore
+            }
+        }
+
         // 新しい画像を読み込む
         private async Task SwitchToImage(string filePath, bool notifyFileSelection)
         {
@@ -521,12 +536,18 @@ namespace Illustra.Views
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
                 LoadAndDisplayImage(filePath);
 
-                // 3. 画像のプロパティは FileSelectedEvent で更新される
-
-                // 4. 前後の画像をキャッシュ
                 var viewModel = Parent?.GetViewModel();
                 if (viewModel != null)
                 {
+                    // 3. プロパティパネルは FileSelectedEvent で更新される
+                    var fileNode = viewModel.Items.FirstOrDefault(f => f.FullPath.Equals(filePath)) as FileNodeModel;
+                    if (fileNode != null)
+                    {
+                        Properties.Rating = fileNode.Rating;
+                        Properties.FileName = fileNode.FileName;
+                    }
+
+                    // 4. 前後の画像をキャッシュ
                     var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                     var currentIndex = files.FindIndex(f => f.FullPath == filePath);
                     if (currentIndex >= 0)
