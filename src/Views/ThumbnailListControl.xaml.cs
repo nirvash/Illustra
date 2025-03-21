@@ -32,7 +32,7 @@ namespace Illustra.Views
         private IEventAggregator _eventAggregator = null!;
         private MainViewModel _viewModel;
         // 画像閲覧用
-        private ImageViewerWindow? _currentViewerWindow;
+        private ImageViewerWindow? _imageViewerWindow;
         private string? _currentFolderPath;
 
         private AppSettingsModel _appSettings;
@@ -253,6 +253,14 @@ namespace Illustra.Views
             _scrollStopTimer.Tick += ScrollStopTimer_Tick;
         }
 
+        private void OnFileSelected(SelectedFileModel args)
+        {
+            if (args.SourceId != CONTROL_ID)
+            {
+                SelectThumbnail(args.FullPath);
+            }
+        }
+
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
             // ContainerLocatorを使ってEventAggregatorを取得
@@ -268,6 +276,8 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             // ListView の ScrollViewer を取得
             if (ThumbnailItemsControl.Template.FindName("ScrollViewer", ThumbnailItemsControl) is ScrollViewer scrollViewer)
@@ -450,36 +460,6 @@ namespace Illustra.Views
             }
         }
 
-        /// <summary>
-        /// サムネイル一覧の選択を指定されたファイルパスに同期します
-        /// </summary>
-        /// <param name="filePath">選択するファイルパス</param>
-        public void SyncThumbnailSelection(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return;
-
-            // サムネイルの選択と表示を更新
-            SelectThumbnail(filePath);
-
-            // UIスレッドで実行することを確保
-            Dispatcher.InvokeAsync(async () =>
-            {
-                // 選択したアイテムをビューに表示
-                if (_viewModel.SelectedItems.Any())
-                {
-                    var selectedItem = _viewModel.SelectedItems.First();
-                    ThumbnailItemsControl.ScrollIntoView(selectedItem);
-
-                    // レイアウトの更新を待機
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                    // コンテナを取得して画面内に表示
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                    container?.BringIntoView();
-                }
-            }, DispatcherPriority.Render);
-        }
         private async void ThumbnailItemsControl_Loaded(object sender, RoutedEventArgs e)
         {
             var scrollViewer = await Task.Run(() => UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl));
@@ -1936,37 +1916,40 @@ namespace Illustra.Views
         {
             try
             {
-                var viewer = new ImageViewerWindow(filePath)
+                // 表示中のウィンドウがない場合は新しく作成
+                if (_imageViewerWindow == null)
                 {
-                    Parent = this
-                };
-                _currentViewerWindow = viewer; // 現在開いているビューアを追跡
-
-                // 初期状態のフルスクリーンモードを設定
-                _thumbnailLoader.SetFullscreenMode(viewer.IsFullScreen);
-
-                // ビューワが全画面表示モードを開始/終了した時のイベントを設定
-                viewer.IsFullscreenChanged += (s, e) =>
-                {
-                    _thumbnailLoader.SetFullscreenMode(viewer.IsFullScreen);
-                };
-
-                // ビューワが閉じられた時のイベントを設定
-                viewer.Closed += (s, e) =>
-                {
-                    _thumbnailLoader.SetFullscreenMode(false);
-                    _currentViewerWindow = null;
-
-                    // サムネイルの再生成
-                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                    if (scrollViewer != null)
+                    _imageViewerWindow = new ImageViewerWindow()
                     {
-                        _ = LoadVisibleThumbnailsAsync(scrollViewer);
-                    }
-                };
+                        Parent = this
+                    };
 
-                viewer.Show();
-                viewer.Focus(); // ビューアウィンドウにフォーカスを設定
+                    // イベントハンドラを設定
+                    _imageViewerWindow.IsFullscreenChanged += (s, e) =>
+                    {
+                        _thumbnailLoader?.SetFullscreenMode(_imageViewerWindow?.IsFullScreen ?? false);
+                    };
+
+                    _imageViewerWindow.Closed += (s, e) =>
+                    {
+                        _thumbnailLoader?.SetFullscreenMode(false);
+
+                        // サムネイルの再生成
+                        var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                        if (scrollViewer != null)
+                        {
+                            _ = LoadVisibleThumbnailsAsync(scrollViewer);
+                        }
+
+                        // インスタンスをクリア
+                        _imageViewerWindow = null;
+                    };
+                }
+
+                // 画像を読み込んでウィンドウを表示
+                _imageViewerWindow.LoadImageFromPath(filePath);
+                _imageViewerWindow.Show();
+                _imageViewerWindow.Focus(); // ビューアウィンドウにフォーカスを設定
             }
             catch (Exception ex)
             {
@@ -1977,6 +1960,9 @@ namespace Illustra.Views
                     (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+
+                // エラー時はインスタンスをクリア
+                _imageViewerWindow = null;
             }
         }
 

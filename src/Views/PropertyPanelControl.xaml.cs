@@ -102,15 +102,9 @@ namespace Illustra.Views
             _db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             Loaded += PropertyPanelControl_Loaded;
+            Unloaded += PropertyPanelControl_Unloaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
             IsVisibleChanged += PropertyPanelControl_IsVisibleChanged;
-        }
-
-        private void PropertyPanelControl_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            // プロパティパネル上でのダブルクリックイベントを処理済みとしてマークし、
-            // 親コントロールへの伝播を停止
-            e.Handled = true;
         }
 
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
@@ -121,7 +115,24 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+        }
 
+        private void PropertyPanelControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (_eventAggregator != null)
+            {
+                _eventAggregator.GetEvent<FileSelectedEvent>().Unsubscribe(OnFileSelected);
+                _eventAggregator.GetEvent<FolderSelectedEvent>().Unsubscribe(OnFolderChanged);
+                _eventAggregator.GetEvent<RatingChangedEvent>().Unsubscribe(OnRatingChanged);
+                _eventAggregator.GetEvent<FilterChangedEvent>().Unsubscribe(OnFilterChanged);
+            }
+        }
+
+        private void PropertyPanelControl_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // プロパティパネル上でのダブルクリックイベントを処理済みとしてマークし、
+            // 親コントロールへの伝播を停止
+            e.Handled = true;
         }
 
 

@@ -13,11 +13,13 @@ using Illustra.Functions;
 using MahApps.Metro.Controls;
 using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Illustra.Views
 {
     public partial class ImageViewerWindow : MetroWindow, INotifyPropertyChanged
     {
+        private const string CONTROL_ID = "ImageViewer";
         // フルスクリーン切り替え前のウィンドウ状態を保存
         private WindowState _previousWindowState;
         private WindowStyle _previousWindowStyle;
@@ -86,8 +88,19 @@ namespace Illustra.Views
             }
         }
 
-        public string FileName { get; private set; }
-        public BitmapSource? ImageSource { get; private set; }
+        private BitmapSource? _imageSource = null;
+        public BitmapSource? ImageSource
+        {
+            get => _imageSource;
+            private set
+            {
+                if (_imageSource != value)
+                {
+                    _imageSource = value;
+                    OnPropertyChanged(nameof(ImageSource));
+                }
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
@@ -98,11 +111,9 @@ namespace Illustra.Views
         private DispatcherTimer hideCursorTimer;
         private readonly IImageCache _imageCache;
 
-        public ImageViewerWindow(string filePath)
+        public ImageViewerWindow()
         {
             InitializeComponent();
-            FileName = System.IO.Path.GetFileName(filePath);
-            _currentFilePath = filePath;
             DataContext = this;
 
             // キャッシュの初期化
@@ -123,6 +134,10 @@ namespace Illustra.Views
             // イベントの購読
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             eventAggregator?.GetEvent<RatingChangedEvent>()?.Subscribe(OnRatingChanged);
+            eventAggregator?.GetEvent<FileSelectedEvent>()?.Subscribe(OnFileSelected,
+                ThreadOption.UIThread,
+                false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             this.StateChanged += MainWindow_StateChanged;
 
@@ -161,81 +176,36 @@ namespace Illustra.Views
 
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
-        }
-
-
-
-        private async Task LoadImagePropertiesAsync(string filePath)
-        {
-            try
-            {
-                // ファイルからプロパティを読み込む
-                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-
-                // データベースからレーティングを読み込んで設定
-                var fileNode = await _dbManager.GetFileNodeAsync(filePath);
-                if (fileNode != null)
-                {
-                    newProperties.Rating = fileNode.Rating;
-                }
-
-                // プロパティの更新はUIスレッドで行う
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    // まず新しいプロパティインスタンスをセット（これによりPropertyChangedイベントハンドラが設定される）
-                    Properties = newProperties;
-                    _currentFilePath = filePath;
-                    FileName = System.IO.Path.GetFileName(filePath);
-
-                    // PropertyPanelControlにプロパティを設定
-                    if (PropertyPanelControl != null)
-                    {
-                        PropertyPanelControl.ImageProperties = Properties;
-                        PropertyPanelControl.DataContext = Properties;
-                    }
-
-                    OnPropertyChanged(nameof(ImageSource));
-                    OnPropertyChanged(nameof(FileName));
-                    OnPropertyChanged(nameof(Properties));
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading image properties: {ex.Message}");
-                MessageBox.Show($"画像プロパティの読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            Unloaded += OnWindowUnloaded();
         }
 
         private async void OnWindowLoaded()
         {
-            // キャッシュから画像を読み込み（なければ新規作成）
-            LoadAndDisplayImage(_currentFilePath);
+            // 画像の読み込みとキャッシュはSwitchToImageに委譲
+            await SwitchToImage(_currentFilePath, true);
 
-            // プロパティの読み込み
-            await LoadImagePropertiesAsync(_currentFilePath);
-
-            // プロパティパネルにプロパティを設定
-            PropertyPanelControl.OnFileSelected(new SelectedFileModel("", _currentFilePath, Properties.Rating));
-
-            // フォーカスを確実に設定
+            // ウィンドウ固有の初期化処理のみ残す
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
-                Activate(); // ウィンドウをアクティブにする
-                Focus();    // ウィンドウにフォーカスを設定
-                MainImage.Focus(); // 画像にフォーカス
+                Activate();
+                Focus();
+                MainImage.Focus();
             }));
 
-            // 前後の画像をキャッシュ
-            var viewModel = Parent?.GetViewModel();
-            if (viewModel != null)
+            // ウィンドウの状態設定
+            MainWindow_StateChanged(null, null);
+        }
+
+
+        private RoutedEventHandler OnWindowUnloaded()
+        {
+            return (s, e) =>
             {
-                var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-                var currentIndex = files.FindIndex(f => f.FullPath == _currentFilePath);
-                if (currentIndex >= 0)
-                {
-                    _imageCache.UpdateCache(files, currentIndex);
-                }
-            }
+                // イベントの購読解除
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator?.GetEvent<RatingChangedEvent>()?.Unsubscribe(OnRatingChanged);
+                eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
+            };
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -477,7 +447,7 @@ namespace Illustra.Views
             string? previousFilePath = Parent.GetPreviousImage(_currentFilePath);
             if (!string.IsNullOrEmpty(previousFilePath))
             {
-                _ = SwitchToImage(previousFilePath);
+                _ = SwitchToImage(previousFilePath, true);
             }
         }
 
@@ -490,7 +460,7 @@ namespace Illustra.Views
             string? nextFilePath = Parent.GetNextImage(_currentFilePath);
             if (!string.IsNullOrEmpty(nextFilePath))
             {
-                _ = SwitchToImage(nextFilePath);
+                _ = SwitchToImage(nextFilePath, true);
             }
             else if (_isSlideshowActive)
             {
@@ -535,18 +505,23 @@ namespace Illustra.Views
         }
 
         // 新しい画像を読み込む
-        private async Task SwitchToImage(string filePath)
+        private async Task SwitchToImage(string filePath, bool notifyFileSelection)
         {
             try
             {
+                if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    // 同じ画像の場合は何もしない
+                    return;
+                }
+
                 // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
 
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
                 LoadAndDisplayImage(filePath);
 
-                // 3. 画像のプロパティを読み込み
-                await LoadImagePropertiesAsync(filePath);
+                // 3. 画像のプロパティは FileSelectedEvent で更新される
 
                 // 4. 前後の画像をキャッシュ
                 var viewModel = Parent?.GetViewModel();
@@ -583,7 +558,12 @@ namespace Illustra.Views
                 }
 
                 // 親ウィンドウのサムネイル選択を更新
-                Parent?.SyncThumbnailSelection(filePath);
+                if (notifyFileSelection)
+                {
+                    var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                    eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(
+                        new SelectedFileModel(CONTROL_ID, filePath, Properties.Rating));
+                }
             }
             catch (Exception ex)
             {
@@ -718,9 +698,9 @@ namespace Illustra.Views
                 // キャッシュをクリア
                 _imageCache.Clear();
 
-                // 明示的なGCを実行
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator?.GetEvent<RatingChangedEvent>()?.Unsubscribe(OnRatingChanged);
+                eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
             }
             catch (Exception ex)
             {
@@ -867,7 +847,7 @@ namespace Illustra.Views
                 // 次の画像があれば表示、なければビューアを閉じる
                 if (!string.IsNullOrEmpty(nextFilePath))
                 {
-                    _ = SwitchToImage(nextFilePath);
+                    _ = SwitchToImage(nextFilePath, true);
                 }
                 else
                 {
@@ -895,7 +875,7 @@ namespace Illustra.Views
                 if (files.Any())
                 {
                     // 先頭の画像に切り替え
-                    _ = SwitchToImage(files.First().FullPath);
+                    _ = SwitchToImage(files.First().FullPath, true);
                 }
             }
         }
@@ -912,9 +892,35 @@ namespace Illustra.Views
                 if (files.Any())
                 {
                     // 末尾の画像に切り替え
-                    _ = SwitchToImage(files.Last().FullPath);
+                    _ = SwitchToImage(files.Last().FullPath, true);
                 }
             }
+        }
+
+        /// <summary>
+        /// 指定されたパスの画像をロードします
+        /// </summary>
+        /// <param name="filePath">画像ファイルのパス</param>
+        public void LoadImageFromPath(string filePath, bool notifyFileSelection = true)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            if (!File.Exists(filePath))
+                return;
+
+            if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
+            {
+                // 同じ画像の場合は何もしない
+                return;
+            }
+
+            _ = SwitchToImage(filePath, notifyFileSelection);
+        }
+
+        private void OnFileSelected(SelectedFileModel args)
+        {
+            LoadImageFromPath(args.FullPath, notifyFileSelection: false);
         }
 
         private void OnRatingChanged(RatingChangedEventArgs args)
