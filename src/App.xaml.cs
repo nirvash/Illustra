@@ -71,6 +71,9 @@ namespace Illustra
         {
             base.OnInitialized();
 
+            // メインウィンドウが閉じられたらアプリ終了
+            Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
             // キーボードショートカットハンドラーを初期化
             KeyboardShortcutHandler.Instance.ReloadShortcuts();
         }
