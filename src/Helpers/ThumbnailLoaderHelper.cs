@@ -26,10 +26,12 @@ using System.Collections.Concurrent;
 public class FileNodesLoadedEventArgs : EventArgs
 {
     public string FolderPath { get; }
+    public string SelectedFilePath { get; }
 
-    public FileNodesLoadedEventArgs(string folderPath)
+    public FileNodesLoadedEventArgs(string folderPath, string selectedFilePath)
     {
         FolderPath = folderPath;
+        SelectedFilePath = selectedFilePath;
     }
 }
 
@@ -260,7 +262,7 @@ public class ThumbnailLoaderHelper
                 _isFileNodesLoadedEventFiring = true;
                 try
                 {
-                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath));
+                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath, initialSelectedFilePath));
                 }
                 finally
                 {

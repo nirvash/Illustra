@@ -820,9 +820,18 @@ namespace Illustra.Views
                         LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailLoader] サムネイル読み込み操作がキャンセルされましたが、選択処理は続行します", LogHelper.Categories.ThumbnailLoader);
                     }
 
-                    // 初期選択ファイルが指定されている場合はそれを選択
-                    if (!string.IsNullOrEmpty(_initialSelectedFilePath)
-                        && _viewModel.Items.Any(x => x.FullPath == _initialSelectedFilePath))
+                    var args = e as FileNodesLoadedEventArgs;
+                    if (args?.SelectedFilePath != null
+                        && args.SelectedFilePath != string.Empty
+                        && File.Exists(args.SelectedFilePath))
+                    {
+                        // 選択するファイルが指定されているとき
+                        var filePath = args.SelectedFilePath;
+                        LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 指定されたファイルを選択します: {filePath}", LogHelper.Categories.ThumbnailLoader);
+                        SelectThumbnail(filePath, _isFirstLoad);
+                    }
+                    else if (!string.IsNullOrEmpty(_initialSelectedFilePath)
+                             && _viewModel.Items.Any(x => x.FullPath == _initialSelectedFilePath))
                     {
                         // 初期選択ファイルが指定されている場合はそれを選択
                         LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 初期選択ファイルを選択します: {_initialSelectedFilePath}", LogHelper.Categories.ThumbnailLoader);

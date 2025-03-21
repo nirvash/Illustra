@@ -64,24 +64,14 @@ namespace Illustra.Views
         {
             // ViewModelの初期化とDataContextの設定
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-
             _appSettings = SettingsHelper.GetSettings();
-            string? folderPath = null;
 
-            // 起動時フォルダ設定に応じてパスを設定
-            switch (_appSettings.StartupMode)
-            {
-                case AppSettingsModel.StartupFolderMode.LastOpened:
-                    folderPath = _appSettings.LastFolderPath;
-                    break;
-                case AppSettingsModel.StartupFolderMode.Specified:
-                    folderPath = _appSettings.StartupFolderPath;
-                    break;
-                case AppSettingsModel.StartupFolderMode.None:
-                default:
-                    folderPath = null;
-                    break;
-            }
+            // 初期状態ではフォルダを選択しない（App.xaml.csからの選択を待つ）
+            _viewModel = new FileSystemTreeViewModel(_eventAggregator, null);
+            DataContext = _viewModel;
+            FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
+
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
 
             // 設定の更新を監視するためにお気に入り関連イベントを購読
             _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(path =>
@@ -99,13 +89,7 @@ namespace Illustra.Views
                 ScrollToSelectedItem();
             });
 
-
-            // パスの存在確認
-            if (!string.IsNullOrEmpty(folderPath) && !Directory.Exists(folderPath))
-            {
-                folderPath = null;
-            }
-            _viewModel = new FileSystemTreeViewModel(_eventAggregator, folderPath);
+            _viewModel = new FileSystemTreeViewModel(_eventAggregator, null);
             DataContext = _viewModel;
             FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
 

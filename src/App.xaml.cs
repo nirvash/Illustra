@@ -16,6 +16,8 @@ using LinqToDB.DataProvider;
 using System.Diagnostics;
 using Illustra.Events;
 using ControlzEx.Theming;
+using System.IO;
+using Illustra.Models;
 
 namespace Illustra
 {
@@ -98,7 +100,6 @@ namespace Illustra
 
             // データベースの初期化
             InitializeDatabase();
-            //            ThemeManager.Current.ChangeTheme(this, "Dark.Green");
 
             // 設定を読み込む
             var settings = SettingsHelper.GetSettings();
@@ -109,6 +110,60 @@ namespace Illustra
 
             // ログカテゴリ設定を読み込む
             LogHelper.LoadCategorySettings();
+
+            var eventAggregator = Container.Resolve<IEventAggregator>();
+
+            // コマンドライン引数からファイルパスを取得
+            if (e.Args.Length > 0)
+            {
+                var filePath = e.Args[0];
+                if (File.Exists(filePath))
+                {
+                    // ファイルが存在する場合、そのフォルダを開いて対象ファイルを選択
+                    var folderPath = Path.GetDirectoryName(filePath);
+                    eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                        new FolderSelectedEventArgs(folderPath!, "App", filePath));
+                }
+                else
+                {
+                    // ファイルが存在しない場合は設定に基づいて動作
+                    OpenFolderBasedOnSettings(settings, eventAggregator);
+                }
+            }
+            else
+            {
+                // 引数がない場合は設定に基づいて動作
+                OpenFolderBasedOnSettings(settings, eventAggregator);
+            }
+        }
+
+        private void OpenFolderBasedOnSettings(AppSettingsModel settings, IEventAggregator eventAggregator)
+        {
+            string? folderToOpen = null;
+            string? fileToSelect = null;
+
+            switch (settings.StartupMode)
+            {
+                case AppSettingsModel.StartupFolderMode.LastOpened:
+                    folderToOpen = settings.LastFolderPath;
+                    fileToSelect = settings.LastSelectedFilePath;
+                    break;
+
+                case AppSettingsModel.StartupFolderMode.Specified:
+                    if (!string.IsNullOrEmpty(settings.StartupFolderPath) &&
+                        Directory.Exists(settings.StartupFolderPath))
+                    {
+                        folderToOpen = settings.StartupFolderPath;
+                    }
+                    break;
+            }
+
+            // フォルダが指定されている場合は開く
+            if (!string.IsNullOrEmpty(folderToOpen) && Directory.Exists(folderToOpen))
+            {
+                eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
+                    new FolderSelectedEventArgs(folderToOpen, "App", fileToSelect));
+            }
         }
 
         public void ChangeTheme(string theme)
