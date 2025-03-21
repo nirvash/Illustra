@@ -39,6 +39,13 @@ namespace Illustra
             // イベントアグリゲーターを取得
             var eventAggregator = Container.Resolve<IEventAggregator>();
 
+            // IllustraAppContextを初期化
+            var appContext = Container.Resolve<IllustraAppContext>();
+
+            // ImagePropertiesServiceを初期化
+            var propertiesService = Container.Resolve<IImagePropertiesService>();
+            propertiesService.Initialize();
+
             // 言語変更イベントを購読
             eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(() =>
             {
@@ -58,6 +65,11 @@ namespace Illustra
             // サービスの登録
             containerRegistry.RegisterSingleton<LanguageService>();
             containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
+            containerRegistry.RegisterSingleton<DatabaseManager>();
+
+            // 新規追加: IllustraAppContextとImagePropertiesServiceの登録
+            containerRegistry.RegisterSingleton<IllustraAppContext>();
+            containerRegistry.RegisterSingleton<IImagePropertiesService, ImagePropertiesService>();
 
             // ビューの登録
             containerRegistry.Register<LanguageSettingsViewModel>();
@@ -65,8 +77,6 @@ namespace Illustra
 
             // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
             containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
-
-            containerRegistry.RegisterSingleton<DatabaseManager>();
         }
 
         protected override void OnInitialized()
@@ -188,6 +198,7 @@ namespace Illustra
             }
             Resources.MergedDictionaries.Add(newTheme);
         }
+
         public void UpdateResourceDictionaries()
         {
             var currentCulture = Thread.CurrentThread.CurrentUICulture;

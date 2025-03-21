@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Prism.Mvvm;
 
 namespace Illustra.Models
 {
