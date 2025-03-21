@@ -112,6 +112,20 @@ Illustra.exe [ファイルパス]
 - ファイルパスを指定して起動すると、そのファイルが存在する場合は対象フォルダを開いてファイルを選択状態にします
 - 指定したファイルが存在しない場合は、設定に基づいて起動時のフォルダを開きます
 
+### ソート機能
+
+#### フォルダのソート設定
+- フォルダツリー上で右クリックして表示されるコンテキストメニューからソート設定が可能です
+- 名前順/作成日順から選択できます
+- 昇順/降順を切り替えられます
+- ソート設定は各フォルダごとに保存され、次回起動時も維持されます
+
+#### サムネイル一覧のソート設定
+- メインウィンドウ上部のソートボタンから設定可能です
+- 名前順/作成日順から選択できます
+- 昇順/降順を切り替えられます
+- 設定は各フォルダごとに保存されます
+
 ### 注意事項
 
 レーティング情報はファイルパスに紐づけてデータベースで管理しています。リネームなどでレーティング情報が失われることがあるため、永続的な画像の振り分けなどはフォルダにファイルを移動して分類することをおすすめします。
@@ -240,6 +254,20 @@ Illustra.exe [file_path]
 
 - When launched with a file path, if the file exists, it opens the containing folder and selects the file
 - If the specified file does not exist, it opens a folder based on startup settings
+
+### Sort Functions
+
+#### Folder Sort Settings
+- Access sort settings through the context menu by right-clicking in the folder tree
+- Choose between sorting by name or creation date
+- Toggle between ascending and descending order
+- Sort settings are saved per folder and persist across application restarts
+
+#### Thumbnail List Sort Settings
+- Access sort settings from the sort buttons at the top of the main window
+- Choose between sorting by name or creation date
+- Toggle between ascending and descending order
+- Settings are saved for each folder
 
 ### Important Note
 
