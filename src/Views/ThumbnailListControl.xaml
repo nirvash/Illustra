@@ -97,7 +97,7 @@
                         Thumb.DragCompleted="ThumbnailSizeSlider_DragCompleted"/>
             </StackPanel>
 
-            <!-- レーティングフィルター (新規追加) -->
+            <!-- レーティングフィルター  -->
             <StackPanel Orientation="Horizontal"
                         Grid.Column="2">
                 <TextBlock Text="{DynamicResource String_Thumbnail_Rating}"
@@ -115,7 +115,7 @@
                         <local:RatingStarControl RatingValue="1"
                                                  Height="18"
                                                  Width="18"
-                                                 IsFilled="False"
+                                                 DisplayMode="Multiple"
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                     <Button Tag="2"
@@ -128,7 +128,6 @@
                         <local:RatingStarControl RatingValue="2"
                                                  Height="18"
                                                  Width="18"
-                                                 IsFilled="False"
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                     <Button Tag="3"
@@ -141,7 +140,6 @@
                         <local:RatingStarControl RatingValue="3"
                                                  Height="18"
                                                  Width="18"
-                                                 IsFilled="False"
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                     <Button Tag="4"
@@ -154,7 +152,6 @@
                         <local:RatingStarControl RatingValue="4"
                                                  Height="18"
                                                  Width="18"
-                                                 IsFilled="False"
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                     <Button Tag="5"
@@ -167,7 +164,6 @@
                         <local:RatingStarControl RatingValue="5"
                                                  Height="18"
                                                  Width="18"
-                                                 IsFilled="False"
                                                  TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
                     </Button>
                 </StackPanel>
@@ -436,10 +432,8 @@
                                 <local:RatingStarControl
                                     x:Name="RatingStarMark"
                                     RatingValue="{Binding Rating, UpdateSourceTrigger=PropertyChanged}"
-                                    IsFilled="{Binding Rating, Converter={StaticResource RatingToBooleanConverter}, UpdateSourceTrigger=PropertyChanged}"
-                                    StarFill="{Binding Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
+                                    DisplayMode="Single"
                                     StrokeColor="White"
-                                    TextColor="{Binding Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"
                                     Width="22"
                                     Height="22"
                                     Margin="2">

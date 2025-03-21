@@ -80,7 +80,7 @@
             x:Name="RatingStarMark"
             Grid.ColumnSpan="3"
             RatingValue="{Binding Properties.Rating, UpdateSourceTrigger=PropertyChanged}"
-            IsFilled="{Binding Properties.Rating, Converter={StaticResource RatingToBooleanConverter}, UpdateSourceTrigger=PropertyChanged}"
+            DisplayMode="Single"
             StarFill="{Binding Properties.Rating, Converter={StaticResource RatingToColorConverter}, UpdateSourceTrigger=PropertyChanged}"
             StrokeColor="White"
             TextColor="{Binding Properties.Rating, Converter={StaticResource RatingToTextColorConverter}, UpdateSourceTrigger=PropertyChanged}"

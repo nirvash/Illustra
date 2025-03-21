@@ -41,8 +41,6 @@ namespace Illustra.Views
             }
         }
 
-        private readonly DispatcherTimer _titleBarTimer;
-        private const double TITLE_BAR_SHOW_AREA = 100; // マウスがここまで近づいたらタイトルバーを表示
 
         // 画像切り替え用
         private string _currentFilePath;

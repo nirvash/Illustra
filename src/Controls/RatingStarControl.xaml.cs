@@ -40,21 +40,38 @@ namespace Illustra.Controls
             set { SetValue(RatingValueProperty, value); }
         }
 
-        // 星を塗りつぶすかどうか
-        public static readonly DependencyProperty IsFilledProperty =
-            DependencyProperty.Register("IsFilled", typeof(bool), typeof(RatingStarControl),
-                new PropertyMetadata(false, OnVisualPropertyChanged));
+        // 現在のレーティング値
+        public static readonly DependencyProperty CurrentRatingProperty =
+            DependencyProperty.Register("CurrentRating", typeof(int), typeof(RatingStarControl),
+                new PropertyMetadata(0, OnVisualPropertyChanged));
 
-        public bool IsFilled
+        public int CurrentRating
         {
-            get { return (bool)GetValue(IsFilledProperty); }
-            set { SetValue(IsFilledProperty, value); }
+            get { return (int)GetValue(CurrentRatingProperty); }
+            set { SetValue(CurrentRatingProperty, value); }
+        }
+
+        // 表示モード
+        public enum RatingDisplayMode
+        {
+            Single,     // 単一の星として動作（CurrentRatingは無視）
+            Multiple    // 複数の星の一部として動作（CurrentRatingと比較して表示状態を決定）
+        }
+
+        public static readonly DependencyProperty DisplayModeProperty =
+            DependencyProperty.Register("DisplayMode", typeof(RatingDisplayMode), typeof(RatingStarControl),
+                new PropertyMetadata(RatingDisplayMode.Multiple, OnVisualPropertyChanged));
+
+        public RatingDisplayMode DisplayMode
+        {
+            get { return (RatingDisplayMode)GetValue(DisplayModeProperty); }
+            set { SetValue(DisplayModeProperty, value); }
         }
 
         // 星の塗りつぶし色
         public static readonly DependencyProperty StarFillProperty =
             DependencyProperty.Register("StarFill", typeof(Brush), typeof(RatingStarControl),
-                new PropertyMetadata(Brushes.Gold, OnVisualPropertyChanged));
+                new PropertyMetadata(Brushes.Gold));
 
         public Brush StarFill
         {
@@ -65,7 +82,7 @@ namespace Illustra.Controls
         // 星の輪郭線の色
         public static readonly DependencyProperty StrokeColorProperty =
             DependencyProperty.Register("StrokeColor", typeof(Brush), typeof(RatingStarControl),
-                new PropertyMetadata(Brushes.DarkGoldenrod, OnVisualPropertyChanged));
+                new PropertyMetadata(Brushes.DarkGoldenrod));
 
         public Brush StrokeColor
         {
@@ -76,7 +93,7 @@ namespace Illustra.Controls
         // 数字テキストの色
         public static readonly DependencyProperty TextColorProperty =
             DependencyProperty.Register("TextColor", typeof(Brush), typeof(RatingStarControl),
-                new PropertyMetadata(RatingHelper.GetTextColor(0), OnVisualPropertyChanged));
+                new PropertyMetadata(RatingHelper.GetTextColor(0)));
 
         public Brush TextColor
         {
@@ -100,31 +117,88 @@ namespace Illustra.Controls
             DependencyProperty.Register("EnableAnimation", typeof(bool), typeof(RatingStarControl),
                 new PropertyMetadata(false));
 
+        public bool EnableAnimation
+        {
+            get { return (bool)GetValue(EnableAnimationProperty); }
+            set { SetValue(EnableAnimationProperty, value); }
+        }
 
         #endregion
+
+        private bool _updatingVisuals;
 
         private static void OnVisualPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is RatingStarControl control)
             {
-                if (e.Property == RatingValueProperty)
+                // 表示状態の更新が必要なプロパティが変更された場合のみ更新
+                if (e.Property == RatingValueProperty ||
+                    e.Property == CurrentRatingProperty ||
+                    e.Property == DisplayModeProperty ||
+                    e.Property == TextEffectProperty)
                 {
-                    // RatingValueが変更された場合、StarFillとTextColorを更新
-                    int rating = (int)e.NewValue;
-                    bool hasRating = rating > 0;
-                    control.IsFilled = hasRating;
-                    if (hasRating)
-                    {
-                        control.StarFill = RatingHelper.GetRatingColor(rating);
-                        control.TextColor = RatingHelper.GetTextColor(rating);
-                    }
-                    else
-                    {
-                        control.StarFill = Brushes.Transparent;
-                        control.TextColor = RatingHelper.GetTextColor(0);
-                    }
+                    control.UpdateVisualState();
                 }
-                control.UpdateVisualState();
+            }
+        }
+
+        private bool ShouldBeFilled()
+        {
+            if (RatingValue <= 0) return false;
+
+            return DisplayMode == RatingDisplayMode.Single
+                ? RatingValue > 0
+                : CurrentRating >= RatingValue;
+        }
+
+        private void UpdateVisualState()
+        {
+            if (_updatingVisuals) return;
+            _updatingVisuals = true;
+
+            try
+            {
+                // StarPathがnullの場合は処理をスキップ
+                if (StarPath == null) return;
+
+                // 塗りつぶし状態の判定
+                bool shouldFill = ShouldBeFilled();
+
+                // DisplayModeに応じた色の決定
+                Brush fillBrush;
+                Brush textBrush;
+
+                if (DisplayMode == RatingDisplayMode.Single)
+                {
+                    // 単独モードの場合
+                    shouldFill = RatingValue > 0;
+                    fillBrush = shouldFill ? RatingHelper.GetRatingColor(RatingValue) : Brushes.Transparent;
+                    textBrush = shouldFill ? RatingHelper.GetTextColor(RatingValue) : RatingHelper.GetTextColor(0);
+                }
+                else
+                {
+                    // 複数モードの場合
+                    shouldFill = CurrentRating >= RatingValue && RatingValue > 0;
+                    fillBrush = shouldFill ? RatingHelper.GetRatingColor(RatingValue) : Brushes.Transparent;
+                    textBrush = shouldFill ? RatingHelper.GetTextColor(RatingValue) : RatingHelper.GetTextColor(0);
+                }
+
+                // 直接Pathに適用
+                StarPath.Fill = fillBrush;
+
+                // RatingTextがnullの場合は処理をスキップ
+                if (RatingText == null) return;
+
+                // テキストの表示状態を設定
+                RatingText.Visibility = RatingValue > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+                // テキストの色を直接設定
+                RatingText.Foreground = textBrush;
+                RatingText.Effect = TextEffect;
+            }
+            finally
+            {
+                _updatingVisuals = false;
             }
         }
 
@@ -154,25 +228,6 @@ namespace Illustra.Controls
             // アニメーションを開始
             StarScale.BeginAnimation(ScaleTransform.ScaleXProperty, xAnimation);
             StarScale.BeginAnimation(ScaleTransform.ScaleYProperty, yAnimation);
-        }
-
-        private void UpdateVisualState()
-        {
-            // StarPathがnullの場合は処理をスキップ
-            if (StarPath == null) return;
-
-            // レーティング値とIsFilledの状態に基づいて塗りつぶし状態を設定
-            StarPath.Fill = (RatingValue > 0 && IsFilled) ? StarFill : Brushes.Transparent;
-
-            // RatingTextがnullの場合は処理をスキップ
-            if (RatingText == null) return;
-
-            // テキストの表示状態を設定
-            RatingText.Visibility = RatingValue > 0 ? Visibility.Visible : Visibility.Collapsed;
-
-            // テキストの色を設定
-            RatingText.Foreground = TextColor;
-            RatingText.Effect = TextEffect;
         }
     }
 }

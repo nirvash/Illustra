@@ -2249,13 +2249,7 @@ namespace Illustra.Views
                     var starControl = UIHelper.FindVisualChild<RatingStarControl>(button);
                     if (starControl != null)
                     {
-                        starControl.IsFilled = position <= selectedRating;
-                        starControl.StarFill = position <= selectedRating ?
-                            RatingHelper.GetRatingColor(position) :
-                            Brushes.Transparent;
-                        starControl.TextColor = position <= selectedRating ?
-                            RatingHelper.GetTextColor(position) :
-                            Brushes.Gray;
+                        starControl.CurrentRating = position;
                     }
                 }
             }
