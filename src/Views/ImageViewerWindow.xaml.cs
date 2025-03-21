@@ -121,11 +121,7 @@ namespace Illustra.Views
             _dbManager = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             // スライドショータイマーの初期化
-            var viewerSettings = ViewerSettingsHelper.LoadSettings();
-            _slideshowTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(viewerSettings.SlideshowIntervalSeconds)
-            };
+            _slideshowTimer = new DispatcherTimer();
             _slideshowTimer.Tick += (s, e) =>
             {
                 NavigateToNextImage();
@@ -357,12 +353,18 @@ namespace Illustra.Views
             ViewerSettingsHelper.SaveSettings(settings);
 
             // タイマーの間隔を更新
-            _slideshowTimer.Interval = TimeSpan.FromSeconds(newInterval);
+            UpdateSlideshowInterval();
 
             // 通知を表示
             ShowNotification(string.Format(
                 (string)FindResource("String_Slideshow_IntervalFormat"),
                 newInterval), 32);
+        }
+
+        private void UpdateSlideshowInterval()
+        {
+            var settings = ViewerSettingsHelper.LoadSettings();
+            _slideshowTimer.Interval = TimeSpan.FromSeconds(settings.SlideshowIntervalSeconds);
         }
 
         private void ToggleSlideshow()
@@ -375,6 +377,7 @@ namespace Illustra.Views
             }
             else
             {
+                UpdateSlideshowInterval();
                 _slideshowTimer.Start();
                 _isSlideshowActive = true;
                 ShowNotification((string)FindResource("String_Slideshow_PlayIcon"), 48);

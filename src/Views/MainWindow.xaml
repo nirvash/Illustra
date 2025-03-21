@@ -7,6 +7,7 @@
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:prism="http://prismlibrary.com/"
+        WindowTransitionsEnabled="False"
         mc:Ignorable="d"
         Height="600"
         Width="900">

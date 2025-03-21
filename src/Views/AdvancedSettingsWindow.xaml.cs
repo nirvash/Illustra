@@ -149,7 +149,8 @@ namespace Illustra.Views
 
             // 設定から値を読み込む
             DeveloperMode = _settings.DeveloperMode;
-            SlideshowInterval = 5.0; // ViewerSettingsから取得する必要がある
+            var viewerSettings = ViewerSettingsHelper.LoadSettings();
+            SlideshowInterval = viewerSettings.SlideshowIntervalSeconds;
             MouseWheelMultiplier = _settings.MouseWheelMultiplier;
 
             // 起動モードの設定
