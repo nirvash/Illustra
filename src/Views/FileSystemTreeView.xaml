@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
              xmlns:models="clr-namespace:Illustra.Models"
+             xmlns:helpers="clr-namespace:Illustra.Helpers"
              xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              xmlns:dd="urn:gong-wpf-dragdrop"
@@ -14,8 +15,10 @@
              x:Name="FileSystemTreeViewControl">
 
     <UserControl.Resources>
+        <helpers:BooleanInverseConverter x:Key="BooleanInverseConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
+        <system:Boolean x:Key="TrueValue">True</system:Boolean>
+        <system:Boolean x:Key="FalseValue">False</system:Boolean>
         <!-- TreeViewItem の状態をバインド -->
         <Style x:Key="BoundTreeViewItemStyle"
                TargetType="{x:Type TreeViewItem}"
@@ -26,6 +29,50 @@
                     Value="{Binding IsSelected, Mode=TwoWay}"/>
             <Setter Property="Padding"
                     Value="0,0,0,0"/>
+            <Setter Property="Tag"
+                    Value="{Binding}"/>
+            <Setter Property="ContextMenu">
+                <Setter.Value>
+                    <ContextMenu>
+                        <MenuItem x:Name="AddToFavoritesMenuItem"
+                            Header="{DynamicResource String_FileSystemTreeView_AddToFavorites}"
+                            Command="{Binding Path=PlacementTarget.Tag.AddToFavoritesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                            IsEnabled="{Binding Path=PlacementTarget.Tag.IsFavorite, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BooleanInverseConverter}}"/>
+                        <Separator/>
+                        <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">
+                            <MenuItem x:Name="SortByNameMenuItem"
+                                    Header="{DynamicResource String_Menu_View_SortByName}"
+                                    IsCheckable="False"
+                                    Command="{Binding Path=PlacementTarget.Tag.SortTypeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                    CommandParameter="{x:Static models:SortType.Name}"
+                                    IsChecked="{Binding PlacementTarget.Tag.IsSortByName, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                            <MenuItem x:Name="SortByDateMenuItem"
+                                    Header="{DynamicResource String_Menu_View_SortByDate}"
+                                    IsCheckable="False"
+                                    Command="{Binding Path=PlacementTarget.Tag.SortTypeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                    CommandParameter="{x:Static models:SortType.Created}"
+                                    IsChecked="{Binding PlacementTarget.Tag.IsSortByName,
+                                                RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}},
+                                                Converter={StaticResource BooleanInverseConverter}}"/>
+                            <Separator/>
+                            <MenuItem x:Name="SortAscendingMenuItem"
+                                    Header="{DynamicResource String_Menu_View_SortAscending}"
+                                    IsCheckable="False"
+                                    Command="{Binding Path=PlacementTarget.Tag.SortDirectionCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                    CommandParameter="{StaticResource TrueValue}"
+                                    IsChecked="{Binding PlacementTarget.Tag.IsAscending, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                            <MenuItem x:Name="SortDescendingMenuItem"
+                                    Header="{DynamicResource String_Menu_View_SortDescending}"
+                                    IsCheckable="False"
+                                    Command="{Binding Path=PlacementTarget.Tag.SortDirectionCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                    CommandParameter="{StaticResource FalseValue}"
+                                    IsChecked="{Binding PlacementTarget.Tag.IsAscending,
+                                                RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}},
+                                                Converter={StaticResource BooleanInverseConverter}}"/>
+                        </MenuItem>
+                    </ContextMenu>
+                </Setter.Value>
+            </Setter>
 
             <!-- イベントハンドラの関連付け -->
             <EventSetter Event="MouseEnter"
@@ -54,7 +101,6 @@
                   DataContext="{x:Null}"
                   ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
                   SelectedItemChanged="TreeView_SelectedItemChanged"
-                  ContextMenuOpening="TreeView_ContextMenuOpening"
                   VirtualizingStackPanel.IsVirtualizing="False"
                   VirtualizingStackPanel.VirtualizationMode="Standard"
                   HorizontalAlignment="Stretch"
@@ -65,13 +111,6 @@
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   dd:DragDrop.IsDragSource="False"
                   dd:DragDrop.IsDropTarget="True">
-            <TreeView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem x:Name="AddToFavoritesMenuItem"
-                              Header="{DynamicResource String_FileSystemTreeView_AddToFavorites}"
-                              Click="AddToFavorites_Click"/>
-                </ContextMenu>
-            </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">

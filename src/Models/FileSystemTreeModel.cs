@@ -15,10 +15,13 @@ namespace Illustra.Models
     public class FileSystemTreeModel : INotifyPropertyChanged
     {
         private ObservableCollection<FileSystemItemModel> _rootItems = new ObservableCollection<FileSystemItemModel>();
+        private FolderTreeSettings _folderTreeSettings;
+
         private bool _isLoading;
-        public FileSystemTreeModel(string? initialPath = null)
+        public FileSystemTreeModel(FolderTreeSettings folderTreeSettings)
         {
             _rootItems = [];
+            _folderTreeSettings = folderTreeSettings;
         }
 
 
@@ -405,6 +408,14 @@ namespace Illustra.Models
                 System.Diagnostics.Debug.WriteLine($"サブフォルダ取得中にエラー: {ex.Message} (パス: {path})");
             }
 
+            // ソート設定を取得
+            var sortSettings = _folderTreeSettings.GetSortSettings(path);
+            SortType sortType = sortSettings?.SortType ?? SortType.Name;
+            bool ascending = sortSettings?.IsAscending ?? true;
+
+            // ソート適用
+            result = FolderSortHelper.Sort(result, sortType, ascending).ToList();
+
             return result;
         }
 
@@ -475,6 +486,88 @@ namespace Illustra.Models
         protected virtual void OnPropertyChanged(string? propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public FileSystemItemModel? FindItem(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            // ドライブ部分を取得
+            string? rootPath = Path.GetPathRoot(path);
+            if (rootPath == null)
+                return null;
+
+            // ルートアイテムを検索
+            var rootItem = RootItems.FirstOrDefault(item =>
+                item.FullPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase));
+
+            if (rootItem == null || rootPath == path)
+                return rootItem;
+
+            // サブフォルダを再帰的に検索
+            return FindItemRecursive(rootItem, path);
+        }
+
+        private FileSystemItemModel? FindItemRecursive(FileSystemItemModel parent, string path)
+        {
+            foreach (var child in parent.Children)
+            {
+                if (child.FullPath.Equals(path, StringComparison.OrdinalIgnoreCase))
+                    return child;
+
+                if (path.StartsWith(child.FullPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    // 子フォルダが未ロードの場合はロードする
+                    if (child.Children.Count == 1 && child.Children[0].IsDummy)
+                    {
+                        LoadSubFolders(child);
+                    }
+                    return FindItemRecursive(child, path);
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// ソート設定を更新し、フォルダの内容を再読み込みする
+        /// </summary>
+        /// <param name="path">対象フォルダのパス</param>
+        /// <param name="sortType">ソートタイプ（nullの場合は既存の設定を維持）</param>
+        /// <param name="ascending">昇順/降順（nullの場合は既存の設定を維持）</param>
+        public void UpdateSort(string path, SortType? sortType = null, bool? ascending = null)
+        {
+            var settings = _folderTreeSettings.SortSettings.GetValueOrDefault(path);
+            if (settings == null)
+            {
+                settings = new FolderSortSettings
+                {
+                    SortType = sortType ?? SortType.Name,
+                    IsAscending = ascending ?? true
+                };
+                _folderTreeSettings.SortSettings[path] = settings;
+            }
+            else
+            {
+                if (sortType.HasValue) settings.SortType = sortType.Value;
+                if (ascending.HasValue) settings.IsAscending = ascending.Value;
+            }
+            _folderTreeSettings.Save();
+
+            // 対象フォルダを探してリロード
+            var item = FindItem(path);
+            if (item != null && item.IsExpanded)
+            {
+                LoadSubFolders(item);
+            }
+        }
+
+        /// <summary>
+        /// 指定されたフォルダのソート設定を取得
+        /// </summary>
+        public FolderSortSettings? GetSortSettings(string path)
+        {
+            return _folderTreeSettings.SortSettings.GetValueOrDefault(path);
         }
 
         /// <summary>

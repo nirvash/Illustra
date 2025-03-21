@@ -276,52 +276,6 @@ namespace Illustra.Views
             return null;
         }
 
-        private void TreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-        {
-            var treeView = sender as TreeView;
-            if (treeView == null) return;
-
-            // イベントの発生元を見つける
-            if (e.OriginalSource is DependencyObject source)
-            {
-                var treeViewItem = FindVisualParent<TreeViewItem>(source);
-                if (treeViewItem != null)
-                {
-                    // TreeView の DataContext (ViewModel) を取得
-                    var viewModel = treeView.DataContext;
-                    // TreeViewItem の DataContext (FileSystemItemModel) を取得
-                    var item = treeViewItem.DataContext as FileSystemItemModel;
-
-                    if (item != null)
-                    {
-                        // お気に入り追加メニューの有効/無効を制御
-                        var addToFavoritesMenuItem = treeView.ContextMenu?.Items.OfType<MenuItem>()
-                            .FirstOrDefault(x => x.Name == "AddToFavoritesMenuItem");
-
-                        if (addToFavoritesMenuItem != null)
-                        {
-                            addToFavoritesMenuItem.IsEnabled = !IsFavorite(item.FullPath);
-                            addToFavoritesMenuItem.CommandParameter = item;
-                        }
-                    }
-                }
-            }
-        }
-
-        private bool IsFavorite(string path)
-        {
-            if (_appSettings?.FavoriteFolders == null) return false;
-            return _appSettings.FavoriteFolders.Contains(path);
-        }
-
-        private void AddToFavorites_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is MenuItem menuItem && menuItem.CommandParameter is FileSystemItemModel item)
-            {
-                _eventAggregator?.GetEvent<AddToFavoritesEvent>()?.Publish(item.FullPath);
-            }
-        }
-
         private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             var parentObject = VisualTreeHelper.GetParent(child);

@@ -256,6 +256,8 @@ namespace Illustra.Views
             if (!_favoriteFolders.Any(f => f.Path == folderPath))
             {
                 _favoriteFolders.Add(new FavoriteFolderModel(folderPath));
+                SetCurrentSettings();
+                SettingsHelper.SaveSettings(_appSettings);
             }
         }
 
@@ -265,6 +267,8 @@ namespace Illustra.Views
             if (folder != null)
             {
                 _favoriteFolders.Remove(folder);
+                SetCurrentSettings();
+                SettingsHelper.SaveSettings(_appSettings);
             }
         }
 

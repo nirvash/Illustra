@@ -9,6 +9,7 @@ using Illustra.Helpers;
 using Illustra.Models;
 using GongSolutions.Wpf.DragDrop;
 using System.Windows;
+using Microsoft.VisualBasic;
 
 namespace Illustra.ViewModels
 {
@@ -16,7 +17,8 @@ namespace Illustra.ViewModels
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly FileSystemTreeModel _model;
-        private FileSystemItemModel _selectedItem = new("", false, false);
+        private readonly FolderTreeSettings _folderSettings;
+        private FileSystemItemModel _selectedItem = new("", false, true);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
         private bool _isExpandingPath = false;
@@ -25,7 +27,8 @@ namespace Illustra.ViewModels
         {
             // 基本的な初期化
             _eventAggregator = eventAggregator;
-            _model = new FileSystemTreeModel();
+            _folderSettings = FolderTreeSettings.Load();
+            _model = new FileSystemTreeModel(_folderSettings);
 
             // モデルのプロパティ変更を監視
             _model.PropertyChanged += (sender, args) =>
@@ -200,6 +203,11 @@ namespace Illustra.ViewModels
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public FileSystemItemModel? FindItem(string path)
+        {
+            return _model.FindItem(path);
         }
     }
 }

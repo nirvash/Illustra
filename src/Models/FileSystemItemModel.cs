@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
+using Illustra.Events;
 using Illustra.Helpers;
 
 namespace Illustra.Models
@@ -22,8 +24,90 @@ namespace Illustra.Models
         private bool _isFolder;
         private bool _isLoading;
         private ObservableCollection<FileSystemItemModel> _children = [];
-        private FileSystemTreeModel _treeModel;
+        private readonly FileSystemTreeModel _treeModel;
         private FileSystemMonitor? _monitor;
+        private ICommand? _sortTypeCommand;
+        private ICommand? _sortDirectionCommand;
+        private ICommand? _addToFavoritesCommand;
+        private bool _lastIsFavorite;
+
+        public ICommand SortTypeCommand
+        {
+            get => _sortTypeCommand ??= new DelegateCommand<SortType?>(type =>
+            {
+                if (type.HasValue)
+                {
+                    IsSortByName = type.Value == SortType.Name;
+                    _treeModel.UpdateSort(FullPath, sortType: type);
+                }
+            });
+        }
+
+        public ICommand SortDirectionCommand
+        {
+            get => _sortDirectionCommand ??= new DelegateCommand<bool?>(ascending =>
+            {
+                if (ascending.HasValue)
+                {
+                    IsAscending = ascending.Value;
+                    _treeModel.UpdateSort(FullPath, ascending: ascending);
+                }
+            });
+        }
+
+        public ICommand AddToFavoritesCommand
+        {
+            get => _addToFavoritesCommand ??= new DelegateCommand(
+                () => ContainerLocator.Container.Resolve<IEventAggregator>()
+                    .GetEvent<AddToFavoritesEvent>()
+                    .Publish(FullPath),
+                () => !IsFavorite)
+                .ObservesProperty(() => IsFavorite);
+        }
+
+        public bool IsFavorite
+        {
+            get
+            {
+                var isFavorite = SettingsHelper.GetSettings()?.FavoriteFolders?.Contains(FullPath) ?? false;
+                // 状態が変化したら通知
+                if (_lastIsFavorite != isFavorite)
+                {
+                    _lastIsFavorite = isFavorite;
+                    OnPropertyChanged(nameof(IsFavorite));
+                }
+                return isFavorite;
+            }
+        }
+        private bool _isSortByName = false;
+        public bool IsSortByName
+        {
+            get => _isSortByName;
+            set
+            {
+                if (_isSortByName != value)
+                {
+                    _isSortByName = value;
+                    OnPropertyChanged(nameof(IsSortByName));
+                }
+            }
+        }
+
+        private bool _isAscending = true;
+        public bool IsAscending
+        {
+            get => _isAscending;
+            set
+            {
+                if (_isAscending != value)
+                {
+                    _isAscending = value;
+                    OnPropertyChanged(nameof(IsAscending));
+                }
+            }
+        }
+
+        public FolderSortSettings? GetSortSettings() => _treeModel.GetSortSettings(FullPath);
 
         public FileSystemItemModel(string fullPath, bool isFolder, bool isDummy, FileSystemTreeModel? treeModel = null)
         {
@@ -42,6 +126,13 @@ namespace Illustra.Models
             if (isFolder && !isDummy && !string.IsNullOrEmpty(fullPath) && treeModel != null)
             {
                 StartMonitoring();
+            }
+
+            if (!isDummy)
+            {
+                var sortSettings = GetSortSettings();
+                IsSortByName = sortSettings == null || sortSettings.SortType == SortType.Name;
+                IsAscending = sortSettings == null || sortSettings.IsAscending;
             }
         }
 
