@@ -103,6 +103,15 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - Ctrl を押しながらのドラッグ＆ドロップでファイルコピー
 - Ctrl+A で全てのサムネイルを選択
 
+### コマンドライン起動
+
+```
+Illustra.exe [ファイルパス]
+```
+
+- ファイルパスを指定して起動すると、そのファイルが存在する場合は対象フォルダを開いてファイルを選択状態にします
+- 指定したファイルが存在しない場合は、設定に基づいて起動時のフォルダを開きます
+
 ### 注意事項
 
 レーティング情報はファイルパスに紐づけてデータベースで管理しています。リネームなどでレーティング情報が失われることがあるため、永続的な画像の振り分けなどはフォルダにファイルを移動して分類することをおすすめします。
@@ -222,6 +231,15 @@ The following features can also be assigned to any key:
 - Select all thumbnails with Ctrl+A
 - Move files with drag & drop
 - Copy files with drag & drop while holding Ctrl
+
+### Command Line Launch
+
+```
+Illustra.exe [file_path]
+```
+
+- When launched with a file path, if the file exists, it opens the containing folder and selects the file
+- If the specified file does not exist, it opens a folder based on startup settings
 
 ### Important Note
 
