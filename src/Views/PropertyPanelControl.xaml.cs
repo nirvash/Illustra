@@ -14,15 +14,16 @@ using System.Runtime.CompilerServices;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System.Text;
 using System.Reflection;
+using Prism.Events;
 
 namespace Illustra.Views
 {
     public partial class PropertyPanelControl : UserControl, INotifyPropertyChanged
     {
-        private IEventAggregator? _eventAggregator;
+        private IEventAggregator _eventAggregator;
+        private IllustraAppContext _appContext;
+        private DatabaseManager _db;
         private SelectedFileModel? _selectedFile;
-
-        private DatabaseManager _db = null;
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
         private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
@@ -38,12 +39,13 @@ namespace Illustra.Views
         {
             get
             {
-                if (string.IsNullOrEmpty(ImageProperties?.FilePath)) return false;
-                string ext = Path.GetExtension(ImageProperties.FilePath).ToLower();
+                if (string.IsNullOrEmpty(_appContext.CurrentProperties?.FilePath)) return false;
+                string ext = Path.GetExtension(_appContext.CurrentProperties.FilePath).ToLower();
                 return EXIF_SUPPORTED_FORMATS.Contains(ext);
             }
         }
 
+        // DependencyPropertyを再導入し、アプリコンテキストと同期させる
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(
                 nameof(ImageProperties),
@@ -54,11 +56,7 @@ namespace Illustra.Views
         public ImagePropertiesModel? ImageProperties
         {
             get => (ImagePropertiesModel?)GetValue(ImagePropertiesProperty);
-            set
-            {
-                SetValue(ImagePropertiesProperty, value);
-                OnPropertyChanged(nameof(CanEditExif));
-            }
+            set => SetValue(ImagePropertiesProperty, value);
         }
 
         private static void OnImagePropertiesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -77,17 +75,20 @@ namespace Illustra.Views
                     newModel.PropertyChanged += control.OnImagePropertiesPropertyChanged;
                 }
 
-                control.DataContext = e.NewValue;
-                // control.UpdatePropertiesDisplayAsync(); // ファイル切り替え時に選択前の _selectedFile を使用してしまうので、ここでは呼ばない
                 control.OnPropertyChanged(nameof(CanEditExif));
             }
         }
 
-        private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        // アプリコンテキストのプロパティ変更を監視し、DependencyPropertyとシンクロさせる
+        private void OnAppContextPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ImagePropertiesModel.FilePath))
+            if (e.PropertyName == nameof(IllustraAppContext.CurrentProperties))
             {
-                OnPropertyChanged(nameof(CanEditExif));
+                // CurrentPropertiesが変更されたらDependencyPropertyも更新
+                ImageProperties = _appContext.CurrentProperties;
+
+                // DataContextも更新（これが重要）
+                DataContext = ImageProperties;
             }
         }
 
@@ -96,15 +97,33 @@ namespace Illustra.Views
             // InitializeComponentはXAMLから自動生成されるメソッドで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             InitializeComponent();
-            ImageProperties = new ImagePropertiesModel();
+
+            // 依存関係の解決
+            _db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+
+            // AppContextからプロパティを初期化（DependencyPropertyにセット）
+            ImageProperties = _appContext.CurrentProperties;
+
+            // DataContextは自分自身ではなくImagePropertiesに設定（XAML側でプロパティを直接バインドできるように）
             DataContext = ImageProperties;
 
-            _db = ContainerLocator.Container.Resolve<DatabaseManager>();
+            // AppContextのCurrentPropertiesの変更を監視
+            _appContext.PropertyChanged += OnAppContextPropertyChanged;
 
             Loaded += PropertyPanelControl_Loaded;
             Unloaded += PropertyPanelControl_Unloaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
             IsVisibleChanged += PropertyPanelControl_IsVisibleChanged;
+        }
+
+        private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ImagePropertiesModel.FilePath))
+            {
+                OnPropertyChanged(nameof(CanEditExif));
+            }
         }
 
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
@@ -143,55 +162,42 @@ namespace Illustra.Views
                 || !File.Exists(selectedFile.FullPath))
                 return;
 
-            // 選択されたファイルが現在の選択と異なる場合、または選択がnullの場合
-            if (_selectedFile == null || !_selectedFile.FullPath.Equals(selectedFile.FullPath))
+            // 選択されたファイルが現在の共有コンテキストと異なる場合、または選択がnullの場合
+            // _selectedFileは履歴として保持し、実際の判定はアプリコンテキストと比較する
+            if (string.IsNullOrEmpty(_appContext.CurrentProperties?.FilePath) ||
+                !_appContext.CurrentProperties.FilePath.Equals(selectedFile.FullPath))
             {
                 _selectedFile = selectedFile;
-                await LoadFilePropertiesAsync(selectedFile.FullPath, selectedFile.Rating);
+
+                // 共有コンテキストを更新するサービスが行うため、自分で読み込む必要はない
+                // このコントロールではレーティングの同期だけ行う
 
                 void syncRating()
                 {
-                    ImageProperties.Rating = _selectedFile.Rating;
-                    UpdateRatingStars();
-                }
-
-                if (ImageProperties != null)
-                {
-                    ImageProperties.Rating = selectedFile.Rating;
-                    _selectedFile.PropertyChanged += (s, e) =>
+                    if (_appContext.CurrentProperties != null)
                     {
-                        if (e.PropertyName == nameof(SelectedFileModel.Rating))
-                        {
-                            syncRating();
-                        }
-                    };
+                        _appContext.CurrentProperties.Rating = _selectedFile.Rating;
+                        UpdateRatingStars();
+                    }
                 }
-                syncRating();
 
+                // 選択ファイルのレーティング変更を監視
+                _selectedFile.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(SelectedFileModel.Rating))
+                    {
+                        syncRating();
+                    }
+                };
+
+                syncRating();
                 Visibility = Visibility.Visible;
             }
             else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
             {
                 // ファイルが選択されていない場合はプロパティパネルを非表示にする
                 _selectedFile.FullPath = string.Empty;
-                ImageProperties = new ImagePropertiesModel();
-                DataContext = ImageProperties;
                 Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private async Task LoadFilePropertiesAsync(string filePath, int rating)
-        {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                newProperties.Rating = rating;
-                ImageProperties = newProperties;
-            }
-            catch (Exception)
-            {
-                // Ignore
             }
         }
 
@@ -302,11 +308,12 @@ namespace Illustra.Views
                 _selectedFile.Rating = rating;
             }
 
-            // レーティング変更イベントを発行. レーティングの永続化は受信先で行う
+            // レーティング変更イベントを発行
+            // レーティングの永続化とコンテキスト更新はサービス側で行う
             _eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
                 new RatingChangedEventArgs { FilePath = _selectedFile.FullPath, Rating = _selectedFile.Rating });
 
-            // UIを更新
+            // UIを更新（コンテキスト変更の通知後に自動更新される場合は不要）
             UpdateRatingStars();
 
             // 非同期操作を待機
@@ -318,18 +325,23 @@ namespace Illustra.Views
         {
             if (args.FilePath == _selectedFile?.FullPath && _selectedFile != null)
             {
+                // 選択ファイルのレーティングを更新
                 _selectedFile.Rating = args.Rating;
+
+                // コンテキストの更新はサービス側で行われるため不要
+
+                // UI表示を更新
                 UpdateRatingStars();
             }
         }
 
         private void CopyOriginalText_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties?.StableDiffusionResult != null)
+            if (_appContext.CurrentProperties?.StableDiffusionResult != null)
             {
                 try
                 {
-                    Clipboard.SetText(ImageProperties.UserComment);
+                    Clipboard.SetText(_appContext.CurrentProperties.UserComment);
                     MessageBox.Show("コメントをクリップボードにコピーしました。", "コピー完了",
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -396,7 +408,7 @@ namespace Illustra.Views
 
         private async void AddPrompt_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties != null && CanEditExif)
+            if (_appContext.CurrentProperties != null && CanEditExif)
             {
                 var dialog = new EditPromptDialog(string.Empty)
                 {
@@ -407,10 +419,12 @@ namespace Illustra.Views
                 {
                     try
                     {
-                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+                        await SaveUserComment(_appContext.CurrentProperties.FilePath, dialog.PromptText);
 
-                        // 保存成功後にプロパティを再読み込み
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
+                        // プロパティ更新サービスに再読み込みをリクエスト
+                        // filePath を送信してプロパティの再読み込みを要求
+                        _eventAggregator?.GetEvent<PubSubEvent<string>>()?.Publish(
+                            _appContext.CurrentProperties.FilePath);
                     }
                     catch
                     {
@@ -422,9 +436,9 @@ namespace Illustra.Views
 
         private async void EditOriginalPrompt_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties != null && CanEditExif)
+            if (_appContext.CurrentProperties != null && CanEditExif)
             {
-                var dialog = new EditPromptDialog(ImageProperties.UserComment)
+                var dialog = new EditPromptDialog(_appContext.CurrentProperties.UserComment)
                 {
                     Owner = Window.GetWindow(this)
                 };
@@ -433,41 +447,17 @@ namespace Illustra.Views
                 {
                     try
                     {
-                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+                        await SaveUserComment(_appContext.CurrentProperties.FilePath, dialog.PromptText);
 
-                        // 保存成功後にプロパティを再読み込み
-                        // これにより LoadFilePropertiesAsync が呼ばれ、EXIFデータが再読み込みされる
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
+                        // プロパティ更新サービスに再読み込みをリクエスト
+                        // filePath を送信してプロパティの再読み込みを要求
+                        _eventAggregator?.GetEvent<PubSubEvent<string>>()?.Publish(
+                            _appContext.CurrentProperties.FilePath);
                     }
                     catch
                     {
                         // エラーは SaveUserComment 内で処理済み
                     }
-                }
-            }
-        }
-
-        private async Task UpdatePropertiesDisplayAsync()
-        {
-            if (ImageProperties == null || _selectedFile == null)
-                return;
-
-            // ファイルが実際に存在する場合のみレーティングを表示
-            if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
-            {
-                try
-                {
-                    // RatingをImagePropertiesに反映
-                    if (ImageProperties != null)
-                    {
-                        ImageProperties.Rating = _selectedFile.Rating;
-                    }
-                    UpdateRatingStars();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"ファイルノードの読み込み中にエラーが発生しました：{ex.Message}", "エラー",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -507,8 +497,9 @@ namespace Illustra.Views
             // フォルダが変更された場合、タグフィルタをクリア
             _currentTagFilters = new List<string>();
             _selectedFile = null;
-            ImageProperties = new ImagePropertiesModel();
-            DataContext = ImageProperties;
+
+            // コンテキストの更新はサービスが行う
+
             UpdateAllTagsHighlight();
             Visibility = Visibility.Collapsed;
         }

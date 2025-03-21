@@ -186,6 +186,9 @@ namespace Illustra.Views
                 Activate();
                 Focus();
                 MainImage.Focus();
+
+                // プロパティパネルを初期化
+                InitializePropertyPanel();
             }));
 
             // ウィンドウの状態設定
@@ -952,6 +955,28 @@ namespace Illustra.Views
             if (args.FilePath == _currentFilePath && Properties != null)
             {
                 Properties.Rating = args.Rating;
+            }
+        }
+
+        private void InitializePropertyPanel()
+        {
+            try
+            {
+                // PropertyPanelControl に直接 ImageProperties を設定
+                PropertyPanelControl.ImageProperties = Properties;
+
+                // Properties が変更されたときに PropertyPanelControl も更新
+                PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(Properties))
+                    {
+                        PropertyPanelControl.ImageProperties = Properties;
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("PropertyPanelControl の初期化中にエラーが発生しました", ex);
             }
         }
     }
