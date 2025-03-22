@@ -89,6 +89,9 @@ namespace Illustra.Views
 
                 // DataContextも更新（これが重要）
                 DataContext = ImageProperties;
+                OnPropertyChanged(nameof(ImageProperties));
+                OnPropertyChanged(nameof(ImageProperties.HasStableDiffusionData));
+                UpdateStableDiffusionVisibility();
             }
         }
 

@@ -12,6 +12,7 @@ using Illustra.Helpers;
 using StableDiffusionTools;
 using System.Diagnostics;
 using System.Text;
+using DryIoc.ImTools;
 
 namespace Illustra.Models
 {
