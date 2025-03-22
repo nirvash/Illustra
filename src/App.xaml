@@ -18,7 +18,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BitmapImage x:Key="AppIcon"
-                         UriSource="pack://application:,,,/assets/illustra.ico"/>
+                         UriSource="pack://application:,,,/assets/illustra2.ico"/>
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>assets/illustra.ico</ApplicationIcon>
+    <ApplicationIcon>assets/illustra2.ico</ApplicationIcon>
     <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>    <!-- 警告をエラーとして扱わない設定 -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>    <!-- ビルドログの詳細設定 -->
@@ -56,7 +56,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
-    <Resource Include="assets/illustra.ico" />
+    <Resource Include="assets/illustra2.ico" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Strings.xaml" />
