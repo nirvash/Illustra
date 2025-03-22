@@ -280,13 +280,32 @@ namespace Illustra.Models
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // 展開状態に関わらず、展開可能状態を更新
-                CanExpand = true;
+                // 追加されるフォルダがアクセス可能で非表示でないことを確認
+                if (!_treeModel?.IsAccessibleFolder(path) ?? false)
+                {
+                    return;
+                }
 
-                // 展開されている場合は子フォルダを再読み込み
+                // サブフォルダの有無を確認して展開可能状態を更新
+                CanExpand = _treeModel?.HasSubDirectories(FullPath) ?? false;
+
+                // 展開されている場合は新しいフォルダを追加
                 if (IsExpanded)
                 {
-                    _treeModel?.LoadSubFolders(this);
+                    var newItem = _treeModel?.CreateFolderItem(path);
+                    if (newItem != null)
+                    {
+                        // 既存のChildrenコレクションに追加
+                        Children.Add(newItem);
+
+                        // ソート設定があれば適用
+                        var sortSettings = _treeModel?.GetSortSettings(FullPath);
+                        if (sortSettings != null)
+                        {
+                            var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
+                            Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                        }
+                    }
                 }
                 // 展開されていない場合はダミー要素を追加
                 else if (Children.Count == 0)
@@ -318,8 +337,7 @@ namespace Illustra.Models
             // 展開状態に関わらず、サブフォルダが残っているか確認して展開可能状態を更新
             try
             {
-                var subDirs = Directory.GetDirectories(FullPath);
-                bool hasSubDirs = subDirs.Length > 0;
+                bool hasSubDirs = _treeModel?.HasSubDirectories(FullPath) ?? false;
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -336,8 +354,21 @@ namespace Illustra.Models
                         }
                         else
                         {
-                            // 子フォルダが残っている場合は再読み込み
-                            _treeModel?.LoadSubFolders(this);
+                            // 削除されたアイテムを見つけて削除
+                            var itemToRemove = Children.FirstOrDefault(child =>
+                                child.FullPath.Equals(path, StringComparison.OrdinalIgnoreCase));
+                            if (itemToRemove != null)
+                            {
+                                Children.Remove(itemToRemove);
+                            }
+
+                            // ソート設定があれば再適用
+                            var sortSettings = _treeModel?.GetSortSettings(FullPath);
+                            if (sortSettings != null)
+                            {
+                                var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
+                                Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                            }
                         }
                     }
                     // 展開されていない場合はダミー要素を管理
@@ -416,6 +447,14 @@ namespace Illustra.Models
                 if (renamedChild != null)
                 {
                     renamedChild.UpdatePath(newPath);
+
+                    // ソート設定があれば再適用
+                    var sortSettings = _treeModel?.GetSortSettings(FullPath);
+                    if (sortSettings != null)
+                    {
+                        var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
+                        Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                    }
                 }
                 // 展開されていない場合でCanExpandがtrueの時はダミー要素の確認
                 else if (!IsExpanded && CanExpand && Children.Count == 0)

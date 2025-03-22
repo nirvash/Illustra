@@ -365,29 +365,7 @@ namespace Illustra.Models
 
                 foreach (var dir in directories)
                 {
-                    bool hasSubDirectories = false;
-                    try
-                    {
-                        hasSubDirectories = Directory.GetDirectories(dir)
-                            .Where(subDir =>
-                            {
-                                try
-                                {
-                                    string subDirName = Path.GetFileName(subDir);
-                                    bool isHidden = (File.GetAttributes(subDir) & FileAttributes.Hidden) == FileAttributes.Hidden;
-                                    return !isHidden && !subDirName.StartsWith(".");
-                                }
-                                catch
-                                {
-                                    return false;
-                                }
-                            })
-                            .Any();
-                    }
-                    catch
-                    {
-                        // アクセス権がない場合など
-                    }
+                    bool hasSubDirectories = HasSubDirectories(dir);
 
                     var item = new FileSystemItemModel(dir, true, false, this)
                     {
@@ -435,29 +413,7 @@ namespace Illustra.Models
 
                 foreach (var drive in drives)
                 {
-                    bool hasSubDirectories = false;
-                    try
-                    {
-                        hasSubDirectories = Directory.GetDirectories(drive.RootDirectory.FullName)
-                            .Where(dir =>
-                            {
-                                try
-                                {
-                                    string dirName = Path.GetFileName(dir);
-                                    bool isHidden = (File.GetAttributes(dir) & FileAttributes.Hidden) == FileAttributes.Hidden;
-                                    return !isHidden && !dirName.StartsWith(".");
-                                }
-                                catch
-                                {
-                                    return false;
-                                }
-                            })
-                            .Any();
-                    }
-                    catch
-                    {
-                        // アクセス権がない場合など
-                    }
+                    bool hasSubDirectories = HasSubDirectories(drive.RootDirectory.FullName);
 
                     var driveItem = new FileSystemItemModel(drive.RootDirectory.FullName, true, false, this)
                     {
@@ -587,6 +543,87 @@ namespace Illustra.Models
             foreach (var item in RootItems)
             {
                 ClearRecursive(item);
+            }
+        }
+        /// <summary>
+        /// 指定されたパスのフォルダに対するFileSystemItemModelを作成する
+        /// </summary>
+        /// <param name="path">フォルダのパス</param>
+        /// <returns>作成されたモデル、またはnull（アクセス不可の場合）</returns>
+        public FileSystemItemModel? CreateFolderItem(string path)
+        {
+            try
+            {
+                // アクセス可能で非表示でないことを確認
+                if (!IsAccessibleFolder(path)) return null;
+
+                // サブフォルダの有無を確認
+                bool hasSubDirectories = HasSubDirectories(path);
+
+                // 新しいフォルダアイテムを作成
+                var item = new FileSystemItemModel(path, true, false, this)
+                {
+                    CanExpand = hasSubDirectories
+                };
+
+                // 展開可能な場合はダミー要素を追加
+                if (hasSubDirectories)
+                {
+                    item.Children.Add(new FileSystemItemModel("", true, true));
+                }
+
+                return item;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[フォルダツリー] フォルダアイテム作成エラー: {ex.Message}");
+                return null;
+            }
+        }
+        /// <summary>
+        /// 指定したパスのフォルダにサブフォルダが存在するか確認する
+        /// </summary>
+        /// <param name="path">確認するフォルダのパス</param>
+        /// <returns>サブフォルダが存在する場合はtrue</returns>
+        public bool HasSubDirectories(string path)
+        {
+            try
+            {
+                return Directory.GetDirectories(path)
+                    .Where(dir =>
+                    {
+                        try
+                        {
+                            string dirName = Path.GetFileName(dir);
+                            bool isHidden = (File.GetAttributes(dir) & FileAttributes.Hidden) == FileAttributes.Hidden;
+                            return !isHidden && !dirName.StartsWith(".");
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    })
+                    .Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 指定したパスのフォルダにアクセス可能かつ非表示でないか確認する
+        /// </summary>
+        public bool IsAccessibleFolder(string path)
+        {
+            try
+            {
+                return (File.GetAttributes(path) & FileAttributes.Hidden) != FileAttributes.Hidden
+                    && !Path.GetFileName(path).StartsWith(".");
+            }
+            catch
+            {
+                return false;
             }
         }
     }
