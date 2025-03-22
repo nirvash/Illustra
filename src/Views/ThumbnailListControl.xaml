@@ -116,7 +116,7 @@
                                                  Height="18"
                                                  Width="18"
                                                  DisplayMode="Multiple"
-                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                 CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
                     <Button Tag="2"
                             Click="RatingFilter_Click"
@@ -128,7 +128,8 @@
                         <local:RatingStarControl RatingValue="2"
                                                  Height="18"
                                                  Width="18"
-                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                 DisplayMode="Multiple"
+                                                 CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
                     <Button Tag="3"
                             Click="RatingFilter_Click"
@@ -140,7 +141,8 @@
                         <local:RatingStarControl RatingValue="3"
                                                  Height="18"
                                                  Width="18"
-                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                 DisplayMode="Multiple"
+                                                 CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
                     <Button Tag="4"
                             Click="RatingFilter_Click"
@@ -152,7 +154,8 @@
                         <local:RatingStarControl RatingValue="4"
                                                  Height="18"
                                                  Width="18"
-                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                 DisplayMode="Multiple"
+                                                 CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
                     <Button Tag="5"
                             Click="RatingFilter_Click"
@@ -164,7 +167,8 @@
                         <local:RatingStarControl RatingValue="5"
                                                  Height="18"
                                                  Width="18"
-                                                 TextColor="{x:Static helpers:RatingHelper.TextColor}"/>
+                                                 DisplayMode="Multiple"
+                                                 CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
                 </StackPanel>
                 <Button Content="{DynamicResource String_Thumbnail_ClearFilter}"
@@ -172,7 +176,7 @@
                         Margin="0,0,5,0"
                         x:Name="ClearFilterButton"
                         Focusable="False"
-                        IsEnabled="False"/>
+                        IsEnabled="{Binding IsRatingFilterActive}"/>
                 <!-- ソートボタン -->
                 <Button x:Name="SortToggleButton"
                         Click="SortToggle_Click"

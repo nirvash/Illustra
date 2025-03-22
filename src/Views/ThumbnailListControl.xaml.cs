@@ -228,9 +228,6 @@ namespace Illustra.Views
             _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
             _thumbnailLoadTimer.Start();
 
-            // フィルターボタンの初期状態を設定
-            UpdateFilterButtonStates(0);
-
             // ソート設定を復元
             _isSortByDate = _appSettings.SortByDate;
             _isSortAscending = _appSettings.SortAscending;
@@ -340,8 +337,7 @@ namespace Illustra.Views
                 if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
                 {
                     // フィルタをクリア
-                    _currentRatingFilter = 0;
-                    UpdateFilterButtonStates(0);
+                    _viewModel.CurrentRatingFilter = 0;
                     _currentTagFilters.Clear();
                     _isTagFilterEnabled = false;
                     _isPromptFilterEnabled = false;
@@ -360,12 +356,11 @@ namespace Illustra.Views
                 else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
                 {
                     // レーティングフィルタの変更
-                    _currentRatingFilter = args.RatingFilter;
-                    UpdateFilterButtonStates(args.RatingFilter);
+                    _viewModel.CurrentRatingFilter = args.RatingFilter;
                 }
 
                 // 各フィルタを適用
-                await _viewModel.ApplyAllFilters(_currentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
 
                 // フィルタリング後の選択位置を更新
                 _thumbnailLoader.UpdateSelectionAfterFilter();
@@ -384,8 +379,7 @@ namespace Illustra.Views
                 return;
 
             // フォルダが変わったらすべてのフィルタを自動的に解除
-            _currentRatingFilter = 0;
-            UpdateFilterButtonStates(0);
+            _viewModel.CurrentRatingFilter = 0;
             _currentTagFilters.Clear();
             _isTagFilterEnabled = false;
             _viewModel.ClearAllFilters();
@@ -2219,7 +2213,6 @@ namespace Illustra.Views
 
             return count;
         }
-        private int _currentRatingFilter = 0;
 
         private async void RatingFilter_Click(object sender, RoutedEventArgs e)
         {
@@ -2228,7 +2221,7 @@ namespace Illustra.Views
                 return;
 
             // 同じレーティングが選択された場合はフィルターを解除
-            if (rating == _currentRatingFilter && rating != 0)
+            if (rating == _viewModel.CurrentRatingFilter && rating != 0)
             {
                 rating = 0;
             }
@@ -2239,25 +2232,6 @@ namespace Illustra.Views
             await ApplyFilterling(0);
         }
 
-        private void UpdateFilterButtonStates(int selectedRating)
-        {
-            // すべてのフィルターボタンをリセット
-            foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
-            {
-                if (int.TryParse(button.Tag?.ToString(), out int position))
-                {
-                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(button);
-                    if (starControl != null)
-                    {
-                        starControl.CurrentRating = position;
-                    }
-                }
-            }
-
-            // フィルター解除ボタンの状態を更新
-            ClearFilterButton.IsEnabled = selectedRating > 0;
-        }
-
         private async Task ApplyFilterling(int rating)
         {
             try
@@ -2266,10 +2240,7 @@ namespace Illustra.Views
                 var focusedItem = _viewModel.SelectedItems.LastOrDefault();
                 var focusedPath = focusedItem?.FullPath;
 
-                _currentRatingFilter = rating;
-                UpdateFilterButtonStates(rating);
-
-                // すべてのフィルタを適用
+                // フィルタを適用（ViewModelが状態を管理）
                 await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
 
                 // フィルター変更イベントを発行して他のコントロールに通知
@@ -2387,9 +2358,9 @@ namespace Illustra.Views
             {
                 fileNode.Rating = args.Rating;
                 // フィルタが設定されている場合のみフィルタを再適用
-                if (_currentRatingFilter > 0)
+                if (_viewModel.CurrentRatingFilter > 0)
                 {
-                    await ApplyFilterling(_currentRatingFilter);
+                    await ApplyFilterling(_viewModel.CurrentRatingFilter);
                     return;
                 }
 
