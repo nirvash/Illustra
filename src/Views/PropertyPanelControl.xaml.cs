@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.IO;
-using System.Windows.Media;
 using Illustra.Models;
 using Illustra.Events;
 using Illustra.Helpers;
@@ -14,15 +13,14 @@ using System.Runtime.CompilerServices;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System.Text;
 using System.Reflection;
+using Prism.Events;
 
 namespace Illustra.Views
 {
     public partial class PropertyPanelControl : UserControl, INotifyPropertyChanged
     {
-        private IEventAggregator? _eventAggregator;
-        private SelectedFileModel? _selectedFile;
-
-        private DatabaseManager _db = null;
+        private IEventAggregator _eventAggregator;
+        private IllustraAppContext _appContext;
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
         private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
@@ -38,12 +36,13 @@ namespace Illustra.Views
         {
             get
             {
-                if (string.IsNullOrEmpty(ImageProperties?.FilePath)) return false;
-                string ext = Path.GetExtension(ImageProperties.FilePath).ToLower();
+                if (string.IsNullOrEmpty(_appContext.CurrentProperties?.FilePath)) return false;
+                string ext = Path.GetExtension(_appContext.CurrentProperties.FilePath).ToLower();
                 return EXIF_SUPPORTED_FORMATS.Contains(ext);
             }
         }
 
+        // DependencyPropertyを再導入し、アプリコンテキストと同期させる
         public static readonly DependencyProperty ImagePropertiesProperty =
             DependencyProperty.Register(
                 nameof(ImageProperties),
@@ -54,11 +53,7 @@ namespace Illustra.Views
         public ImagePropertiesModel? ImageProperties
         {
             get => (ImagePropertiesModel?)GetValue(ImagePropertiesProperty);
-            set
-            {
-                SetValue(ImagePropertiesProperty, value);
-                OnPropertyChanged(nameof(CanEditExif));
-            }
+            set => SetValue(ImagePropertiesProperty, value);
         }
 
         private static void OnImagePropertiesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -77,10 +72,45 @@ namespace Illustra.Views
                     newModel.PropertyChanged += control.OnImagePropertiesPropertyChanged;
                 }
 
-                control.DataContext = e.NewValue;
-                // control.UpdatePropertiesDisplayAsync(); // ファイル切り替え時に選択前の _selectedFile を使用してしまうので、ここでは呼ばない
                 control.OnPropertyChanged(nameof(CanEditExif));
             }
+        }
+
+        // アプリコンテキストのプロパティ変更を監視し、DependencyPropertyとシンクロさせる
+        private void OnAppContextPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(IllustraAppContext.CurrentProperties))
+            {
+                // CurrentPropertiesが変更されたらDependencyPropertyも更新
+                ImageProperties = _appContext.CurrentProperties;
+
+                // DataContextも更新（これが重要）
+                DataContext = ImageProperties;
+            }
+        }
+
+        public PropertyPanelControl()
+        {
+            // InitializeComponentはXAMLから自動生成されるメソッドで、
+            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
+            InitializeComponent();
+
+            // 依存関係の解決
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+
+            // AppContextからプロパティを初期化（DependencyPropertyにセット）
+            ImageProperties = _appContext.CurrentProperties;
+
+            // DataContextは自分自身ではなくImagePropertiesに設定（XAML側でプロパティを直接バインドできるように）
+            DataContext = ImageProperties;
+
+            // AppContextのCurrentPropertiesの変更を監視
+            _appContext.PropertyChanged += OnAppContextPropertyChanged;
+
+            Loaded += PropertyPanelControl_Loaded;
+            Unloaded += PropertyPanelControl_Unloaded;
+            PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
         }
 
         private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -91,28 +121,11 @@ namespace Illustra.Views
             }
         }
 
-        public PropertyPanelControl()
-        {
-            // InitializeComponentはXAMLから自動生成されるメソッドで、
-            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
-            InitializeComponent();
-            ImageProperties = new ImagePropertiesModel();
-            DataContext = ImageProperties;
-
-            _db = ContainerLocator.Container.Resolve<DatabaseManager>();
-
-            Loaded += PropertyPanelControl_Loaded;
-            Unloaded += PropertyPanelControl_Unloaded;
-            PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
-            IsVisibleChanged += PropertyPanelControl_IsVisibleChanged;
-        }
-
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
         {
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread);
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderChanged);
-            _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged);
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
         }
@@ -123,7 +136,6 @@ namespace Illustra.Views
             {
                 _eventAggregator.GetEvent<FileSelectedEvent>().Unsubscribe(OnFileSelected);
                 _eventAggregator.GetEvent<FolderSelectedEvent>().Unsubscribe(OnFolderChanged);
-                _eventAggregator.GetEvent<RatingChangedEvent>().Unsubscribe(OnRatingChanged);
                 _eventAggregator.GetEvent<FilterChangedEvent>().Unsubscribe(OnFilterChanged);
             }
         }
@@ -143,195 +155,71 @@ namespace Illustra.Views
                 || !File.Exists(selectedFile.FullPath))
                 return;
 
-            // 選択されたファイルが現在の選択と異なる場合、または選択がnullの場合
-            if (_selectedFile == null || !_selectedFile.FullPath.Equals(selectedFile.FullPath))
+            // 選択されたファイルが現在の共有コンテキストと異なる場合、または選択がnullの場合
+            if (string.IsNullOrEmpty(_appContext.CurrentProperties?.FilePath) ||
+                !_appContext.CurrentProperties.FilePath.Equals(selectedFile.FullPath))
             {
-                _selectedFile = selectedFile;
-                await LoadFilePropertiesAsync(selectedFile.FullPath, selectedFile.Rating);
-
-                void syncRating()
-                {
-                    ImageProperties.Rating = _selectedFile.Rating;
-                    UpdateRatingStars();
-                }
-
-                if (ImageProperties != null)
-                {
-                    ImageProperties.Rating = selectedFile.Rating;
-                    _selectedFile.PropertyChanged += (s, e) =>
-                    {
-                        if (e.PropertyName == nameof(SelectedFileModel.Rating))
-                        {
-                            syncRating();
-                        }
-                    };
-                }
-                syncRating();
-
+                // 共有コンテキストを更新するサービスが行うため、自分で読み込む必要はない
                 Visibility = Visibility.Visible;
             }
             else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
             {
                 // ファイルが選択されていない場合はプロパティパネルを非表示にする
-                _selectedFile.FullPath = string.Empty;
-                ImageProperties = new ImagePropertiesModel();
-                DataContext = ImageProperties;
                 Visibility = Visibility.Collapsed;
             }
         }
 
-        private async Task LoadFilePropertiesAsync(string filePath, int rating)
+        private RelayCommand<string> _ratingCommand;
+        public ICommand RatingCommand => _ratingCommand ??= new RelayCommand<string>(ExecuteRatingCommand);
+
+        private async void ExecuteRatingCommand(string parameter)
         {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                newProperties.Rating = rating;
-                ImageProperties = newProperties;
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-        }
-
-        // FindVisualChild を利用するため非表示状態では描画更新されない
-        private void UpdateRatingStars()
-        {
-            // PropertiesGridはXAMLで定義されたコンポーネントで、
-            // リンターエラーが表示されることがありますが、ビルド時には問題ありません
-            if (_selectedFile != null && PropertiesGrid != null)
-            {
-                var buttonList = FindButtonsInVisualTree(PropertiesGrid);
-
-                foreach (var button in buttonList)
-                {
-                    if (button.Tag != null && int.TryParse(button.Tag.ToString(), out int rating))
-                    {
-                        var starControl = FindVisualChild<RatingStarControl>(button);
-                        if (starControl != null)
-                        {
-                            // レーティングに応じて塗りつぶし状態を設定
-                            starControl.IsFilled = rating <= _selectedFile.Rating;
-
-                            // レーティング値に応じた色を設定（空白時は透明）
-                            if (rating <= _selectedFile.Rating)
-                            {
-                                starControl.StarFill = RatingHelper.GetRatingColor(rating);
-                                starControl.TextColor = RatingHelper.GetTextColor(rating);
-                            }
-                            else
-                            {
-                                starControl.StarFill = Brushes.Transparent;
-                                starControl.TextColor = Brushes.DarkGray;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Visual Tree内のすべてのButtonを探す再帰関数
-        private List<Button> FindButtonsInVisualTree(DependencyObject parent)
-        {
-            var result = new List<Button>();
-
-            // 子要素の数を取得
-            int childCount = VisualTreeHelper.GetChildrenCount(parent);
-
-            for (int i = 0; i < childCount; i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
-
-                // 子がButtonならリストに追加
-                if (child is Button button)
-                {
-                    result.Add(button);
-                }
-
-                // 再帰的に子の子も検索
-                result.AddRange(FindButtonsInVisualTree(child));
-            }
-
-            return result;
-        }
-
-        // ヘルパーメソッド: Visual Tree内の特定の型の子要素を検索
-        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-        {
-            if (parent == null) return null;
-
-            // Check if we're on the UI thread
-            if (!parent.Dispatcher.CheckAccess())
-            {
-                // If not, invoke the method on the UI thread and wait for the result
-                return parent.Dispatcher.Invoke(() => FindVisualChild<T>(parent));
-            }
-
-            // Now safely on UI thread
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
-
-                if (child is T t)
-                {
-                    return t;
-                }
-                var result = FindVisualChild<T>(child);
-                if (result != null)
-                {
-                    return result;
-                }
-            }
-            return null;
-        }
-
-        private async void RatingStar_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedFile == null || !(sender is Button button) ||
-                !int.TryParse(button.Tag?.ToString(), out int rating))
+            if (ImageProperties == null || !int.TryParse(parameter, out int rating))
                 return;
 
-            if (_selectedFile.Rating == rating)
-            {
-                // 同じ星をクリックした場合はレーティングをクリア
-                _selectedFile.Rating = 0;
-            }
-            else
-            {
-                _selectedFile.Rating = rating;
-            }
-
-            // レーティング変更イベントを発行. レーティングの永続化は受信先で行う
+            // レーティング変更イベントを発行
+            // レーティングの永続化とコンテキスト更新はサービス側で行う
             _eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
-                new RatingChangedEventArgs { FilePath = _selectedFile.FullPath, Rating = _selectedFile.Rating });
+                new RatingChangedEventArgs
+                {
+                    FilePath = ImageProperties.FilePath,
+                    Rating = rating == ImageProperties.Rating ? 0 : rating // 同じ星をクリックした場合はクリア
+                });
 
-            // UIを更新
-            UpdateRatingStars();
-
-            // 非同期操作を待機
             await Task.CompletedTask;
         }
 
-        // 外部でレーティングが変更された場合の処理
-        private async void OnRatingChanged(RatingChangedEventArgs args)
+        private void CopyPromptContent_Click(object sender, RoutedEventArgs e)
         {
-            if (args.FilePath == _selectedFile?.FullPath && _selectedFile != null)
+            if (_appContext.CurrentProperties?.StableDiffusionResult != null)
             {
-                _selectedFile.Rating = args.Rating;
-                UpdateRatingStars();
+                try
+                {
+                    var result = _appContext.CurrentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトとLoraのみを追加
+                    sb.AppendLine(result.Prompt);
+
+                    Clipboard.SetText(sb.ToString().Trim());
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private void CopyOriginalText_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties?.StableDiffusionResult != null)
+            if (_appContext.CurrentProperties?.StableDiffusionResult != null)
             {
                 try
                 {
-                    Clipboard.SetText(ImageProperties.UserComment);
-                    MessageBox.Show("コメントをクリップボードにコピーしました。", "コピー完了",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    Clipboard.SetText(_appContext.CurrentProperties.UserComment);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
                 }
                 catch (Exception ex)
                 {
@@ -396,7 +284,7 @@ namespace Illustra.Views
 
         private async void AddPrompt_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties != null && CanEditExif)
+            if (_appContext.CurrentProperties != null && CanEditExif)
             {
                 var dialog = new EditPromptDialog(string.Empty)
                 {
@@ -407,10 +295,12 @@ namespace Illustra.Views
                 {
                     try
                     {
-                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+                        await SaveUserComment(_appContext.CurrentProperties.FilePath, dialog.PromptText);
 
-                        // 保存成功後にプロパティを再読み込み
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
+                        // プロパティ更新サービスに再読み込みをリクエスト
+                        // filePath を送信してプロパティの再読み込みを要求
+                        _eventAggregator?.GetEvent<PubSubEvent<string>>()?.Publish(
+                            _appContext.CurrentProperties.FilePath);
                     }
                     catch
                     {
@@ -422,9 +312,9 @@ namespace Illustra.Views
 
         private async void EditOriginalPrompt_Click(object sender, RoutedEventArgs e)
         {
-            if (ImageProperties != null && CanEditExif)
+            if (_appContext.CurrentProperties != null && CanEditExif)
             {
-                var dialog = new EditPromptDialog(ImageProperties.UserComment)
+                var dialog = new EditPromptDialog(_appContext.CurrentProperties.UserComment)
                 {
                     Owner = Window.GetWindow(this)
                 };
@@ -433,41 +323,17 @@ namespace Illustra.Views
                 {
                     try
                     {
-                        await SaveUserComment(ImageProperties.FilePath, dialog.PromptText);
+                        await SaveUserComment(_appContext.CurrentProperties.FilePath, dialog.PromptText);
 
-                        // 保存成功後にプロパティを再読み込み
-                        // これにより LoadFilePropertiesAsync が呼ばれ、EXIFデータが再読み込みされる
-                        await LoadFilePropertiesAsync(ImageProperties.FilePath, ImageProperties.Rating);
+                        // プロパティ更新サービスに再読み込みをリクエスト
+                        // filePath を送信してプロパティの再読み込みを要求
+                        _eventAggregator?.GetEvent<PubSubEvent<string>>()?.Publish(
+                            _appContext.CurrentProperties.FilePath);
                     }
                     catch
                     {
                         // エラーは SaveUserComment 内で処理済み
                     }
-                }
-            }
-        }
-
-        private async Task UpdatePropertiesDisplayAsync()
-        {
-            if (ImageProperties == null || _selectedFile == null)
-                return;
-
-            // ファイルが実際に存在する場合のみレーティングを表示
-            if (!string.IsNullOrEmpty(ImageProperties.FilePath) && File.Exists(ImageProperties.FilePath))
-            {
-                try
-                {
-                    // RatingをImagePropertiesに反映
-                    if (ImageProperties != null)
-                    {
-                        ImageProperties.Rating = _selectedFile.Rating;
-                    }
-                    UpdateRatingStars();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"ファイルノードの読み込み中にエラーが発生しました：{ex.Message}", "エラー",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -492,23 +358,14 @@ namespace Illustra.Views
             }
         }
 
-        private async void PropertyPanelControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-            if (e.NewValue is bool isVisible && isVisible)
-            {
-                // 表示完了するまで待つ
-                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Render);
-                UpdateRatingStars();
-            }
-        }
 
         private void OnFolderChanged(FolderSelectedEventArgs args)
         {
             // フォルダが変更された場合、タグフィルタをクリア
             _currentTagFilters = new List<string>();
-            _selectedFile = null;
-            ImageProperties = new ImagePropertiesModel();
-            DataContext = ImageProperties;
+
+            // コンテキストの更新はサービスが行う
+
             UpdateAllTagsHighlight();
             Visibility = Visibility.Collapsed;
         }

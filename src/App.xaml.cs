@@ -29,6 +29,10 @@ namespace Illustra
         private readonly DatabaseManager _db = new();
         public bool EnableCyclicNavigation { get; set; }
 
+        // アプリケーション全体で共有するサービスへの参照を保持
+        private IllustraAppContext _appContext;
+        private IImagePropertiesService _propertiesService;
+
         public static App Instance => (App)Current;
 
         protected override Window CreateShell()
@@ -38,6 +42,13 @@ namespace Illustra
 
             // イベントアグリゲーターを取得
             var eventAggregator = Container.Resolve<IEventAggregator>();
+
+            // IllustraAppContextを初期化（参照を保持）
+            _appContext = Container.Resolve<IllustraAppContext>();
+
+            // ImagePropertiesServiceを初期化（参照を保持）
+            _propertiesService = Container.Resolve<IImagePropertiesService>();
+            _propertiesService.Initialize();
 
             // 言語変更イベントを購読
             eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(() =>
@@ -58,6 +69,12 @@ namespace Illustra
             // サービスの登録
             containerRegistry.RegisterSingleton<LanguageService>();
             containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
+            containerRegistry.RegisterSingleton<DatabaseManager>();
+
+            // IllustraAppContextとImagePropertiesServiceの登録
+            // アプリケーションライフサイクルと同じライフタイムを保証するためシングルトンとして登録
+            containerRegistry.RegisterSingleton<IllustraAppContext>();
+            containerRegistry.RegisterSingleton<IImagePropertiesService, ImagePropertiesService>();
 
             // ビューの登録
             containerRegistry.Register<LanguageSettingsViewModel>();
@@ -65,19 +82,26 @@ namespace Illustra
 
             // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
             containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
-
-            containerRegistry.RegisterSingleton<DatabaseManager>();
         }
 
         protected override void OnInitialized()
         {
             base.OnInitialized();
 
-            // メインウィンドウが閉じられたらアプリ終了
-            Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            try
+            {
+                // メインウィンドウが閉じられたらアプリ終了
+                Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-            // キーボードショートカットハンドラーを初期化
-            KeyboardShortcutHandler.Instance.ReloadShortcuts();
+                // キーボードショートカットハンドラーを初期化
+                KeyboardShortcutHandler.Instance.ReloadShortcuts();
+
+                LogHelper.LogWithTimestamp("アプリケーション初期化完了", LogHelper.Categories.UI);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("アプリケーション初期化エラー", ex);
+            }
         }
 
         protected override void OnStartup(StartupEventArgs e)
@@ -188,6 +212,7 @@ namespace Illustra
             }
             Resources.MergedDictionaries.Add(newTheme);
         }
+
         public void UpdateResourceDictionaries()
         {
             var currentCulture = Thread.CurrentThread.CurrentUICulture;
@@ -296,7 +321,30 @@ namespace Illustra
 
         protected override void OnExit(ExitEventArgs e)
         {
-            base.OnExit(e);
+            try
+            {
+                LogHelper.LogWithTimestamp("アプリケーション終了処理を開始", LogHelper.Categories.UI);
+
+                // イメージプロパティサービスのリソース解放
+                if (_propertiesService is IDisposable disposableService)
+                {
+                    disposableService.Dispose();
+                    LogHelper.LogWithTimestamp("ImagePropertiesServiceのリソースを解放", LogHelper.Categories.UI);
+                }
+
+                // データベース接続のクローズなど、その他のリソース解放
+                // _db?.Dispose();
+
+                LogHelper.LogWithTimestamp("アプリケーション終了処理完了", LogHelper.Categories.UI);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("アプリケーション終了処理エラー", ex);
+            }
+            finally
+            {
+                base.OnExit(e);
+            }
         }
     }
 }

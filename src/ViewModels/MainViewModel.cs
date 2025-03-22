@@ -191,7 +191,7 @@ namespace Illustra.ViewModels
         public int CurrentRatingFilter
         {
             get => _currentRatingFilter;
-            private set
+            set
             {
                 if (_currentRatingFilter != value)
                 {

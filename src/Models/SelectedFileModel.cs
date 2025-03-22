@@ -1,14 +1,14 @@
 using System.ComponentModel;
+using Prism.Mvvm;
 
 namespace Illustra.Models
 {
     public class SelectedFileModel : BindableBase
     {
-        public SelectedFileModel(string sourceId, string fullPath, int rating)
+        public SelectedFileModel(string sourceId, string fullPath)
         {
             SourceId = sourceId;
             FullPath = fullPath;
-            Rating = rating;
         }
 
         public string SourceId { get; set; }
@@ -18,13 +18,6 @@ namespace Illustra.Models
         {
             get => _fullPath;
             set => SetProperty(ref _fullPath, value);
-        }
-
-        private int _rating;
-        public int Rating
-        {
-            get => _rating;
-            set => SetProperty(ref _rating, value);
         }
     }
 }

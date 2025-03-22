@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Diagnostics;
+using System.Text;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -14,6 +17,7 @@ using MahApps.Metro.Controls;
 using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
 using System.IO;
+using Illustra.ViewModels;
 
 namespace Illustra.Views
 {
@@ -41,8 +45,6 @@ namespace Illustra.Views
             }
         }
 
-        private readonly DispatcherTimer _titleBarTimer;
-        private const double TITLE_BAR_SHOW_AREA = 100; // マウスがここまで近づいたらタイトルバーを表示
 
         // 画像切り替え用
         private string _currentFilePath;
@@ -51,42 +53,11 @@ namespace Illustra.Views
         public new ThumbnailListControl? Parent { get; set; }
         private DatabaseManager? _dbManager;
 
-        private ImagePropertiesModel _properties = new();
-        public ImagePropertiesModel Properties
-        {
-            get => _properties;
-            private set
-            {
-                if (_properties != value)
-                {
-                    var oldProperties = _properties;
-                    _properties = value;
+        private IllustraAppContext? _appContext;
+        public ImagePropertiesModel Properties => _appContext?.CurrentProperties ?? new ImagePropertiesModel();
 
-                    // Ratingプロパティの変更を監視するためのハンドラーを設定
-                    if (oldProperties != null)
-                    {
-                        oldProperties.PropertyChanged -= Properties_PropertyChanged;
-                    }
-                    if (_properties != null)
-                    {
-                        _properties.PropertyChanged += Properties_PropertyChanged;
-                    }
-                    // 明示的に変更を通知
-                    OnPropertyChanged(nameof(Properties));
-                    OnPropertyChanged(nameof(Properties.Rating));
-                }
-            }
-        }
-
-        private void Properties_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(ImagePropertiesModel.Rating))
-            {
-                // Ratingが変更された時、改めてPropertiesの変更を通知
-                OnPropertyChanged(nameof(Properties));
-                System.Diagnostics.Debug.WriteLine($"Rating changed to: {Properties.Rating}");
-            }
-        }
+        // MainViewModelへの参照を追加
+        public MainViewModel? MainViewModel => _appContext?.MainViewModel;
 
         private BitmapSource? _imageSource = null;
         public BitmapSource? ImageSource
@@ -119,6 +90,15 @@ namespace Illustra.Views
             // キャッシュの初期化
             _imageCache = new WindowBasedImageCache();
             _dbManager = ContainerLocator.Container.Resolve<DatabaseManager>();
+            _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+
+            _appContext.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(_appContext.CurrentProperties))
+                {
+                    OnPropertyChanged(nameof(Properties));
+                }
+            };
 
             // スライドショータイマーの初期化
             _slideshowTimer = new DispatcherTimer();
@@ -129,13 +109,22 @@ namespace Illustra.Views
 
             // イベントの購読
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            eventAggregator?.GetEvent<RatingChangedEvent>()?.Subscribe(OnRatingChanged);
             eventAggregator?.GetEvent<FileSelectedEvent>()?.Subscribe(OnFileSelected,
                 ThreadOption.UIThread,
                 false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             this.StateChanged += MainWindow_StateChanged;
+
+            // 右クリックイベントを設定
+            MainImage.PreviewMouseRightButtonDown += (s, e) =>
+            {
+                if (_appContext?.CurrentProperties?.StableDiffusionResult != null)
+                {
+                    ShowPromptMenu();
+                    e.Handled = true;
+                }
+            };
 
             // マウスカーソル非表示用のタイマー
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -199,9 +188,67 @@ namespace Illustra.Views
             {
                 // イベントの購読解除
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-                eventAggregator?.GetEvent<RatingChangedEvent>()?.Unsubscribe(OnRatingChanged);
                 eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
             };
+        }
+
+        private void ShowPromptMenu()
+        {
+            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+
+            // コンテキストメニューを作成
+            var menu = new ContextMenu();
+
+            // プロンプトをコピー
+            var copyPromptItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
+            };
+            copyPromptItem.Click += (s, e) => CopyPrompt(false);
+            menu.Items.Add(copyPromptItem);
+
+            // プロンプト全体をコピー
+            var copyAllPromptItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+            };
+            copyAllPromptItem.Click += (s, e) => CopyPrompt(true);
+            menu.Items.Add(copyAllPromptItem);
+
+            // メニューを表示
+            menu.PlacementTarget = MainImage;
+            menu.IsOpen = true;
+        }
+
+        private void CopyPrompt(bool copyAll = false)
+        {
+            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+
+            try
+            {
+                string textToCopy;
+                if (copyAll)
+                {
+                    // UserCommentそのものをコピー
+                    textToCopy = _appContext.CurrentProperties.UserComment;
+                }
+                else
+                {
+                    var result = _appContext.CurrentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトのみを追加
+                    sb.AppendLine(result.Prompt);
+                    textToCopy = sb.ToString().Trim();
+                }
+
+                Clipboard.SetText(textToCopy);
+                ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"プロンプトのコピー中にエラーが発生しました: {ex.Message}");
+            }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -322,12 +369,9 @@ namespace Illustra.Views
                 rating = 0;
             }
 
-            // 現在の値と異なる場合のみ処理を実行
+            // 現在の値と異なる場合のみイベントを発行
             if (Properties.Rating != rating)
             {
-                // レーティングを更新
-                Properties.Rating = rating;
-
                 // レーティング変更イベントを発行. レーティングの永続化は受信先で行う
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<RatingChangedEvent>()?.Publish(
@@ -477,26 +521,27 @@ namespace Illustra.Views
         {
             try
             {
-                /*              キャッシュ動作の解析用ログ
-                                var viewModel = Parent?.GetViewModel();
-                                if (viewModel != null)
-                                {
-                                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-                                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
-                                    bool isFromCache = _imageCache.HasImage(filePath);
+                /*
+                // キャッシュ動作の解析用ログ
+                var viewModel = Parent?.GetViewModel();
+                if (viewModel != null)
+                {
+                    var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                    var currentIndex = files.FindIndex(f => f.FullPath == filePath);
+                    bool isFromCache = _imageCache.HasImage(filePath);
 
-                                    // キャッシュされているファイルのインデックスを取得
-                                    var cachedIndexes = _imageCache.CachedItems.Keys
-                                        .Select(p => files.FindIndex(f => f.FullPath == p))
-                                        .Where(i => i >= 0)
-                                        .OrderBy(i => i);
+                    // キャッシュされているファイルのインデックスを取得
+                    var cachedIndexes = _imageCache.CachedItems.Keys
+                        .Select(p => files.FindIndex(f => f.FullPath == p))
+                        .Where(i => i >= 0)
+                        .OrderBy(i => i);
 
-                                    // キャッシュの状態を詳細にログ出力
-                                    LogHelper.LogWithTimestamp(
-                                        $"Loading image [index: {currentIndex}] from {(isFromCache ? "cache" : "disk")}\n" +
-                                        $"Cached indexes: [{string.Join(", ", cachedIndexes)}]",
-                                        LogHelper.Categories.ImageCache);
-                                }
+                    // キャッシュの状態を詳細にログ出力
+                    LogHelper.LogWithTimestamp(
+                        $"Loading image [index: {currentIndex}] from {(isFromCache ? "cache" : "disk")}\n" +
+                        $"Cached indexes: [{string.Join(", ", cachedIndexes)}]",
+                        LogHelper.Categories.ImageCache);
+                }
                 */
                 ImageSource = _imageCache.GetImage(filePath);
             }
@@ -504,21 +549,6 @@ namespace Illustra.Views
             {
                 LogHelper.LogError($"画像の読み込み中にエラーが発生: {ex.Message}", ex);
                 throw;
-            }
-        }
-
-        private async Task LoadFilePropertiesAsync(string filePath, int rating)
-        {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                var newProperties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                newProperties.Rating = rating;
-                Properties = newProperties;
-            }
-            catch (Exception)
-            {
-                // Ignore
             }
         }
 
@@ -539,17 +569,10 @@ namespace Illustra.Views
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
                 LoadAndDisplayImage(filePath);
 
-                var viewModel = Parent?.GetViewModel();
+                // 3. MainViewModelを取得
+                var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
-                    // 3. プロパティパネルは FileSelectedEvent で更新される
-                    var fileNode = viewModel.Items.FirstOrDefault(f => f.FullPath.Equals(filePath)) as FileNodeModel;
-                    if (fileNode != null)
-                    {
-                        Properties.Rating = fileNode.Rating;
-                        Properties.FileName = fileNode.FileName;
-                    }
-
                     // 4. 前後の画像をキャッシュ
                     var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                     var currentIndex = files.FindIndex(f => f.FullPath == filePath);
@@ -586,7 +609,7 @@ namespace Illustra.Views
                 {
                     var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                     eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(
-                        new SelectedFileModel(CONTROL_ID, filePath, Properties.Rating));
+                        new SelectedFileModel(CONTROL_ID, filePath));
                 }
             }
             catch (Exception ex)
@@ -723,7 +746,6 @@ namespace Illustra.Views
                 _imageCache.Clear();
 
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-                eventAggregator?.GetEvent<RatingChangedEvent>()?.Unsubscribe(OnRatingChanged);
                 eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
             }
             catch (Exception ex)
@@ -857,8 +879,8 @@ namespace Illustra.Views
                 // 削除通知を表示
                 ShowNotification((string)FindResource("String_Status_FileDeleted"), 24);
 
-                // 親のViewModelから削除
-                var viewModel = Parent?.GetViewModel();
+                // ViewModelから削除
+                var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
                     var fileNode = viewModel.Items.FirstOrDefault(x => x.FullPath == _currentFilePath);
@@ -890,9 +912,8 @@ namespace Illustra.Views
         // 先頭の画像に移動
         private void NavigateToFirstImage()
         {
-            if (Parent == null) return;
-
-            var viewModel = Parent.GetViewModel();
+            // MainViewModelを使用
+            var viewModel = MainViewModel;
             if (viewModel != null)
             {
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
@@ -907,9 +928,8 @@ namespace Illustra.Views
         // 末尾の画像に移動
         private void NavigateToLastImage()
         {
-            if (Parent == null) return;
-
-            var viewModel = Parent.GetViewModel();
+            // MainViewModelを使用
+            var viewModel = MainViewModel;
             if (viewModel != null)
             {
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
@@ -945,14 +965,6 @@ namespace Illustra.Views
         private void OnFileSelected(SelectedFileModel args)
         {
             LoadImageFromPath(args.FullPath, notifyFileSelection: false);
-        }
-
-        private void OnRatingChanged(RatingChangedEventArgs args)
-        {
-            if (args.FilePath == _currentFilePath && Properties != null)
-            {
-                Properties.Rating = args.Rating;
-            }
         }
     }
 }

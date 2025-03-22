@@ -23,6 +23,7 @@ using System.Threading;
 using Illustra.Extensions;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data; // 追加: FileNodeModelExtensionsを使用するため
+using System.Text;
 
 namespace Illustra.Views
 {
@@ -31,6 +32,7 @@ namespace Illustra.Views
     {
         private IEventAggregator _eventAggregator = null!;
         private MainViewModel _viewModel;
+        private IllustraAppContext _appContext;
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
         private string? _currentFolderPath;
@@ -185,6 +187,13 @@ namespace Illustra.Views
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
 
+            // アプリケーション全体で共有するコンテキストにViewModelを設定
+            var appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+            if (appContext != null)
+            {
+                appContext.MainViewModel = _viewModel;
+            }
+
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
@@ -228,9 +237,6 @@ namespace Illustra.Views
             _thumbnailLoadTimer.Tick += async (s, e) => await ProcessThumbnailLoadQueue();
             _thumbnailLoadTimer.Start();
 
-            // フィルターボタンの初期状態を設定
-            UpdateFilterButtonStates(0);
-
             // ソート設定を復元
             _isSortByDate = _appSettings.SortByDate;
             _isSortAscending = _appSettings.SortAscending;
@@ -261,10 +267,93 @@ namespace Illustra.Views
             }
         }
 
+        private void CopyPrompt(bool copyAll = false)
+        {
+            if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
+
+            var currentProperties = _appContext.CurrentProperties;
+            if (currentProperties?.StableDiffusionResult == null) return;
+
+            try
+            {
+                string textToCopy;
+                if (copyAll)
+                {
+                    // UserCommentそのものをコピー
+                    textToCopy = currentProperties.UserComment;
+                }
+                else
+                {
+                    var result = currentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトのみを追加
+                    sb.AppendLine(result.Prompt);
+                    textToCopy = sb.ToString().Trim();
+                }
+
+                Clipboard.SetText(textToCopy);
+                ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"プロンプトのコピー中にエラーが発生しました: {ex.Message}");
+            }
+        }
+
+        private void ShowPromptMenu(FrameworkElement element)
+        {
+            if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
+
+            // 現在のプロパティを取得
+            var currentProperties = _appContext.CurrentProperties;
+            if (currentProperties?.StableDiffusionResult == null) return;
+
+            // コンテキストメニューを作成
+            var menu = new ContextMenu();
+
+            // プロンプトをコピー
+            // プロンプト情報がある場合のみメニューを表示
+            if (currentProperties.StableDiffusionResult != null)
+            {
+                var copyPromptItem = new MenuItem
+                {
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
+                };
+                copyPromptItem.Click += (s, e) => CopyPrompt(false);
+                menu.Items.Add(copyPromptItem);
+
+                // プロンプト全体をコピー
+                var copyAllPromptItem = new MenuItem
+                {
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+                };
+                copyAllPromptItem.Click += (s, e) => CopyPrompt(true);
+                menu.Items.Add(copyAllPromptItem);
+            }
+
+            // メニューを表示
+            menu.PlacementTarget = element;
+            menu.IsOpen = true;
+        }
+
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // AppContextを取得
+            _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+
+            // ThumbnailItemsControlの右クリックイベントを設定
+            ThumbnailItemsControl.PreviewMouseRightButtonDown += (s, e) =>
+            {
+                if (e.OriginalSource is FrameworkElement element)
+                {
+                    ShowPromptMenu(element);
+                    e.Handled = true;
+                }
+            };
             // ショートカットキーイベントを購読
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
@@ -340,8 +429,7 @@ namespace Illustra.Views
                 if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
                 {
                     // フィルタをクリア
-                    _currentRatingFilter = 0;
-                    UpdateFilterButtonStates(0);
+                    _viewModel.CurrentRatingFilter = 0;
                     _currentTagFilters.Clear();
                     _isTagFilterEnabled = false;
                     _isPromptFilterEnabled = false;
@@ -360,12 +448,11 @@ namespace Illustra.Views
                 else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
                 {
                     // レーティングフィルタの変更
-                    _currentRatingFilter = args.RatingFilter;
-                    UpdateFilterButtonStates(args.RatingFilter);
+                    _viewModel.CurrentRatingFilter = args.RatingFilter;
                 }
 
                 // 各フィルタを適用
-                await _viewModel.ApplyAllFilters(_currentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
 
                 // フィルタリング後の選択位置を更新
                 _thumbnailLoader.UpdateSelectionAfterFilter();
@@ -384,8 +471,7 @@ namespace Illustra.Views
                 return;
 
             // フォルダが変わったらすべてのフィルタを自動的に解除
-            _currentRatingFilter = 0;
-            UpdateFilterButtonStates(0);
+            _viewModel.CurrentRatingFilter = 0;
             _currentTagFilters.Clear();
             _isTagFilterEnabled = false;
             _viewModel.ClearAllFilters();
@@ -542,7 +628,7 @@ namespace Illustra.Views
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
                     if (lastSelected != null)
                     {
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath, lastSelected.Rating);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath);
                         _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
                         LoadFilePropertiesAsync(lastSelected.FullPath);
                     }
@@ -860,7 +946,7 @@ namespace Illustra.Views
                                 ThumbnailItemsControl.Focus();
                             }
                             LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 最初のアイテムを選択しました: {selectedFileNode.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedFileNode.FullPath, selectedFileNode.Rating);
+                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedFileNode.FullPath);
                             _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                         }
                     }
@@ -958,8 +1044,7 @@ namespace Illustra.Views
                         }
 
                         // FileSelectedEvent を発行 - 同期メソッドを使用
-                        var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
                         _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
 
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
@@ -993,8 +1078,7 @@ namespace Illustra.Views
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                                 // FileSelectedEvent を発行 - 同期メソッドを使用
-                                var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
-                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
                                 _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                                 var index = _viewModel.Items.IndexOf(matchingItem);
                                 System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
@@ -1259,12 +1343,20 @@ namespace Illustra.Views
 
             // W/A 操作中にレーティングフィルタ適用によって SelectedItems が変更されるのでコピー
             var items = _viewModel.SelectedItems.Cast<FileNodeModel>().ToList();
+            var isSameRating = items.All(item => item.Rating == rating);
             foreach (var selectedItem in items)
             {
-                // 同じレーティングの場合はスキップ
+                // 同じレーティングの場合
                 if (selectedItem.Rating == rating && rating != 0)
                 {
-                    continue;
+                    if (isSameRating)
+                    {
+                        rating = 0; // 対象のレーティングがすべて一致する時はレーティングをクリア
+                    }
+                    else
+                    {
+                        continue;   // 一致しない時はレーティングを変更しない
+                    }
                 }
 
                 // レーティングを更新
@@ -2219,7 +2311,6 @@ namespace Illustra.Views
 
             return count;
         }
-        private int _currentRatingFilter = 0;
 
         private async void RatingFilter_Click(object sender, RoutedEventArgs e)
         {
@@ -2228,7 +2319,7 @@ namespace Illustra.Views
                 return;
 
             // 同じレーティングが選択された場合はフィルターを解除
-            if (rating == _currentRatingFilter && rating != 0)
+            if (rating == _viewModel.CurrentRatingFilter && rating != 0)
             {
                 rating = 0;
             }
@@ -2239,31 +2330,6 @@ namespace Illustra.Views
             await ApplyFilterling(0);
         }
 
-        private void UpdateFilterButtonStates(int selectedRating)
-        {
-            // すべてのフィルターボタンをリセット
-            foreach (var button in new[] { Filter1, Filter2, Filter3, Filter4, Filter5 })
-            {
-                if (int.TryParse(button.Tag?.ToString(), out int position))
-                {
-                    var starControl = UIHelper.FindVisualChild<RatingStarControl>(button);
-                    if (starControl != null)
-                    {
-                        starControl.IsFilled = position <= selectedRating;
-                        starControl.StarFill = position <= selectedRating ?
-                            RatingHelper.GetRatingColor(position) :
-                            Brushes.Transparent;
-                        starControl.TextColor = position <= selectedRating ?
-                            RatingHelper.GetTextColor(position) :
-                            Brushes.Gray;
-                    }
-                }
-            }
-
-            // フィルター解除ボタンの状態を更新
-            ClearFilterButton.IsEnabled = selectedRating > 0;
-        }
-
         private async Task ApplyFilterling(int rating)
         {
             try
@@ -2272,10 +2338,7 @@ namespace Illustra.Views
                 var focusedItem = _viewModel.SelectedItems.LastOrDefault();
                 var focusedPath = focusedItem?.FullPath;
 
-                _currentRatingFilter = rating;
-                UpdateFilterButtonStates(rating);
-
-                // すべてのフィルタを適用
+                // フィルタを適用（ViewModelが状態を管理）
                 await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
 
                 // フィルター変更イベントを発行して他のコントロールに通知
@@ -2393,9 +2456,9 @@ namespace Illustra.Views
             {
                 fileNode.Rating = args.Rating;
                 // フィルタが設定されている場合のみフィルタを再適用
-                if (_currentRatingFilter > 0)
+                if (_viewModel.CurrentRatingFilter > 0)
                 {
-                    await ApplyFilterling(_currentRatingFilter);
+                    await ApplyFilterling(_viewModel.CurrentRatingFilter);
                     return;
                 }
 
