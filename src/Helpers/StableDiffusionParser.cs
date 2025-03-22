@@ -262,8 +262,7 @@ namespace StableDiffusionTools
                     var paramLines = parameters.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                     foreach (var line in paramLines)
                     {
-                        if (line.Contains("Model:", StringComparison.OrdinalIgnoreCase) &&
-                            !line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
+                        if (line.Contains("Model:", StringComparison.OrdinalIgnoreCase))
                         {
                             var modelMatch = Regex.Match(line, @"Model:\s*([^,]+)", RegexOptions.IgnoreCase);
                             if (modelMatch.Success)
@@ -271,7 +270,7 @@ namespace StableDiffusionTools
                                 result.Model = modelMatch.Groups[1].Value.Trim();
                             }
                         }
-                        else if (line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
+                        if (line.Contains("Model hash:", StringComparison.OrdinalIgnoreCase))
                         {
                             var hashMatch = Regex.Match(line, @"Model hash:\s*([^,]+)", RegexOptions.IgnoreCase);
                             if (hashMatch.Success)
