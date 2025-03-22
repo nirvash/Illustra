@@ -24,6 +24,8 @@ using Illustra.Extensions;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data; // 追加: FileNodeModelExtensionsを使用するため
 using System.Text;
+using System.Runtime.InteropServices;
+using System.Net.Http;
 
 namespace Illustra.Views
 {
@@ -109,6 +111,48 @@ namespace Illustra.Views
 #pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
+        public static bool CanAcceptImageDrop(IDataObject dataObject)
+        {
+            if (dataObject == null) return false;
+
+            bool hasDescriptor = dataObject.GetDataPresent("FileGroupDescriptorW");
+            bool hasContents = dataObject.GetDataPresent("FileContents");
+            bool hasIgnoreFlag = dataObject.GetDataPresent("chromium/x-ignore-file-contents");
+
+            // ✅ 仮想ファイル（本物）だけOK
+            if (!hasIgnoreFlag && hasDescriptor && hasContents)
+                return true;
+
+            // ✅ ローカルファイル（FileDrop）は無条件OK
+            if (dataObject.GetDataPresent(DataFormats.FileDrop))
+                return true;
+
+            // ✅ URLの場合、画像URLかどうか拡張子チェック
+            if (dataObject.GetDataPresent(DataFormats.UnicodeText))
+            {
+                try
+                {
+                    string url = dataObject.GetData(DataFormats.UnicodeText) as string;
+                    if (Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+                    {
+                        string ext = Path.GetExtension(uri.LocalPath).ToLowerInvariant();
+                        string[] allowedExts = FileHelper.SupportedExtensions;
+
+                        if (!string.IsNullOrEmpty(ext) && allowedExts.Contains(ext))
+                            return true;
+                    }
+                }
+                catch
+                {
+                    // 無視（URL壊れてるか不明）
+                }
+            }
+
+            // ❌ それ以外は拒否
+            return false;
+        }
+
+
         public class CustomDropHandler : DefaultDropHandler
         {
             private ThumbnailListControl _control = null;
@@ -134,11 +178,14 @@ namespace Illustra.Views
                     e.DropTargetAdorner = null;
                 }
 
-                // look for drag&drop new files
-                if (dataObject != null && dataObject.GetDataPresent(DataFormats.FileDrop))
+                if (CanAcceptImageDrop(dataObject))
                 {
                     bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
                     e.Effects = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
+                }
+                else
+                {
+                    e.Effects = DragDropEffects.None;
                 }
             }
 
@@ -1971,23 +2018,146 @@ namespace Illustra.Views
 
         public async void ThumbnailItemsControl_Drop(IDropInfo e)
         {
-            // サムネイル一覧からサムネイル一覧へのドロップ無効
-            var dataObject = e.Data as DataObject;
-            if (dataObject != null && dataObject.GetDataPresent(typeof(FileNodeModel).Name))
+            var dataObject = e.Data as IDataObject;
+            if (dataObject == null) return;
+
+            // サムネイル同士のドロップは無視
+            if (dataObject.GetDataPresent(typeof(FileNodeModel).Name))
+                return;
+
+            // 対象外のドロップは無視
+            if (!CanAcceptImageDrop(dataObject))
             {
+                e.Effects = DragDropEffects.None;
                 return;
             }
 
-            // look for drag&drop new files
-            if (dataObject != null && dataObject.ContainsFileDropList())
-            {
-                var files = dataObject.GetFileDropList().OfType<string>().ToList();
-                if (files == null)
-                    return;
+            List<string> fileList = new List<string>();
+            bool isVirtual = false;
 
-                bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
-                var processedFiles = await ProcessImageFiles(files, isCopy);
-                e.Effects = processedFiles.Any() ? (isCopy ? DragDropEffects.Copy : DragDropEffects.Move) : DragDropEffects.None;
+            bool hasDescriptor = dataObject.GetDataPresent("FileGroupDescriptorW");
+            bool hasContents = dataObject.GetDataPresent("FileContents");
+            bool hasIgnoreFlag = dataObject.GetDataPresent("chromium/x-ignore-file-contents");
+
+            foreach (var format in dataObject.GetFormats())
+            {
+                LogHelper.LogAnalysis("Format: " + format);
+            }
+
+            // 仮想ファイル処理（ちゃんと中身がある場合）
+            if (hasDescriptor && hasContents && !hasIgnoreFlag &&
+                TryGetValidVirtualFile(dataObject, out var stream, out var fileName))
+            {
+                try
+                {
+                    if (stream != null)
+                    {
+                        string tempPath = Path.Combine(Path.GetTempPath(), fileName);
+                        using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+                        {
+                            stream.CopyTo(fs);
+                        }
+                        fileList.Add(tempPath);
+                        isVirtual = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError("[仮想ファイル] 処理失敗: " + ex.Message);
+                }
+            }
+            // ローカルファイル（FileDrop）
+            else if (!hasIgnoreFlag && dataObject.GetDataPresent(DataFormats.FileDrop))
+            {
+                try
+                {
+                    string[] files = (string[])dataObject.GetData(DataFormats.FileDrop);
+                    fileList.AddRange(files);
+                }
+                catch (COMException ex)
+                {
+                    LogHelper.LogError("[FileDrop] 例外: " + ex.Message);
+                }
+            }
+            // URL（UnicodeText）
+            else if (dataObject.GetDataPresent(DataFormats.UnicodeText))
+            {
+                try
+                {
+                    string url = dataObject.GetData(DataFormats.UnicodeText) as string;
+                    if (Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+                    {
+                        LogHelper.LogAnalysis($"[URL] 画像URL: {url}");
+
+                        string fileNameForURL = Path.GetFileName(uri.LocalPath);
+                        if (string.IsNullOrWhiteSpace(Path.GetExtension(fileNameForURL)))
+                            fileNameForURL += ".jpg";
+
+                        string tempPath = Path.Combine(Path.GetTempPath(), fileNameForURL);
+
+                        using (var client = new HttpClient())
+                        {
+                            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+                            var bytes = await client.GetByteArrayAsync(uri);
+                            await File.WriteAllBytesAsync(tempPath, bytes);
+                            fileList.Add(tempPath);
+                        }
+
+                        isVirtual = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError("[URLダウンロード] 失敗: " + ex.Message);
+                }
+            }
+
+            if (fileList.Any())
+            {
+                bool isCopy = isVirtual || (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+                var processed = await ProcessImageFiles(fileList, isCopy);
+                e.Effects = processed.Any()
+                    ? (isCopy ? DragDropEffects.Copy : DragDropEffects.Move)
+                    : DragDropEffects.None;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        bool TryGetValidVirtualFile(IDataObject dataObject, out Stream stream, out string fileName)
+        {
+            stream = null;
+            fileName = null;
+
+            try
+            {
+                if (!dataObject.GetDataPresent("FileGroupDescriptorW")) return false;
+
+                // ファイル名
+                var descriptor = dataObject.GetData("FileGroupDescriptorW") as MemoryStream;
+                var buf = new byte[descriptor.Length];
+                descriptor.Read(buf, 0, buf.Length);
+                fileName = Encoding.Unicode.GetString(buf, 76, 520).TrimEnd('\0');
+
+                // 中身
+                var raw = dataObject.GetData("FileContents", true);
+                if (raw is MemoryStream ms)
+                    stream = ms;
+                else if (raw is Stream s)
+                    stream = s;
+                else if (raw is Array arr && arr.Length > 0 && arr.GetValue(0) is Stream s0)
+                    stream = s0;
+                else
+                    return false;
+
+                return stream != null;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -2023,7 +2193,7 @@ namespace Illustra.Views
                             }
 
                             // 削除されたファイル数を通知（デバッグ用）
-                            Debug.WriteLine($"{removedItems.Count}個のファイルが移動により一覧から削除されました");
+                            LogHelper.LogAnalysis($"{removedItems.Count}個のファイルが移動により一覧から削除されました");
                         });
                     }
                 });
