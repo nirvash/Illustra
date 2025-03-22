@@ -8,13 +8,24 @@
         xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_KeyboardShortcutSettingsWindow_Title}"
-        Icon="{StaticResource AppIcon}"
         Height="450"
         Width="400"
         MinWidth="350"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="CanResize">
-
+    <!-- アイコンサイズを変更 -->
+    <mahcontrols:MetroWindow.TitleTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{StaticResource AppIcon}"
+                       Width="18" Height="18" Margin="5,0,0,0"/>
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           Margin="5,0,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </mahcontrols:MetroWindow.TitleTemplate>
     <local:KeyboardShortcutSettingsView DataContext="{Binding}"/>
 </mahcontrols:MetroWindow>

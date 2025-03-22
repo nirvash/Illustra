@@ -41,7 +41,7 @@
             <StackPanel Orientation="Horizontal">
                 <Image Source="{StaticResource AppIcon}"
                        Width="16" Height="16" Margin="5,0,0,0"/>
-                <TextBlock Text="{Binding FileName, RelativeSource={RelativeSource AncestorType=Window}}"
+                <TextBlock Text="{Binding Properties.FileName, RelativeSource={RelativeSource AncestorType=Window}}"
                            VerticalAlignment="Center"
                            FontSize="14"
                            Margin="5,0,0,0"/>

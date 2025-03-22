@@ -228,6 +228,12 @@
     <system:String x:Key="String_About_Title">バージョン情報</system:String>
     <system:String x:Key="String_About_Version">バージョン:</system:String>
     <system:String x:Key="String_About_ProductVersion">製品バージョン:</system:String>
+    <system:String x:Key="String_About_DistributionPage">配布ページ:</system:String>
+    <system:String x:Key="String_About_CheckUpdate">更新を確認</system:String>
+    <system:String x:Key="String_About_LatestVersion">最新バージョン: {0}</system:String>
+    <system:String x:Key="String_About_IsLatestVersion">お使いのバージョンは最新です。</system:String>
+    <system:String x:Key="String_About_UpdateAvailable">新しいバージョン {0} が利用可能です。</system:String>
+    <system:String x:Key="String_About_CheckError">更新の確認中にエラーが発生しました。</system:String>
 
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">準備完了</system:String>

@@ -3,11 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         Title="{DynamicResource String_Menu_Settings_Advanced}"
-        Icon="{StaticResource AppIcon}"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="NoResize">
+
+    <!-- アイコンサイズを変更 -->
+    <mahcontrols:MetroWindow.TitleTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{StaticResource AppIcon}"
+                       Width="18" Height="18" Margin="5,0,0,0"/>
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           Margin="5,0,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </mahcontrols:MetroWindow.TitleTemplate>
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

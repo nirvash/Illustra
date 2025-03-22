@@ -214,6 +214,12 @@
     <system:String x:Key="String_About_Title">About</system:String>
     <system:String x:Key="String_About_Version">Version:</system:String>
     <system:String x:Key="String_About_ProductVersion">Product Version:</system:String>
+    <system:String x:Key="String_About_DistributionPage">Distribution Page:</system:String>
+    <system:String x:Key="String_About_CheckUpdate">Check for Updates</system:String>
+    <system:String x:Key="String_About_LatestVersion">Latest Version: {0}</system:String>
+    <system:String x:Key="String_About_IsLatestVersion">You are using the latest version.</system:String>
+    <system:String x:Key="String_About_UpdateAvailable">New version {0} is available.</system:String>
+    <system:String x:Key="String_About_CheckError">An error occurred while checking for updates.</system:String>
 
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">Ready</system:String>

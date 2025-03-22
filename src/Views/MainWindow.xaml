@@ -18,7 +18,7 @@
         <DataTemplate>
             <StackPanel Orientation="Horizontal">
                 <Image Source="{StaticResource AppIcon}"
-                       Width="16" Height="16" Margin="5,0,0,0"/>
+                       Width="18" Height="18" Margin="5,0,0,0"/>
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
                            VerticalAlignment="Center"
                            FontSize="14"

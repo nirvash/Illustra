@@ -347,22 +347,7 @@ namespace Illustra.Views
 
         private void ShowAboutDialog(object sender, RoutedEventArgs e)
         {
-            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
-            var productVersion = "";
-            try
-            {
-                string path = Environment.GetCommandLineArgs()[0];
-                var ver = FileVersionInfo.GetVersionInfo(path);
-                productVersion = ver.ProductVersion;
-            }
-            catch
-            {
-                productVersion = versionString;
-            }
-            var versionInfo = $"{(string)FindResource("String_About_Version")} \n{versionString}\n\n{(string)FindResource("String_About_ProductVersion")} \n{productVersion}";
-
-            var dialog = new VersionInfoDialog(versionInfo);
+            var dialog = new VersionInfoDialog();
             dialog.Owner = this;
             dialog.ShowDialog();
         }
