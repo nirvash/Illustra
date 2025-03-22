@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.IO;
-using System.Windows.Media;
 using Illustra.Models;
 using Illustra.Events;
 using Illustra.Helpers;
@@ -190,6 +189,29 @@ namespace Illustra.Views
             await Task.CompletedTask;
         }
 
+        private void CopyPromptContent_Click(object sender, RoutedEventArgs e)
+        {
+            if (_appContext.CurrentProperties?.StableDiffusionResult != null)
+            {
+                try
+                {
+                    var result = _appContext.CurrentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトとLoraのみを追加
+                    sb.AppendLine(result.Prompt);
+
+                    Clipboard.SetText(sb.ToString().Trim());
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         private void CopyOriginalText_Click(object sender, RoutedEventArgs e)
         {
             if (_appContext.CurrentProperties?.StableDiffusionResult != null)
@@ -197,8 +219,7 @@ namespace Illustra.Views
                 try
                 {
                     Clipboard.SetText(_appContext.CurrentProperties.UserComment);
-                    MessageBox.Show("コメントをクリップボードにコピーしました。", "コピー完了",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
                 }
                 catch (Exception ex)
                 {

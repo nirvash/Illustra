@@ -1,0 +1,26 @@
+<mah:MetroWindow x:Class="Illustra.Views.ToastWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        mc:Ignorable="d"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        WindowTransitionsEnabled="False"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ShowTitleBar="False"
+        IsHitTestVisible="False"
+        Topmost="True"
+        SizeToContent="WidthAndHeight"
+        ShowCloseButton="False"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        BorderThickness="0"
+        WindowStartupLocation="Manual">
+    <Border Background="#DD333333" CornerRadius="10" Padding="10" Margin="5">
+        <TextBlock Text="{Binding Message}" Foreground="White" FontWeight="Bold" FontSize="14"
+                   VerticalAlignment="Center" HorizontalAlignment="Center" />
+    </Border>
+</mah:MetroWindow>

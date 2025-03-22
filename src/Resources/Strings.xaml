@@ -151,6 +151,9 @@
     <system:String x:Key="String_Thumbnail_ContextMenu_Properties">Properties</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">Set rating</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_AddTags">Add tags</system:String>
+    <system:String x:Key="String_Thumbnail_CopyPrompt">Copy Prompt</system:String>
+    <system:String x:Key="String_Thumbnail_CopyAllPrompt">Copy All Prompt</system:String>
+    <system:String x:Key="String_Thumbnail_PromptCopied">Prompt copied to clipboard</system:String>
 
     <!-- Thumbnail List Controls -->
     <system:String x:Key="String_Thumbnail_Size">Thumbnail Size</system:String>

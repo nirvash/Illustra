@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Diagnostics;
+using System.Text;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -113,6 +116,16 @@ namespace Illustra.Views
 
             this.StateChanged += MainWindow_StateChanged;
 
+            // 右クリックイベントを設定
+            MainImage.PreviewMouseRightButtonDown += (s, e) =>
+            {
+                if (_appContext?.CurrentProperties?.StableDiffusionResult != null)
+                {
+                    ShowPromptMenu();
+                    e.Handled = true;
+                }
+            };
+
             // マウスカーソル非表示用のタイマー
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             hideCursorTimer.Tick += (s, args) =>
@@ -177,6 +190,65 @@ namespace Illustra.Views
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
             };
+        }
+
+        private void ShowPromptMenu()
+        {
+            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+
+            // コンテキストメニューを作成
+            var menu = new ContextMenu();
+
+            // プロンプトをコピー
+            var copyPromptItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
+            };
+            copyPromptItem.Click += (s, e) => CopyPrompt(false);
+            menu.Items.Add(copyPromptItem);
+
+            // プロンプト全体をコピー
+            var copyAllPromptItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+            };
+            copyAllPromptItem.Click += (s, e) => CopyPrompt(true);
+            menu.Items.Add(copyAllPromptItem);
+
+            // メニューを表示
+            menu.PlacementTarget = MainImage;
+            menu.IsOpen = true;
+        }
+
+        private void CopyPrompt(bool copyAll = false)
+        {
+            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+
+            try
+            {
+                string textToCopy;
+                if (copyAll)
+                {
+                    // UserCommentそのものをコピー
+                    textToCopy = _appContext.CurrentProperties.UserComment;
+                }
+                else
+                {
+                    var result = _appContext.CurrentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトのみを追加
+                    sb.AppendLine(result.Prompt);
+                    textToCopy = sb.ToString().Trim();
+                }
+
+                Clipboard.SetText(textToCopy);
+                ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"プロンプトのコピー中にエラーが発生しました: {ex.Message}");
+            }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

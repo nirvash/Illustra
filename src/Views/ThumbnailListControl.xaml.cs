@@ -23,6 +23,7 @@ using System.Threading;
 using Illustra.Extensions;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data; // 追加: FileNodeModelExtensionsを使用するため
+using System.Text;
 
 namespace Illustra.Views
 {
@@ -31,6 +32,7 @@ namespace Illustra.Views
     {
         private IEventAggregator _eventAggregator = null!;
         private MainViewModel _viewModel;
+        private IllustraAppContext _appContext;
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
         private string? _currentFolderPath;
@@ -265,10 +267,93 @@ namespace Illustra.Views
             }
         }
 
+        private void CopyPrompt(bool copyAll = false)
+        {
+            if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
+
+            var currentProperties = _appContext.CurrentProperties;
+            if (currentProperties?.StableDiffusionResult == null) return;
+
+            try
+            {
+                string textToCopy;
+                if (copyAll)
+                {
+                    // UserCommentそのものをコピー
+                    textToCopy = currentProperties.UserComment;
+                }
+                else
+                {
+                    var result = currentProperties.StableDiffusionResult;
+                    var sb = new StringBuilder();
+
+                    // ポジティブプロンプトのみを追加
+                    sb.AppendLine(result.Prompt);
+                    textToCopy = sb.ToString().Trim();
+                }
+
+                Clipboard.SetText(textToCopy);
+                ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"プロンプトのコピー中にエラーが発生しました: {ex.Message}");
+            }
+        }
+
+        private void ShowPromptMenu(FrameworkElement element)
+        {
+            if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
+
+            // 現在のプロパティを取得
+            var currentProperties = _appContext.CurrentProperties;
+            if (currentProperties?.StableDiffusionResult == null) return;
+
+            // コンテキストメニューを作成
+            var menu = new ContextMenu();
+
+            // プロンプトをコピー
+            // プロンプト情報がある場合のみメニューを表示
+            if (currentProperties.StableDiffusionResult != null)
+            {
+                var copyPromptItem = new MenuItem
+                {
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
+                };
+                copyPromptItem.Click += (s, e) => CopyPrompt(false);
+                menu.Items.Add(copyPromptItem);
+
+                // プロンプト全体をコピー
+                var copyAllPromptItem = new MenuItem
+                {
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+                };
+                copyAllPromptItem.Click += (s, e) => CopyPrompt(true);
+                menu.Items.Add(copyAllPromptItem);
+            }
+
+            // メニューを表示
+            menu.PlacementTarget = element;
+            menu.IsOpen = true;
+        }
+
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // AppContextを取得
+            _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+
+            // ThumbnailItemsControlの右クリックイベントを設定
+            ThumbnailItemsControl.PreviewMouseRightButtonDown += (s, e) =>
+            {
+                if (e.OriginalSource is FrameworkElement element)
+                {
+                    ShowPromptMenu(element);
+                    e.Handled = true;
+                }
+            };
             // ショートカットキーイベントを購読
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 

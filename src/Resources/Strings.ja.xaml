@@ -249,6 +249,9 @@
     <system:String x:Key="String_Thumbnail_ImageCopied">画像をコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_FilesCopied">ファイルをコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_FilesMoved">ファイルを移動しました</system:String>
+    <system:String x:Key="String_Thumbnail_CopyPrompt">プロンプトをコピー</system:String>
+    <system:String x:Key="String_Thumbnail_CopyAllPrompt">プロンプト全体をコピー</system:String>
+    <system:String x:Key="String_Thumbnail_PromptCopied">プロンプトをコピーしました</system:String>
 
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">デフォルト設定に戻す</system:String>
