@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Illustra.Events;
 using Illustra.Helpers;
@@ -100,11 +101,12 @@ namespace Illustra.Services
 
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
 
-                // 現在のレーティングを保持
-                if (_appContext.CurrentProperties != null &&
-                    _appContext.CurrentProperties.FilePath == filePath)
+                // MainViewModelから対応するFileNodeModelのレーティングを設定
+                var fileNode = _appContext.MainViewModel?.Items?.FirstOrDefault(n => n.FullPath == filePath);
+                if (fileNode != null)
                 {
-                    properties.Rating = _appContext.CurrentProperties.Rating;
+                    properties.Rating = fileNode.Rating;
+                    LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
                 }
 
                 _appContext.CurrentProperties = properties;
@@ -131,7 +133,13 @@ namespace Illustra.Services
                 LogHelper.LogWithTimestamp($"ファイル選択: {model.FullPath}", LogHelper.Categories.UI);
 
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(model.FullPath);
-                properties.Rating = model.Rating; // 選択モデルからレーティングを設定
+                // MainViewModelから対応するFileNodeModelのレーティングを設定
+                var fileNode = _appContext.MainViewModel?.Items?.FirstOrDefault(n => n.FullPath == model.FullPath);
+                if (fileNode != null)
+                {
+                    properties.Rating = fileNode.Rating;
+                    LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
+                }
                 _appContext.CurrentProperties = properties;
             }
             catch (Exception ex)

@@ -14,6 +14,7 @@ using MahApps.Metro.Controls;
 using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
 using System.IO;
+using Illustra.ViewModels;
 
 namespace Illustra.Views
 {
@@ -51,6 +52,9 @@ namespace Illustra.Views
 
         private IllustraAppContext? _appContext;
         public ImagePropertiesModel Properties => _appContext?.CurrentProperties ?? new ImagePropertiesModel();
+
+        // MainViewModelへの参照を追加
+        public MainViewModel? MainViewModel => _appContext?.MainViewModel;
 
         private BitmapSource? _imageSource = null;
         public BitmapSource? ImageSource
@@ -493,7 +497,8 @@ namespace Illustra.Views
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
                 LoadAndDisplayImage(filePath);
 
-                var viewModel = Parent?.GetViewModel();
+                // 3. MainViewModelを取得
+                var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
                     // 4. 前後の画像をキャッシュ
@@ -532,7 +537,7 @@ namespace Illustra.Views
                 {
                     var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                     eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(
-                        new SelectedFileModel(CONTROL_ID, filePath, Properties.Rating));
+                        new SelectedFileModel(CONTROL_ID, filePath));
                 }
             }
             catch (Exception ex)
@@ -802,8 +807,8 @@ namespace Illustra.Views
                 // 削除通知を表示
                 ShowNotification((string)FindResource("String_Status_FileDeleted"), 24);
 
-                // 親のViewModelから削除
-                var viewModel = Parent?.GetViewModel();
+                // ViewModelから削除
+                var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
                     var fileNode = viewModel.Items.FirstOrDefault(x => x.FullPath == _currentFilePath);
@@ -835,9 +840,8 @@ namespace Illustra.Views
         // 先頭の画像に移動
         private void NavigateToFirstImage()
         {
-            if (Parent == null) return;
-
-            var viewModel = Parent.GetViewModel();
+            // MainViewModelを使用
+            var viewModel = MainViewModel;
             if (viewModel != null)
             {
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
@@ -852,9 +856,8 @@ namespace Illustra.Views
         // 末尾の画像に移動
         private void NavigateToLastImage()
         {
-            if (Parent == null) return;
-
-            var viewModel = Parent.GetViewModel();
+            // MainViewModelを使用
+            var viewModel = MainViewModel;
             if (viewModel != null)
             {
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();

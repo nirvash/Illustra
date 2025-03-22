@@ -185,6 +185,13 @@ namespace Illustra.Views
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
 
+            // アプリケーション全体で共有するコンテキストにViewModelを設定
+            var appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
+            if (appContext != null)
+            {
+                appContext.MainViewModel = _viewModel;
+            }
+
             var db = ContainerLocator.Container.Resolve<DatabaseManager>();
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(ThumbnailItemsControl, new CustomDropHandler(this));
@@ -536,7 +543,7 @@ namespace Illustra.Views
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
                     if (lastSelected != null)
                     {
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath, lastSelected.Rating);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath);
                         _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
                         LoadFilePropertiesAsync(lastSelected.FullPath);
                     }
@@ -854,7 +861,7 @@ namespace Illustra.Views
                                 ThumbnailItemsControl.Focus();
                             }
                             LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 最初のアイテムを選択しました: {selectedFileNode.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedFileNode.FullPath, selectedFileNode.Rating);
+                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedFileNode.FullPath);
                             _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                         }
                     }
@@ -952,8 +959,7 @@ namespace Illustra.Views
                         }
 
                         // FileSelectedEvent を発行 - 同期メソッドを使用
-                        var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
                         _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
 
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
@@ -987,8 +993,7 @@ namespace Illustra.Views
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
                                 // FileSelectedEvent を発行 - 同期メソッドを使用
-                                var fileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == filePath);
-                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath, fileNode?.Rating ?? 0);
+                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
                                 _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                                 var index = _viewModel.Items.IndexOf(matchingItem);
                                 System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
@@ -1253,12 +1258,20 @@ namespace Illustra.Views
 
             // W/A 操作中にレーティングフィルタ適用によって SelectedItems が変更されるのでコピー
             var items = _viewModel.SelectedItems.Cast<FileNodeModel>().ToList();
+            var isSameRating = items.All(item => item.Rating == rating);
             foreach (var selectedItem in items)
             {
-                // 同じレーティングの場合はスキップ
+                // 同じレーティングの場合
                 if (selectedItem.Rating == rating && rating != 0)
                 {
-                    continue;
+                    if (isSameRating)
+                    {
+                        rating = 0; // 対象のレーティングがすべて一致する時はレーティングをクリア
+                    }
+                    else
+                    {
+                        continue;   // 一致しない時はレーティングを変更しない
+                    }
                 }
 
                 // レーティングを更新

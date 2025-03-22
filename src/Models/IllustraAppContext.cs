@@ -1,5 +1,6 @@
 using Illustra.Helpers;
 using Prism.Mvvm;
+using Illustra.ViewModels;
 
 namespace Illustra.Models
 {
@@ -23,9 +24,17 @@ namespace Illustra.Models
             }
         }
 
+        private MainViewModel _mainViewModel;
+        public MainViewModel MainViewModel
+        {
+            get => _mainViewModel;
+            set => SetProperty(ref _mainViewModel, value);
+        }
+
         public IllustraAppContext()
         {
             _currentProperties = new ImagePropertiesModel();
+            // ThumbnailListControlがMainViewModelのライフサイクルを管理するため、ここでは初期化しない
             LogHelper.LogWithTimestamp("初期化完了", LogHelper.Categories.UI);
         }
     }
