@@ -37,7 +37,10 @@ namespace Illustra.Models
         // スプリッター位置設定
         public double FavoriteFoldersHeight { get; set; } = 0;
         public double MainSplitterPosition { get; set; } = 0;
-        public double PropertySplitterPosition { get; set; } = 0;
+        public double PropertySplitterPosition { get; set; } = 200;
+
+        // メインウィンドウのプロパティパネル設定
+        public bool MainPropertyPanelVisible { get; set; } = true;
 
         // お気に入りフォルダ
         public ObservableCollection<string> FavoriteFolders { get; set; } = new ObservableCollection<string>();

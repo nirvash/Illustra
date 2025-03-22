@@ -1536,7 +1536,10 @@ namespace Illustra.Views
             }
 
             // その他のキーの場合は、ListViewのデフォルト動作を無効化
-            e.Handled = true;
+            if (!shortcutHandler.IsShortcutMatch(FuncId.TogglePropertyPanel, e.Key))
+            {
+                e.Handled = true;
+            }
 
             // リストの先頭に移動
             if (shortcutHandler.IsShortcutMatch(FuncId.MoveToStart, e.Key))

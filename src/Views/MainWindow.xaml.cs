@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls; // Add this for MenuItem
+using System.Windows.Input;   // Add this for KeyEventArgs
 using Illustra.Helpers;
+using Illustra.Functions;     // Add this for FuncId
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
@@ -28,6 +30,7 @@ namespace Illustra.Views
         private bool _sortAscending = true;
         private double _mainSplitterPosition;
         private double _favoritesFoldersSplitterPosition;
+        private double _lastPropertyPanelHeight = 200;  // プロパティパネルのデフォルト高さ
         private FavoriteFoldersControl? _favoriteFoldersControl;
         private FolderTreeControl? _folderTreeControl;
         private string _currentFolderPath = string.Empty;
@@ -102,6 +105,43 @@ namespace Illustra.Views
             {
                 shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
             }
+        }
+
+        protected void MainWindow_OnKeyDown(object sender, KeyEventArgs e)
+        {
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+            if (shortcutHandler.IsShortcutMatch(FuncId.TogglePropertyPanel, e.Key))
+            {
+                TogglePropertyPanel();
+                e.Handled = true;
+            }
+        }
+
+        private void TogglePropertyPanel()
+        {
+            // プロパティパネルとスプリッターの現在の状態を取得
+            var isVisible = RightPanelGrid.RowDefinitions[2].Height.Value > 0;
+
+            if (isVisible)
+            {
+                // 非表示にする前に現在の高さを保存
+                _lastPropertyPanelHeight = RightPanelGrid.RowDefinitions[2].ActualHeight;
+
+                // パネルとスプリッターを非表示に
+                RightPanelGrid.RowDefinitions[1].Height = new GridLength(0);
+                RightPanelGrid.RowDefinitions[2].Height = new GridLength(0);
+            }
+            else
+            {
+                // パネルとスプリッターを表示
+                RightPanelGrid.RowDefinitions[1].Height = new GridLength(3);
+                RightPanelGrid.RowDefinitions[2].Height = new GridLength(_lastPropertyPanelHeight);
+            }
+
+            // 設定を保存
+            _appSettings.MainPropertyPanelVisible = !isVisible;
+            _appSettings.PropertySplitterPosition = _lastPropertyPanelHeight;
+            SettingsHelper.SaveSettings(_appSettings);
         }
 
         private void InitializeSortMenuItems()
@@ -197,7 +237,16 @@ namespace Illustra.Views
                 // スプリッター位置を保存
                 _appSettings.MainSplitterPosition = MainContentGrid.ColumnDefinitions[0].ActualWidth;
                 _appSettings.FavoriteFoldersHeight = LeftPanelGrid.RowDefinitions[0].ActualHeight;
-                _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[2].ActualHeight;
+                // プロパティパネルの状態を保存
+                _appSettings.MainPropertyPanelVisible = RightPanelGrid.RowDefinitions[2].Height.Value > 0;
+                if (_appSettings.MainPropertyPanelVisible)
+                {
+                    _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[2].ActualHeight;
+                }
+                else
+                {
+                    _appSettings.PropertySplitterPosition = _lastPropertyPanelHeight;
+                }
             }
             catch (Exception ex)
             {
@@ -485,10 +534,19 @@ namespace Illustra.Views
                     LeftPanelGrid.RowDefinitions[0].Height = new GridLength(_favoritesFoldersSplitterPosition, GridUnitType.Pixel);
                 }
 
-                // プロパティパネルの高さ
-                if (_appSettings.PropertySplitterPosition > 0)
+                // 現在の高さを保存
+                _lastPropertyPanelHeight = _appSettings.PropertySplitterPosition;
+                if (!_appSettings.MainPropertyPanelVisible)
                 {
-                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(_appSettings.PropertySplitterPosition, GridUnitType.Pixel);
+                    // パネルとスプリッターを非表示に
+                    RightPanelGrid.RowDefinitions[1].Height = new GridLength(0);
+                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(0);
+                }
+                else
+                {
+                    // パネルとスプリッターを表示
+                    RightPanelGrid.RowDefinitions[1].Height = new GridLength(3);
+                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(_lastPropertyPanelHeight, GridUnitType.Pixel);
                 }
             }
             catch (Exception ex)

@@ -8,6 +8,7 @@
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:prism="http://prismlibrary.com/"
         WindowTransitionsEnabled="False"
+        KeyDown="MainWindow_OnKeyDown"
         mc:Ignorable="d"
         Height="600"
         Width="900">
