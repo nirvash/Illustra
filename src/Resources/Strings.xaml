@@ -52,6 +52,12 @@
     <system:String x:Key="String_Menu_Settings_CyclicNavigation">Enable Cyclic Navigation</system:String>
     <system:String x:Key="String_Menu_About">About</system:String>
 
+    <!-- Settings Categories -->
+    <system:String x:Key="String_Settings_General_Category">General</system:String>
+    <system:String x:Key="String_Settings_Thumbnail_Category">Thumbnail View</system:String>
+    <system:String x:Key="String_Settings_Viewer_Category">Viewer</system:String>
+    <system:String x:Key="String_Settings_Developer_Category">Developer Options</system:String>
+
     <!-- Slideshow -->
     <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
     <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>
@@ -72,6 +78,11 @@
     <system:String x:Key="String_Settings_Slideshow_InvalidInterval">Please enter a value greater than 0 for the interval.</system:String>
     <system:String x:Key="String_Settings_MouseWheel_InvalidValue">Please enter a value greater than 0 for the mouse wheel speed.</system:String>
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
+    <system:String x:Key="String_Settings_ValidationError">Invalid input values. Please check all settings.</system:String>
+    <system:String x:Key="String_Settings_SaveCompleted">Settings have been saved.</system:String>
+    <system:String x:Key="String_Error">Error</system:String>
+
+    <!-- Settings -->
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
     <system:String x:Key="String_Settings_Developer_LogCategories">Log Categories</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>

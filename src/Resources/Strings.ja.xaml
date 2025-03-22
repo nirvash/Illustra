@@ -55,9 +55,9 @@
     <system:String x:Key="String_Slideshow_IntervalFormat">{0:F1} 秒</system:String>
 
     <!-- 設定画面のカテゴリ -->
-    <system:String x:Key="String_Settings_General_Category">全般</system:String>
-    <system:String x:Key="String_Settings_Thumbnail_Category">サムネイル画面</system:String>
-    <system:String x:Key="String_Settings_Viewer_Category">ビューワ画面</system:String>
+    <system:String x:Key="String_Settings_General_Category">一般</system:String>
+    <system:String x:Key="String_Settings_Thumbnail_Category">サムネイル表示</system:String>
+    <system:String x:Key="String_Settings_Viewer_Category">ビューア</system:String>
     <system:String x:Key="String_Settings_Developer_Category">開発者オプション</system:String>
 
     <!-- Settings -->
@@ -75,8 +75,8 @@
     <system:String x:Key="String_Settings_Slideshow_InvalidInterval">再生間隔は0より大きい値を入力してください。</system:String>
     <system:String x:Key="String_Settings_MouseWheel_InvalidValue">マウスホイールの速度は0より大きい値を入力してください。</system:String>
     <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
-    <system:String x:Key="String_Settings_ValidationError">入力値が不正です。各設定項目を確認してください。</system:String>
-    <system:String x:Key="String_Settings_SaveCompleted">設定を保存しました。</system:String>
+    <system:String x:Key="String_Settings_ValidationError">入力値が無効です。すべての設定を確認してください。</system:String>
+    <system:String x:Key="String_Settings_SaveCompleted">設定が保存されました。</system:String>
     <system:String x:Key="String_Error">エラー</system:String>
 
     <!-- Settings -->
@@ -86,7 +86,8 @@
     <system:String x:Key="String_Settings_Developer_CleanDatabase">データベース整理</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">データベース整理</system:String>
     <system:String x:Key="String_Settings_Developer_PreparingCleanup">データベースの整理を行います。</system:String>
-    <system:String x:Key="String_Settings_Developer_CleanupComplete" xml:space="preserve">クリーンアップが完了しました。&#x0a;不要なエントリ：{0}件&#x0a;存在しないファイル：{1}件</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupComplete"
+                   xml:space="preserve">クリーンアップが完了しました。&#x0a;不要なエントリ：{0}件&#x0a;存在しないファイル：{1}件</system:String>
     <system:String x:Key="String_Settings_Developer_DeletingEntries">不要な項目を削除しています...</system:String>
     <system:String x:Key="String_Settings_Developer_CheckingFiles">ファイルの存在を確認しています...</system:String>
     <system:String x:Key="String_Settings_Developer_CheckingFilesProgress">ファイルの存在を確認しています... ({0}/{1})</system:String>

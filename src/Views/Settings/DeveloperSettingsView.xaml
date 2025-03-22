@@ -1,0 +1,42 @@
+<UserControl x:Class="Illustra.Views.Settings.DeveloperSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
+    <StackPanel>
+        <GroupBox Header="{DynamicResource String_Settings_Developer_Section}">
+            <StackPanel>
+                <CheckBox Content="{DynamicResource String_Settings_Developer_EnableDevMode}"
+                          IsChecked="{Binding DeveloperMode}"
+                          VerticalAlignment="Center"/>
+
+                <!-- データベース整理ボタン -->
+                <Button Content="{DynamicResource String_Settings_Developer_CleanDatabase}"
+                        Command="{Binding CleanupDatabaseCommand}"
+                        Margin="0,10,0,5"
+                        Padding="10,3"
+                        HorizontalAlignment="Left"/>
+
+                <!-- ログカテゴリ設定（開発者モードが有効な場合のみ表示） -->
+                <Expander Header="{DynamicResource String_Settings_Developer_LogCategories}"
+                         Margin="0,5,0,0"
+                         IsExpanded="True"
+                         Visibility="{Binding DeveloperMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ScrollViewer MaxHeight="200"
+                                 VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding LogCategories}"
+                                    Margin="5">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}"
+                                             IsChecked="{Binding IsEnabled}"
+                                             Margin="5"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Expander>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

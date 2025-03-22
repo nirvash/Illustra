@@ -1,0 +1,27 @@
+<UserControl x:Class="Illustra.Views.Settings.ThumbnailSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
+    <StackPanel>
+        <GroupBox Header="{DynamicResource String_Settings_ScrollConfig_Section}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0"
+                       Content="{DynamicResource String_Settings_MouseWheelMultiplier}"
+                       VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+                         Text="{Binding MouseWheelMultiplier, UpdateSourceTrigger=PropertyChanged, StringFormat=F1}"
+                         VerticalAlignment="Center"
+                         Margin="5,0"/>
+                <Label Grid.Column="2"
+                       Content="×"
+                       VerticalAlignment="Center"/>
+            </Grid>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

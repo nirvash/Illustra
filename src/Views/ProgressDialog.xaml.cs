@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using MahApps.Metro.Controls;
+using System.Threading;
 
 namespace Illustra.Views
 {
@@ -64,6 +65,23 @@ namespace Illustra.Views
             }
         }
 
+        private bool _cancellationSupported;
+        public bool CancellationSupported
+        {
+            get => _cancellationSupported;
+            set
+            {
+                if (_cancellationSupported != value)
+                {
+                    _cancellationSupported = value;
+                    OnPropertyChanged(nameof(CancellationSupported));
+                }
+            }
+        }
+
+        private CancellationTokenSource _cancellationTokenSource;
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+
         public event EventHandler CancelRequested;
         public event EventHandler StartRequested;
         public event PropertyChangedEventHandler PropertyChanged;
@@ -77,6 +95,7 @@ namespace Illustra.Views
         {
             InitializeComponent();
             DataContext = this;
+            _cancellationTokenSource = new CancellationTokenSource();
             Reset();
         }
 
@@ -107,6 +126,7 @@ namespace Illustra.Views
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             CancelButton.IsEnabled = false;
+            _cancellationTokenSource.Cancel();
             CancelRequested?.Invoke(this, EventArgs.Empty);
         }
 

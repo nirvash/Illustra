@@ -2,6 +2,7 @@ using System.Windows;
 using Prism.Commands;
 using Prism.Mvvm;
 using Illustra.Views;
+using Illustra.Views.Settings;
 using Illustra.Helpers;
 
 namespace Illustra.ViewModels
@@ -80,12 +81,19 @@ namespace Illustra.ViewModels
         private void ExecuteOpenAdvancedSettings()
         {
             // 詳細設定画面をダイアログとして表示
-            var advancedSettingsWindow = new AdvancedSettingsWindow
+            var advancedSettingsWindow = new Views.Settings.AdvancedSettingsWindow
             {
                 Owner = Application.Current.MainWindow
             };
-            advancedSettingsWindow.ShowDialog();
-            StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
+
+            if (advancedSettingsWindow.ShowDialog() == true)
+            {
+                StatusMessage = (string)Application.Current.Resources["String_Settings_SaveCompleted"];
+            }
+            else
+            {
+                StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
+            }
         }
 
         private void ExecuteOpenImageGenerationWindow()
