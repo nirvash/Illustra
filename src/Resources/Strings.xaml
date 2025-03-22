@@ -56,7 +56,16 @@
     <system:String x:Key="String_Settings_General_Category">General</system:String>
     <system:String x:Key="String_Settings_Thumbnail_Category">Thumbnail View</system:String>
     <system:String x:Key="String_Settings_Viewer_Category">Viewer</system:String>
+    <system:String x:Key="String_Settings_PropertyPanel_Category">Property Panel</system:String>
     <system:String x:Key="String_Settings_Developer_Category">Developer Options</system:String>
+
+    <!-- Display Settings -->
+    <system:String x:Key="String_Settings_Display_Section">Display Settings</system:String>
+    <system:String x:Key="String_Settings_Display_FileName">Show File Name</system:String>
+    <system:String x:Key="String_Settings_Display_Rating">Show Rating</system:String>
+    <system:String x:Key="String_Settings_Display_Details">Show Details</system:String>
+    <system:String x:Key="String_Settings_Display_StableDiffusion">Show Stable Diffusion</system:String>
+    <system:String x:Key="String_Settings_Display_Comment">Show Comment</system:String>
 
     <!-- Slideshow -->
     <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>

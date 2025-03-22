@@ -2,6 +2,7 @@ using Prism.Events;
 using System.Windows.Input;
 using System.Collections.Generic;
 using Illustra.Models;
+using Illustra.Helpers;
 
 namespace Illustra.Events
 {
@@ -235,4 +236,7 @@ namespace Illustra.Events
     /// ソート順が変更されたときにトリガーされるイベント
     /// </summary>
     public class SortOrderChangedEvent : PubSubEvent<SortOrderChangedEventArgs> { }
+
+    // ViewerSettingsが変更されたときのイベント
+    public class ViewerSettingsChangedEvent : PubSubEvent { }
 }

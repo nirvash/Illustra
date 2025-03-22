@@ -43,6 +43,7 @@
                 <TreeViewItem Header="{DynamicResource String_Settings_General_Category}" Tag="General" IsSelected="True"/>
                 <TreeViewItem Header="{DynamicResource String_Settings_Thumbnail_Category}" Tag="Thumbnail"/>
                 <TreeViewItem Header="{DynamicResource String_Settings_Viewer_Category}" Tag="Viewer"/>
+                <TreeViewItem Header="{DynamicResource String_Settings_PropertyPanel_Category}" Tag="PropertyPanel"/>
                 <TreeViewItem Header="{DynamicResource String_Settings_Developer_Category}" Tag="Developer"/>
             </TreeView>
 
@@ -62,6 +63,9 @@
                             <local:ViewerSettingsView DataContext="{Binding ViewerSettings}"
                                                      x:Name="ViewerSettings"
                                                      Visibility="Collapsed"/>
+                            <local:PropertyPanelSettingsView DataContext="{Binding PropertyPanelSettings}"
+                                                           x:Name="PropertyPanelSettings"
+                                                           Visibility="Collapsed"/>
                             <local:DeveloperSettingsView DataContext="{Binding DeveloperSettings}"
                                                         x:Name="DeveloperSettings"
                                                         Visibility="Collapsed"/>

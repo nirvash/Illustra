@@ -2,23 +2,9 @@ using Illustra.Helpers;
 
 namespace Illustra.ViewModels.Settings
 {
-    public class ViewerSettingsViewModel : SettingsViewModelBase
+    public class PropertyPanelSettingsViewModel : SettingsViewModelBase
     {
         private readonly ViewerSettings _settings;
-
-        private double _slideshowInterval;
-        public double SlideshowInterval
-        {
-            get => _slideshowInterval;
-            set
-            {
-                if (_slideshowInterval != value)
-                {
-                    _slideshowInterval = value;
-                    OnPropertyChanged(nameof(SlideshowInterval));
-                }
-            }
-        }
 
         private bool _showFileName;
         public bool ShowFileName
@@ -90,14 +76,13 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
-        public ViewerSettingsViewModel(ViewerSettings settings)
+        public PropertyPanelSettingsViewModel(ViewerSettings settings)
         {
             _settings = settings;
         }
 
         public override void LoadSettings()
         {
-            SlideshowInterval = _settings.SlideshowIntervalSeconds;
             ShowFileName = _settings.ShowFileName;
             ShowRating = _settings.ShowRating;
             ShowDetails = _settings.ShowDetails;
@@ -107,7 +92,6 @@ namespace Illustra.ViewModels.Settings
 
         public override void SaveSettings()
         {
-            _settings.SlideshowIntervalSeconds = SlideshowInterval;
             _settings.ShowFileName = ShowFileName;
             _settings.ShowRating = ShowRating;
             _settings.ShowDetails = ShowDetails;
@@ -117,7 +101,7 @@ namespace Illustra.ViewModels.Settings
 
         public override bool ValidateSettings()
         {
-            return SlideshowInterval > 0;
+            return true;
         }
     }
 }

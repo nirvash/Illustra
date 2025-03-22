@@ -58,7 +58,16 @@
     <system:String x:Key="String_Settings_General_Category">一般</system:String>
     <system:String x:Key="String_Settings_Thumbnail_Category">サムネイル表示</system:String>
     <system:String x:Key="String_Settings_Viewer_Category">ビューア</system:String>
+    <system:String x:Key="String_Settings_PropertyPanel_Category">プロパティパネル</system:String>
     <system:String x:Key="String_Settings_Developer_Category">開発者オプション</system:String>
+
+    <!-- 表示設定 -->
+    <system:String x:Key="String_Settings_Display_Section">表示設定</system:String>
+    <system:String x:Key="String_Settings_Display_FileName">ファイル名を表示</system:String>
+    <system:String x:Key="String_Settings_Display_Rating">レーティングを表示</system:String>
+    <system:String x:Key="String_Settings_Display_Details">詳細情報を表示</system:String>
+    <system:String x:Key="String_Settings_Display_StableDiffusion">Stable Diffusionを表示</system:String>
+    <system:String x:Key="String_Settings_Display_Comment">コメントを表示</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>

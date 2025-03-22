@@ -3,6 +3,7 @@ using Illustra.Helpers;
 using Illustra.Models;
 using Illustra.Views;
 using Illustra.Controls;
+using Illustra.Events;
 
 namespace Illustra.ViewModels.Settings
 {
@@ -14,6 +15,7 @@ namespace Illustra.ViewModels.Settings
         public GeneralSettingsViewModel GeneralSettings { get; }
         public ThumbnailSettingsViewModel ThumbnailSettings { get; }
         public ViewerSettingsViewModel ViewerSettings { get; }
+        public PropertyPanelSettingsViewModel PropertyPanelSettings { get; }
         public DeveloperSettingsViewModel DeveloperSettings { get; }
 
         public AdvancedSettingsViewModel()
@@ -25,6 +27,7 @@ namespace Illustra.ViewModels.Settings
             GeneralSettings = new GeneralSettingsViewModel(_settings);
             ThumbnailSettings = new ThumbnailSettingsViewModel(_settings);
             ViewerSettings = new ViewerSettingsViewModel(_viewerSettings);
+            PropertyPanelSettings = new PropertyPanelSettingsViewModel(_viewerSettings);
             DeveloperSettings = new DeveloperSettingsViewModel(_settings);
 
             // 設定を読み込む
@@ -36,6 +39,7 @@ namespace Illustra.ViewModels.Settings
             GeneralSettings.LoadSettings();
             ThumbnailSettings.LoadSettings();
             ViewerSettings.LoadSettings();
+            PropertyPanelSettings.LoadSettings();
             DeveloperSettings.LoadSettings();
         }
 
@@ -44,6 +48,7 @@ namespace Illustra.ViewModels.Settings
             return GeneralSettings.ValidateSettings() &&
                    ThumbnailSettings.ValidateSettings() &&
                    ViewerSettings.ValidateSettings() &&
+                   PropertyPanelSettings.ValidateSettings() &&
                    DeveloperSettings.ValidateSettings();
         }
 
@@ -52,6 +57,7 @@ namespace Illustra.ViewModels.Settings
             GeneralSettings.SaveSettings();
             ThumbnailSettings.SaveSettings();
             ViewerSettings.SaveSettings();
+            PropertyPanelSettings.SaveSettings();
             DeveloperSettings.SaveSettings();
 
             // 基本設定の保存
@@ -78,6 +84,9 @@ namespace Illustra.ViewModels.Settings
                     thumbnailList.ApplySettings();
                     LogHelper.LogWithTimestamp($"マウスホイール倍率を更新: {ThumbnailSettings.MouseWheelMultiplier:F1}", LogHelper.Categories.UI);
                 }
+
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator.GetEvent<ViewerSettingsChangedEvent>().Publish();
             }
         }
 

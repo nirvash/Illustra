@@ -14,6 +14,8 @@ using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System.Text;
 using System.Reflection;
 using Prism.Events;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Illustra.Views
 {
@@ -24,6 +26,7 @@ namespace Illustra.Views
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
         private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
+        private ViewerSettings _viewerSettings;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -99,6 +102,9 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
 
+            // 設定の読み込み
+            LoadViewerSettings();
+
             // AppContextからプロパティを初期化（DependencyPropertyにセット）
             ImageProperties = _appContext.CurrentProperties;
 
@@ -111,6 +117,42 @@ namespace Illustra.Views
             Loaded += PropertyPanelControl_Loaded;
             Unloaded += PropertyPanelControl_Unloaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
+        }
+
+        // 設定を読み込み、UI要素の表示・非表示を設定
+        private void LoadViewerSettings()
+        {
+            try
+            {
+                _viewerSettings = ViewerSettingsHelper.LoadSettings();
+                ApplyViewerSettings();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"設定の読み込みに失敗しました: {ex.Message}");
+                _viewerSettings = new ViewerSettings(); // デフォルト設定を使用
+            }
+        }
+
+        // 設定に基づいてUI要素の表示・非表示を適用
+        private void ApplyViewerSettings()
+        {
+            if (_viewerSettings == null) return;
+
+            // ファイル名セクション
+            FileNameSection.Visibility = _viewerSettings.ShowFileName ? Visibility.Visible : Visibility.Collapsed;
+
+            // レーティングセクション
+            RatingSection.Visibility = _viewerSettings.ShowRating ? Visibility.Visible : Visibility.Collapsed;
+
+            // 詳細情報セクション
+            DetailsSection.Visibility = _viewerSettings.ShowDetails ? Visibility.Visible : Visibility.Collapsed;
+
+            // Stable Diffusion情報セクション
+            StableDiffusionSection.Visibility = _viewerSettings.ShowStableDiffusion ? Visibility.Visible : Visibility.Collapsed;
+
+            // コメントセクション
+            CommentSection.Visibility = _viewerSettings.ShowComment ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -128,6 +170,16 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderChanged);
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+
+            // 設定変更イベントを購読（設定ダイアログからの変更通知）
+            _eventAggregator.GetEvent<ViewerSettingsChangedEvent>().Subscribe(OnViewerSettingsChanged, ThreadOption.UIThread);
+        }
+
+        // 設定変更イベントを処理
+        private void OnViewerSettingsChanged()
+        {
+            // 設定を再読み込み
+            LoadViewerSettings();
         }
 
         private void PropertyPanelControl_Unloaded(object sender, RoutedEventArgs e)
@@ -137,6 +189,7 @@ namespace Illustra.Views
                 _eventAggregator.GetEvent<FileSelectedEvent>().Unsubscribe(OnFileSelected);
                 _eventAggregator.GetEvent<FolderSelectedEvent>().Unsubscribe(OnFolderChanged);
                 _eventAggregator.GetEvent<FilterChangedEvent>().Unsubscribe(OnFilterChanged);
+                _eventAggregator.GetEvent<ViewerSettingsChangedEvent>().Unsubscribe(OnViewerSettingsChanged);
             }
         }
 
@@ -161,11 +214,35 @@ namespace Illustra.Views
             {
                 // 共有コンテキストを更新するサービスが行うため、自分で読み込む必要はない
                 Visibility = Visibility.Visible;
+
+                // Stable Diffusionのセクションを表示/非表示
+                UpdateStableDiffusionVisibility();
             }
             else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
             {
                 // ファイルが選択されていない場合はプロパティパネルを非表示にする
                 Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // StableDiffusionセクションの表示/非表示を更新
+        private void UpdateStableDiffusionVisibility()
+        {
+            // 基本的な表示設定がオフの場合は非表示
+            if (!_viewerSettings.ShowStableDiffusion)
+            {
+                StableDiffusionSection.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // HasStableDiffusionDataの状態に応じて表示/非表示
+            if (ImageProperties?.HasStableDiffusionData == true)
+            {
+                StableDiffusionSection.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                StableDiffusionSection.Visibility = Visibility.Collapsed;
             }
         }
 

@@ -110,15 +110,17 @@
                         </Grid.RowDefinitions>
 
                         <!-- ファイル名 -->
-                        <TextBox Grid.Row="0"
-                                 Text="{Binding FileName, Mode=OneWay}"
-                                 FontSize="14"
-                                 FontWeight="Bold"
-                                 Margin="0,0,0,10"
-                                 Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                        <StackPanel x:Name="FileNameSection" Grid.Row="0">
+                            <TextBox Text="{Binding FileName, Mode=OneWay}"
+                                    FontSize="14"
+                                    FontWeight="Bold"
+                                    Margin="0,0,0,10"
+                                    Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                        </StackPanel>
 
                         <!-- レーティング -->
-                        <StackPanel Grid.Row="1"
+                        <StackPanel x:Name="RatingSection"
+                                    Grid.Row="1"
                                     Orientation="Horizontal"
                                     Margin="0,0,0,10">
                                 <TextBlock Text="{DynamicResource String_Property_Rating}"
@@ -180,12 +182,12 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                         </StackPanel>
-
                         <!-- 詳細情報（折りたたみ可能） -->
-                        <Expander Grid.Row="2"
-                                  IsExpanded="{Binding FolderPathExpanded, Mode=TwoWay}"
-                                  Header="{DynamicResource String_Property_DetailInfo}"
-                                  Margin="0,0,0,10">
+                        <Expander x:Name="DetailsSection"
+                                Grid.Row="2"
+                                IsExpanded="{Binding FolderPathExpanded, Mode=TwoWay}"
+                                Header="{DynamicResource String_Property_DetailInfo}"
+                                Margin="0,0,0,10">
                                 <Grid>
                                         <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -321,7 +323,8 @@
                         </Expander>
 
                         <!-- Stable Diffusion情報 -->
-                        <Expander Grid.Row="3"
+                        <Expander x:Name="StableDiffusionSection"
+                                  Grid.Row="3"
                                   Header="{DynamicResource String_Property_StableDiffusion}"
                                   Margin="0,0,0,10"
                                   IsExpanded="{Binding StableDiffusionExpanded}"
@@ -498,7 +501,8 @@
                         </Button>
 
                         <!-- コメント -->
-                        <Grid Grid.Row="5"
+                        <Grid x:Name="CommentSection"
+                              Grid.Row="5"
                               Margin="0,0,0,5">
                                 <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
