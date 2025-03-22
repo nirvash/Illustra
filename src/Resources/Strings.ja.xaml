@@ -54,6 +54,12 @@
     <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>
     <system:String x:Key="String_Slideshow_IntervalFormat">{0:F1} 秒</system:String>
 
+    <!-- 設定画面のカテゴリ -->
+    <system:String x:Key="String_Settings_General_Category">全般</system:String>
+    <system:String x:Key="String_Settings_Thumbnail_Category">サムネイル画面</system:String>
+    <system:String x:Key="String_Settings_Viewer_Category">ビューワ画面</system:String>
+    <system:String x:Key="String_Settings_Developer_Category">開発者オプション</system:String>
+
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>
     <system:String x:Key="String_Settings_ScrollConfig_Section">スクロール設定</system:String>
@@ -69,6 +75,11 @@
     <system:String x:Key="String_Settings_Slideshow_InvalidInterval">再生間隔は0より大きい値を入力してください。</system:String>
     <system:String x:Key="String_Settings_MouseWheel_InvalidValue">マウスホイールの速度は0より大きい値を入力してください。</system:String>
     <system:String x:Key="String_Settings_SaveError">設定の保存中にエラーが発生しました。</system:String>
+    <system:String x:Key="String_Settings_ValidationError">入力値が不正です。各設定項目を確認してください。</system:String>
+    <system:String x:Key="String_Settings_SaveCompleted">設定を保存しました。</system:String>
+    <system:String x:Key="String_Error">エラー</system:String>
+
+    <!-- Settings -->
     <system:String x:Key="String_Settings_Developer_Section">開発者オプション</system:String>
     <system:String x:Key="String_Settings_Developer_LogCategories">ログカテゴリ設定</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>

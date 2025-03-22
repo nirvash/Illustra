@@ -78,6 +78,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 | Ctrl+V   | クリップボードから画像を貼り付け |
 | Delete   | ファイルを削除                   |
 | F11      | フルスクリーン切り替え           |
+| P        | プロパティパネルの表示/非表示    |
 
 #### ビューワ画面
 
@@ -221,6 +222,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 | Ctrl+V   | Paste images from clipboard   |
 | Delete   | Delete file                   |
 | F11      | Toggle fullscreen             |
+| P        | Toggle property panel         |
 
 #### Image Viewer
 
