@@ -325,24 +325,62 @@ namespace Illustra.Models
                 {
                     _userComment = value;
                     OnPropertyChanged(nameof(UserComment));
-
-                    // UserCommentが更新されたらStable Diffusion解析を試みる
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        try
-                        {
-                            StableDiffusionResult = StableDiffusionParser.Parse(value);
-                        }
-                        catch
-                        {
-                            StableDiffusionResult = null;
-                        }
-                    }
-                    else
-                    {
-                        StableDiffusionResult = null;
-                    }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Stable Diffusionの解析結果を設定する
+        /// </summary>
+        /// <param name="metadata">メタデータ</param>
+        public void SetStableDiffusionData(StableDiffusionMetadata metadata)
+        {
+            if (metadata == null || !metadata.ParseSuccess)
+            {
+                StableDiffusionResult = null;
+                return;
+            }
+
+            try
+            {
+                // 新しい変換ヘルパーを使用してレガシーフォーマットに変換
+                var legacyResult = StableDiffusionMetadataManager.ConvertToLegacyParseResult(metadata);
+                StableDiffusionResult = legacyResult;
+            }
+            catch
+            {
+                StableDiffusionResult = null;
+            }
+        }
+
+        /// <summary>
+        /// UserCommentからStable Diffusionデータを解析する
+        /// </summary>
+        public void ParseStableDiffusionFromUserComment()
+        {
+            if (string.IsNullOrEmpty(UserComment))
+            {
+                StableDiffusionResult = null;
+                return;
+            }
+
+            try
+            {
+                // 新しいパーサーシステムを使用してメタデータを解析
+                var metadata = StableDiffusionMetadataManager.ParseMetadataText(UserComment);
+                if (metadata.ParseSuccess)
+                {
+                    SetStableDiffusionData(metadata);
+                }
+                else
+                {
+                    // 従来のパーサーを使用（後方互換性のため）
+                    StableDiffusionResult = StableDiffusionParser.Parse(UserComment);
+                }
+            }
+            catch
+            {
+                StableDiffusionResult = null;
             }
         }
 
@@ -485,6 +523,7 @@ namespace Illustra.Models
 
                 properties.FilePath = filePath;
                 properties.FileName = Path.GetFileName(filePath);
+                properties.FolderPath = Path.GetDirectoryName(filePath);
 
                 var fileInfo = new FileInfo(filePath);
                 properties.FileSizeBytes = fileInfo.Length;
@@ -526,85 +565,42 @@ namespace Illustra.Models
 
             return properties;
         }
-        static string DetectAndDecodeUtf16(byte[] data)
-        {
-            Encoding encoding;
-
-            // 🔹 BOM でエンディアンを判定
-            if (data.Length >= 2 && data[0] == 0xFE && data[1] == 0xFF)
-            {
-                encoding = Encoding.BigEndianUnicode;
-                data = data.Skip(2).ToArray(); // BOM を除去
-            }
-            else if (data.Length >= 2 && data[0] == 0xFF && data[1] == 0xFE)
-            {
-                encoding = Encoding.Unicode; // UTF-16LE
-                data = data.Skip(2).ToArray(); // BOM を除去
-            }
-            else
-            {
-                // BOM がない場合、Exif の仕様に従い UTF-16BE とみなす
-                encoding = Encoding.BigEndianUnicode;
-            }
-
-            return encoding.GetString(data);
-        }
 
         private static void ReadExifData(string filePath, ImagePropertiesModel properties)
         {
             try
             {
-                // PNGファイルの場合は、Parametersチャンクを確認
-                if (Path.GetExtension(filePath).Equals(".png", StringComparison.OrdinalIgnoreCase))
+                // Stable Diffusionメタデータを解析
+                var metadata = StableDiffusionMetadataManager.ExtractMetadataFromFileAsync(filePath).GetAwaiter().GetResult();
+                if (metadata.HasMetadata)
                 {
-                    var pngParameters = PngMetadataReader.ReadTextChunk(filePath, "parameters");
-                    if (!string.IsNullOrEmpty(pngParameters))
+                    // メタデータをプロパティに設定
+                    properties.UserComment = metadata.RawMetadata;
+                    // 解析成功した場合のみStableDiffusionResultを設定
+                    if (metadata.ParseSuccess)
                     {
-                        properties.UserComment = pngParameters;
-                        return; // PNG形式でプロンプト情報が見つかった場合は、Exif情報は不要
+                        properties.SetStableDiffusionData(metadata);
                     }
                 }
 
-                // Exif情報を読み取る
+                // Exif情報を読み取る（Stable Diffusionメタデータがあっても一般的なEXIFは読み取る）
                 var directories = ImageMetadataReader.ReadMetadata(filePath);
                 var exif = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
                 var exifIfd0 = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
 
                 if (exif != null)
                 {
-                    // ユーザーコメント
-                    try
+                    // UserCommentがまだ設定されていない場合のみ設定
+                    if (string.IsNullOrEmpty(properties.UserComment))
                     {
-                        var bytes = exif.GetByteArray(ExifDirectoryBase.TagUserComment);
-                        if (bytes != null && bytes.Length > 8)
+                        try
                         {
-                            // 最初の8バイトがエンコーディング識別子
-                            var encodingStr = System.Text.Encoding.ASCII.GetString(bytes.Take(8).ToArray());
-                            if (encodingStr.StartsWith("ASCII") || encodingStr.Equals("\0\0\0\0\0\0\0\0"))
-                            {
-                                // ASCIIエンコーディング情報がある場合はUTF-8としてデコード
-                                properties.UserComment = System.Text.Encoding.UTF8.GetString(bytes.Skip(8).ToArray());
-                            }
-                            else if (encodingStr.StartsWith("UNICODE"))
-                            {
-                                // UNICODEエンコーディング情報がある場合はUTF-16としてデコード(BOMなしの場合はUTF-16BE)
-                                properties.UserComment = DetectAndDecodeUtf16(bytes.Skip(8).ToArray());
-                            }
-                            else
-                            {
-                                // その他の場合は既存の方式で取得
-                                properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
-                            }
-                        }
-                        else
-                        {
-                            // バイトデータが取得できない場合は既存の方式で取得
                             properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
                         }
-                    }
-                    catch (Exception)
-                    {
-                        properties.UserComment = exif.GetDescription(ExifDirectoryBase.TagUserComment) ?? string.Empty;
+                        catch
+                        {
+                            // 無視
+                        }
                     }
 
                     // 撮影日時

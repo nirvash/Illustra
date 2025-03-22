@@ -7,9 +7,66 @@ using System.Text.RegularExpressions;
 namespace StableDiffusionTools
 {
     /// <summary>
-    /// Stable Diffusionの出力テキストを解析するためのクラス
+    /// Stable Diffusionの出力テキストを解析するためのクラス（後方互換性のためのラッパー）
     /// </summary>
     public class StableDiffusionParser
+    {
+        /// <summary>
+        /// Stable Diffusionの出力テキストを解析する
+        /// </summary>
+        /// <param name="text">解析するテキスト</param>
+        /// <returns>解析結果</returns>
+        public static ParseResult Parse(string? text)
+        {
+            return WebUIStableDiffusionParser.Parse(text);
+        }
+
+        /// <summary>
+        /// Stable Diffusionのパース結果を保持するクラス
+        /// </summary>
+        public class ParseResult
+        {
+            /// <summary>
+            /// 元のプロンプト全体
+            /// </summary>
+            public string Prompt { get; set; } = string.Empty;
+
+            /// <summary>
+            /// 抽出されたプロンプトタグのリスト
+            /// </summary>
+            public List<string> Tags { get; set; } = new List<string>();
+
+            /// <summary>
+            /// 抽出されたLoRAタグのリスト
+            /// </summary>
+            public List<string> Loras { get; set; } = new List<string>();
+
+            /// <summary>
+            /// Negative Prompt全体
+            /// </summary>
+            public string NegativePrompt { get; set; } = string.Empty;
+
+            /// <summary>
+            /// 抽出されたネガティブプロンプトタグのリスト
+            /// </summary>
+            public List<string> NegativeTags { get; set; } = new List<string>();
+
+            /// <summary>
+            /// モデル名
+            /// </summary>
+            public string Model { get; set; } = string.Empty;
+
+            /// <summary>
+            /// モデルハッシュ
+            /// </summary>
+            public string ModelHash { get; set; } = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// WebUI形式のStable Diffusion出力テキストを解析するためのクラス
+    /// </summary>
+    public class WebUIStableDiffusionParser
     {
         /// <summary>
         /// 既定のセクションパターン
@@ -153,54 +210,13 @@ namespace StableDiffusionTools
         }
 
         /// <summary>
-        /// Stable Diffusionのパース結果を保持するクラス
-        /// </summary>
-        public class ParseResult
-        {
-            /// <summary>
-            /// 元のプロンプト全体
-            /// </summary>
-            public string Prompt { get; set; } = string.Empty;
-
-            /// <summary>
-            /// 抽出されたプロンプトタグのリスト
-            /// </summary>
-            public List<string> Tags { get; set; } = new List<string>();
-
-            /// <summary>
-            /// 抽出されたLoRAタグのリスト
-            /// </summary>
-            public List<string> Loras { get; set; } = new List<string>();
-
-            /// <summary>
-            /// Negative Prompt全体
-            /// </summary>
-            public string NegativePrompt { get; set; } = string.Empty;
-
-            /// <summary>
-            /// 抽出されたネガティブプロンプトタグのリスト
-            /// </summary>
-            public List<string> NegativeTags { get; set; } = new List<string>();
-
-            /// <summary>
-            /// モデル名
-            /// </summary>
-            public string Model { get; set; } = string.Empty;
-
-            /// <summary>
-            /// モデルハッシュ
-            /// </summary>
-            public string ModelHash { get; set; } = string.Empty;
-        }
-
-        /// <summary>
         /// Stable Diffusionの出力テキストを解析する
         /// </summary>
         /// <param name="text">解析するテキスト</param>
         /// <returns>解析結果</returns>
-        public static ParseResult Parse(string? text)
+        public static StableDiffusionParser.ParseResult Parse(string? text)
         {
-            var result = new ParseResult();
+            var result = new StableDiffusionParser.ParseResult();
 
             try
             {
