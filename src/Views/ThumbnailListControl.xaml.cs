@@ -712,6 +712,17 @@ namespace Illustra.Views
             return null;
         }
 
+        private static bool IsInsideTreeView(DependencyObject element)
+        {
+            while (element != null)
+            {
+                if (element is TreeView || element is TreeViewItem)
+                    return true;
+                element = VisualTreeHelper.GetParent(element);
+            }
+            return false;
+        }
+
         /// <summary>
         /// サムネイルのロード完了時に前回選択したファイルを選択する処理
         /// </summary>
@@ -737,6 +748,15 @@ namespace Illustra.Views
                     {
                         // ソート順に従って適切な位置に挿入
                         _viewModel.AddItem(fileNode);
+
+                        var focused = Keyboard.FocusedElement;
+
+                        // TreeViewやその子孫がフォーカス中ならフォーカスしない
+                        if (focused is DependencyObject d && !IsInsideTreeView(d))
+                        {
+                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                            ThumbnailItemsControl.Focus();
+                        }
 
                         _ = Task.Run(async () =>
                         {
