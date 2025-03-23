@@ -137,6 +137,9 @@ namespace Illustra.Models
 
                 if (rootDrive != null)
                 {
+                    // 選択状態をクリア
+                    ClearSelection();
+
                     // ドライブを展開状態に設定
                     rootDrive.IsExpanded = true;
 
@@ -182,6 +185,7 @@ namespace Illustra.Models
             // このフォルダがターゲットと一致する場合は選択
             if (item.FullPath.Equals(targetPath, StringComparison.OrdinalIgnoreCase))
             {
+                ClearSelection();
                 item.IsSelected = true;
                 return;
             }

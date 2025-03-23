@@ -79,20 +79,6 @@
                          Handler="TreeViewItem_MouseEnter"/>
             <EventSetter Event="MouseLeave"
                          Handler="TreeViewItem_MouseLeave"/>
-
-            <!-- SystemColorブラシをオーバーライド -->
-            <Style.Resources>
-                <!-- 選択時の背景色（フォーカスあり） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"
-                                 Color="LightBlue"/>
-                <!-- 選択時の背景色（フォーカスなし） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
-                                 Color="LightBlue"/>
-                <!-- 選択時のテキスト色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"
-                                 Color="Black"/>
-            </Style.Resources>
-
         </Style>
     </UserControl.Resources>
 

@@ -120,7 +120,6 @@ namespace Illustra.Views
                     var container = treeView.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
                     if (container != null)
                     {
-                        container.Foreground = new SolidColorBrush(Colors.Black); // テキストカラーを設定
                         container.Visibility = Visibility.Visible; // 表示状態を設定
                         container.UpdateLayout(); // レイアウトを更新
                     }
