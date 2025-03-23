@@ -518,6 +518,7 @@ namespace Illustra.Views
                 return;
 
             // フォルダが変わったらすべてのフィルタを自動的に解除
+            ThumbnailItemsControl.Visibility = Visibility.Hidden;
             _viewModel.CurrentRatingFilter = 0;
             _currentTagFilters.Clear();
             _isTagFilterEnabled = false;
@@ -543,7 +544,7 @@ namespace Illustra.Views
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             await LoadFileNodesAsync(folderPath, args.InitialSelectedFilePath);
 
-            // ソート条件の適用はOnFileNodesLoadedで行う
+            //            ThumbnailItemsControl.Visibility = Visibility.Visible;
         }
 
         public void SetCurrentSettings()
@@ -1017,13 +1018,13 @@ namespace Illustra.Views
                             _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
                         }
                     }
-
                     LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 処理完了", LogHelper.Categories.ThumbnailLoader);
                 }
                 finally
                 {
                     _isFirstLoad = false;
                     _isProcessingOnFileNodesLoaded = false;
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
                 }
             }
             catch (Exception ex)
