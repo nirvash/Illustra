@@ -300,11 +300,10 @@ namespace Illustra.Models
 
                         // ソート設定があれば適用
                         var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                        if (sortSettings != null)
-                        {
-                            var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
-                            Children = new ObservableCollection<FileSystemItemModel>(sorted);
-                        }
+                        var sortType = sortSettings?.SortType ?? SortType.Name;
+                        var isAscending = sortSettings?.IsAscending ?? true;
+                        var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
+                        Children = new ObservableCollection<FileSystemItemModel>(sorted);
                     }
                 }
                 // 展開されていない場合はダミー要素を追加
@@ -362,13 +361,12 @@ namespace Illustra.Models
                                 Children.Remove(itemToRemove);
                             }
 
-                            // ソート設定があれば再適用
+                            // ソート設定があれば適用
                             var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                            if (sortSettings != null)
-                            {
-                                var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
-                                Children = new ObservableCollection<FileSystemItemModel>(sorted);
-                            }
+                            var sortType = sortSettings?.SortType ?? SortType.Name;
+                            var isAscending = sortSettings?.IsAscending ?? true;
+                            var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
+                            Children = new ObservableCollection<FileSystemItemModel>(sorted);
                         }
                     }
                     // 展開されていない場合はダミー要素を管理
@@ -448,13 +446,12 @@ namespace Illustra.Models
                 {
                     renamedChild.UpdatePath(newPath);
 
-                    // ソート設定があれば再適用
+                    // ソート設定があれば適用
                     var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                    if (sortSettings != null)
-                    {
-                        var sorted = FolderSortHelper.Sort(Children, sortSettings.SortType, sortSettings.IsAscending);
-                        Children = new ObservableCollection<FileSystemItemModel>(sorted);
-                    }
+                    var sortType = sortSettings?.SortType ?? SortType.Name;
+                    var isAscending = sortSettings?.IsAscending ?? true;
+                    var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
+                    Children = new ObservableCollection<FileSystemItemModel>(sorted);
                 }
                 // 展開されていない場合でCanExpandがtrueの時はダミー要素の確認
                 else if (!IsExpanded && CanExpand && Children.Count == 0)
