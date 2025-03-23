@@ -54,7 +54,7 @@ namespace Illustra.Views
         private DatabaseManager? _dbManager;
 
         private IllustraAppContext? _appContext;
-        public ImagePropertiesModel Properties => _appContext?.CurrentProperties ?? new ImagePropertiesModel();
+        public ImagePropertiesModel Properties { get; set; } = new ImagePropertiesModel();
 
         // MainViewModelへの参照を追加
         public MainViewModel? MainViewModel => _appContext?.MainViewModel;
@@ -85,6 +85,10 @@ namespace Illustra.Views
         public ImageViewerWindow()
         {
             InitializeComponent();
+            this.WindowPlacementSettings = new CustomPlacementSettings
+            {
+                SettingsIdentifier = "ImageViewerWindow"
+            };
             DataContext = this;
 
             // キャッシュの初期化
@@ -96,9 +100,11 @@ namespace Illustra.Views
             {
                 if (e.PropertyName == nameof(_appContext.CurrentProperties))
                 {
+                    Properties = _appContext.CurrentProperties;
                     OnPropertyChanged(nameof(Properties));
                 }
             };
+            Properties = _appContext?.CurrentProperties ?? new ImagePropertiesModel();
 
             // スライドショータイマーの初期化
             _slideshowTimer = new DispatcherTimer();

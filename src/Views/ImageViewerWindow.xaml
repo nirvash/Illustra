@@ -75,7 +75,7 @@
                    RenderOptions.BitmapScalingMode="HighQuality"/>
         </Grid>
 
-        <!-- レーティング表示（全体の右上に配置） -->
+        <!-- レーティング表示（全体の左上に配置） -->
         <controls:RatingStarControl
             x:Name="RatingStarMark"
             Grid.ColumnSpan="3"
@@ -111,7 +111,7 @@
                 VerticalAlignment="Stretch"
                 BorderThickness="1,0,0,0">
             <StackPanel Margin="10" Width="Auto">
-                <local:PropertyPanelControl x:Name="PropertyPanelControl" ImageProperties="{Binding Properties}"/>
+                <local:PropertyPanelControl x:Name="PropertyPanelControl" />
             </StackPanel>
         </Border>
 
