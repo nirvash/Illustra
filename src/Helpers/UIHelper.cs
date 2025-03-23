@@ -1,6 +1,10 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows.Controls;
+using System.Windows.Interop;
 
 namespace Illustra.Helpers
 {
@@ -9,6 +13,31 @@ namespace Illustra.Helpers
     /// </summary>
     public static class UIHelper
     {
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        public static bool IsParentWindowActive(Control control)
+        {
+            if (!control.IsLoaded) return false;
+
+            Window parentWindow = Window.GetWindow(control);
+            if (parentWindow == null) return false;
+
+            IntPtr hwnd = new WindowInteropHelper(parentWindow).Handle;
+            return hwnd == GetForegroundWindow();
+        }
+
+        [DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+        public static bool IsCurrentWindowActive()
+        {
+            IntPtr foregroundWindow = GetForegroundWindow();
+            GetWindowThreadProcessId(foregroundWindow, out uint activeProcId);
+            uint currentProcId = (uint)Process.GetCurrentProcess().Id;
+            return activeProcId == currentProcId;
+        }
+
         /// <summary>
         /// 指定された型の祖先要素を検索します
         /// </summary>

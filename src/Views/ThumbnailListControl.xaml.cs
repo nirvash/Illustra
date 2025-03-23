@@ -401,6 +401,13 @@ namespace Illustra.Views
                     e.Handled = true;
                 }
             };
+
+            var window = Window.GetWindow(this);
+            if (window != null)
+            {
+                window.Activated += ParentWindow_Activated;
+            }
+
             // ショートカットキーイベントを購読
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
@@ -431,6 +438,17 @@ namespace Illustra.Views
                         thumb.DragCompleted += ScrollBar_DragCompleted;
                     }
                 }
+            }
+        }
+
+        private void ParentWindow_Activated(object? sender, EventArgs e)
+        {
+            // ウィンドウがアクティブになったときにフォーカスを設定
+            var focused = Keyboard.FocusedElement;
+            // TreeViewやその子孫がフォーカス中ならフォーカスしない
+            if (focused is DependencyObject d && !IsInsideTreeView(d))
+            {
+                ThumbnailItemsControl.Focus();
             }
         }
 
@@ -798,9 +816,8 @@ namespace Illustra.Views
                         _viewModel.AddItem(fileNode);
 
                         var focused = Keyboard.FocusedElement;
-
                         // TreeViewやその子孫がフォーカス中ならフォーカスしない
-                        if (focused is DependencyObject d && !IsInsideTreeView(d))
+                        if (UIHelper.IsParentWindowActive(this) && focused is DependencyObject d && !IsInsideTreeView(d))
                         {
                             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                             ThumbnailItemsControl.Focus();
