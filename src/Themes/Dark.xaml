@@ -6,7 +6,7 @@
     </ResourceDictionary.MergedDictionaries>
 
     <!-- 基本カラー -->
-    <Color x:Key="GrayPrimaryColor">#444444</Color>  <!-- メインの灰色 -->
+    <Color x:Key="GrayPrimaryColor">#333333</Color>  <!-- メインの灰色 -->
     <Color x:Key="GrayDarkColor">#222222</Color>  <!-- ダークな灰色 -->
     <Color x:Key="GrayLightColor">#AAAAAA</Color>  <!-- 明るい灰色 -->
     <Color x:Key="GrayHighlightColor">#CCCCCC</Color>  <!-- ハイライト -->

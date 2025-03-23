@@ -2,6 +2,13 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
 
+    <!-- Folder Navigation -->
+    <system:String x:Key="String_FolderTree_EnterAddress">フォルダのアドレスを入力してください</system:String>
+    <system:String x:Key="String_FolderTree_InvalidPath">無効なフォルダパスです</system:String>
+    <system:String x:Key="String_FolderTree_AccessDenied">フォルダへのアクセスが拒否されました</system:String>
+    <system:String x:Key="String_FolderTree_NotFound">フォルダが見つかりません</system:String>
+    <system:String x:Key="String_FolderTree_Tooltip">現在のフォルダ：{0}</system:String>
+
     <!-- Common -->
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>

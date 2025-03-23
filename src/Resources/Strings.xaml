@@ -3,6 +3,13 @@
                     xmlns:system="clr-namespace:System;assembly=mscorlib"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
+    <!-- Folder Navigation -->
+    <system:String x:Key="String_FolderTree_EnterAddress">Enter folder address</system:String>
+    <system:String x:Key="String_FolderTree_InvalidPath">Invalid folder path</system:String>
+    <system:String x:Key="String_FolderTree_AccessDenied">Access to folder denied</system:String>
+    <system:String x:Key="String_FolderTree_NotFound">Folder not found</system:String>
+    <system:String x:Key="String_FolderTree_Tooltip">Current folder: {0}</system:String>
+
     <!-- Common -->
     <system:String x:Key="String_AppName">Illustra</system:String>
     <system:String x:Key="String_Common_Ok">OK</system:String>
