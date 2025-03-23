@@ -24,7 +24,7 @@ namespace Illustra.ViewModels.Settings
             _viewerSettings = ViewerSettingsHelper.LoadSettings();
 
             // 各カテゴリのViewModelを初期化
-            GeneralSettings = new GeneralSettingsViewModel(_settings);
+            GeneralSettings = new GeneralSettingsViewModel(_settings, _viewerSettings);
             ThumbnailSettings = new ThumbnailSettingsViewModel(_settings);
             ViewerSettings = new ViewerSettingsViewModel(_viewerSettings);
             PropertyPanelSettings = new PropertyPanelSettingsViewModel(_viewerSettings);

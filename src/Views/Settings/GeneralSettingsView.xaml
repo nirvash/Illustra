@@ -39,5 +39,20 @@
                          Margin="0,10,0,0"/>
             </StackPanel>
         </GroupBox>
+
+        <!-- ファイル削除設定 -->
+        <GroupBox Header="{DynamicResource String_Settings_FileOperation_Section}"
+                 Margin="0,10,0,0">
+            <StackPanel Margin="5">
+                <TextBlock Text="{DynamicResource String_Settings_FileOperation_DeleteMode}"
+                         Margin="0,0,0,5"/>
+                <RadioButton Content="{DynamicResource String_Settings_FileOperation_DeleteMode_RecycleBin}"
+                           IsChecked="{Binding DeleteModeRecycleBin}"
+                           Margin="0,0,0,5"/>
+                <RadioButton Content="{DynamicResource String_Settings_FileOperation_DeleteMode_Permanent}"
+                           IsChecked="{Binding DeleteModePermanent}"
+                           Margin="0,0,0,5"/>
+            </StackPanel>
+        </GroupBox>
     </StackPanel>
 </UserControl>

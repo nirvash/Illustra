@@ -89,6 +89,12 @@
     <system:String x:Key="String_Error">エラー</system:String>
 
     <!-- Settings -->
+    <system:String x:Key="String_Settings_FileOperation_Section">ファイル操作</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode">ファイル削除時の動作</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode_RecycleBin">ごみ箱に移動</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode_Permanent">完全に削除</system:String>
+
+    <!-- Settings -->
     <system:String x:Key="String_Settings_Developer_Section">開発者オプション</system:String>
     <system:String x:Key="String_Settings_Developer_LogCategories">ログカテゴリ設定</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
@@ -259,6 +265,7 @@
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">準備完了</system:String>
     <system:String x:Key="String_Status_FileDeleted">🗑️ ファイルを削除しました</system:String>
+    <system:String x:Key="String_Status_FileMovedToRecycleBin">🗑️ ファイルをごみ箱に移動しました</system:String>
     <system:String x:Key="String_Status_Loading">読み込み中...</system:String>
     <system:String x:Key="String_Status_ItemsSelected">{0}個の項目が選択されています</system:String>
     <system:String x:Key="String_Status_Error">エラー: {0}</system:String>
@@ -267,6 +274,7 @@
     <system:String x:Key="String_Thumbnail_RatingFilterMessage">選択したファイルはレーティングフィルターにより表示されていません。フィルターを解除しますか？</system:String>
     <system:String x:Key="String_Thumbnail_RatingFilterTitle">レーティングフィルター</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmMessage">選択された{0}個のファイルを削除しますか？</system:String>
+    <system:String x:Key="String_Thumbnail_MoveToRecycleBinConfirmMessage">選択された{0}個のファイルをごみ箱に移動しますか？</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmTitle">削除の確認</system:String>
     <system:String x:Key="String_Thumbnail_FileOperationError">ファイルの{0}に失敗しました: {1}</system:String>
     <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">ファイル操作エラー</system:String>

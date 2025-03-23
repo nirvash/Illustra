@@ -3,6 +3,12 @@ using Newtonsoft.Json;
 
 namespace Illustra.Helpers
 {
+    public enum FileDeleteMode
+    {
+        Permanent, // 完全削除
+        RecycleBin // ごみ箱に削除
+    }
+
     public static class ViewerSettingsHelper
     {
         // 設定ファイルのパスを固定値で設定
@@ -69,5 +75,8 @@ namespace Illustra.Helpers
         public bool ShowDetails { get; set; } = true;
         public bool ShowStableDiffusion { get; set; } = true;
         public bool ShowComment { get; set; } = true;
+
+        // ファイル操作の設定
+        public FileDeleteMode DeleteMode { get; set; } = FileDeleteMode.RecycleBin; // デフォルトはごみ箱に削除
     }
 }

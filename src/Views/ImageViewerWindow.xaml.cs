@@ -874,10 +874,15 @@ namespace Illustra.Views
                 var fileOp = new FileOperationHelper(db);
 
                 // ファイルを削除
-                await fileOp.DeleteFile(_currentFilePath);
+                var settings = ViewerSettingsHelper.LoadSettings();
+                bool moveToRecycleBin = settings.DeleteMode == FileDeleteMode.RecycleBin;
+                await fileOp.DeleteFile(_currentFilePath, moveToRecycleBin);
 
-                // 削除通知を表示
-                ShowNotification((string)FindResource("String_Status_FileDeleted"), 24);
+                // 削除通知を表示（ごみ箱に移動した場合は専用メッセージ）
+                var message = moveToRecycleBin
+                    ? (string)FindResource("String_Status_FileMovedToRecycleBin")
+                    : (string)FindResource("String_Status_FileDeleted");
+                ToastNotificationHelper.ShowRelativeTo(this, message);
 
                 // ViewModelから削除
                 var viewModel = MainViewModel;

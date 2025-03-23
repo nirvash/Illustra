@@ -92,6 +92,12 @@
     <system:String x:Key="String_Error">Error</system:String>
 
     <!-- Settings -->
+    <system:String x:Key="String_Settings_FileOperation_Section">File Operations</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode">File deletion behavior</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode_RecycleBin">Move to Recycle Bin</system:String>
+    <system:String x:Key="String_Settings_FileOperation_DeleteMode_Permanent">Delete permanently</system:String>
+
+    <!-- Settings -->
     <system:String x:Key="String_Settings_Developer_Section">Developer Options</system:String>
     <system:String x:Key="String_Settings_Developer_LogCategories">Log Categories</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
@@ -244,6 +250,7 @@
     <!-- Status Messages -->
     <system:String x:Key="String_Status_Ready">Ready</system:String>
     <system:String x:Key="String_Status_FileDeleted">🗑️ File deleted</system:String>
+    <system:String x:Key="String_Status_FileMovedToRecycleBin">🗑️ File moved to Recycle Bin</system:String>
     <system:String x:Key="String_Status_Loading">Loading...</system:String>
     <system:String x:Key="String_Status_ItemsSelected">{0} items selected</system:String>
     <system:String x:Key="String_Status_Error">Error: {0}</system:String>
@@ -252,6 +259,7 @@
     <system:String x:Key="String_Thumbnail_RatingFilterMessage">The selected file is not displayed due to the rating filter. Do you want to clear the filter?</system:String>
     <system:String x:Key="String_Thumbnail_RatingFilterTitle">Rating Filter</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmMessage">Are you sure you want to delete {0} selected files?</system:String>
+    <system:String x:Key="String_Thumbnail_MoveToRecycleBinConfirmMessage">Are you sure you want to move {0} selected files to the recycle bin?</system:String>
     <system:String x:Key="String_Thumbnail_DeleteConfirmTitle">Delete Confirmation</system:String>
     <system:String x:Key="String_Thumbnail_FileOperationError">Failed to {0} file: {1}</system:String>
     <system:String x:Key="String_Thumbnail_FileOperationErrorTitle">File Operation Error</system:String>

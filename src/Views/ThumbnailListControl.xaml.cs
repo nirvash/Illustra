@@ -1715,6 +1715,7 @@ namespace Illustra.Views
 
         private async void DeleteSelectedItems()
         {
+            var settings = ViewerSettingsHelper.LoadSettings();
             try
             {
                 var selectedItems = _viewModel.SelectedItems.ToList();
@@ -1723,8 +1724,14 @@ namespace Illustra.Views
                 // 複数選択時は確認ダイアログを表示
                 if (selectedItems.Count > 1)
                 {
+                    bool moveToRecycleBin = settings.DeleteMode == FileDeleteMode.RecycleBin;
+
+                    var messageKey = moveToRecycleBin ?
+                        "String_Thumbnail_MoveToRecycleBinConfirmMessage" :
+                        "String_Thumbnail_DeleteConfirmMessage";
+
                     var message = string.Format(
-                        (string)Application.Current.FindResource("String_Thumbnail_DeleteConfirmMessage"),
+                        (string)Application.Current.FindResource(messageKey),
                         selectedItems.Count);
                     var result = MessageBox.Show(
                         message,
@@ -1742,8 +1749,15 @@ namespace Illustra.Views
                 {
                     if (File.Exists(item.FullPath))
                     {
-                        await fileOp.DeleteFile(item.FullPath);
+                        bool moveToRecycleBin = settings.DeleteMode == FileDeleteMode.RecycleBin;
+                        await fileOp.DeleteFile(item.FullPath, moveToRecycleBin, false);
                         _viewModel.Items.Remove(item);
+
+                        // 削除完了通知を表示（ごみ箱に移動した場合は専用メッセージ）
+                        var message = moveToRecycleBin
+                            ? (string)Application.Current.FindResource("String_Status_FileMovedToRecycleBin")
+                            : (string)Application.Current.FindResource("String_Status_FileDeleted");
+                        ToastNotificationHelper.ShowRelativeTo(this, message);
                     }
                 }
             }

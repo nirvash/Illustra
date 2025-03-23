@@ -8,6 +8,9 @@ namespace Illustra.ViewModels.Settings
     public class GeneralSettingsViewModel : SettingsViewModelBase
     {
         private readonly AppSettingsModel _settings;
+        private readonly ViewerSettings _viewerSettings;
+        private bool _deleteModePermanent;
+        private bool _deleteModeRecycleBin;
 
         private bool _selectLastFileOnStartup;
         public bool SelectLastFileOnStartup
@@ -84,9 +87,46 @@ namespace Illustra.ViewModels.Settings
 
         public ICommand BrowseStartupFolderCommand { get; }
 
-        public GeneralSettingsViewModel(AppSettingsModel settings)
+        public bool DeleteModePermanent
+        {
+            get => _deleteModePermanent;
+            set
+            {
+                if (_deleteModePermanent != value)
+                {
+                    _deleteModePermanent = value;
+                    OnPropertyChanged(nameof(DeleteModePermanent));
+                    if (value)
+                    {
+                        _viewerSettings.DeleteMode = FileDeleteMode.Permanent;
+                        DeleteModeRecycleBin = false;
+                    }
+                }
+            }
+        }
+
+        public bool DeleteModeRecycleBin
+        {
+            get => _deleteModeRecycleBin;
+            set
+            {
+                if (_deleteModeRecycleBin != value)
+                {
+                    _deleteModeRecycleBin = value;
+                    OnPropertyChanged(nameof(DeleteModeRecycleBin));
+                    if (value)
+                    {
+                        _viewerSettings.DeleteMode = FileDeleteMode.RecycleBin;
+                        DeleteModePermanent = false;
+                    }
+                }
+            }
+        }
+
+        public GeneralSettingsViewModel(AppSettingsModel settings, ViewerSettings viewerSettings)
         {
             _settings = settings;
+            _viewerSettings = viewerSettings;
             BrowseStartupFolderCommand = new RelayCommand(BrowseStartupFolder);
         }
 
@@ -112,18 +152,27 @@ namespace Illustra.ViewModels.Settings
 
         public override void LoadSettings()
         {
+            // AppSettingsの読み込み
             UpdateStartupMode(_settings.StartupMode);
             StartupFolderPath = _settings.StartupFolderPath;
             SelectLastFileOnStartup = _settings.SelectLastFileOnStartup;
+
+            // ViewerSettingsの読み込み
+            DeleteModePermanent = _viewerSettings.DeleteMode == FileDeleteMode.Permanent;
+            DeleteModeRecycleBin = _viewerSettings.DeleteMode == FileDeleteMode.RecycleBin;
         }
 
         public override void SaveSettings()
         {
+            // AppSettingsの保存
             _settings.StartupMode = StartupModeNone ? AppSettingsModel.StartupFolderMode.None :
                                    StartupModeLastOpened ? AppSettingsModel.StartupFolderMode.LastOpened :
                                    AppSettingsModel.StartupFolderMode.Specified;
             _settings.StartupFolderPath = StartupFolderPath;
             _settings.SelectLastFileOnStartup = SelectLastFileOnStartup;
+
+            // ViewerSettingsの保存
+            _viewerSettings.DeleteMode = DeleteModeRecycleBin ? FileDeleteMode.RecycleBin : FileDeleteMode.Permanent;
         }
 
         public override bool ValidateSettings()
