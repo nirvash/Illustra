@@ -76,6 +76,9 @@ namespace Illustra.Helpers
         public bool ShowStableDiffusion { get; set; } = true;
         public bool ShowComment { get; set; } = true;
 
+        // フォントサイズの設定
+        public double PropertyPanelFontSize { get; set; } = 12.0; // フォントサイズ
+
         // ファイル操作の設定
         public FileDeleteMode DeleteMode { get; set; } = FileDeleteMode.RecycleBin; // デフォルトはごみ箱に削除
     }

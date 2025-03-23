@@ -16,8 +16,17 @@
                 <helpers:NumberToVisibilityConverter x:Key="NumberToVisibilityConverter"/>
                 <helpers:AndMultiValueConverter x:Key="AndMultiValueConverter"/>
                 <helpers:BooleanInverseConverter x:Key="BooleanInverseConverter"/>
+                <!-- 基本テキストスタイル -->
+                <Style x:Key="PropertyPanelTextStyle">
+                    <Setter Property="Control.FontSize" Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                </Style>
+
+                <!-- すべてのTextBlockに適用される基本スタイル -->
+                <Style TargetType="TextBlock" BasedOn="{StaticResource PropertyPanelTextStyle}"/>
+
                 <Style x:Key="NormalTagTextBoxStyle"
-                       TargetType="TextBox">
+                       TargetType="TextBox"
+                       BasedOn="{StaticResource PropertyPanelTextStyle}">
                         <Setter Property="IsReadOnly"
                                 Value="True"/>
                         <Setter Property="Background"
@@ -34,7 +43,8 @@
                                 Value="#666666"/>
                 </Style>
                 <Style x:Key="LoRATagTextBoxStyle"
-                       TargetType="TextBox">
+                       TargetType="TextBox"
+                       BasedOn="{StaticResource PropertyPanelTextStyle}">
                         <Setter Property="IsReadOnly"
                                 Value="True"/>
                         <Setter Property="Background"
@@ -51,7 +61,8 @@
                                 Value="#90C49A"/>
                 </Style>
                 <Style x:Key="NegativeTagTextBoxStyle"
-                       TargetType="TextBox">
+                       TargetType="TextBox"
+                       BasedOn="{StaticResource PropertyPanelTextStyle}">
                         <Setter Property="IsReadOnly"
                                 Value="True"/>
                         <Setter Property="Background"
@@ -78,10 +89,14 @@
                         <Setter Property="Padding"
                                 Value="0"/>
                 </Style>
+
                 <!-- 読み取り専用のテキストボックススタイル -->
                 <Style x:Key="ReadOnlyTextBoxStyle"
-                       TargetType="TextBox">
+                       TargetType="TextBox"
+                       BasedOn="{StaticResource PropertyPanelTextStyle}">
                         <Setter Property="IsReadOnly"
+                                Value="True"/>
+                        <Setter Property="Focusable"
                                 Value="True"/>
                         <Setter Property="Background"
                                 Value="Transparent"/>
@@ -112,10 +127,10 @@
                         <!-- ファイル名 -->
                         <StackPanel x:Name="FileNameSection" Grid.Row="0">
                             <TextBox Text="{Binding FileName, Mode=OneWay}"
-                                    FontSize="14"
-                                    FontWeight="Bold"
-                                    Margin="0,0,0,10"
-                                    Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                FontWeight="Bold"
+                                Margin="0,0,0,10"
+                                Style="{StaticResource ReadOnlyTextBoxStyle}"/>
                         </StackPanel>
 
                         <!-- レーティング -->
@@ -125,6 +140,7 @@
                                     Margin="0,0,0,10">
                                 <TextBlock Text="{DynamicResource String_Property_Rating}"
                                            VerticalAlignment="Center"
+                                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                            Margin="0,0,35,0"/>
                                 <Button x:Name="RatingStar1"
                                         Style="{StaticResource RatingStarButton}"
@@ -187,6 +203,7 @@
                                 Grid.Row="2"
                                 IsExpanded="{Binding FolderPathExpanded, Mode=TwoWay}"
                                 Header="{DynamicResource String_Property_DetailInfo}"
+                                FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 Margin="0,0,0,10">
                                 <Grid>
                                         <Grid.ColumnDefinitions>

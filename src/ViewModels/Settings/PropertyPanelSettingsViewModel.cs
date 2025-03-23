@@ -76,6 +76,20 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
+        private double _fontSize = 12.0;
+        public double FontSize
+        {
+            get => _fontSize;
+            set
+            {
+                if (_fontSize != value && value >= 8.0 && value <= 24.0)
+                {
+                    _fontSize = value;
+                    OnPropertyChanged(nameof(FontSize));
+                }
+            }
+        }
+
         public PropertyPanelSettingsViewModel(ViewerSettings settings)
         {
             _settings = settings;
@@ -88,6 +102,7 @@ namespace Illustra.ViewModels.Settings
             ShowDetails = _settings.ShowDetails;
             ShowStableDiffusion = _settings.ShowStableDiffusion;
             ShowComment = _settings.ShowComment;
+            FontSize = _settings.PropertyPanelFontSize;
         }
 
         public override void SaveSettings()
@@ -97,11 +112,12 @@ namespace Illustra.ViewModels.Settings
             _settings.ShowDetails = ShowDetails;
             _settings.ShowStableDiffusion = ShowStableDiffusion;
             _settings.ShowComment = ShowComment;
+            _settings.PropertyPanelFontSize = FontSize;
         }
 
         public override bool ValidateSettings()
         {
-            return true;
+            return FontSize >= 8.0 && FontSize <= 24.0;
         }
     }
 }

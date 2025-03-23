@@ -3,6 +3,7 @@
                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                         xmlns:local="clr-namespace:Illustra"
                         xmlns:helpers="clr-namespace:Illustra.Helpers"
+                        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
                         xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
         <ResourceDictionary>
@@ -65,6 +66,19 @@
                         Value="Center"/>
                 <Setter Property="VerticalContentAlignment"
                         Value="Center"/>
+            </Style>
+
+            <!-- DoubleUpDown のスタイル定義 -->
+            <Style TargetType="xctk:DoubleUpDown">
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TextBox.Background}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TextBox.Border}" />
+
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Highlight}" />
+                    </Trigger>
+                </Style.Triggers>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

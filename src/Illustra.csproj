@@ -34,6 +34,7 @@
     <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\src\GitVersion.yml"</GitVersion_ToolArguments>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="4.7.25104.5739" />
     <PackageReference Include="GitVersionTask" Version="5.5.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

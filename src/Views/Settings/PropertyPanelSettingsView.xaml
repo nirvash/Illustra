@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit">
     <StackPanel>
         <GroupBox Header="{DynamicResource String_Settings_Display_Section}">
             <StackPanel>
@@ -21,6 +22,19 @@
                 <CheckBox Content="{DynamicResource String_Settings_Display_Comment}"
                          IsChecked="{Binding ShowComment}"
                          Margin="0,5"/>
+
+                <!-- Font Size Setting -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                    <TextBlock Text="{DynamicResource String_Settings_Display_FontSize}"
+                             VerticalAlignment="Center"
+                             Margin="0,0,10,0"/>
+                    <xctk:DoubleUpDown Value="{Binding FontSize}"
+                                    Minimum="8"
+                                    Maximum="24"
+                                    Increment="0.5"
+                                    FormatString="F1"
+                                    Width="80" />
+                </StackPanel>
             </StackPanel>
         </GroupBox>
     </StackPanel>

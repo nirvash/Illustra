@@ -68,6 +68,7 @@
     <system:String x:Key="String_Settings_Display_Details">詳細情報を表示</system:String>
     <system:String x:Key="String_Settings_Display_StableDiffusion">Stable Diffusionを表示</system:String>
     <system:String x:Key="String_Settings_Display_Comment">コメントを表示</system:String>
+    <system:String x:Key="String_Settings_Display_FontSize">フォントサイズ:</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">設定</system:String>

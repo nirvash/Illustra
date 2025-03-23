@@ -59,6 +59,19 @@ namespace Illustra.Views
             set => SetValue(ImagePropertiesProperty, value);
         }
 
+        public static readonly DependencyProperty FontSizeProperty =
+            DependencyProperty.Register(
+                nameof(FontSize),
+                typeof(double),
+                typeof(PropertyPanelControl),
+                new PropertyMetadata(12.0));
+
+        public double FontSize
+        {
+            get => (double)GetValue(FontSizeProperty);
+            set => SetValue(FontSizeProperty, value);
+        }
+
         private static void OnImagePropertiesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is PropertyPanelControl control)
@@ -156,6 +169,9 @@ namespace Illustra.Views
 
             // コメントセクション
             CommentSection.Visibility = _viewerSettings.ShowComment ? Visibility.Visible : Visibility.Collapsed;
+
+            // フォントサイズを適用
+            FontSize = _viewerSettings.PropertyPanelFontSize;
         }
 
         private void OnImagePropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)

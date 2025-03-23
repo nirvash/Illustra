@@ -66,6 +66,7 @@
     <system:String x:Key="String_Settings_Display_Details">Show Details</system:String>
     <system:String x:Key="String_Settings_Display_StableDiffusion">Show Stable Diffusion</system:String>
     <system:String x:Key="String_Settings_Display_Comment">Show Comment</system:String>
+    <system:String x:Key="String_Settings_Display_FontSize">Font Size:</system:String>
 
     <!-- Slideshow -->
     <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
