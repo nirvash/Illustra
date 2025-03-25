@@ -138,6 +138,7 @@ namespace Illustra.Views
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             hideCursorTimer.Tick += (s, args) =>
             {
+                if (!IsFullScreen) return; // フルスクリーン時のみカーソルを隠す
                 if (Mouse.OverrideCursor == Cursors.Arrow || Mouse.OverrideCursor == null)
                 {
                     // マウスカーソルを非表示にする
@@ -539,7 +540,8 @@ namespace Illustra.Views
                 {
                     WebView.Visibility = Visibility.Visible;
                     ImageZoomControl.Visibility = Visibility.Collapsed;
-                    await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath);
+                    var settings = ViewerSettingsHelper.LoadSettings();
+                    await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath, settings.FitSmallAnimationToScreen);
 
                     // WebView表示中はカーソルを隠す機能はオフ
                     Mouse.OverrideCursor = Cursors.Arrow;

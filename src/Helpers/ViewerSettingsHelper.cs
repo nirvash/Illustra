@@ -81,5 +81,8 @@ namespace Illustra.Helpers
 
         // ファイル操作の設定
         public FileDeleteMode DeleteMode { get; set; } = FileDeleteMode.RecycleBin; // デフォルトはごみ箱に削除
+
+        // WebP動画の表示設定
+        public bool FitSmallAnimationToScreen { get; set; } = false; // デフォルトは1:1表示
     }
 }

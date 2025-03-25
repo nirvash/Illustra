@@ -94,6 +94,20 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
+        private bool _fitSmallAnimationToScreen;
+        public bool FitSmallAnimationToScreen
+        {
+            get => _fitSmallAnimationToScreen;
+            set
+            {
+                if (_fitSmallAnimationToScreen != value)
+                {
+                    _fitSmallAnimationToScreen = value;
+                    OnPropertyChanged(nameof(FitSmallAnimationToScreen));
+                }
+            }
+        }
+
         public ViewerSettingsViewModel(ViewerSettings settings)
         {
             _settings = settings;
@@ -116,6 +130,7 @@ namespace Illustra.ViewModels.Settings
             ShowDetails = _settings.ShowDetails;
             ShowStableDiffusion = _settings.ShowStableDiffusion;
             ShowComment = _settings.ShowComment;
+            FitSmallAnimationToScreen = _settings.FitSmallAnimationToScreen;
         }
 
         public override void SaveSettings()
@@ -126,6 +141,7 @@ namespace Illustra.ViewModels.Settings
             _settings.ShowDetails = ShowDetails;
             _settings.ShowStableDiffusion = ShowStableDiffusion;
             _settings.ShowComment = ShowComment;
+            _settings.FitSmallAnimationToScreen = FitSmallAnimationToScreen;
         }
 
         public override bool ValidateSettings()

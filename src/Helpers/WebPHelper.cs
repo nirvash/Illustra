@@ -129,7 +129,10 @@ namespace Illustra.Helpers
         /// <summary>
         /// アニメーション付きWebPを表示します。
         /// </summary>
-        public static async Task ShowAnimatedWebPAsync(WebView2 webView, string filePath)
+        /// <param name="webView">WebViewコントロール</param>
+        /// <param name="filePath">ファイルパス</param>
+        /// <param name="fitToScreen">true: 画面にフィットさせる、false: 可能な場合は1:1で表示</param>
+        public static async Task ShowAnimatedWebPAsync(WebView2 webView, string filePath, bool fitToScreen = false)
         {
             try
             {
@@ -154,8 +157,8 @@ namespace Illustra.Helpers
                     await webView.EnsureCoreWebView2Async(environment);
                 }
 
-                string htmlContent = GenerateAnimationHtml(filePath);
-                var hash = filePath.GetHashCode();
+                string htmlContent = GenerateAnimationHtml(filePath, fitToScreen);
+                var hash = filePath.GetHashCode() + DateTime.Now.Ticks.ToString("x");
                 string tempHtmlPath = Path.Combine(Path.GetTempPath(), $"webp_viewer_{hash}.html");
                 File.WriteAllText(tempHtmlPath, htmlContent);
                 webView.Source = new Uri(tempHtmlPath);
@@ -217,7 +220,7 @@ namespace Illustra.Helpers
         /// <summary>
         /// アニメーション表示用のHTMLを生成します。
         /// </summary>
-        private static string GenerateAnimationHtml(string filePath)
+        private static string GenerateAnimationHtml(string filePath, bool fitToScreen = true)
         {
             return $@"
                 <!DOCTYPE html>
@@ -251,6 +254,7 @@ namespace Illustra.Helpers
                         }}
                     </style>
                     <script>
+                        window.fitToScreen = {(fitToScreen ? "true" : "false")};
                         window.imageState = {{
                             scale: 1.0,
                             offsetX: 0,
@@ -286,12 +290,20 @@ namespace Illustra.Helpers
 
                             console.log(`Image Size: ${{imgWidth}}x${{imgHeight}}, Container Size: ${{containerWidth}}x${{containerHeight}}`);
 
-                            window.imageState.scale = Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
+                            // fitToScreenがfalseの場合、可能であれば1:1で表示
+                            if (!window.fitToScreen && imgWidth <= containerWidth && imgHeight <= containerHeight) {{
+                                window.imageState.scale = 1.0;
+                            }} else {{
+                                window.imageState.scale = Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
+                            }}
+
                             const scaledWidth = imgWidth * window.imageState.scale;
                             const scaledHeight = imgHeight * window.imageState.scale;
 
                             window.imageState.offsetX = (containerWidth - scaledWidth) / 2;
                             window.imageState.offsetY = (containerHeight - scaledHeight) / 2;
+
+                            console.log('Scale: ' + window.imageState.scale + ', Fit to screen: ' + window.fitToScreen);
 
                             updateImageTransform();
                         }}

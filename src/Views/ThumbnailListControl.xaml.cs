@@ -2687,39 +2687,48 @@ namespace Illustra.Views
                     return;
                 }
 
-                // 選択中のファイルのレーティングが変更された場合はアニメーション実行
-                foreach (var selectedItem in _viewModel.SelectedItems)
+                try
                 {
-                    if (selectedItem.FullPath == args.FilePath)
+                    var items = _viewModel.SelectedItems.Cast<FileNodeModel>().ToList();
+
+                    // 選択中のファイルのレーティングが変更された場合はアニメーション実行
+                    foreach (var selectedItem in items)
                     {
-                        // UIスレッドで実行
-                        await Dispatcher.InvokeAsync(() =>
+                        if (selectedItem.FullPath == args.FilePath)
                         {
-                            try
+                            // UIスレッドで実行
+                            await Dispatcher.InvokeAsync(() =>
                             {
-                                // ウィンドウがアクティブな場合のみフォーカス処理を実行
-                                if (Window.GetWindow(this)?.IsActive == true)
+                                try
                                 {
-                                    // 選択中アイテムのコンテナを取得
-                                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
-                                    if (container != null)
+                                    // ウィンドウがアクティブな場合のみフォーカス処理を実行
+                                    if (Window.GetWindow(this)?.IsActive == true)
                                     {
-                                        // DataTemplateの中のRatingStarControlを検索
-                                        var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
-                                        if (starControl != null)
+                                        // 選択中アイテムのコンテナを取得
+                                        var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListViewItem;
+                                        if (container != null)
                                         {
-                                            // 明示的にアニメーションを実行
-                                            starControl.PlayAnimation();
+                                            // DataTemplateの中のRatingStarControlを検索
+                                            var starControl = UIHelper.FindVisualChild<RatingStarControl>(container);
+                                            if (starControl != null)
+                                            {
+                                                // 明示的にアニメーションを実行
+                                                starControl.PlayAnimation();
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.WriteLine($"アニメーション実行中にエラー: {ex.Message}");
-                            }
-                        }, DispatcherPriority.Background);
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine($"アニメーション実行中にエラー: {ex.Message}");
+                                }
+                            }, DispatcherPriority.Background);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"Error in OnRatingChanged: {ex.Message}");
                 }
             }
         }

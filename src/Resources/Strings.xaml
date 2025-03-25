@@ -181,6 +181,10 @@
     <system:String x:Key="String_WebView2_Status_Description">Runtime required for animated WebP</system:String>
     <system:String x:Key="String_WebView2_DownloadLink">Download page</system:String>
 
+    <!-- Animation Settings -->
+    <system:String x:Key="String_Settings_Animation_Section">Animation</system:String>
+    <system:String x:Key="String_Settings_Animation_FitToScreen">Fit small animations to screen</system:String>
+
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String>
     <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>
