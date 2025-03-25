@@ -112,7 +112,8 @@
     <system:String x:Key="String_Settings_Developer_CleanDatabase">Clean Database</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">Database Cleanup</system:String>
     <system:String x:Key="String_Settings_Developer_PreparingCleanup">Press Start to clean up database.</system:String>
-    <system:String x:Key="String_Settings_Developer_CleanupComplete" xml:space="preserve">Cleanup completed.&#x0a;Unnecessary items: {0} items&#x0a;Missing files: {1} items</system:String>
+    <system:String x:Key="String_Settings_Developer_CleanupComplete"
+                   xml:space="preserve">Cleanup completed.&#x0a;Unnecessary items: {0} items&#x0a;Missing files: {1} items</system:String>
     <system:String x:Key="String_Settings_Developer_DeletingEntries">Deleting unnecessary items...</system:String>
     <system:String x:Key="String_Settings_Developer_CheckingFiles">Checking file existence...</system:String>
     <system:String x:Key="String_Settings_Developer_CheckingFilesProgress">Checking file existence... ({0}/{1})</system:String>
@@ -238,6 +239,7 @@
     <system:String x:Key="String_Function_FullScreen">Full Screen</system:String>
     <system:String x:Key="String_Function_PreviousImage">Previous Image</system:String>
     <system:String x:Key="String_Function_NextImage">Next Image</system:String>
+    <system:String x:Key="String_Function_ZoomReset">Reset Zoom</system:String>
 
     <!-- Keyboard Shortcuts -->
     <system:String x:Key="String_Settings_ResetConfirm"

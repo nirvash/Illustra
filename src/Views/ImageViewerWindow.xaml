@@ -1,23 +1,24 @@
 <mahcontrols:MetroWindow x:Class="Illustra.Views.ImageViewerWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Illustra.Views"
-        xmlns:helpers="clr-namespace:Illustra.Helpers"
-        xmlns:controls="clr-namespace:Illustra.Controls"
-        xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
-        mc:Ignorable="d"
-        Height="600"
-        Width="800"
-        SaveWindowPosition="True"
-        IgnoreTaskbarOnMaximize="True"
-        WindowTransitionsEnabled="False"
-        WindowStartupLocation="CenterScreen"
-        KeyDown="Window_KeyDown"
-        PreviewKeyDown="Window_PreviewKeyDown"
-        PreviewMouseDown="Window_PreviewMouseDown"
-        MouseDoubleClick="Window_MouseDoubleClick">
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:local="clr-namespace:Illustra.Views"
+                         xmlns:helpers="clr-namespace:Illustra.Helpers"
+                         xmlns:controls="clr-namespace:Illustra.Controls"
+                         xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
+                         mc:Ignorable="d"
+                         Height="600"
+                         Width="800"
+                         SaveWindowPosition="True"
+                         IgnoreTaskbarOnMaximize="True"
+                         WindowTransitionsEnabled="False"
+                         WindowStartupLocation="CenterScreen"
+                         KeyDown="Window_KeyDown"
+                         PreviewKeyDown="Window_PreviewKeyDown"
+                         PreviewMouseDown="Window_PreviewMouseDown"
+                         MouseDoubleClick="Window_MouseDoubleClick"
+                         SizeChanged="Window_SizeChanged">
 
     <mahcontrols:MetroWindow.Resources>
         <helpers:RatingToColorConverter x:Key="RatingToColorConverter"/>
@@ -28,10 +29,14 @@
         <!-- フェードイン/アウトアニメーション -->
         <Storyboard x:Key="ShowNotificationStoryboard">
             <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                           From="0" To="1" Duration="0:0:0.3"/>
+                             From="0"
+                             To="1"
+                             Duration="0:0:0.3"/>
             <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                           From="1" To="0" Duration="0:0:0.3"
-                           BeginTime="0:0:1"/>
+                             From="1"
+                             To="0"
+                             Duration="0:0:0.3"
+                             BeginTime="0:0:1"/>
         </Storyboard>
     </mahcontrols:MetroWindow.Resources>
 
@@ -40,7 +45,9 @@
         <DataTemplate>
             <StackPanel Orientation="Horizontal">
                 <Image Source="{StaticResource AppIcon}"
-                       Width="16" Height="16" Margin="5,0,0,0"/>
+                       Width="16"
+                       Height="16"
+                       Margin="5,0,0,0"/>
                 <TextBlock Text="{Binding Properties.FileName, RelativeSource={RelativeSource AncestorType=Window}}"
                            VerticalAlignment="Center"
                            FontSize="14"
@@ -50,93 +57,168 @@
     </mahcontrols:MetroWindow.TitleTemplate>
 
     <mahcontrols:MetroWindow.RightWindowCommands>
-        <mahcontrols:WindowCommands>
+        <mahcontrols:WindowCommands x:Name="WindowCommands" ShowSeparators="False">
             <Button Content="⛶"
                     ToolTip="{DynamicResource String_Function_FullScreen}"
                     Click="ToggleFullScreen_Click"
-                    Margin="5, 0, 10, 0" />
+                    Margin="5, 0, 10, 0"/>
+            <Button Content="↺"
+                    ToolTip="{DynamicResource String_Function_ZoomReset}"
+                    Click="ResetZoom_Click"
+                    Margin="5, 0, 10, 0"/>
         </mahcontrols:WindowCommands>
     </mahcontrols:MetroWindow.RightWindowCommands>
-
-    <Grid x:Name="MainGrid"
-        MouseMove="MainGrid_MouseMove">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto" x:Name="SplitterColumn"/> <!-- スプリッター用 -->
-            <ColumnDefinition Width="250" x:Name="PropertyColumn"/> <!-- プロパティパネル用 -->
-        </Grid.ColumnDefinitions>
-
-        <!-- メイン表示領域とレーティング表示をまとめたGrid -->
-        <Grid Grid.Column="0" Background="Transparent" PreviewMouseWheel="MainImage_PreviewMouseWheel">
-            <!-- メイン表示領域 -->
-            <Image x:Name="MainImage"
-                   Source="{Binding ImageSource}"
-                   Stretch="Uniform"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
-        </Grid>
-
-        <!-- レーティング表示（全体の左上に配置） -->
-        <controls:RatingStarControl
-            x:Name="RatingStarMark"
-            Grid.ColumnSpan="3"
-            RatingValue="{Binding Properties.Rating, UpdateSourceTrigger=PropertyChanged}"
-            DisplayMode="Single"
-            StrokeColor="White"
-            Width="28" Height="28"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
-            Margin="5,5,0,0"
-            Panel.ZIndex="1">
-            <controls:RatingStarControl.Effect>
-                <DropShadowEffect Color="Black" Direction="315"
-                                ShadowDepth="1" BlurRadius="2" Opacity="0.7"/>
-            </controls:RatingStarControl.Effect>
-        </controls:RatingStarControl>
-
-        <!-- スプリッター -->
-        <GridSplitter x:Name="PropertySplitter"
-                    Grid.Column="1"
-                    Width="3"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Stretch"
-                    Cursor="SizeWE"
-                    Focusable="False"
-                    DragCompleted="GridSplitter_DragCompleted"
-                    Visibility="{Binding ElementName=PropertyPanel, Path=Visibility}" />
-
-        <!-- プロパティパネル -->
-        <Border x:Name="PropertyPanel"
-                Grid.Column="2"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                BorderThickness="1,0,0,0">
-            <StackPanel Margin="10" Width="Auto">
-                <local:PropertyPanelControl x:Name="PropertyPanelControl" />
-            </StackPanel>
+    <Grid>
+        <!-- フルスクリーン時のコントロール -->
+        <Border x:Name="FullScreenControls"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Background="{DynamicResource MahApps.Brushes.WindowCommands.Background}"
+                Panel.ZIndex="100"
+                Margin="0,0,140,0"
+                Visibility="Collapsed">
+            <ItemsControl Margin="0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <Button Content="⛶"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        ToolTip="{DynamicResource String_Function_FullScreen}"
+                        Click="ToggleFullScreen_Click"
+                        Width="34"
+                        Height="26"
+                        Margin="5 0 10 0"
+                        Padding="8,0"
+                        Style="{DynamicResource MahApps.Styles.Button.WindowCommands}">
+                    <Button.Resources>
+                        <ResourceDictionary>
+                            <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.WindowCommands}">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.WindowCommands.Foreground.MouseOver}" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ResourceDictionary>
+                    </Button.Resources>
+                </Button>
+                <Button Content="↺"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        ToolTip="{DynamicResource String_Function_ZoomReset}"
+                        Click="ResetZoom_Click"
+                        Width="34"
+                        Height="26"
+                        Margin="5 0 10 0"
+                        Padding="8,0"
+                        Style="{DynamicResource MahApps.Styles.Button.WindowCommands}">
+                    <Button.Resources>
+                        <ResourceDictionary>
+                            <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.WindowCommands}">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.WindowCommands.Foreground.MouseOver}" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ResourceDictionary>
+                    </Button.Resources>
+                </Button>
+            </ItemsControl>
         </Border>
+        <Grid x:Name="MainGrid"
+            MouseMove="MainGrid_MouseMove">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"
+                                x:Name="SplitterColumn"/>
+                <!-- スプリッター用 -->
+                <ColumnDefinition Width="250"
+                                x:Name="PropertyColumn"/>
+                <!-- プロパティパネル用 -->
+            </Grid.ColumnDefinitions>
 
-
-        <!-- 状態通知オーバーレイ -->
-        <Border x:Name="Notification"
-                Grid.ColumnSpan="3"
-                MinWidth="150" Height="100"
-                MaxWidth="400"
-                Background="#80000000"
-                CornerRadius="10"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Opacity="0"
-                Padding="16,8">
-            <Grid>
-                <TextBlock x:Name="NotificationText"
-                          Text="▶"
-                          FontSize="48"
-                          Foreground="White"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          MaxWidth="380"
-                          TextWrapping="Wrap"/>
+            <!-- メイン表示領域とレーティング表示をまとめたGrid -->
+            <Grid Grid.Column="0">
+                <!-- メイン表示領域 -->
+                <controls:ZoomControl x:Name="ImageZoomControl"
+                                    Source="{Binding ImageSource}"
+                                    PreviewMouseWheel="MainImage_PreviewMouseWheel"
+                                    Grid.Column="0"/>
             </Grid>
-        </Border>
+
+            <!-- レーティング表示（全体の左上に配置） -->
+            <controls:RatingStarControl
+                x:Name="RatingStarMark"
+                Grid.ColumnSpan="3"
+                RatingValue="{Binding Properties.Rating, UpdateSourceTrigger=PropertyChanged}"
+                DisplayMode="Single"
+                StrokeColor="White"
+                Width="28"
+                Height="28"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="5,5,0,0"
+                Panel.ZIndex="1">
+                <controls:RatingStarControl.Effect>
+                    <DropShadowEffect Color="Black"
+                                    Direction="315"
+                                    ShadowDepth="1"
+                                    BlurRadius="2"
+                                    Opacity="0.7"/>
+                </controls:RatingStarControl.Effect>
+            </controls:RatingStarControl>
+
+            <!-- スプリッター -->
+            <GridSplitter x:Name="PropertySplitter"
+                        Grid.Column="1"
+                        Width="3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        Cursor="SizeWE"
+                        Focusable="False"
+                        DragCompleted="GridSplitter_DragCompleted"
+                        Visibility="{Binding ElementName=PropertyPanel, Path=Visibility}"/>
+
+            <!-- プロパティパネル -->
+            <Border x:Name="PropertyPanel"
+                    Grid.Column="2"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    BorderThickness="1,0,0,0">
+                <StackPanel Margin="10"
+                            Width="Auto">
+                    <local:PropertyPanelControl x:Name="PropertyPanelControl"/>
+                </StackPanel>
+            </Border>
+
+
+            <!-- 状態通知オーバーレイ -->
+            <Border x:Name="Notification"
+                    Grid.ColumnSpan="3"
+                    MinWidth="150"
+                    Height="100"
+                    MaxWidth="400"
+                    Background="#80000000"
+                    CornerRadius="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    IsHitTestVisible="False"
+                    Opacity="0"
+                    Padding="16,8">
+                <Grid>
+                    <TextBlock x:Name="NotificationText"
+                            IsHitTestVisible="False"
+                            Text="▶"
+                            FontSize="48"
+                            Foreground="White"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            MaxWidth="380"
+                            TextWrapping="Wrap"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </mahcontrols:MetroWindow>

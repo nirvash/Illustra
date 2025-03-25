@@ -243,10 +243,11 @@
     <system:String x:Key="String_Function_ToggleSlideshow">スライドショー開始/停止</system:String>
     <system:String x:Key="String_Function_IncreaseSlideshowInterval">スライドショー間隔を増やす</system:String>
     <system:String x:Key="String_Function_DecreaseSlideshowInterval">スライドショー間隔を減らす</system:String>
-    <system:String x:Key="String_Function_CloseViewer">ビューワーを閉じる</system:String>
+    <system:String x:Key="String_Function_CloseViewer">ビューアを閉じる</system:String>
     <system:String x:Key="String_Function_FullScreen">フルスクリーン</system:String>
     <system:String x:Key="String_Function_PreviousImage">前の画像</system:String>
     <system:String x:Key="String_Function_NextImage">次の画像</system:String>
+    <system:String x:Key="String_Function_ZoomReset">ズームをリセット</system:String>
 
     <!-- Language Settings -->
     <system:String x:Key="String_Settings_Language_SavedTitle">設定の保存</system:String>

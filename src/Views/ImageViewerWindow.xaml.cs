@@ -123,7 +123,7 @@ namespace Illustra.Views
             this.StateChanged += MainWindow_StateChanged;
 
             // 右クリックイベントを設定
-            MainImage.PreviewMouseRightButtonDown += (s, e) =>
+            ImageZoomControl.MouseRightButtonDown += (s, e) =>
             {
                 if (_appContext?.CurrentProperties?.StableDiffusionResult != null)
                 {
@@ -180,7 +180,7 @@ namespace Illustra.Views
             {
                 Activate();
                 Focus();
-                MainImage.Focus();
+                ImageZoomControl.Focus();
             }));
 
             // ウィンドウの状態設定
@@ -222,7 +222,7 @@ namespace Illustra.Views
             menu.Items.Add(copyAllPromptItem);
 
             // メニューを表示
-            menu.PlacementTarget = MainImage;
+            menu.PlacementTarget = ImageZoomControl;
             menu.IsOpen = true;
         }
 
@@ -350,6 +350,12 @@ namespace Illustra.Views
             else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToEnd, e.Key))
             {
                 NavigateToLastImage();
+                e.Handled = true;
+            }
+            // ズームをリセット（Home キー）
+            else if (e.Key == Key.Home)
+            {
+                ImageZoomControl.ResetZoom();
                 e.Handled = true;
             }
 
@@ -575,11 +581,14 @@ namespace Illustra.Views
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
                 LoadAndDisplayImage(filePath);
 
-                // 3. MainViewModelを取得
+                // 3. ズームをリセット
+                ImageZoomControl.ResetZoom();
+
+                // 4. MainViewModelを取得
                 var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
-                    // 4. 前後の画像をキャッシュ
+                    // 5. 前後の画像をキャッシュ
                     var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                     var currentIndex = files.FindIndex(f => f.FullPath == filePath);
                     if (currentIndex >= 0)
@@ -699,6 +708,26 @@ namespace Illustra.Views
                 WindowState = WindowState.Normal;
                 IsFullScreen = false; // プロパティ経由で設定
             }
+            UpdateControlsVisibility();
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateControlsVisibility();
+        }
+
+        private void UpdateControlsVisibility()
+        {
+            if (_isFullScreen)
+            {
+                WindowCommands.Visibility = Visibility.Collapsed;
+                FullScreenControls.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                WindowCommands.Visibility = Visibility.Visible;
+                FullScreenControls.Visibility = Visibility.Collapsed;
+            }
         }
 
         // 現在のウィンドウ設定を保存する共通メソッド
@@ -773,6 +802,19 @@ namespace Illustra.Views
 
         private void MainImage_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // コントロールキーが押されている場合はズーム処理をZoomControlに任せる
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // ZoomControlのPreviewMouseWheelイベントハンドラがズーム処理を行う
+                return;
+            }
+
+            // その他のモディファイヤーキーが押されている場合もイベントを処理しない
+            if (Keyboard.Modifiers != ModifierKeys.None)
+            {
+                return;
+            }
+
             if (e.Delta > 0)
             {
                 // ホイール上回転で前の画像
@@ -860,6 +902,11 @@ namespace Illustra.Views
         private void FullScreenButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleFullScreen();
+        }
+
+        private void ResetZoom_Click(object sender, RoutedEventArgs e)
+        {
+            ImageZoomControl.ResetZoom();
         }
 
         private async void DeleteCurrentImage()
