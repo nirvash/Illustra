@@ -175,6 +175,12 @@
     <system:String x:Key="String_Property_Comment">Comment</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">Edit Prompt</system:String>
 
+    <!-- WebView2 -->
+    <system:String x:Key="String_WebView2_Status_Installed">✓ Installed</system:String>
+    <system:String x:Key="String_WebView2_Status_NotInstalled">✗ Not installed</system:String>
+    <system:String x:Key="String_WebView2_Status_Description">Runtime required for animated WebP</system:String>
+    <system:String x:Key="String_WebView2_DownloadLink">Download page</system:String>
+
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String>
     <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>

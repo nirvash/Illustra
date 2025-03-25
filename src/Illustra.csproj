@@ -43,9 +43,11 @@
     <PackageReference Include="Hjg.Pngcs" Version="1.1.4" />
     <PackageReference Include="linq2db" Version="5.4.1" />
     <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.5.0" />
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
     <PackageReference Include="Prism.Core" Version="9.0.537" />

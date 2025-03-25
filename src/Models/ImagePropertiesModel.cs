@@ -652,13 +652,20 @@ namespace Illustra.Models
                     try { make = exifIfd0.GetString(ExifDirectoryBase.TagMake) ?? string.Empty; } catch (MetadataException) { }
                     try { model = exifIfd0.GetString(ExifDirectoryBase.TagModel) ?? string.Empty; } catch (MetadataException) { }
 
-                    if (!string.IsNullOrEmpty(make) && !string.IsNullOrEmpty(model))
+                    // ダブルクォートから始まるカメラ情報は無効値として扱う
+                    bool isValidMake = !string.IsNullOrEmpty(make) && !make.StartsWith("workflow", StringComparison.OrdinalIgnoreCase);
+                    bool isValidModel = !string.IsNullOrEmpty(model) && !model.StartsWith("prompt", StringComparison.OrdinalIgnoreCase);
+
+                    if (isValidModel)
                     {
-                        properties.CameraModel = $"{make} {model}";
-                    }
-                    else if (!string.IsNullOrEmpty(model))
-                    {
-                        properties.CameraModel = model;
+                        if (isValidMake)
+                        {
+                            properties.CameraModel = $"{make} {model}";
+                        }
+                        else
+                        {
+                            properties.CameraModel = model;
+                        }
                     }
                 }
             }

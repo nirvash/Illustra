@@ -426,6 +426,7 @@ namespace Illustra.Controls
 
         private void ZoomControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_source == null || _zoomLogic == null) return;
             if (Keyboard.Modifiers == ModifierKeys.Control)
             {
                 _userInteracted = true; // 操作開始で固定
@@ -435,7 +436,7 @@ namespace Illustra.Controls
 
                 // ホイール1回転で約10%のズーム変化
                 var direction = -Math.Sign(e.Delta); // ホイールの回転方向に応じてズームイン/アウト
-                double delta = direction * 0.15;
+                double delta = direction * -0.15;
 
                 // 新しいスケールの計算
                 _zoomLogic.UpdateZoom(mouse, delta);
@@ -447,12 +448,14 @@ namespace Illustra.Controls
 
         private void ZoomControl_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (_source == null || _zoomLogic == null) return;
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 _userInteracted = true; // パン開始で固定
                 _isDragging = false;
                 _isDragChecking = true; // ドラッグチェック開始
                 _dragStartMouse = e.GetPosition(HitBox);
+                HitBox.Cursor = Cursors.Hand;
 
                 // パン開始位置を記録
                 _zoomLogic.StartPan();
@@ -472,8 +475,7 @@ namespace Illustra.Controls
 
         private void ZoomControl_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (_source == null) return;
-
+            if (_source == null || _zoomLogic == null) return;
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 // 現在のマウス位置（スクリーン座標系）
@@ -503,6 +505,7 @@ namespace Illustra.Controls
 
                     ApplyTransformToView();
                     _zoomLogic.LogViewportState("During Drags");
+                    HitBox.Cursor = Cursors.Hand;
 
                     e.Handled = true;
                 }
@@ -517,8 +520,8 @@ namespace Illustra.Controls
                 this.ReleaseMouseCapture();
                 Mouse.OverrideCursor = null;
                 HitBox.ReleaseMouseCapture();
-                HitBox.Cursor = Cursors.Arrow;
             }
+            HitBox.Cursor = Cursors.Arrow;
             _isDragChecking = false; // ドラッグチェック終了
         }
     }

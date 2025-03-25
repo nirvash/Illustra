@@ -7,9 +7,12 @@
                          xmlns:helpers="clr-namespace:Illustra.Helpers"
                          xmlns:controls="clr-namespace:Illustra.Controls"
                          xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
+                         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
                          mc:Ignorable="d"
                          Height="600"
                          Width="800"
+                         MinWidth="200"
+                         MinHeight="200"
                          SaveWindowPosition="True"
                          IgnoreTaskbarOnMaximize="True"
                          WindowTransitionsEnabled="False"
@@ -18,6 +21,7 @@
                          PreviewKeyDown="Window_PreviewKeyDown"
                          PreviewMouseDown="Window_PreviewMouseDown"
                          MouseDoubleClick="Window_MouseDoubleClick"
+                         PreviewMouseWheel="MainImage_PreviewMouseWheel"
                          SizeChanged="Window_SizeChanged">
 
     <mahcontrols:MetroWindow.Resources>
@@ -140,13 +144,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- メイン表示領域とレーティング表示をまとめたGrid -->
-            <Grid Grid.Column="0">
-                <!-- メイン表示領域 -->
-                <controls:ZoomControl x:Name="ImageZoomControl"
-                                    Source="{Binding ImageSource}"
-                                    PreviewMouseWheel="MainImage_PreviewMouseWheel"
-                                    Grid.Column="0"/>
-            </Grid>
+            <!-- メイン表示領域 -->
+            <!-- アニメーション用 WebView2 -->
+            <wv2:WebView2 x:Name="WebView"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsHitTestVisible="True"
+                DefaultBackgroundColor="Transparent"
+                Visibility="Collapsed"/>
+            <controls:ZoomControl x:Name="ImageZoomControl"
+                Source="{Binding ImageSource}"
+                PreviewMouseWheel="MainImage_PreviewMouseWheel"/>
 
             <!-- レーティング表示（全体の左上に配置） -->
             <controls:RatingStarControl

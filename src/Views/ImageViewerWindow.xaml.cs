@@ -18,6 +18,10 @@ using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
 using System.IO;
 using Illustra.ViewModels;
+using Microsoft.Web.WebView2.Wpf;
+using Microsoft.Web.WebView2.Core;
+using Illustra.Controls;
+using System.Windows.Documents;
 
 namespace Illustra.Views
 {
@@ -25,8 +29,6 @@ namespace Illustra.Views
     {
         private const string CONTROL_ID = "ImageViewer";
         // フルスクリーン切り替え前のウィンドウ状態を保存
-        private WindowState _previousWindowState;
-        private WindowStyle _previousWindowStyle;
         private bool _isFullScreen = false;
 
         public event EventHandler? IsFullscreenChanged;
@@ -136,7 +138,11 @@ namespace Illustra.Views
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             hideCursorTimer.Tick += (s, args) =>
             {
-                Mouse.OverrideCursor = Cursors.None;
+                if (Mouse.OverrideCursor == Cursors.Arrow || Mouse.OverrideCursor == null)
+                {
+                    // マウスカーソルを非表示にする
+                    Mouse.OverrideCursor = Cursors.None;
+                }
                 hideCursorTimer.Stop();
             };
 
@@ -168,6 +174,7 @@ namespace Illustra.Views
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
             Unloaded += OnWindowUnloaded();
+            WebView.WebMessageReceived += WebView_WebMessageReceived;
         }
 
         private async void OnWindowLoaded()
@@ -352,12 +359,6 @@ namespace Illustra.Views
                 NavigateToLastImage();
                 e.Handled = true;
             }
-            // ズームをリセット（Home キー）
-            else if (e.Key == Key.Home)
-            {
-                ImageZoomControl.ResetZoom();
-                e.Handled = true;
-            }
 
             // レーティング設定
             for (int i = 0; i <= 5; i++)
@@ -529,8 +530,38 @@ namespace Illustra.Views
                 ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
             }
         }
-        private void LoadAndDisplayImage(string filePath)
+        private async Task LoadAndDisplayImage(string filePath)
         {
+            var IsWebView2Available = WebPHelper.IsWebView2Installed();
+            if (IsWebView2Available && WebPHelper.IsAnimatedWebP(filePath))
+            {
+                try
+                {
+                    WebView.Visibility = Visibility.Visible;
+                    ImageZoomControl.Visibility = Visibility.Collapsed;
+                    await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath);
+
+                    // WebView表示中はカーソルを隠す機能はオフ
+                    Mouse.OverrideCursor = Cursors.Arrow;
+                    hideCursorTimer.Stop();
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"WebView2の初期化中にエラーが発生: {ex.Message}", ex);
+                    ShowStaticImage(filePath);
+                }
+            }
+            else
+            {
+                ShowStaticImage(filePath);
+            }
+        }
+
+        private void ShowStaticImage(string filePath)
+        {
+            WebView.Visibility = Visibility.Collapsed;
+            ImageZoomControl.Visibility = Visibility.Visible;
+
             try
             {
                 /*
@@ -575,11 +606,13 @@ namespace Illustra.Views
                     return;
                 }
 
+                hideCursorTimer.Start();
+
                 // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
 
                 // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
-                LoadAndDisplayImage(filePath);
+                await LoadAndDisplayImage(filePath);
 
                 // 3. ズームをリセット
                 ImageZoomControl.ResetZoom();
@@ -639,6 +672,64 @@ namespace Illustra.Views
             Close();
         }
 
+        private void WebView_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            try
+            {
+                var jsonDocument = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson);
+                var root = jsonDocument.RootElement;
+
+                if (root.TryGetProperty("type", out var typeProperty))
+                {
+                    string type = typeProperty.GetString();
+                    switch (type)
+                    {
+                        case "wheel":
+                            double deltaY = root.GetProperty("deltaY").GetDouble();
+                            // PreviewMouseWheelイベントを生成して呼び出し
+                            var wheelEventArgs = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, (int)deltaY)
+                            {
+                                RoutedEvent = PreviewMouseWheelEvent
+                            };
+                            LogHelper.LogAnalysis($"WebView_WebMessageReceived: Wheel event - deltaY: {deltaY}");
+                            RaiseEvent(wheelEventArgs);
+                            break;
+
+                        case "dblclick":
+                            // Window_MouseDoubleClickを直接呼び出し
+                            var doubleClickEventArgs = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left);
+                            Window_MouseDoubleClick(this, doubleClickEventArgs);
+                            break;
+
+                        case "keydown":
+                            string key = root.GetProperty("key").GetString();
+                            Console.WriteLine($"Key down received: {key}");
+                            try
+                            {
+                                Key wpfKey = (Key)Enum.Parse(typeof(Key), key, true);
+                                var keyEventArgs = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(this), Environment.TickCount, wpfKey)
+                                {
+                                    RoutedEvent = PreviewKeyDownEvent
+                                };
+                                RaiseEvent(keyEventArgs);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Failed to parse key '{key}': {ex.Message}");
+                            }
+                            break;
+
+                        default:
+                            Console.WriteLine($"Unknown message type: {type}");
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing WebView2 message: {ex.Message}");
+            }
+        }
 
         private void MainWindow_StateChanged(object sender, System.EventArgs e)
         {
@@ -649,6 +740,7 @@ namespace Illustra.Views
                 WindowState = WindowState.Maximized;
                 // Topmost = true; // フルスクリーン時は常に最前面に表示
                 IsFullScreen = true; // プロパティ経由で設定
+                WebView.Margin = new Thickness(0, 20, 0, 0); // ボタン類が操作できるように上部50pxを空ける
                 hideCursorTimer.Start();
             }
             else if (this.WindowState == WindowState.Normal)
@@ -658,6 +750,7 @@ namespace Illustra.Views
                 WindowState = WindowState.Normal;
                 Topmost = false; // 通常時は最前面表示を解除
                 IsFullScreen = false; // プロパティ経由で設定
+                WebView.Margin = new Thickness(0, 0, 0, 0); //
 
                 // マウスカーソルを表示状態に戻す
                 Mouse.OverrideCursor = Cursors.Arrow;
@@ -906,7 +999,19 @@ namespace Illustra.Views
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
-            ImageZoomControl.ResetZoom();
+            if (ImageZoomControl.Visibility == Visibility.Visible)
+            {
+                // ズームをリセット
+                ImageZoomControl.ResetZoom();
+            }
+            else if (WebView.Visibility == Visibility.Visible)
+            {
+                // WebViewのズームをリセット
+                if (WebView.IsLoaded)
+                {
+                    WebView.Reload();
+                }
+            }
         }
 
         private async void DeleteCurrentImage()

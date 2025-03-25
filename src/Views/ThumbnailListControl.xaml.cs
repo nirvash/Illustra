@@ -249,7 +249,7 @@ namespace Illustra.Views
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragAdornerTranslation(ThumbnailItemsControl, new Point(5, 20));
 
             // キーボードイベントハンドラのバインド
-            ThumbnailItemsControl.PreviewKeyDown += ThumbnailItemsControl_PreviewKeyDown;
+            ThumbnailItemsControl.PreviewKeyDown += async (s, e) => await ThumbnailItemsControl_PreviewKeyDown(s, e);
 
             // DatabaseManagerの取得とサムネイルローダーの初期化
             _thumbnailLoader = new ThumbnailLoaderHelper(
@@ -1419,7 +1419,7 @@ namespace Illustra.Views
 
 
         // レーティングを設定する新しいメソッド
-        private async void SetRating(int rating)
+        private void SetRating(int rating)
         {
             if (!_viewModel.SelectedItems.Any()) return;
 
@@ -1565,7 +1565,7 @@ namespace Illustra.Views
             }
         }
 
-        private void ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
+        private async Task ThumbnailItemsControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             var shortcutHandler = KeyboardShortcutHandler.Instance;
 
@@ -1644,7 +1644,7 @@ namespace Illustra.Views
             }
 
             // レーティングキーの処理
-            HandleRatingKey(e);
+            await HandleRatingKey(e);
         }
 
         /// <summary>
