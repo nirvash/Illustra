@@ -420,14 +420,30 @@
                                    VerticalAlignment="Center"
                                    Margin="2"/>
                             <TextBlock Text="{Binding FileName}"
-                                       VerticalAlignment="Bottom"
-                                       HorizontalAlignment="Center"
-                                       Margin="2,0,2,-20"
-                                       Padding="2"
-                                       Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
-                                       Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
-                                       TextAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
+                                        VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Center"
+                                        Margin="2,0,2,-20"
+                                        Padding="2"
+                                        Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
+                                        Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
+                                        TextAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
+                            <!-- 動画アイコン -->
+                            <TextBlock Text="🎞️"
+                                     FontSize="14"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Top"
+                                     Margin="0,2,2,0"
+                                     Foreground="White"
+                                     Visibility="{Binding IsAnimated, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="Black"
+                                                    Direction="315"
+                                                    ShadowDepth="1"
+                                                    BlurRadius="2"
+                                                    Opacity="0.7"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
                             <!-- レーティング表示部分のみを更新 -->
                             <Grid HorizontalAlignment="Left"
                                   VerticalAlignment="Top"

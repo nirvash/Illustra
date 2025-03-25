@@ -762,11 +762,25 @@ public class ThumbnailLoaderHelper
             {
                 // バックグラウンドスレッドでサムネイル生成
                 LogHelper.LogWithTimestamp($"画像処理開始: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
-                thumbnail = await Task.Run(() =>
+                // サムネイル生成とアニメーション判定を同時に行う
+                var (thumbnailImage, isAnimated) = await Task.Run(() =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return ThumbnailHelper.CreateThumbnailOptimized(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+                    var thumb = ThumbnailHelper.CreateThumbnailOptimized(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+
+                    // WebPファイルで500KB以上の場合のみアニメーション判定を行う
+                    var isAnim = false;
+                    if (Path.GetExtension(fileNode.FullPath).ToLowerInvariant() == ".webp" &&
+                        new FileInfo(fileNode.FullPath).Length >= 512000) // 500KB = 512000バイト
+                    {
+                        isAnim = WebPHelper.IsAnimatedWebP(fileNode.FullPath);
+                    }
+
+                    return (thumb, isAnim);
                 }, cancellationToken);
+
+                thumbnail = thumbnailImage;
+                fileNode.IsAnimated = isAnimated;
 
                 LogHelper.LogWithTimestamp($"画像処理完了: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
             }

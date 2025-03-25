@@ -157,6 +157,21 @@ namespace Illustra.Models
         [Column, NotNull]
         public string FileType { get; set; } = string.Empty;
 
+        private bool _isAnimated;
+        [Column, NotNull]
+        public bool IsAnimated
+        {
+            get => _isAnimated;
+            set
+            {
+                if (_isAnimated != value)
+                {
+                    _isAnimated = value;
+                    OnPropertyChanged(nameof(IsAnimated));
+                }
+            }
+        }
+
         private int _rating;
 
         [Column, NotNull]
