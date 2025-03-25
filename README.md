@@ -63,11 +63,11 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 3. フィルタされた画像一覧から目的の画像を素早く見つけることが可能
 4. メニューの フィルタ > すべてのフィルタを解除 でフィルタを解除
 
-### キーボードショートカット
+### 操作説明
 
 #### メイン画面
 
-| キー     | 動作                                 |
+| 操作     | 動作                                 |
 | -------- | ------------------------------------ |
 | ←/→/↑/↓  | サムネイル選択の移動                 |
 | Home/End | 先頭/末尾のサムネイルへ移動          |
@@ -82,7 +82,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 
 #### ビューワ画面
 
-| キー | 動作                          |
+| 操作 | 動作                          |
 | ---- | ----------------------------- |
 | ←/→  | 前/次の画像に移動             |
 | 1-5  | レーティングを設定            |
@@ -91,6 +91,9 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 | Esc  | ビューワを閉じる              |
 | S    | スライドショーの開始/停止     |
 | +/-  | スライドショーの間隔を増減    |
+| Ctrl+マウスホイール | 画像のズームイン/アウト |
+| 左クリック+ドラッグ | 画像をパン（移動） |
+| 画面右上の↺ボタン | ズームをリセット |
 
 ※ キーボードショートカットはカスタマイズ可能です。設定 → キーボードショートカット設定から変更できます。
 以下の機能も設定から任意のキーに割り当てられます：
@@ -143,6 +146,10 @@ Illustra.exe [ファイルパス]
 - 英語 (English)
 
 言語は設定メニューから切り替え可能です。
+
+### 依存ライブラリ
+
+詳細な依存ライブラリ情報は [English Documentation の Dependencies セクション](#dependencies) を参照してください。
 
 ## Contributing
 
@@ -213,12 +220,12 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 3. Quickly find images in the filtered thumbnail list
 4. Clear filters by selecting Filter > Clear All Filters from the menu
 
-### Keyboard Shortcuts
+### Operation Guide
 
 #### Main Window
 
-| Key      | Action                            |
-| -------- | --------------------------------- |
+| Operation | Action                            |
+| --------- | --------------------------------- |
 | ←/→/↑/↓  | Move thumbnail selection          |
 | Home/End | Move to first/last thumbnail      |
 | Enter    | Display selected image            |
@@ -241,6 +248,14 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 | Esc | Close viewer              |
 | S   | Toggle slideshow          |
 | +/- | Adjust slideshow interval |
+
+#### Image Operations
+
+| Operation | Action |
+| --------- | ------ |
+| Ctrl+Mouse wheel | Zoom in/out |
+| Left-click+drag | Pan (move) image |
+| ↺ button (top-right) | Reset zoom |
 
 Note: Keyboard shortcuts are customizable. You can modify them in Settings → Keyboard Shortcuts.
 The following features can also be assigned to any key:
@@ -322,12 +337,24 @@ dotnet run --project src/Illustra/Illustra.csproj
 - [SkiaSharp](https://github.com/mono/SkiaSharp) - Fast image processing
   - License: MIT
   - Used for: Image processing and thumbnail generation
+- [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) - Modern image processing
+  - License: Apache 2.0
+  - Used for: Additional image format support and processing
+- [Hjg.Pngcs](https://github.com/leonbloy/pngcs) - PNG file handling
+  - License: Apache 2.0
+  - Used for: Advanced PNG metadata handling
 - [gong-wpf-dragdrop](https://github.com/punker76/gong-wpf-dragdrop) - Drag & Drop functionality
   - License: BSD 3-Clause
   - Used for: File drag & drop operations
 - [VirtualizingWrapPanel](https://github.com/sbaeumlisberger/VirtualizingWrapPanel) - Virtualized thumbnail display
   - License: MIT
   - Used for: Virtualized thumbnail list display
+- [Extended.Wpf.Toolkit](https://github.com/xceedsoftware/wpftoolkit) - Additional WPF controls
+  - License: MS-PL
+  - Used for: Enhanced UI controls and utilities
+- [MahApps.Metro](https://github.com/MahApps/MahApps.Metro) - Modern UI framework
+  - License: MIT
+  - Used for: Modern UI styling and controls
 
 #### Application Framework
 
