@@ -7,6 +7,7 @@ using LinqToDB.Data;
 using LinqToDB.Configuration;
 using LinqToDB.DataProvider.SQLite;
 using LinqToDB.DataProvider;
+using System.Windows;
 
 namespace Illustra.Helpers
 {
@@ -179,29 +180,49 @@ namespace Illustra.Helpers
         {
             await _dbAccess.WriteAsync(async db =>
             {
-                // 最後にチェックした時刻を設定
-                fileNode.LastCheckedTime = DateTime.Now;
-
-                if (fileNode.Rating <= 0)
+                try
                 {
-                    // 1. `DeleteAsync` を実行
-                    int affectedRows = await db.GetTable<FileNodeModel>()
-                        .Where(fn => fn.FullPath == fileNode.FullPath)
-                        .DeleteAsync();
-                }
-                else
-                {
-                    // 1. `UpdateAsync` を実行し、更新された行数を取得
-                    int affectedRows = await db.GetTable<FileNodeModel>()
-                        .Where(fn => fn.FullPath == fileNode.FullPath)
-                        .Set(fn => fn.Rating, fileNode.Rating)
-                        .Set(fn => fn.LastCheckedTime, fileNode.LastCheckedTime)
-                        .UpdateAsync();
+                    // 最後にチェックした時刻を設定
+                    fileNode.LastCheckedTime = DateTime.Now;
 
-                    // 2. 更新された行が 0 の場合は `InsertAsync` を実行
-                    if (affectedRows == 0)
+                    if (fileNode.Rating <= 0)
                     {
-                        await db.InsertAsync(fileNode);
+                        // 1. `DeleteAsync` を実行
+                        int affectedRows = await db.GetTable<FileNodeModel>()
+                            .Where(fn => fn.FullPath == fileNode.FullPath)
+                            .DeleteAsync();
+                    }
+                    else
+                    {
+                        // 1. `UpdateAsync` を実行し、更新された行数を取得
+                        int affectedRows = await db.GetTable<FileNodeModel>()
+                            .Where(fn => fn.FullPath == fileNode.FullPath)
+                            .Set(fn => fn.Rating, fileNode.Rating)
+                            .Set(fn => fn.LastCheckedTime, fileNode.LastCheckedTime)
+                            .UpdateAsync();
+
+                        // 2. 更新された行が 0 の場合は `InsertAsync` を実行
+                        if (affectedRows == 0)
+                        {
+                            await db.InsertAsync(fileNode);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"Error updating rating for {fileNode.FullPath}: {ex.Message}");
+                    var _appSettings = SettingsHelper.GetSettings();
+                    Debug.WriteLine($"Error updating rating for {fileNode.FullPath}: {ex.Message}");
+                    if (_appSettings.DeveloperMode)
+                    {
+                        MessageBox.Show(
+                        string.Format(
+                            "データベースへの保存に失敗しました: {0} {1}",
+                            fileNode.FullPath,
+                            ex.Message),
+                        "エラー",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                     }
                 }
             });

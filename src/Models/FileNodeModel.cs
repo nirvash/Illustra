@@ -158,7 +158,7 @@ namespace Illustra.Models
         public string FileType { get; set; } = string.Empty;
 
         private bool _isAnimated;
-        [Column, NotNull]
+        [LinqToDB.Mapping.NotColumn]
         public bool IsAnimated
         {
             get => _isAnimated;
