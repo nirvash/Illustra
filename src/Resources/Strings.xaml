@@ -235,7 +235,10 @@
     <system:String x:Key="String_Function_FilterRating3">Filter by ★3</system:String>
     <system:String x:Key="String_Function_FilterRating4">Filter by ★4</system:String>
     <system:String x:Key="String_Function_FilterRating5">Filter by ★5</system:String>
+    <system:String x:Key="String_Function_Copy">Copy</system:String>
+    <system:String x:Key="String_Function_Paste">Paste</system:String>
     <system:String x:Key="String_Function_Delete">Delete</system:String>
+    <system:String x:Key="String_Function_Rename">Rename</system:String> <!-- Added -->
     <system:String x:Key="String_Function_ToggleViewer">Toggle Viewer</system:String>
     <system:String x:Key="String_Function_SelectAll">Select All</system:String>
     <system:String x:Key="String_Function_MoveToStart">Move to Start</system:String>

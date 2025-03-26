@@ -55,6 +55,7 @@ namespace Illustra.Functions
         public static readonly FuncId Delete = new FuncId("delete");
         public static readonly FuncId Copy = new FuncId("copy"); // 追加
         public static readonly FuncId Paste = new FuncId("paste"); // 追加
+        public static readonly FuncId Rename = new FuncId("rename"); // 追加
 
         // 決定操作
         public static readonly FuncId ToggleViewer = new FuncId("toggle_viewer");
@@ -120,6 +121,7 @@ namespace Illustra.Models
             new() { FunctionId = FuncId.Delete.Value, ResourceKey = "String_Function_Delete", DefaultKeys = new List<Key> { Key.Delete } },
             new() { FunctionId = FuncId.Copy.Value, ResourceKey = "String_Function_Copy", DefaultKeys = new List<Key> { Key.C }, DefaultModifiers = new Dictionary<Key, ModifierKeys> { { Key.C, ModifierKeys.Control } } },
             new() { FunctionId = FuncId.Paste.Value, ResourceKey = "String_Function_Paste", DefaultKeys = new List<Key> { Key.V }, DefaultModifiers = new Dictionary<Key, ModifierKeys> { { Key.V, ModifierKeys.Control } } },
+            new() { FunctionId = FuncId.Rename.Value, ResourceKey = "String_Function_Rename", DefaultKeys = new List<Key> { Key.F2 } }, // 追加
 
             // 基本操作
             new() { FunctionId = FuncId.ToggleViewer.Value, ResourceKey = "String_Function_ToggleViewer", DefaultKeys = new List<Key> { Key.Return } },

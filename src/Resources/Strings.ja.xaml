@@ -243,7 +243,10 @@
     <system:String x:Key="String_Function_FilterRating3">★3でフィルター</system:String>
     <system:String x:Key="String_Function_FilterRating4">★4でフィルター</system:String>
     <system:String x:Key="String_Function_FilterRating5">★5でフィルター</system:String>
+    <system:String x:Key="String_Function_Copy">コピー</system:String>
+    <system:String x:Key="String_Function_Paste">ペースト</system:String>
     <system:String x:Key="String_Function_Delete">削除</system:String>
+    <system:String x:Key="String_Function_Rename">名前の変更</system:String> <!-- 追加 -->
     <system:String x:Key="String_Function_ToggleViewer">単独表示切替</system:String>
     <system:String x:Key="String_Function_SelectAll">全選択</system:String>
     <system:String x:Key="String_Function_MoveToStart">先頭へ移動</system:String>

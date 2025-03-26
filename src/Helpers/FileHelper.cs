@@ -15,5 +15,37 @@ namespace Illustra.Helpers
         {
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
         };
+
+        public static bool IsValidFileName(string fileName)
+        {
+            // 禁止文字を取得
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+
+            // 禁止文字が含まれているかチェック
+            if (fileName.IndexOfAny(invalidChars) >= 0)
+            {
+                return false;
+            }
+
+            // 予約語のチェック（大文字小文字を区別せず）
+            string[] reservedNames = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                                   "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+
+            string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName).ToUpper();
+
+            if (reservedNames.Contains(nameWithoutExt))
+            {
+                return false;
+            }
+
+            string GetFileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrWhiteSpace(GetFileNameWithoutExtension))
+            {
+                return false;
+            }
+
+            // ファイル名が空じゃないことをチェック
+            return !string.IsNullOrWhiteSpace(fileName);
+        }
     }
 }

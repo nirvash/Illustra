@@ -348,7 +348,7 @@ namespace Illustra.Views
             }
         }
 
-        private void ShowPromptMenu(FrameworkElement element)
+        private void ShowContextMenu(FrameworkElement element)
         {
             if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
 
@@ -379,9 +379,58 @@ namespace Illustra.Views
                 menu.Items.Add(copyAllPromptItem);
             }
 
+            // 名前の変更
+            var renameItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_ContextMenu_Rename")
+            };
+            renameItem.Click += async (s, e) =>
+            {
+                if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
+                {
+                    await DoRenameAsync(selectedItem);
+                }
+            };
+            menu.Items.Add(renameItem);
+
             // メニューを表示
             menu.PlacementTarget = element;
             menu.IsOpen = true;
+        }
+
+        private async Task DoRenameAsync(FileNodeModel selectedItem)
+        {
+            var oldPath = selectedItem.FullPath;
+            var dialog = new RenameDialog(oldPath)
+            {
+                Owner = Window.GetWindow(this),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                var newPath = dialog.NewFilePath;
+                try
+                {
+                    var fileOp = new FileOperationHelper(ContainerLocator.Container.Resolve<DatabaseManager>());
+                    var fileNode = await fileOp.RenameFile(oldPath, newPath);
+                    if (fileNode == null) return; // 変更なし
+
+                    var oldFileNode = _viewModel.Items.FirstOrDefault(x => x.FullPath == oldPath);
+                    if (oldFileNode != null)
+                    {
+                        oldFileNode.FullPath = newPath;
+                        oldFileNode.FileName = Path.GetFileName(newPath);
+                    }
+
+                    await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
+                    // ビューワなどで新しいパスで開くためにイベントを発行
+                    _eventAggregator.GetEvent<FileSelectedEvent>().Publish(new SelectedFileModel(CONTROL_ID, newPath));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"エラー: {ex.Message}", "名前の変更エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
@@ -397,7 +446,7 @@ namespace Illustra.Views
             {
                 if (e.OriginalSource is FrameworkElement element)
                 {
-                    ShowPromptMenu(element);
+                    ShowContextMenu(element);
                     e.Handled = true;
                 }
             };
@@ -883,6 +932,8 @@ namespace Illustra.Views
                             existingNode.Rating = newNode.Rating;
                             existingNode.FileName = newNode.FileName;
                             existingNode.ThumbnailInfo = newNode.ThumbnailInfo;
+
+                            await SortThumbnailAsync(_isSortByDate, _isSortAscending, true);
 
                             // サムネイル生成をトリガー
                             var index = _viewModel.Items.IndexOf(existingNode);
@@ -1596,6 +1647,21 @@ namespace Illustra.Views
             if (shortcutHandler.IsShortcutMatch(FuncId.Paste, e.Key))
             {
                 PasteFilesFromClipboard();
+                e.Handled = true;
+                return;
+            }
+
+            // リネーム
+            if (shortcutHandler.IsShortcutMatch(FuncId.Rename, e.Key))
+            {
+                if (_viewModel.SelectedItems.Count == 1)
+                {
+                    var selectedItem = _viewModel.SelectedItems.FirstOrDefault() as FileNodeModel;
+                    if (selectedItem != null)
+                    {
+                        DoRenameAsync(selectedItem);
+                    }
+                }
                 e.Handled = true;
                 return;
             }

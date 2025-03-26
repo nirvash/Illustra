@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Illustra.Models;
 using Microsoft.VisualBasic.FileIO;
-using XmpCore.Options;
 
 namespace Illustra.Helpers
 {
@@ -17,6 +17,34 @@ namespace Illustra.Helpers
         public FileOperationHelper(DatabaseManager db)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
+        }
+
+        /// <summary>
+        /// ファイル名を変更し、関連するデータベース情報も更新します
+        /// </summary>
+        public async Task<FileNodeModel> RenameFile(string oldPath, string newPath)
+        {
+            if (string.IsNullOrEmpty(oldPath) || string.IsNullOrEmpty(newPath))
+                throw new ArgumentNullException("ファイルパスが無効です");
+
+            if (!File.Exists(oldPath))
+                throw new FileNotFoundException("元のファイルが見つかりません", oldPath);
+
+            if (oldPath == newPath)
+                return null; // 変更なし;
+
+            try
+            {
+                // ファイル名を変更
+                File.Move(oldPath, newPath);
+
+                // データベースの更新
+                return await _db.HandleFileRenamedAsync(oldPath, newPath);
+            }
+            catch (Exception ex)
+            {
+                throw new FileOperationException($"ファイル名の変更中にエラーが発生しました: {ex.Message}", ex);
+            }
         }
 
         /// <summary>

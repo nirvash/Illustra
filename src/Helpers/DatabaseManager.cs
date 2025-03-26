@@ -227,7 +227,6 @@ namespace Illustra.Helpers
                 }
             });
         }
-
         public async Task<FileNodeModel> HandleFileRenamedAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)
         {
             try
@@ -244,6 +243,7 @@ namespace Illustra.Helpers
                 }
 
                 // ファイル情報を更新
+                // ファイル情報を更新
                 var fileInfo = new FileInfo(newPath);
                 if (!fileInfo.Exists)
                 {
@@ -257,7 +257,7 @@ namespace Illustra.Helpers
                 fileNode.FileName = Path.GetFileName(newPath);
                 fileNode.LastModified = fileInfo.LastWriteTime;
 
-                // DBを更新
+                // DBを更新 (WriteAsyncを使用)
                 await UpdateFileNode(fileNode);
                 return fileNode;
             }
@@ -301,8 +301,8 @@ namespace Illustra.Helpers
                     Rating = 0
                 };
 
-                // DBに保存
-                await SaveFileNodeAsync(newNode);
+                // レーティングがない場合はDBに保存しなくてよい
+                // await SaveFileNodeAsync(newNode);
                 return newNode;
             }
             catch (OperationCanceledException)
