@@ -15,6 +15,7 @@ namespace Illustra.Helpers
         {
             public const string Default = "DEFAULT";
             public const string Error = "ERROR";
+            public const string Warning = "WARNING";
             public const string Performance = "PERFORMANCE";
             public const string ThumbnailLoader = "THUMBNAIL_LOADER";
             public const string ThumbnailQueue = "THUMBNAIL_QUEUE";
@@ -39,6 +40,7 @@ namespace Illustra.Helpers
             // デフォルトですべてのカテゴリを有効化
             _enabledCategories[Categories.Default] = true;
             _enabledCategories[Categories.Error] = true;
+            _enabledCategories[Categories.Warning] = true;
             _enabledCategories[Categories.Performance] = true;
             _enabledCategories[Categories.ThumbnailLoader] = true;
             _enabledCategories[Categories.ThumbnailQueue] = true;
@@ -164,6 +166,19 @@ namespace Illustra.Helpers
             string errorDetails = ex != null ? $" - 例外: {ex.Message}" : "";
             LogWithTimestamp($"[エラー] {message}{errorDetails}", Categories.Error, callerName);
         }
+
+        /// <summary>
+        /// 警告メッセージをログに出力します
+        /// </summary>
+        /// <param name="message">警告メッセージ</param>
+        /// <param name="callerName">呼び出し元のメソッド名（自動設定）</param>
+        public static void LogWarning(
+            string message,
+            [CallerMemberName] string callerName = "")
+        {
+            LogWithTimestamp($"[警告] {message}", Categories.Warning, callerName);
+        }
+
 
         /// <summary>
         /// 処理時間を計測してログに出力するためのストップウォッチを作成します

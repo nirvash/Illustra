@@ -334,4 +334,9 @@
     <system:String x:Key="String_FileSystemTreeView_SameNameExists">A folder with the same name already exists.</system:String>
     <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">Invalid folder name.</system:String>
     <system:String x:Key="String_FileSystemTreeView_RenameError">Failed to rename the folder: {0}</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteFolder">Delete Folder</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteConfirmTitle">Confirm Deletion</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteConfirmMessage">Are you sure you want to permanently delete the folder '{0}' and all its contents?</system:String>
+    <system:String x:Key="String_FileSystemTreeView_MoveToRecycleBinConfirmMessage">Are you sure you want to move the folder '{0}' and all its contents to the Recycle Bin?</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteError">Failed to delete the folder: {0}</system:String>
 </ResourceDictionary>

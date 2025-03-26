@@ -199,6 +199,52 @@ namespace Illustra.Helpers
             }
         }
 
+        /// <summary>
+        /// フォルダを削除し、関連するデータベース情報も削除します
+        /// </summary>
+        /// <param name="directoryPath">削除するフォルダのパス</param>
+        /// <param name="useRecycleBin">trueの場合、ごみ箱に移動。falseの場合、完全削除</param>
+        /// <param name="showUI">操作中にUIを表示するかどうか</param>
+        public async Task DeleteDirectoryAsync(string directoryPath, bool useRecycleBin, bool showUI = true)
+        {
+            if (string.IsNullOrEmpty(directoryPath))
+                throw new ArgumentNullException(nameof(directoryPath));
+
+            if (!Directory.Exists(directoryPath))
+                throw new DirectoryNotFoundException($"フォルダが見つかりません: {directoryPath}");
+
+            try
+            {
+                // UIオプションの設定
+                UIOption uiOption = showUI ? UIOption.AllDialogs : UIOption.OnlyErrorDialogs;
+
+                // リサイクルオプションの設定
+                RecycleOption recycleOption = useRecycleBin ? RecycleOption.SendToRecycleBin : RecycleOption.DeletePermanently;
+
+                // フォルダの削除 (STA スレッドで実行する必要がある場合がある)
+                await RunOnStaThread(() =>
+                {
+                    FileSystem.DeleteDirectory(
+                        directoryPath,
+                        uiOption,
+                        recycleOption
+                    );
+                });
+
+                // データベースから関連フォルダ情報を削除 (必要に応じて実装)
+                // FileSystemMonitor が検知して削除するため、ここでは不要な場合が多い
+                // await _db.DeleteFolderNodeRecursiveAsync(directoryPath); // 例
+            }
+            catch (Exception ex)
+            {
+                // エラーメッセージをリソース化することも検討
+                MessageBox.Show($"フォルダの削除中にエラーが発生しました: {directoryPath}\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogHelper.LogError($"フォルダの削除中にエラーが発生しました: {directoryPath}\n{ex.Message}");
+                throw new FileOperationException($"フォルダの削除中にエラーが発生しました: {directoryPath}\n{ex.Message}", ex);
+            }
+        }
+
+
         #region プライベートヘルパーメソッド
 
         public static Task RunOnStaThread(Action action)

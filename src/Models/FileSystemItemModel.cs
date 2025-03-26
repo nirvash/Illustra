@@ -33,6 +33,7 @@ namespace Illustra.Models
         private ICommand? _addToFavoritesCommand;
         private ICommand? _createFolderCommand;
         private ICommand? _renameFolderCommand;
+        private ICommand? _deleteFolderCommand;
 
         public ICommand RenameFolderCommand
         {
@@ -101,6 +102,79 @@ namespace Illustra.Models
                         (string)Application.Current.FindResource("String_Error"), // エラータイトルもリソース化
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
+                }
+            }
+        }
+
+
+        public ICommand DeleteFolderCommand
+        {
+            get => _deleteFolderCommand ??= new DelegateCommand(ExecuteDeleteFolder, CanExecuteDeleteFolder);
+        }
+
+        private bool CanExecuteDeleteFolder()
+        {
+            // ルートフォルダやダミーフォルダは削除不可
+            return IsFolder && !IsDummy && Parent != null;
+        }
+
+        private async void ExecuteDeleteFolder() // async に変更
+        {
+            if (!CanExecuteDeleteFolder()) return;
+
+            // 設定から削除モードを取得
+            var settings = ViewerSettingsHelper.LoadSettings();
+            bool useRecycleBin = settings.DeleteMode == FileDeleteMode.RecycleBin;
+
+            // 確認メッセージを設定
+            string messageKey = useRecycleBin
+                ? "String_FileSystemTreeView_MoveToRecycleBinConfirmMessage" // ごみ箱移動用のキー
+                : "String_FileSystemTreeView_DeleteConfirmMessage"; // 完全削除用のキー
+            var message = string.Format((string)Application.Current.FindResource(messageKey), Name);
+            var title = (string)Application.Current.FindResource("String_FileSystemTreeView_DeleteConfirmTitle");
+
+            if (MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    // フォルダ存在チェック
+                    if (!Directory.Exists(FullPath))
+                    {
+                        LogHelper.LogWarning($"削除対象のフォルダが見つかりません: {FullPath}"); // LogWarn を LogWarning に修正
+                        // 必要であればユーザーに通知 (例: ステータスバー表示)
+                        return; // 処理を中断
+                    }
+
+                    // 削除前に監視を停止
+                    StopMonitoring();
+
+                    // FileOperationHelper を使用してフォルダを削除
+                    var fileOpHelper = ContainerLocator.Container.Resolve<FileOperationHelper>();
+                    // showUI: false を指定して FileOperationHelper 内の確認ダイアログを抑制
+                    await fileOpHelper.DeleteDirectoryAsync(FullPath, useRecycleBin, showUI: false);
+
+                    // OnFileDeleted は FileSystemMonitor が検知するため、ここでは呼び出さない
+                    // Parent?.OnFileDeleted(FullPath);
+                    // 削除成功後、このノード自体を親から削除する必要があるかもしれないが、
+                    // FileSystemMonitor が親の OnFileDeleted を呼び出すことを期待する
+                }
+                catch (FileOperationHelper.FileOperationException ex)
+                {
+                    // FileOperationHelper内で既にMessageBoxが表示されている可能性があるため、ここではログのみ記録
+                    LogHelper.LogError($"フォルダ削除操作中にエラーが発生しました: {FullPath}. Details: {ex.Message}");
+                    // 必要に応じて追加のエラー処理（例：ステータスバーへの表示など）
+                }
+                catch (Exception ex) // FileOperationHelper 以外からの予期せぬエラー
+                {
+                    var errorMessage = string.Format(
+                        (string)Application.Current.FindResource("String_FileSystemTreeView_DeleteError"),
+                        ex.Message);
+                    MessageBox.Show(
+                        errorMessage,
+                        (string)Application.Current.FindResource("String_Error"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    LogHelper.LogError($"フォルダ削除中に予期せぬエラーが発生しました: {FullPath}. Details: {ex.Message}");
                 }
             }
         }

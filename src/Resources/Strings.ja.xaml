@@ -330,4 +330,9 @@
     <system:String x:Key="String_FileSystemTreeView_SameNameExists">同名のフォルダが既に存在します。</system:String>
     <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">無効なフォルダ名です。</system:String>
     <system:String x:Key="String_FileSystemTreeView_RenameError">フォルダ名の変更に失敗しました: {0}</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteFolder">フォルダを削除</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteConfirmTitle">削除の確認</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteConfirmMessage">フォルダ '{0}' とその内容すべてを完全に削除しますか？</system:String>
+    <system:String x:Key="String_FileSystemTreeView_MoveToRecycleBinConfirmMessage">フォルダ '{0}' とその内容すべてをごみ箱に移動しますか？</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DeleteError">フォルダの削除に失敗しました: {0}</system:String>
 </ResourceDictionary>
