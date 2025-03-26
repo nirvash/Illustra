@@ -56,11 +56,21 @@ jobs:
       - name: Publish
         run: dotnet publish src/Illustra.csproj -c Release -o publish --self-contained true -r win-x64 /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+
+      - name: Build Installer
+        run: |
+          cd installer && "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Illustra.iss
+
       - name: Create ZIP archive
         shell: bash # WindowsでもBashで統一
         run: |
           cd publish
           7z a -tzip "../Illustra-${GITHUB_REF_NAME}.zip" *
+          cd ../installer/Output
+          7z a -tzip "../../Illustra-Installer-${GITHUB_REF_NAME}.zip" *
 
       - name: Generate Release Notes
         id: read_release_notes
@@ -144,6 +154,7 @@ jobs:
           prerelease: false
           files: |
             Illustra-${{ github.ref_name }}.zip
+            installer/Output/Illustra_installer.exe
           body: |
             ## 🚀 Illustra ${{ github.ref_name }}
 
