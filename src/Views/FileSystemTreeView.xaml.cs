@@ -205,6 +205,37 @@ namespace Illustra.Views
                     await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                     scrollViewer.ScrollToVerticalOffset(itemTopInHost - 20); // Margin 20
                 }
+
+                // --- 水平方向のスクロール処理を追加 ---
+
+                // 見えている範囲を計算 (水平)
+                double itemLeftInHost = positionInHost.X;
+                // TreeViewItem の幅を取得 (ヘッダー部分などを考慮する必要があるかもしれない)
+                // シンプルに ActualWidth を使う
+                double itemRightInHost = itemLeftInHost + targetItem.ActualWidth;
+
+                // 現在のスクロール範囲 (水平)
+                double viewportWidth = scrollViewer.ViewportWidth;
+                double horizontalOffset = scrollViewer.HorizontalOffset;
+                double viewportRight = horizontalOffset + viewportWidth;
+                const double horizontalMargin = 20; // 水平方向のマージン
+
+                // スクロール必要なら実行 (水平)
+                // アイテムの右端 + マージン がビューポートの右端より外側にある場合
+                if (itemRightInHost + horizontalMargin > viewportRight)
+                {
+                    // アイテムの右端 + マージン が見えるようにスクロール
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                    scrollViewer.ScrollToHorizontalOffset(itemRightInHost + horizontalMargin - viewportWidth);
+                }
+                // アイテムの左端がビューポートの左端より外側にある場合 (左スクロール)
+                else if (itemLeftInHost < horizontalOffset)
+                {
+                    // アイテムの左端が見えるようにスクロール
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                    scrollViewer.ScrollToHorizontalOffset(itemLeftInHost);
+                }
+
             }, DispatcherPriority.Background);
         }
 
