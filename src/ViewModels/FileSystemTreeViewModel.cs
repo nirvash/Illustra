@@ -92,9 +92,11 @@ namespace Illustra.ViewModels
             Debug.WriteLine($"フォルダ削除を検知: {path}");
         }
 
-        public void OnFileRenamed(string oldPath, string newPath)
+        public async Task OnChildFolderRenamed(string oldPath, string newPath)
         {
-            Debug.WriteLine($"フォルダ名変更を検知: {oldPath} -> {newPath}");
+            Debug.WriteLine($"子フォルダ名変更を検知: {oldPath} -> {newPath}");
+            // Model側の処理に任せて、ViewModelでは監視のみ行う
+            await Task.CompletedTask;
         }
 
         private void Initialize(string? initialPath)

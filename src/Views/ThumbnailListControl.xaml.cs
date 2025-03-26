@@ -401,7 +401,7 @@ namespace Illustra.Views
         private async Task DoRenameAsync(FileNodeModel selectedItem)
         {
             var oldPath = selectedItem.FullPath;
-            var dialog = new RenameDialog(oldPath)
+            var dialog = new RenameDialog(oldPath, false)
             {
                 Owner = Window.GetWindow(this),
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -910,12 +910,11 @@ namespace Illustra.Views
             });
         }
 
-        public void OnFileRenamed(string oldPath, string newPath)
+        public async Task OnChildFolderRenamed(string oldPath, string newPath)
         {
-            Debug.WriteLine($"[サムネイル] ファイル名変更: {oldPath} -> {newPath}");
-            if (!FileHelper.IsImageFile(newPath)) return;
+            Debug.WriteLine($"[サムネイル] 子フォルダ名変更: {oldPath} -> {newPath}");
 
-            Dispatcher.Invoke(async () =>
+            await Dispatcher.InvokeAsync(async () =>
             {
                 try
                 {

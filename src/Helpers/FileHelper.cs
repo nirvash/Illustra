@@ -47,5 +47,23 @@ namespace Illustra.Helpers
             // ファイル名が空じゃないことをチェック
             return !string.IsNullOrWhiteSpace(fileName);
         }
+
+        /// <summary>
+        /// 指定されたベースパスをもとにユニークなフォルダ名を生成します。
+        /// </summary>
+        /// <param name="basePath">ベースとなるフォルダパス</param>
+        /// <returns>ユニークなフォルダパス</returns>
+        public static string GenerateUniqueFolderPath(string basePath)
+        {
+            string uniquePath = basePath;
+            int counter = 1;
+
+            while (Directory.Exists(uniquePath))
+            {
+                uniquePath = $"{basePath} ({counter++})";
+            }
+
+            return uniquePath;
+        }
     }
 }

@@ -130,3 +130,9 @@ ehthumbs.db
 .idea/
 *.sln.iml
 tests/TestResults/test_results.trx
+installer/Illustra__.iss
+installer/illustra.nsi
+installer/Output/Illustra_installer.exe
+installer/Output/setup.exe
+publish/Illustra.exe
+src/Illustra.wxs

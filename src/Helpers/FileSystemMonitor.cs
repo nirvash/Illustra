@@ -11,7 +11,7 @@ namespace Illustra.Helpers
     {
         void OnFileCreated(string path);
         void OnFileDeleted(string path);
-        void OnFileRenamed(string oldPath, string newPath);
+        Task OnChildFolderRenamed(string oldPath, string newPath); // 子要素がリネームされた場合に呼び出される
     }
 
     public class FileSystemMonitor : IDisposable
@@ -83,7 +83,7 @@ namespace Illustra.Helpers
             _processTimer.Start();
         }
 
-        private void ProcessQueuedEvents(object? sender, ElapsedEventArgs e)
+        private async void ProcessQueuedEvents(object? sender, ElapsedEventArgs e)
         {
             while (_eventQueue.TryDequeue(out var evt))
             {
@@ -98,7 +98,7 @@ namespace Illustra.Helpers
                         break;
 
                     case RenamedEventArgs renameEvent:
-                        _handler.OnFileRenamed(renameEvent.OldFullPath, renameEvent.FullPath);
+                        await _handler.OnChildFolderRenamed(renameEvent.OldFullPath, renameEvent.FullPath);
                         break;
                 }
             }

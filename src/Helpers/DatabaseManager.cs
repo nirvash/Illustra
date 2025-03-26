@@ -413,6 +413,62 @@ namespace Illustra.Helpers
             return (deletedZeroRating, deletedMissing);
         }
 
+        /// <summary>
+        /// フォルダ名が変更された際に、データベース内のファイルパスを更新します
+        /// </summary>
+        /// <param name="oldFolderPath">変更前のフォルダパス</param>
+        /// <param name="newFolderPath">変更後のフォルダパス</param>
+        public async Task UpdateFolderPathsAsync(string oldFolderPath, string newFolderPath)
+        {
+            // Windows パス区切り文字を使用
+            var oldFolderWinPath = oldFolderPath;
+            var newFolderWinPath = newFolderPath;
+
+            // パス末尾の \ を除去
+            if (!string.IsNullOrEmpty(oldFolderWinPath) && oldFolderWinPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                oldFolderWinPath = oldFolderWinPath.TrimEnd(Path.DirectorySeparatorChar);
+            }
+            if (!string.IsNullOrEmpty(newFolderWinPath) && newFolderWinPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                newFolderWinPath = newFolderWinPath.TrimEnd(Path.DirectorySeparatorChar);
+            }
+
+            // SQLインジェクション対策でパラメータ化クエリを使用
+            var oldFolderPathPattern = oldFolderWinPath + Path.DirectorySeparatorChar + "%";
+
+            await _dbAccess.WriteAsync(async db =>
+            {
+                // FolderPath と FullPath を一括で更新する SQL 文
+                // FolderPath: newPrefix + (元のパスから oldPrefix を除いた部分)
+                // FullPath: (新しい FolderPath の計算式) + '\' + FileName
+                var updateSql = $@"
+                    UPDATE FileNodeModel
+                    SET
+                        FolderPath = @newPath || SUBSTR(FolderPath, LENGTH(@oldPath) + 1),
+                        FullPath = (@newPath || SUBSTR(FolderPath, LENGTH(@oldPath) + 1)) || @separator || FileName
+                    WHERE FolderPath = @oldPath OR FolderPath LIKE @oldPathPattern";
+
+                try
+                {
+                    int count = await db.ExecuteAsync(updateSql,
+                        new
+                        {
+                            newPath = newFolderWinPath,
+                            oldPath = oldFolderWinPath,
+                            oldPathPattern = oldFolderPathPattern,
+                            separator = Path.DirectorySeparatorChar.ToString()
+                        });
+                    Debug.WriteLine($"[DatabaseManager] Updated folder paths from '{oldFolderPath}' to '{newFolderPath}': count {count}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DatabaseManager] Error updating folder paths: {ex.Message}");
+                    // 必要に応じてエラー処理を追加
+                }
+            });
+        }
+
         public class MySettings : ILinqToDBSettings
         {
             private readonly string _connectionString;

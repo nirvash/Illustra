@@ -322,5 +322,12 @@
     <system:String x:Key="String_KeyboardShortcutSettingDialog_PressKey">キーを押してください</system:String>
     <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">キーボードショートカット設定</system:String>
     <system:String x:Key="String_LanguageSettingsWindow_Title">言語設定</system:String>
-
+    <!-- Folder Operations -->
+    <system:String x:Key="String_FileSystemTreeView_CreateFolder">フォルダを作成</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">新しいフォルダ</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameFolder">名前の変更</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameTitle">名前の変更</system:String>
+    <system:String x:Key="String_FileSystemTreeView_SameNameExists">同名のフォルダが既に存在します。</system:String>
+    <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">無効なフォルダ名です。</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameError">フォルダ名の変更に失敗しました: {0}</system:String>
 </ResourceDictionary>

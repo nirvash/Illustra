@@ -10,18 +10,29 @@ namespace Illustra.Views
         public string NewFilePath { get; private set; }
 
         private readonly string _oldFilePath;
+        private readonly bool _isFolder;
 
-        public RenameDialog(string oldFilePath)
+        public RenameDialog(string oldFilePath, bool isFolder)
         {
             InitializeComponent();
             _oldFilePath = oldFilePath;
+            _isFolder = isFolder;
 
-            // ファイル名と拡張子を分離
-            var fileName = Path.GetFileNameWithoutExtension(oldFilePath);
-            var extension = Path.GetExtension(oldFilePath);
-
-            FileNameTextBox.Text = fileName;
-            FileExtensionTextBlock.Text = extension;
+            if (_isFolder)
+            {
+                // フォルダの場合
+                FileNameTextBox.Text = Path.GetFileName(oldFilePath);
+                FileExtensionTextBlock.Text = string.Empty;
+                FileExtensionTextBlock.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // ファイルの場合
+                var fileName = Path.GetFileNameWithoutExtension(oldFilePath);
+                var extension = Path.GetExtension(oldFilePath);
+                FileNameTextBox.Text = fileName;
+                FileExtensionTextBlock.Text = extension;
+            }
 
             // ファイル名部分を全選択
             FileNameTextBox.SelectAll();
@@ -33,7 +44,7 @@ namespace Illustra.Views
             try
             {
                 var directory = Path.GetDirectoryName(_oldFilePath);
-                var newFileName = FileNameTextBox.Text + FileExtensionTextBlock.Text;
+                var newFileName = _isFolder ? FileNameTextBox.Text : FileNameTextBox.Text + FileExtensionTextBlock.Text;
                 var newFilePath = Path.Combine(directory, newFileName);
 
                 if (newFilePath.Equals(_oldFilePath, StringComparison.OrdinalIgnoreCase))
@@ -52,8 +63,8 @@ namespace Illustra.Views
                     return;
                 }
 
-                // ファイル名の重複チェック
-                if (File.Exists(newFilePath))
+                // 重複チェック
+                if ((_isFolder && Directory.Exists(newFilePath)) || (!_isFolder && File.Exists(newFilePath)))
                 {
                     int counter = 1;
                     string baseFileName = Path.GetFileNameWithoutExtension(newFileName);

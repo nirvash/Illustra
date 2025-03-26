@@ -326,4 +326,12 @@
     <system:String x:Key="String_Status_PromptFilter">Prompt Filter Enabled</system:String>
     <system:String x:Key="String_Status_Enabled">Enabled</system:String>
 
+    <!-- Folder Operations -->
+    <system:String x:Key="String_FileSystemTreeView_CreateFolder">Create Folder</system:String>
+    <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">New Folder</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameFolder">Rename</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameTitle">Rename</system:String>
+    <system:String x:Key="String_FileSystemTreeView_SameNameExists">A folder with the same name already exists.</system:String>
+    <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">Invalid folder name.</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameError">Failed to rename the folder: {0}</system:String>
 </ResourceDictionary>

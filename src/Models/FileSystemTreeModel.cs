@@ -18,10 +18,33 @@ namespace Illustra.Models
         private FolderTreeSettings _folderTreeSettings;
 
         private bool _isLoading;
+        private FileSystemItemModel? _selectedItem;
+
         public FileSystemTreeModel(FolderTreeSettings folderTreeSettings)
         {
             _rootItems = [];
             _folderTreeSettings = folderTreeSettings;
+        }
+
+        public FileSystemItemModel? SelectedItem
+        {
+            get => _selectedItem;
+            set
+            {
+                if (_selectedItem != value)
+                {
+                    if (_selectedItem != null)
+                    {
+                        _selectedItem.IsSelected = false; // 古い選択を解除
+                    }
+                    _selectedItem = value;
+                    if (_selectedItem != null)
+                    {
+                        _selectedItem.IsSelected = true; // 新しい選択を設定
+                    }
+                    OnPropertyChanged(nameof(SelectedItem));
+                }
+            }
         }
 
 
@@ -185,8 +208,7 @@ namespace Illustra.Models
             // このフォルダがターゲットと一致する場合は選択
             if (item.FullPath.Equals(targetPath, StringComparison.OrdinalIgnoreCase))
             {
-                ClearSelection();
-                item.IsSelected = true;
+                SelectedItem = item; // 選択アイテムを設定
                 return;
             }
 
@@ -261,8 +283,8 @@ namespace Illustra.Models
                     }
                 }
 
-                // 現在の子フォルダを取得
-                var subFolders = GetSubFolders(parentItem.FullPath);
+                // 現在の子フォルダを取得（このフォルダ自身を親として渡す）
+                var subFolders = GetSubFolders(parentItem.FullPath, parentItem);
 
                 // 展開可能状態を更新
                 parentItem.CanExpand = subFolders.Count > 0;
@@ -305,7 +327,7 @@ namespace Illustra.Models
                         // 展開可能な場合はダミー要素を追加
                         if (hasSubDirs)
                         {
-                            parentItem.Children.Add(new FileSystemItemModel("", true, true));
+                            parentItem.Children.Add(new FileSystemItemModel("", true, true, this, null)); // ダミーノードは親なし
                         }
                     }
                     else
@@ -331,8 +353,9 @@ namespace Illustra.Models
         /// 指定したパスのサブフォルダを取得する
         /// </summary>
         /// <param name="path">親フォルダのパス</param>
+        /// <param name="parent">親フォルダのモデル（ドライブの場合はnull）</param>
         /// <returns>サブフォルダのリスト</returns>
-        private List<FileSystemItemModel> GetSubFolders(string path)
+        private List<FileSystemItemModel> GetSubFolders(string path, FileSystemItemModel? parent)
         {
             var result = new List<FileSystemItemModel>();
 
@@ -371,7 +394,7 @@ namespace Illustra.Models
                 {
                     bool hasSubDirectories = HasSubDirectories(dir);
 
-                    var item = new FileSystemItemModel(dir, true, false, this)
+                    var item = new FileSystemItemModel(dir, true, false, this, parent) // 親を渡す
                     {
                         CanExpand = hasSubDirectories
                     };
@@ -379,7 +402,7 @@ namespace Illustra.Models
                     // 展開可能な場合はダミー要素を追加
                     if (hasSubDirectories)
                     {
-                        item.Children.Add(new FileSystemItemModel("", true, true));
+                        item.Children.Add(new FileSystemItemModel("", true, true, this, null)); // ダミーノードは親なし
                     }
 
                     result.Add(item);
@@ -419,15 +442,15 @@ namespace Illustra.Models
                 {
                     bool hasSubDirectories = HasSubDirectories(drive.RootDirectory.FullName);
 
-                    var driveItem = new FileSystemItemModel(drive.RootDirectory.FullName, true, false, this)
+                    var driveItem = new FileSystemItemModel(drive.RootDirectory.FullName, true, false, this, null) // 親はnull
                     {
-                        CanExpand = hasSubDirectories
+                        CanExpand = hasSubDirectories,
                     };
 
                     // 展開可能状態に応じてダミー要素を管理
                     if (hasSubDirectories)
                     {
-                        driveItem.Children.Add(new FileSystemItemModel("", true, true));
+                        driveItem.Children.Add(new FileSystemItemModel("", true, true, this, null)); // ダミーノードは親なし
                     }
 
                     result.Add(driveItem);
@@ -548,13 +571,15 @@ namespace Illustra.Models
             {
                 ClearRecursive(item);
             }
+            SelectedItem = null; // 選択アイテムもクリア
         }
         /// <summary>
         /// 指定されたパスのフォルダに対するFileSystemItemModelを作成する
         /// </summary>
         /// <param name="path">フォルダのパス</param>
+        /// <param name="parent">親フォルダ（ドライブの場合はnull）</param>
         /// <returns>作成されたモデル、またはnull（アクセス不可の場合）</returns>
-        public FileSystemItemModel? CreateFolderItem(string path)
+        public FileSystemItemModel? CreateFolderItem(string path, FileSystemItemModel? parent = null)
         {
             try
             {
@@ -565,7 +590,7 @@ namespace Illustra.Models
                 bool hasSubDirectories = HasSubDirectories(path);
 
                 // 新しいフォルダアイテムを作成
-                var item = new FileSystemItemModel(path, true, false, this)
+                var item = new FileSystemItemModel(path, true, false, this, parent) // 親を渡す
                 {
                     CanExpand = hasSubDirectories
                 };
@@ -573,7 +598,7 @@ namespace Illustra.Models
                 // 展開可能な場合はダミー要素を追加
                 if (hasSubDirectories)
                 {
-                    item.Children.Add(new FileSystemItemModel("", true, true));
+                    item.Children.Add(new FileSystemItemModel("", true, true, this, null)); // ダミーノードは親なし
                 }
 
                 return item;

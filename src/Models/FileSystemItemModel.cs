@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
+using Illustra.Views;
 
 namespace Illustra.Models
 {
@@ -25,10 +26,107 @@ namespace Illustra.Models
         private bool _isLoading;
         private ObservableCollection<FileSystemItemModel> _children = [];
         private readonly FileSystemTreeModel _treeModel;
+        public FileSystemItemModel? Parent { get; private set; }
         private FileSystemMonitor? _monitor;
         private ICommand? _sortTypeCommand;
         private ICommand? _sortDirectionCommand;
         private ICommand? _addToFavoritesCommand;
+        private ICommand? _createFolderCommand;
+        private ICommand? _renameFolderCommand;
+
+        public ICommand RenameFolderCommand
+        {
+            get => _renameFolderCommand ??= new DelegateCommand(ExecuteRenameFolder, CanExecuteRenameFolder);
+        }
+
+        private bool CanExecuteRenameFolder()
+        {
+            return CanRename;
+        }
+
+        private async void ExecuteRenameFolder()
+        {
+            if (!IsFolder) return;
+
+            var dialog = new RenameDialog(FullPath, IsFolder)
+            {
+                Owner = Application.Current.MainWindow,
+                Title = (string)Application.Current.FindResource("String_FileSystemTreeView_RenameTitle")
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                string newName = dialog.NewFilePath;
+                string newPath = Path.Combine(Path.GetDirectoryName(FullPath), newName);
+                if (Directory.Exists(newPath))
+                {
+                    MessageBox.Show(
+                        (string)Application.Current.FindResource("String_FileSystemTreeView_SameNameExists"),
+                        (string)Application.Current.FindResource("String_Error"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                try
+                {
+                    string oldPath = FullPath;
+
+                    // リネーム前に監視を停止（StopMonitoring は再帰的に子ノードの監視も停止）
+                    StopMonitoring();
+
+                    Directory.Move(oldPath, newPath);
+
+                    // 親ノードの OnChildFolderRenamed を呼び出してモデルを更新
+                    if (Parent != null)
+                    {
+                        await Parent.OnChildFolderRenamed(oldPath, newPath);
+                    }
+
+                    // パスの更新（子ノードのパスも再帰的に更新）
+                    UpdatePath(newPath);
+
+                    // 監視を再開（新しいパスで）
+                    if (!IsDummy)
+                    {
+                        StartMonitoring();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var errorMessage = string.Format(
+                        (string)Application.Current.FindResource("String_FileSystemTreeView_RenameError"),
+                        ex.Message);
+                    MessageBox.Show(
+                        errorMessage,
+                        (string)Application.Current.FindResource("String_Error"), // エラータイトルもリソース化
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+        }
+
+        public ICommand CreateFolderCommand
+        {
+            get => _createFolderCommand ??= new DelegateCommand(() =>
+            {
+                if (!IsFolder) return;
+
+                var newFolderName = (string)Application.Current.FindResource("String_FileSystemTreeView_DefaultFolderName");
+                var newFolderPath = FileHelper.GenerateUniqueFolderPath(Path.Combine(FullPath, newFolderName));
+
+                try
+                {
+                    Directory.CreateDirectory(newFolderPath);
+                    // フォルダ作成後に親フォルダを展開
+                    IsExpanded = true;
+                    OnFileCreated(newFolderPath);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"フォルダ作成中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
+        }
         private bool _lastIsFavorite;
 
         public ICommand SortTypeCommand
@@ -109,10 +207,11 @@ namespace Illustra.Models
 
         public FolderSortSettings? GetSortSettings() => _treeModel.GetSortSettings(FullPath);
 
-        public FileSystemItemModel(string fullPath, bool isFolder, bool isDummy, FileSystemTreeModel? treeModel = null)
+        public FileSystemItemModel(string fullPath, bool isFolder, bool isDummy, FileSystemTreeModel? treeModel = null, FileSystemItemModel? parent = null)
         {
             _fullPath = fullPath;
             _name = Path.GetFileName(fullPath);
+            Parent = parent; // 親を設定
             if (string.IsNullOrEmpty(_name) && isFolder) // ルートディレクトリの場合
             {
                 _name = fullPath; // ドライブ名をそのまま使用
@@ -175,6 +274,8 @@ namespace Illustra.Models
             }
         }
 
+        public bool CanRename => IsFolder && !IsDummy && Parent != null;
+
         public bool IsExpanded
         {
             get => _isExpanded;
@@ -198,7 +299,7 @@ namespace Illustra.Models
                     else if (!value && IsFolder && CanExpand)
                     {
                         Children.Clear();
-                        Children.Add(new FileSystemItemModel("", true, true));
+                        Children.Add(new FileSystemItemModel("", true, true, _treeModel, null)); // ダミーは親なし
                     }
                 }
             }
@@ -292,9 +393,15 @@ namespace Illustra.Models
                 // 展開されている場合は新しいフォルダを追加
                 if (IsExpanded)
                 {
-                    var newItem = _treeModel?.CreateFolderItem(path);
+                    var newItem = _treeModel?.CreateFolderItem(path, this);
                     if (newItem != null)
                     {
+                        // 既に存在するかチェック
+                        if (Children.Any(child => child.FullPath.Equals(newItem.FullPath, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            return; // 既に存在する場合は追加しない
+                        }
+
                         // 既存のChildrenコレクションに追加
                         Children.Add(newItem);
 
@@ -311,7 +418,7 @@ namespace Illustra.Models
                 {
                     // TreeViewは子ノードがある場合のみ展開ボタンを表示するため、
                     // 展開可能なフォルダには必ずダミーの子ノードを追加しておく
-                    Children.Add(new FileSystemItemModel("", true, true));
+                    Children.Add(new FileSystemItemModel("", true, true, null, null)); // ダミーは親なし
                 }
             });
 
@@ -382,7 +489,7 @@ namespace Illustra.Models
                         {
                             // TreeViewは子ノードがある場合のみ展開ボタンを表示するため、
                             // 展開可能なフォルダには必ずダミーの子ノードを追加しておく
-                            Children.Add(new FileSystemItemModel("", true, true));
+                            Children.Add(new FileSystemItemModel("", true, true, _treeModel, null)); // ダミーは親なし
                         }
                     }
                 });
@@ -406,12 +513,6 @@ namespace Illustra.Models
         }
 
         /// <summary>
-        /// フォルダの名前が変更されたときの処理
-        /// </summary>
-        /// <param name="oldPath">変更前のパス</param>
-        /// <param name="newPath">変更後のパス</param>
-        /// <returns>このフォルダで処理された場合はtrue</returns>
-        /// <summary>
         /// フォルダのパスを更新し、必要に応じて監視を再設定します
         /// </summary>
         /// <param name="newPath">新しいパス</param>
@@ -419,14 +520,25 @@ namespace Illustra.Models
         {
             FullPath = newPath;
             Name = Path.GetFileName(newPath);
-            if (!IsDummy)
+
+            // 子ノードのパスを再帰的に更新
+            foreach (var child in Children)
             {
-                StopMonitoring();
-                StartMonitoring();
+                if (!child.IsDummy)
+                {
+                    // 子ノードの新しいパスを計算
+                    string childNewPath = Path.Combine(newPath, child.Name);
+                    child.UpdatePath(childNewPath);
+                }
             }
         }
 
-        public virtual void OnFileRenamed(string oldPath, string newPath)
+        /// <summary>
+        /// 子フォルダの名前が変更されたときの処理 (外部変更検知 or アプリ内リネーム後に親から呼ばれる)
+        /// </summary>
+        /// <param name="oldPath">変更前の子フォルダのパス</param>
+        /// <param name="newPath">変更後の子フォルダのパス</param>
+        public virtual async Task OnChildFolderRenamed(string oldPath, string newPath)
         {
             if (!IsFolder) return;
 
@@ -436,15 +548,29 @@ namespace Illustra.Models
 
             Debug.WriteLine($"[フォルダツリー] 子フォルダ名変更: {oldPath} -> {newPath}, 親フォルダ: {FullPath}");
 
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                // 該当する子フォルダを探してパスを更新
+                // データベースのパスを更新
+                var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                await db.UpdateFolderPathsAsync(oldPath, newPath);
+
+                // 該当する子フォルダを探す
                 var renamedChild = Children.FirstOrDefault(child =>
                     child.IsFolder && child.FullPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase));
 
                 if (renamedChild != null)
                 {
+                    // 監視を停止
+                    renamedChild.StopMonitoring();
+
+                    // パスを更新
                     renamedChild.UpdatePath(newPath);
+
+                    // 監視を再開
+                    if (!renamedChild.IsDummy)
+                    {
+                        renamedChild.StartMonitoring();
+                    }
 
                     // ソート設定があれば適用
                     var sortSettings = _treeModel?.GetSortSettings(FullPath);
@@ -452,11 +578,35 @@ namespace Illustra.Models
                     var isAscending = sortSettings?.IsAscending ?? true;
                     var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
                     Children = new ObservableCollection<FileSystemItemModel>(sorted);
+
+                    // 現在選択されているアイテムがリネームの影響を受けるか確認
+                    var currentSelectedItem = _treeModel?.SelectedItem;
+                    if (currentSelectedItem != null &&
+                        (currentSelectedItem.FullPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase) ||
+                         currentSelectedItem.FullPath.StartsWith(oldPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        string newSelectedPath;
+                        if (currentSelectedItem.FullPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // リネームされたフォルダ自身が選択されていた場合
+                            newSelectedPath = newPath;
+                        }
+                        else
+                        {
+                            // リネームされたフォルダの子孫が選択されていた場合
+                            newSelectedPath = newPath + currentSelectedItem.FullPath.Substring(oldPath.Length);
+                        }
+
+                        // FolderSelected イベントを発行して選択パスを更新
+                        var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                        eventAggregator.GetEvent<FolderSelectedEvent>().Publish(new FolderSelectedEventArgs("FileSystemItemModel", newSelectedPath));
+                        Debug.WriteLine($"[フォルダツリー] リネームにより選択フォルダ変更イベント発行: {newSelectedPath}");
+                    }
                 }
                 // 展開されていない場合でCanExpandがtrueの時はダミー要素の確認
                 else if (!IsExpanded && CanExpand && Children.Count == 0)
                 {
-                    Children.Add(new FileSystemItemModel("", true, true));
+                    Children.Add(new FileSystemItemModel("", true, true, _treeModel, null)); // ダミーは親なし
                 }
             });
 
@@ -509,6 +659,15 @@ namespace Illustra.Models
                 // 新しい監視を開始
                 _monitor = new FileSystemMonitor(this, true);  // サブディレクトリも監視する
                 _monitor.StartMonitoring(FullPath);
+
+                // 子フォルダの監視も再帰的に開始
+                foreach (var child in Children)
+                {
+                    if (child.IsFolder && !child.IsDummy)
+                    {
+                        child.StartMonitoring();
+                    }
+                }
             }
             catch (Exception ex)
             {
