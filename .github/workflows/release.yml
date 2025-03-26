@@ -62,7 +62,7 @@ jobs:
 
       - name: Build Installer
         run: |
-          cd installer && "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Illustra.iss
+          cd installer && "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" illustra.iss
 
       - name: Create ZIP archive
         shell: bash # WindowsでもBashで統一
