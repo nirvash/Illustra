@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Prism.Events; // Required for IEventAggregator if shared
-using Illustra; // Required for App class reference
+using Prism.Events;
+using System.Linq;
 
 namespace Illustra.MCPHost
 {
@@ -17,45 +18,82 @@ namespace Illustra.MCPHost
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            // Register controllers (needed for API endpoints)
-            services.AddControllers();
+            System.Diagnostics.Debug.WriteLine("Configuring services...");
 
-            // Register a new instance of IEventAggregator
+            services.AddControllers()
+                .AddApplicationPart(typeof(Controllers.McpController).Assembly);
+
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
+
             services.AddSingleton<IEventAggregator, Prism.Events.EventAggregator>();
+            services.AddScoped<APIService>();
 
-            // Register APIService as Singleton
-            services.AddSingleton<APIService>();
+            // List registered controllers
+            var controllerTypes = typeof(Controllers.McpController).Assembly
+                .GetTypes()
+                .Where(t => t.Name.EndsWith("Controller"))
+                .ToList();
 
-            // Note: IEventAggregator is registered in App.xaml.cs's ConfigureServices
-            // It's injected here if needed by services within this project.
-            // Example: services.AddSingleton<MyServiceThatNeedsAggregator>();
+            foreach (var controller in controllerTypes)
+            {
+                System.Diagnostics.Debug.WriteLine($"Found controller: {controller.FullName}");
+            }
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            System.Diagnostics.Debug.WriteLine("Configuring application...");
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                // We will add Swagger UI later in Step 2
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
-            // Minimal routing setup for now
+            // Log all requests
+            app.Use(async (context, next) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"Incoming request: {context.Request.Method} {context.Request.Path}");
+                await next();
+                System.Diagnostics.Debug.WriteLine($"Response status: {context.Response.StatusCode}");
+            });
+
             app.UseRouting();
 
-            // Enable controllers
+            // Log endpoint selection
+            app.Use(async (context, next) =>
+            {
+                var endpoint = context.GetEndpoint();
+                System.Diagnostics.Debug.WriteLine($"Selected endpoint: {endpoint?.DisplayName ?? "None"}");
+                if (endpoint == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Available endpoints:");
+                    var endpointDataSource = app.ApplicationServices.GetServices<Microsoft.AspNetCore.Routing.EndpointDataSource>().FirstOrDefault();
+                    if (endpointDataSource != null)
+                    {
+                        foreach (var ep in endpointDataSource.Endpoints)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"- {ep.DisplayName}");
+                        }
+                    }
+                }
+                await next();
+            });
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                // Basic root endpoint for testing if the server is running
                 endpoints.MapGet("/", async context =>
                 {
                     await context.Response.WriteAsync("Illustra MCP Host is running.");
                 });
             });
+
+            System.Diagnostics.Debug.WriteLine("Application configuration completed.");
         }
     }
 }

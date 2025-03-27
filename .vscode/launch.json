@@ -11,10 +11,17 @@
       "cwd": "${workspaceFolder}/src/",
       "console": "integratedTerminal",
       "stopAtEntry": false,
-      "justMyCode": false, // ここを追加
+      "justMyCode": false,
       "logging": {
-        "moduleLoad": false // モジュールの読み込みログを無効化
+        "moduleLoad": false
       }
+    },
+    {
+      "name": "Attach to MCP Host",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false
     },
     {
       "name": ".NET Core NUnit Test",
@@ -26,6 +33,15 @@
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "console": "internalConsole"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Illustra + MCP Host",
+      "configurations": [
+        "Launch Illustra",
+        "Attach to MCP Host"
+      ]
     }
   ]
 }

@@ -142,44 +142,8 @@ namespace Illustra
                 _mcpHost = Host.CreateDefaultBuilder()
                     .ConfigureWebHostDefaults(webBuilder =>
                     {
-                        // Configure services directly, mimicking Startup.ConfigureServices and Program.cs
-                        webBuilder.ConfigureServices(services =>
-                        {
-                            services.AddControllers();
-                            services.AddEndpointsApiExplorer(); // Needed for Swagger
-                            services.AddSwaggerGen();
-
-                            // Register services needed specifically for MCPHost
-                            // Using new instances scoped to this host
-                            services.AddSingleton<IEventAggregator, Prism.Events.EventAggregator>();
-                            services.AddSingleton<Illustra.MCPHost.APIService>(); // Use explicit namespace
-                        });
-
-                        // Configure the application pipeline directly, mimicking Startup.Configure and Program.cs
-                        webBuilder.Configure(app =>
-                        {
-                            var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
-
-                            if (env.IsDevelopment())
-                            {
-                                app.UseDeveloperExceptionPage();
-                                app.UseSwagger();
-                                app.UseSwaggerUI(); // Setup Swagger UI endpoint
-                            }
-
-                            // app.UseHttpsRedirection(); // Keep disabled for now
-
-                            app.UseRouting();
-
-                            // app.UseAuthorization(); // Add if needed later
-
-                            app.UseEndpoints(endpoints =>
-                            {
-                                endpoints.MapControllers(); // Map API controllers
-                                endpoints.MapGet("/", () => "Illustra MCP Host is running (Configured in App.xaml.cs)."); // Basic health check endpoint
-                            });
-                        });
-
+                        // Use Startup class for configuration
+                        webBuilder.UseStartup<Illustra.MCPHost.Startup>();
                         // Set the URL
                         webBuilder.UseUrls("http://localhost:5149");
                     })

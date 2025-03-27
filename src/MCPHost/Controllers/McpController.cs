@@ -10,7 +10,7 @@ namespace Illustra.MCPHost.Controllers
     /// Defines endpoints for executing tools and potentially retrieving resources.
     /// </summary>
     [ApiController]
-    [Route("api")] // Base route for MCP related endpoints
+    [Route("api")] // Base route for all API endpoints
     public class McpController : ControllerBase
     {
         private readonly APIService _apiService;
