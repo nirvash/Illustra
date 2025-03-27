@@ -88,6 +88,9 @@
                          Handler="TreeViewItem_MouseEnter"/>
             <EventSetter Event="MouseLeave"
                          Handler="TreeViewItem_MouseLeave"/>
+            <!-- 標準の BringIntoView 動作をキャンセル -->
+            <EventSetter Event="RequestBringIntoView"
+                         Handler="TreeViewItem_RequestBringIntoView"/>
         </Style>
     </UserControl.Resources>
 

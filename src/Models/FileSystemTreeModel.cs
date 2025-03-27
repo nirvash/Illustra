@@ -373,25 +373,54 @@ namespace Illustra.Models
                     }
                 }
 
-                var directories = Directory.GetDirectories(path)
+                // --- Directory.GetDirectories を try-catch で囲む ---
+                string[] directories;
+                try
+                {
+                    directories = Directory.GetDirectories(path);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Debug.WriteLine($"[フォルダツリー] アクセス権限がありません: {path}. Error: {ex.Message}");
+                    return result; // アクセスできない場合は空のリストを返す
+                }
+                catch (Exception ex) // その他の予期せぬエラー
+                {
+                    Debug.WriteLine($"[フォルダツリー] ディレクトリ取得中に予期せぬエラー: {path}. Error: {ex.Message}");
+                    return result; // エラー時は空のリストを返す
+                }
+                // --- ここまで修正 ---
+
+                var filteredDirectories = directories
                     .Where(dir =>
                     {
                         try
                         {
                             string dirName = Path.GetFileName(dir);
-                            bool isHidden = (File.GetAttributes(dir) & FileAttributes.Hidden) == FileAttributes.Hidden;
-                            return !isHidden && !dirName.StartsWith(".");
+                            // File.GetAttributes も権限エラーを起こす可能性があるため try-catch
+                            FileAttributes attributes = File.GetAttributes(dir);
+                            bool isHidden = (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+                            // システムファイルなども除外するなら追加: bool isSystem = (attributes & FileAttributes.System) == FileAttributes.System;
+                            return !isHidden && !dirName.StartsWith("."); // && !isSystem;
                         }
-                        catch
+                        catch (UnauthorizedAccessException) // 属性取得時の権限エラー
                         {
-                            return false;
+                            Debug.WriteLine($"[フォルダツリー] 属性取得時にアクセス権限がありません: {dir}");
+                            return false; // アクセスできないものは除外
+                        }
+                        catch (Exception ex) // その他の属性取得エラー
+                        {
+                            Debug.WriteLine($"[フォルダツリー] 属性取得エラー: {dir}. Error: {ex.Message}");
+                            return false; // エラー発生時も除外
                         }
                     })
                     .OrderBy(dir => dir)
                     .ToList();
 
-                foreach (var dir in directories)
+                foreach (var dir in filteredDirectories)
                 {
+                    // HasSubDirectories 内でも権限エラーの可能性があるため注意が必要
+                    // HasSubDirectories 内でエラーが発生した場合、CanExpand は false になる
                     bool hasSubDirectories = HasSubDirectories(dir);
 
                     var item = new FileSystemItemModel(dir, true, false, this, parent) // 親を渡す
@@ -618,24 +647,52 @@ namespace Illustra.Models
         {
             try
             {
-                return Directory.GetDirectories(path)
-                    .Where(dir =>
+                // --- Directory.EnumerateDirectories を try-catch で囲む ---
+                IEnumerable<string> subDirs;
+                try
+                {
+                    // GetDirectories より EnumerateDirectories の方が効率的な場合がある
+                    subDirs = Directory.EnumerateDirectories(path);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Debug.WriteLine($"[フォルダツリー][HasSubDirectories] アクセス権限がありません: {path}");
+                    return false; // アクセスできない場合はサブフォルダなしとみなす
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[フォルダツリー][HasSubDirectories] ディレクトリ列挙中にエラー: {path}. Error: {ex.Message}");
+                    return false; // エラー時もサブフォルダなしとみなす
+                }
+                // --- ここまで修正 ---
+
+                return subDirs.Where(dir =>
                     {
                         try
                         {
                             string dirName = Path.GetFileName(dir);
-                            bool isHidden = (File.GetAttributes(dir) & FileAttributes.Hidden) == FileAttributes.Hidden;
-                            return !isHidden && !dirName.StartsWith(".");
+                            FileAttributes attributes = File.GetAttributes(dir);
+                            bool isHidden = (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+                            // bool isSystem = (attributes & FileAttributes.System) == FileAttributes.System;
+                            return !isHidden && !dirName.StartsWith("."); // && !isSystem;
                         }
-                        catch
+                        catch (UnauthorizedAccessException)
                         {
-                            return false;
+                            return false; // アクセスできないものは除外
+                        }
+                        catch (Exception) // その他の属性取得エラー
+                        {
+                            return false; // エラー発生時も除外
                         }
                     })
                     .Any();
             }
-            catch
+            // HasSubDirectories 全体を囲む catch は Directory.EnumerateDirectories の try-catch に移動したため不要だが、
+            // ユーザーフィードバックにより、その他の予期せぬエラー捕捉のため残す場合がある。
+            // 今回は EnumerateDirectories で捕捉するため、この外側の catch は削除する。
+            catch (Exception ex) // EnumerateDirectories や Where 内で捕捉されなかった予期せぬエラー
             {
+                Debug.WriteLine($"[フォルダツリー][HasSubDirectories] 予期せぬエラー: {path}. Error: {ex.Message}");
                 return false;
             }
         }
@@ -647,12 +704,26 @@ namespace Illustra.Models
         {
             try
             {
-                return (File.GetAttributes(path) & FileAttributes.Hidden) != FileAttributes.Hidden
-                    && !Path.GetFileName(path).StartsWith(".");
+                // まず Directory.Exists で存在と基本的なアクセスを確認
+                if (!Directory.Exists(path)) return false;
+
+                // 次に属性を確認 (隠しファイル、'.'始まりを除外)
+                FileAttributes attributes = File.GetAttributes(path);
+                bool isHidden = (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+                // bool isSystem = (attributes & FileAttributes.System) == FileAttributes.System;
+                bool startsWithDot = Path.GetFileName(path).StartsWith(".");
+
+                return !isHidden && !startsWithDot; // && !isSystem;
             }
-            catch
+            catch (UnauthorizedAccessException) // 属性取得時の権限エラー
             {
-                return false;
+                Debug.WriteLine($"[フォルダツリー][IsAccessibleFolder] アクセス権限がありません: {path}");
+                return false; // アクセスできない
+            }
+            catch (Exception ex) // その他のエラー
+            {
+                Debug.WriteLine($"[フォルダツリー][IsAccessibleFolder] アクセスチェック中にエラー: {path}. Error: {ex.Message}");
+                return false; // 不明なエラー時もアクセス不可とみなす
             }
         }
     }
