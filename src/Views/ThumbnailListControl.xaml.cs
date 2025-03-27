@@ -27,6 +27,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Net.Http;
 using System; // IProgress を使うために追加
+using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {
@@ -461,7 +462,7 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
             // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
@@ -577,10 +578,10 @@ namespace Illustra.Views
             }
         }
 
-        private async void OnFolderSelected(FolderSelectedEventArgs args)
+        private async void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
         {
-            Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.Path}");
-            string folderPath = args.Path;
+            Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.FolderPath}"); // Changed property name
+            string folderPath = args.FolderPath; // Changed property name
             if (folderPath == _currentFolderPath)
                 return;
 
@@ -609,9 +610,9 @@ namespace Illustra.Views
             _fileSystemMonitor.StartMonitoring(folderPath);
 
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            await LoadFileNodesAsync(folderPath, args.InitialSelectedFilePath);
+            await LoadFileNodesAsync(folderPath, args.SelectedFilePath); // Changed property name
 
-            //            ThumbnailItemsControl.Visibility = Visibility.Visible;
+//            ThumbnailItemsControl.Visibility = Visibility.Visible;
         }
 
         public void SetCurrentSettings()

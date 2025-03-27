@@ -16,6 +16,7 @@ using System.Threading.Tasks; // Task を使うために追加
 using System; // IProgress を使うために追加
 // using MahApps.Metro.Controls; // MetroWindow は DialogHelper で使うので不要
 using Illustra.Helpers; // DialogHelper を使うために追加
+using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {
@@ -211,7 +212,7 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected, ThreadOption.UIThread, false, // Renamed
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             // お気に入り関連イベントの設定
@@ -223,13 +224,13 @@ namespace Illustra.Views
 
         }
 
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
         {
             var selectedModel = FavoriteFoldersTreeView.SelectedItem as FavoriteFolderModel;
-            if (args.Path == selectedModel?.Path) return;
-            if (_favoriteFolders.Any(f => f.Path == args.Path))
+            if (args.FolderPath == selectedModel?.Path) return; // Changed property name
+            if (_favoriteFolders.Any(f => f.Path == args.FolderPath)) // Changed property name
             {
-                var targetModel = _favoriteFolders.FirstOrDefault(f => f.Path == args.Path);
+                var targetModel = _favoriteFolders.FirstOrDefault(f => f.Path == args.FolderPath); // Changed property name
                 var item = targetModel != null ?
                     FavoriteFoldersTreeView.ItemContainerGenerator.ContainerFromItem(targetModel) as TreeViewItem : null;
                 if (item != null)
@@ -271,8 +272,13 @@ namespace Illustra.Views
                 {
                     // フォルダ選択イベントを発行
                     Debug.WriteLine($"FavoriteFoldersTreeView: SelectedItemChanged: Publish Events: {folder.Path}");
-                    _eventAggregator?.GetEvent<FolderSelectedEvent>().Publish(
-                        new FolderSelectedEventArgs(folder.Path, CONTROL_ID));
+                    _eventAggregator?.GetEvent<McpOpenFolderEvent>().Publish( // Renamed
+                        new McpOpenFolderEventArgs // Renamed
+                        {
+                            FolderPath = folder.Path,
+                            SourceId = CONTROL_ID,
+                            ResultCompletionSource = null // No need to wait for result from UI interaction
+                        });
                     _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");
                 }
             }

@@ -8,6 +8,7 @@ using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
+using Illustra.Shared.Models; // Added for MCP events
 using Prism.Ioc;
 
 namespace Illustra.Views
@@ -65,7 +66,7 @@ namespace Illustra.Views
         {
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected, ThreadOption.UIThread, false, // Renamed
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
             // 初期値を設定
@@ -164,8 +165,13 @@ namespace Illustra.Views
                         return;
                     }
 
-                    _eventAggregator?.GetEvent<FolderSelectedEvent>().Publish(
-                        new FolderSelectedEventArgs(path, CONTROL_ID));
+                    _eventAggregator?.GetEvent<McpOpenFolderEvent>().Publish( // Renamed
+                        new McpOpenFolderEventArgs // Renamed
+                        {
+                            FolderPath = path,
+                            SourceId = CONTROL_ID,
+                            ResultCompletionSource = null // No need to wait for result from UI interaction
+                        });
                 }
                 catch (Exception)
                 {
@@ -178,9 +184,9 @@ namespace Illustra.Views
             }
         }
 
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
         {
-            if (args.Path == _currentSelectedFilePath) return;
+            if (args.FolderPath == _currentSelectedFilePath) return; // Changed property name
             if (ignoreSelectedChangedOnce)
             {
                 ignoreSelectedChangedOnce = false;
@@ -188,10 +194,10 @@ namespace Illustra.Views
             }
 
             ignoreSelectedChangedOnce = false;
-            _currentSelectedFilePath = args.Path;
-            _addressBox.Text = args.Path;
+            _currentSelectedFilePath = args.FolderPath; // Changed property name
+            _addressBox.Text = args.FolderPath; // Changed property name
             ScrollAddressBoxToEnd();
-            UpdateToolTip(args.Path);
+            UpdateToolTip(args.FolderPath); // Changed property name
 
             // Expand 処理は FileSystemTreeViewControl が行うのでここでは行わない
             _eventAggregator?.GetEvent<SelectFileRequestEvent>().Publish("");

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
+using Illustra.Shared.Models; // Added for MCP events
 using GongSolutions.Wpf.DragDrop;
 using System.Windows;
 using Microsoft.VisualBasic;
@@ -72,8 +73,10 @@ namespace Illustra.ViewModels
             });
 
             // イベント購読
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            // _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
+            //     filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolder, ThreadOption.UIThread);
+
 
             // 初期化
             Initialize(initialPath);
@@ -123,9 +126,14 @@ namespace Illustra.ViewModels
 
                     if (_selectedItem != null && _selectedItem.IsFolder && !_isExpandingPath)
                     {
-                        // 選択されたフォルダのパスをイベントとして発行
-                        _eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
-                            new FolderSelectedEventArgs(_selectedItem.FullPath, CONTROL_ID));
+                        // Publish McpOpenFolderEvent instead
+                        _eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(
+                            new McpOpenFolderEventArgs
+                            {
+                                FolderPath = _selectedItem.FullPath,
+                                SourceId = CONTROL_ID, // Identify the source as this control
+                                ResultCompletionSource = null // No need to wait for result from UI interaction
+                            });
                     }
                 }
             }
@@ -189,16 +197,38 @@ namespace Illustra.ViewModels
             return SelectedItem != null && SelectedItem.IsFolder;
         }
 
-        // 外部からのフォルダ選択イベントの処理
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        // MCPからのフォルダ選択イベントの処理
+        private void OnMcpOpenFolder(McpOpenFolderEventArgs args)
         {
-            if (!string.IsNullOrEmpty(args.Path) && Directory.Exists(args.Path))
+            System.Diagnostics.Debug.WriteLine($"[FileSystemTreeVM] Received McpOpenFolderEvent for path: {args.FolderPath}, SourceId: {args.SourceId}");
+            bool success = false;
+            try
             {
-                Expand(args.Path);
-                // フォルダを展開した後、そのノードを画面内に表示
-                _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.Path);
+                if (!string.IsNullOrEmpty(args.FolderPath) && Directory.Exists(args.FolderPath))
+                {
+                    Expand(args.FolderPath);
+                    // フォルダを展開した後、そのノードを画面内に表示
+                    _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.FolderPath);
+
+                    // File selection logic removed as per user feedback
+                    success = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Debug.WriteLine($"Error handling McpOpenFolderEvent: {ex.Message}");
+                success = false;
+            }
+            finally
+            {
+                System.Diagnostics.Debug.WriteLine($"[FileSystemTreeVM] Setting McpOpenFolderEvent result: {success}");
+                // Notify the APIService about the result
+                args.ResultCompletionSource?.SetResult(success);
+                System.Diagnostics.Debug.WriteLine($"[FileSystemTreeVM] McpOpenFolderEvent result set.");
             }
         }
+
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

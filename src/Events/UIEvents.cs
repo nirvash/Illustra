@@ -6,24 +6,7 @@ using Illustra.Helpers;
 
 namespace Illustra.Events
 {
-    public class FolderSelectedEventArgs
-    {
-        public string Path { get; set; }
-        public string SourceId { get; set; }
-        public string? InitialSelectedFilePath { get; set; }
-
-        public FolderSelectedEventArgs(string path, string sourceId, string? initialSelectedFilePath = null)
-        {
-            Path = path;
-            SourceId = sourceId;
-            InitialSelectedFilePath = initialSelectedFilePath;
-        }
-    }
-
-    /// <summary>
-    /// フォルダが選択されたときにトリガーされるイベント
-    /// </summary>
-    public class FolderSelectedEvent : PubSubEvent<FolderSelectedEventArgs> { }
+    // FolderSelectedEvent and FolderSelectedEventArgs removed, replaced by McpOpenFolderEvent
 
     /// <summary>
     /// フォルダ内の先頭ファイルの選択を要求するイベント

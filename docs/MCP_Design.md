@@ -175,7 +175,7 @@ sequenceDiagram
                 webBuilder.UseStartup<Illustra.MCPHost.Startup>(); // MCPHostプロジェクトのStartupクラスを指定
                 webBuilder.UseKestrel(options =>
                 {
-                    options.ListenLocalhost(5001); // 例: ポート番号指定
+                    options.ListenLocalhost(5149); // 実際のポート番号
                 });
             })
             .ConfigureServices((hostContext, services) =>
@@ -207,11 +207,11 @@ sequenceDiagram
 
 Illustra の機能は OpenAPI 3.0 仕様に準拠した REST API として公開されます。API 仕様は以下のエンドポイントから取得できます。
 
-*   **GET /api/openapi.json:**
-    *   サーバーが提供する API の詳細な仕様を OpenAPI 3.0 形式 (JSON) で返します。JSON はマシン間の相互運用性に優れています。
-    *   この仕様には、各エンドポイント (ツール/リソースに対応)、HTTP メソッド、パラメータ、リクエスト/レスポンスのスキーマ、そして LLM が理解しやすいように自然言語での説明 (目的、使用例など) が含まれます。
-    *   仕様は `Swashbuckle.AspNetCore` ライブラリと XML ドキュメントコメントを用いて自動生成されます。
-    *   **[追記]** 必要に応じて、人間が読みやすい YAML 形式 (`GET /api/openapi.yaml`) も提供することを検討します。
+*   **GET /api/v1/openapi.json:**
+*   サーバーが提供する API の詳細な仕様を OpenAPI 3.0 形式 (JSON) で返します。JSON はマシン間の相互運用性に優れています。
+*   この仕様には、各エンドポイント (ツール/リソースに対応)、HTTP メソッド、パラメータ、リクエスト/レスポンスのスキーマ、そして LLM が理解しやすいように自然言語での説明 (目的、使用例など) が含まれます。
+*   仕様は `Swashbuckle.AspNetCore` ライブラリと XML ドキュメントコメントを用いて自動生成されます。
+*   Swagger UIは `/api/swagger` で利用可能です。
 
 **公開される主な API (OpenAPI 仕様内で定義):**
 
@@ -227,7 +227,15 @@ OpenAPI 仕様には、以下のような操作や情報取得に対応するエ
     *   アプリケーション内の特定データ (設定、履歴など) をリソースとして公開するためのエンドポイント (例: `GET /api/resources/settings`)。
 
 **API 命名規則:**
+エンドポイントのパスは以下の形式で実装されています：
+- 操作系: `/api/execute/{toolName}`
+- 情報取得系: `/api/info/{toolName}`
 
+例:
+- `/api/execute/test-tool`
+- `/api/info/test-tool`
+
+これにより、OpenAPI 仕様が整理され、理解しやすくなります。
 エンドポイントのパスは、操作 (`execute`)、情報取得 (`info`)、リソース (`resources`) などのカテゴリでグループ化し、その後に具体的なアクション名 (`open_folder` など) を続ける形式を検討します (例: `/api/execute/open_folder`, `/api/info/current_folder`)。これにより、OpenAPI 仕様が整理され、理解しやすくなります。最終的なパスは実装時に決定します。
 
 ## 8. 段階的な実装計画

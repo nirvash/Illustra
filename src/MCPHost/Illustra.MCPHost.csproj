@@ -2,9 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>    <!-- Add OutputType -->
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>    <!-- Changed to include windows -->
+    <UseWPF>true</UseWPF>    <!-- Added UseWPF -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +24,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared\Illustra.Shared.csproj" />
+    <!-- <ProjectReference Include="..\Illustra.csproj" /> -->    <!-- Removed reference causing circular dependency -->
+    <!-- Added reference to main WPF project -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Illustra.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

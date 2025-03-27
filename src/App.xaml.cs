@@ -18,6 +18,7 @@ using Illustra.Events;
 using ControlzEx.Theming;
 using System.IO;
 using Illustra.Models;
+using Illustra.Shared.Models; // Added for MCP events
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -135,11 +136,24 @@ namespace Illustra
             // 設定を読み込む
             var settings = SettingsHelper.GetSettings();
 
+            // Resolve IEventAggregator early
+            var eventAggregator = Container.Resolve<IEventAggregator>();
+            // var dispatcherService = new WpfDispatcherService(); // Removed
+
             // MCP Host の起動制御
             if (settings.EnableMcpHost)
             {
                 // Web API ホストを起動（ポート5149を使用 - launchSettings.json に合わせる）
+                // IEventAggregator instance is already resolved
+
                 _mcpHost = Host.CreateDefaultBuilder()
+                    .ConfigureServices((hostContext, services) => // Add ConfigureServices here
+                    {
+                        // Register the existing IEventAggregator instance as a singleton
+                        services.AddSingleton(eventAggregator);
+                        // Register the WPF Dispatcher instance as a singleton
+                        services.AddSingleton(Application.Current.Dispatcher);
+                    })
                     .ConfigureWebHostDefaults(webBuilder =>
                     {
                         // Use Startup class for configuration
@@ -165,7 +179,7 @@ namespace Illustra
             // ログカテゴリ設定を読み込む
             LogHelper.LoadCategorySettings();
 
-            var eventAggregator = Container.Resolve<IEventAggregator>();
+            // var eventAggregator = Container.Resolve<IEventAggregator>(); // Already resolved earlier
 
             // コマンドライン引数からファイルパスを取得
             if (e.Args.Length > 0)
@@ -175,8 +189,14 @@ namespace Illustra
                 {
                     // ファイルが存在する場合、そのフォルダを開いて対象ファイルを選択
                     var folderPath = Path.GetDirectoryName(filePath);
-                    eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
-                        new FolderSelectedEventArgs(folderPath!, "App", filePath));
+                    eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(
+                        new McpOpenFolderEventArgs
+                        {
+                            FolderPath = folderPath!,
+                            SourceId = "App",
+                            SelectedFilePath = filePath,
+                            ResultCompletionSource = null // No need to wait for result here
+                        });
                 }
                 else
                 {
@@ -215,8 +235,14 @@ namespace Illustra
             // フォルダが指定されている場合は開く
             if (!string.IsNullOrEmpty(folderToOpen) && Directory.Exists(folderToOpen))
             {
-                eventAggregator.GetEvent<FolderSelectedEvent>().Publish(
-                    new FolderSelectedEventArgs(folderToOpen, "App", fileToSelect));
+                eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(
+                    new McpOpenFolderEventArgs
+                    {
+                        FolderPath = folderToOpen,
+                        SourceId = "App",
+                        SelectedFilePath = fileToSelect,
+                        ResultCompletionSource = null // No need to wait for result here
+                    });
             }
         }
 

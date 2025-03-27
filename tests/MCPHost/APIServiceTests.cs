@@ -5,7 +5,8 @@ using Moq;
 using NUnit.Framework;
 using Prism.Events;
 using Illustra.MCPHost;
-using Illustra.MCPHost.Events;
+using Illustra.Shared.Models; // Updated namespace
+using Illustra.Services; // Added for IDispatcherService
 
 namespace Illustra.Tests.MCPHost
 {
@@ -13,26 +14,33 @@ namespace Illustra.Tests.MCPHost
     public class APIServiceTests
     {
         private Mock<IEventAggregator> _mockEventAggregator;
-        private Mock<ExecuteToolEvent> _mockExecuteToolEvent;
-        private Mock<GetInfoEvent> _mockGetInfoEvent;
+        private Mock<McpExecuteToolEvent> _mockExecuteToolEvent; // Renamed
+        private Mock<McpGetInfoEvent> _mockGetInfoEvent; // Renamed
         private APIService _apiService;
 
         [SetUp]
         public void Setup()
         {
             _mockEventAggregator = new Mock<IEventAggregator>();
-            _mockExecuteToolEvent = new Mock<ExecuteToolEvent>();
-            _mockGetInfoEvent = new Mock<GetInfoEvent>();
+            _mockExecuteToolEvent = new Mock<McpExecuteToolEvent>(); // Renamed
+            _mockGetInfoEvent = new Mock<McpGetInfoEvent>(); // Renamed
 
             _mockEventAggregator
-                .Setup(x => x.GetEvent<ExecuteToolEvent>())
+                .Setup(x => x.GetEvent<McpExecuteToolEvent>()) // Renamed
                 .Returns(_mockExecuteToolEvent.Object);
 
             _mockEventAggregator
-                .Setup(x => x.GetEvent<GetInfoEvent>())
+                .Setup(x => x.GetEvent<McpGetInfoEvent>()) // Renamed
                 .Returns(_mockGetInfoEvent.Object);
 
-            _apiService = new APIService(_mockEventAggregator.Object);
+            // Add mock for IDispatcherService
+            var mockDispatcherService = new Mock<IDispatcherService>();
+            // Setup InvokeAsync to execute the action immediately for testing
+            // For InvokeAsync that returns Task, setup needs to return Task.CompletedTask
+            // mockDispatcherService.Setup(d => d.InvokeAsync(It.IsAny<Action>())) // No longer needed
+            //                      .Callback<Action>(action => action())
+            //                      .Returns(Task.CompletedTask);
+            _apiService = new APIService(_mockEventAggregator.Object); // Removed dispatcher service mock
         }
 
         [Test]
@@ -41,11 +49,11 @@ namespace Illustra.Tests.MCPHost
             // Arrange
             var toolName = "test-tool";
             var parameters = new { param1 = "value1" };
-            ExecuteToolEventArgs capturedArgs = null;
+            McpExecuteToolEventArgs capturedArgs = null; // Renamed
 
             _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<ExecuteToolEventArgs>()))
-                .Callback<ExecuteToolEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
+                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act
             var task = _apiService.ExecuteToolAsync(toolName, parameters);
@@ -67,11 +75,11 @@ namespace Illustra.Tests.MCPHost
         {
             // Arrange
             var expectedResult = "test-result";
-            ExecuteToolEventArgs capturedArgs = null;
+            McpExecuteToolEventArgs capturedArgs = null; // Renamed
 
             _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<ExecuteToolEventArgs>()))
-                .Callback<ExecuteToolEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
+                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act
             var task = _apiService.ExecuteToolAsync("test-tool", new { });
@@ -87,11 +95,11 @@ namespace Illustra.Tests.MCPHost
         {
             // Arrange
             var expectedException = new Exception("Test error");
-            ExecuteToolEventArgs capturedArgs = null;
+            McpExecuteToolEventArgs capturedArgs = null; // Renamed
 
             _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<ExecuteToolEventArgs>()))
-                .Callback<ExecuteToolEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
+                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act & Assert
             var task = _apiService.ExecuteToolAsync("test-tool", new { });
@@ -105,11 +113,11 @@ namespace Illustra.Tests.MCPHost
             // Arrange
             var toolName = "test-tool";
             var filePath = "test/path";
-            GetInfoEventArgs capturedArgs = null;
+            McpGetInfoEventArgs capturedArgs = null; // Renamed
 
             _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<GetInfoEventArgs>()))
-                .Callback<GetInfoEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
+                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act
             var task = _apiService.GetInfoAsync(toolName, filePath);
@@ -131,11 +139,11 @@ namespace Illustra.Tests.MCPHost
         {
             // Arrange
             var expectedResult = "test-info";
-            GetInfoEventArgs capturedArgs = null;
+            McpGetInfoEventArgs capturedArgs = null; // Renamed
 
             _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<GetInfoEventArgs>()))
-                .Callback<GetInfoEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
+                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act
             var task = _apiService.GetInfoAsync("test-tool");
@@ -151,11 +159,11 @@ namespace Illustra.Tests.MCPHost
         {
             // Arrange
             var expectedException = new Exception("Test error");
-            GetInfoEventArgs capturedArgs = null;
+            McpGetInfoEventArgs capturedArgs = null; // Renamed
 
             _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<GetInfoEventArgs>()))
-                .Callback<GetInfoEventArgs>(args => capturedArgs = args);
+                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
+                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
 
             // Act & Assert
             var task = _apiService.GetInfoAsync("test-tool");

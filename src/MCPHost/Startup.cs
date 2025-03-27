@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Prism.Events;
+// using Illustra.Services; // Removed - No longer needed
 using System.Linq;
 
 namespace Illustra.MCPHost
@@ -18,6 +19,7 @@ namespace Illustra.MCPHost
 
         public IConfiguration Configuration { get; }
 
+        // Add using Illustra.Services; at the top if not present
         public void ConfigureServices(IServiceCollection services)
         {
             System.Diagnostics.Debug.WriteLine("Configuring services...");
@@ -26,10 +28,18 @@ namespace Illustra.MCPHost
                 .AddApplicationPart(typeof(Controllers.McpController).Assembly);
 
             services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Illustra MCP API",
+                    Version = "v1",
+                    Description = "The API for Illustra Multi-Command Protocol"
+                });
+            });
 
-            services.AddSingleton<IEventAggregator, Prism.Events.EventAggregator>();
-            services.AddScoped<APIService>();
+            // IEventAggregator and IDispatcherService are registered in App.xaml.cs
+            services.AddScoped<APIService>(); // APIService depends on them
 
             // List registered controllers
             var controllerTypes = typeof(Controllers.McpController).Assembly
@@ -50,9 +60,18 @@ namespace Illustra.MCPHost
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI();
             }
+
+            app.UseSwagger(options =>
+            {
+                options.RouteTemplate = "api/{documentName}/openapi.json";
+            });
+
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/api/v1/openapi.json", "Illustra MCP API v1");
+                options.RoutePrefix = "api/swagger";
+            });
 
             // Log all requests
             app.Use(async (context, next) =>

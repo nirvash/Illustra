@@ -16,6 +16,7 @@ using System.Reflection;
 using Prism.Events;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {
@@ -186,7 +187,7 @@ namespace Illustra.Views
         {
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread);
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderChanged);
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderChanged); // Renamed
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
 
@@ -206,7 +207,7 @@ namespace Illustra.Views
             if (_eventAggregator != null)
             {
                 _eventAggregator.GetEvent<FileSelectedEvent>().Unsubscribe(OnFileSelected);
-                _eventAggregator.GetEvent<FolderSelectedEvent>().Unsubscribe(OnFolderChanged);
+                _eventAggregator.GetEvent<McpOpenFolderEvent>().Unsubscribe(OnMcpFolderChanged); // Renamed
                 _eventAggregator.GetEvent<FilterChangedEvent>().Unsubscribe(OnFilterChanged);
                 _eventAggregator.GetEvent<ViewerSettingsChangedEvent>().Unsubscribe(OnViewerSettingsChanged);
             }
@@ -455,7 +456,7 @@ namespace Illustra.Views
         }
 
 
-        private void OnFolderChanged(FolderSelectedEventArgs args)
+        private void OnMcpFolderChanged(McpOpenFolderEventArgs args) // Renamed and changed args type
         {
             // フォルダが変更された場合、タグフィルタをクリア
             _currentTagFilters = new List<string>();

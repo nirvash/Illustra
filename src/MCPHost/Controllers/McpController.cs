@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Illustra.Shared.Models; // Updated namespace
+using Illustra.Shared.Models; // For request/event args
 using Microsoft.AspNetCore.Http; // For IHttpContextAccessor
 
 namespace Illustra.MCPHost.Controllers
@@ -50,7 +51,50 @@ namespace Illustra.MCPHost.Controllers
             {
                 return StatusCode(500, $"Error executing tool: {ex.Message}");
             }
+        } // End of ExecuteTool method
+
+        /// <summary>
+        /// Opens a specified folder in the application.
+        /// </summary>
+        /// <param name="request">The request body containing the folder path.</param>
+        /// <returns>Status indicating success or failure.</returns>
+        /// <response code="200">If the folder was opened successfully.</response>
+        /// <response code="400">If the request body or folder path is invalid.</response>
+        /// <response code="500">If an internal server error occurs.</response>
+        [HttpPost("commands/open_folder")] // Changed route to avoid conflict
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> OpenFolder([FromBody] OpenFolderRequest request) // Added public back for testing
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.FolderPath))
+                {
+                    return BadRequest("Folder path is required.");
+                }
+
+                // Set a fixed SourceId indicating the request originated from the MCP Host API
+                string sourceId = "MCPHost";
+
+                bool success = await _apiService.OpenFolderAsync(request.FolderPath, sourceId);
+
+                if (success)
+                {
+                    return Ok(new { Message = "Folder opened successfully." });
+                }
+                else
+                {
+                    // Consider returning a more specific error if APIService provides details
+                    return StatusCode(500, "Failed to open folder.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error opening folder: {ex.Message}");
+            }
         }
+
 
         // Placeholder for retrieving information
         // GET /api/info/{tool_name}
@@ -68,9 +112,18 @@ namespace Illustra.MCPHost.Controllers
                 }
 
                 var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-                var result = await _apiService.GetInfoAsync(toolName, filePath, cancellationToken);
 
-                return Ok(result ?? new { Message = "No information available" });
+                // Check if the request is for the list of available tools
+                if (toolName.Equals("available_tools", StringComparison.OrdinalIgnoreCase))
+                {
+                    var tools = await _apiService.GetAvailableToolsAsync(cancellationToken);
+                    return Ok(tools);
+                }
+                else // Otherwise, get info for the specific tool
+                {
+                    var result = await _apiService.GetInfoAsync(toolName, filePath, cancellationToken);
+                    return Ok(result ?? new { Message = $"No specific information available for tool '{toolName}'" });
+                }
             }
             catch (Exception ex)
             {

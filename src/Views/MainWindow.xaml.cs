@@ -16,6 +16,7 @@ using DryIoc.ImTools;
 using Illustra.Models;
 using MahApps.Metro.Controls;
 using System.Windows.Media;
+using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {
@@ -62,7 +63,7 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // イベント購読
-            _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected);
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected); // Renamed
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
@@ -584,10 +585,10 @@ namespace Illustra.Views
             FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled;
         }
 
-        private void OnFolderSelected(FolderSelectedEventArgs args)
+        private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
         {
             // 現在のフォルダパスを更新
-            _currentFolderPath = args.Path;
+            _currentFolderPath = args.FolderPath; // Changed property name
 
             // フィルタをクリア
             _currentRatingFilter = 0;

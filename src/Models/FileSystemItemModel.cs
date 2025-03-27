@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
+using Illustra.Shared.Models; // Added for MCP events
 using Illustra.Views;
 
 namespace Illustra.Models
@@ -673,7 +674,13 @@ namespace Illustra.Models
 
                         // FolderSelected イベントを発行して選択パスを更新
                         var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-                        eventAggregator.GetEvent<FolderSelectedEvent>().Publish(new FolderSelectedEventArgs("FileSystemItemModel", newSelectedPath));
+                        eventAggregator.GetEvent<McpOpenFolderEvent>().Publish( // Renamed
+                            new McpOpenFolderEventArgs // Renamed
+                            {
+                                FolderPath = newSelectedPath,
+                                SourceId = "FileSystemItemModel", // Identify the source
+                                ResultCompletionSource = null // No need to wait for result here
+                            });
                         Debug.WriteLine($"[フォルダツリー] リネームにより選択フォルダ変更イベント発行: {newSelectedPath}");
                     }
                 }
