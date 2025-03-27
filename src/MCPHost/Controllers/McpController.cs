@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Illustra.Shared.Models; // Updated namespace
+using Microsoft.AspNetCore.Http; // For IHttpContextAccessor
 
 namespace Illustra.MCPHost.Controllers
 {
@@ -16,10 +17,16 @@ namespace Illustra.MCPHost.Controllers
         private readonly APIService _apiService;
         // Add ILogger if needed
 
-        public McpController(APIService apiService)
+        public McpController(APIService apiService, IHttpContextAccessor httpContextAccessor = null)
         {
             _apiService = apiService;
+            HttpContext = httpContextAccessor?.HttpContext;
         }
+
+        /// <summary>
+        /// For unit testing purposes
+        /// </summary>
+        public Microsoft.AspNetCore.Http.HttpContext HttpContext { get; set; }
 
         // Placeholder for executing an operation tool
         // POST /api/execute/{tool_name}
@@ -28,18 +35,20 @@ namespace Illustra.MCPHost.Controllers
         {
             // TODO: Implement actual call to _apiService.ExecuteToolAsync(toolName, request.Parameters)
             // TODO: Add proper error handling (try-catch) and return appropriate status codes
-            // Example (needs refinement based on APIService implementation):
             try
             {
-                // object result = await _apiService.ExecuteToolAsync(toolName, request.Parameters, HttpContext.RequestAborted);
-                // return Ok(new { message = $"{toolName} executed successfully.", result });
-                await Task.Delay(10); // Simulate async work
-                return Ok(new { message = $"Placeholder: {toolName} would be executed with params: {request.Parameters}" });
+                if (request == null)
+                {
+                    return BadRequest("Request body is required");
+                }
+
+                var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+                var result = await _apiService.ExecuteToolAsync(toolName, request.Parameters, cancellationToken);
+                return Ok(result);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                // Log the exception
-                return StatusCode(500, new { error = $"Error executing {toolName}: {ex.Message}" });
+                return StatusCode(500, $"Error executing tool: {ex.Message}");
             }
         }
 
@@ -53,15 +62,24 @@ namespace Illustra.MCPHost.Controllers
             // Example (needs refinement based on APIService implementation):
             try
             {
-                // object result = await _apiService.GetInfoAsync(toolName, filePath, HttpContext.RequestAborted);
-                // return Ok(result);
-                await Task.Delay(10); // Simulate async work
-                return Ok(new { message = $"Placeholder: Info for {toolName} would be retrieved. FilePath: {filePath}" });
+                if (string.IsNullOrEmpty(toolName))
+                {
+                    return BadRequest("Tool name is required");
+                }
+
+                var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+                var result = await _apiService.GetInfoAsync(toolName, filePath, cancellationToken);
+
+                return Ok(result ?? new { Message = "No information available" });
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                // Log the exception
-                return StatusCode(500, new { error = $"Error getting info for {toolName}: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    Error = "Internal server error",
+                    Details = ex.Message,
+                    ToolName = toolName
+                });
             }
         }
 

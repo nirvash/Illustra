@@ -21,7 +21,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/tests/bin/Debug/net9.0-windows/YourTestProject.dll",
+      "program": "${workspaceFolder}/tests/bin/Debug/net9.0-windows/Illustra.Tests.dll",
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
