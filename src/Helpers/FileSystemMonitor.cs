@@ -64,8 +64,18 @@ namespace Illustra.Helpers
             StopMonitoring();
 
             _watcher.Path = path;
-            _watcher.EnableRaisingEvents = true;
-            _isMonitoring = true;
+            try
+            {
+                _watcher.EnableRaisingEvents = true;
+                _isMonitoring = true;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.ComponentModel.Win32Exception)
+            {
+                // Win32Exception は、ネットワークドライブなど特定の状況で発生する可能性がある
+                Debug.WriteLine($"Error starting file system monitoring for path '{path}': {ex.Message}");
+                StopMonitoring(); // 監視を開始できなかった場合は停止状態に戻す
+                // 必要に応じて、ユーザーへの通知やエラーハンドリングを追加
+            }
         }
 
         public void StopMonitoring()
