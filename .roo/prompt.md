@@ -9,12 +9,12 @@
 - **Do not proceed** with further steps or attempt completion if the build fails.
 - Fix any reported build errors promptly. Refer to the "Troubleshooting" section in `docs/Rule.md` for common issues and solutions.
 
-## 3. Verify Tool Output for Special Characters
-- When using `write_to_file` or `insert_content` with content containing XML/XAML tags or C# code:
+## 3. Verify Tool Output for Special Characters & Operators (CRITICAL)
+- When using `write_to_file`, `insert_content`, or `execute_command` with content containing XML/XAML tags, C# code, or shell commands:
     - **Carefully review** the content you are providing to the tool.
     - Ensure that special characters like `<`, `>`, and `&amp;` are **not** unnecessarily escaped (e.g., `&amp;lt;`, `&amp;gt;`, `&amp;amp;`).
-    - Pay special attention to C# logical operators like `&&` which might be incorrectly escaped to `&amp;&amp;`.
-- If a build fails due to parsing errors (like `XamlParseException`) or C# syntax errors after using these tools, immediately suspect incorrect character escaping and correct the relevant file.
+    - Pay special attention to C# logical operators (`&&`, `||`) and shell command chaining operators (`&&`, `;`) which might be incorrectly escaped (e.g., `&amp;&amp;`). **Output the correct operator characters directly.**
+- If a build fails due to parsing errors (like `XamlParseException`), C# syntax errors, or command execution errors after using these tools, immediately suspect incorrect character escaping and correct the relevant file or command.
 
 ## 4. Follow General Best Practices
 - Use DI (Dependency Injection) where appropriate, following the project's established patterns (e.g., using `ContainerLocator` or constructor injection as seen in existing code).

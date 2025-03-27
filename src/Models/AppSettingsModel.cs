@@ -66,6 +66,9 @@ namespace Illustra.Models
         // 開発者モード設定
         public bool DeveloperMode { get; set; } = false;
 
+
+        // MCP Host 有効化設定
+        public bool EnableMcpHost { get; set; } = false;
         // 起動時フォルダ設定
         public enum StartupFolderMode
         {

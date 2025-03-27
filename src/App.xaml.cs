@@ -18,6 +18,10 @@ using Illustra.Events;
 using ControlzEx.Theming;
 using System.IO;
 using Illustra.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Builder; // Required for IApplicationBuilder extension methods
 
 namespace Illustra
 {
@@ -28,6 +32,9 @@ namespace Illustra
     {
         private readonly DatabaseManager _db = new();
         public bool EnableCyclicNavigation { get; set; }
+
+        // Web API ホストのインスタンスを保持
+        private IHost? _mcpHost;
 
         // アプリケーション全体で共有するサービスへの参照を保持
         private IllustraAppContext _appContext;
@@ -104,7 +111,7 @@ namespace Illustra
             }
         }
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
@@ -127,6 +134,65 @@ namespace Illustra
 
             // 設定を読み込む
             var settings = SettingsHelper.GetSettings();
+
+            // MCP Host の起動制御
+            if (settings.EnableMcpHost)
+            {
+                // Web API ホストを起動（ポート5149を使用 - launchSettings.json に合わせる）
+                _mcpHost = Host.CreateDefaultBuilder()
+                    .ConfigureWebHostDefaults(webBuilder =>
+                    {
+                        // Configure services directly, mimicking Startup.ConfigureServices and Program.cs
+                        webBuilder.ConfigureServices(services =>
+                        {
+                            services.AddControllers();
+                            services.AddEndpointsApiExplorer(); // Needed for Swagger
+                            services.AddSwaggerGen();
+
+                            // Register services needed specifically for MCPHost
+                            // Using new instances scoped to this host
+                            services.AddSingleton<IEventAggregator, Prism.Events.EventAggregator>();
+                            services.AddSingleton<Illustra.MCPHost.APIService>(); // Use explicit namespace
+                        });
+
+                        // Configure the application pipeline directly, mimicking Startup.Configure and Program.cs
+                        webBuilder.Configure(app =>
+                        {
+                            var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
+
+                            if (env.IsDevelopment())
+                            {
+                                app.UseDeveloperExceptionPage();
+                                app.UseSwagger();
+                                app.UseSwaggerUI(); // Setup Swagger UI endpoint
+                            }
+
+                            // app.UseHttpsRedirection(); // Keep disabled for now
+
+                            app.UseRouting();
+
+                            // app.UseAuthorization(); // Add if needed later
+
+                            app.UseEndpoints(endpoints =>
+                            {
+                                endpoints.MapControllers(); // Map API controllers
+                                endpoints.MapGet("/", () => "Illustra MCP Host is running (Configured in App.xaml.cs)."); // Basic health check endpoint
+                            });
+                        });
+
+                        // Set the URL
+                        webBuilder.UseUrls("http://localhost:5149");
+                    })
+                    .Build();
+
+                await _mcpHost.StartAsync();
+                LogHelper.LogWithTimestamp("MCP Web API ホストを起動しました (Port: 5149)", LogHelper.Categories.MCP);
+            }
+            else
+            {
+                LogHelper.LogWithTimestamp("MCP Web API ホストは無効化されています", LogHelper.Categories.MCP);
+            }
+
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
 
             // 保存されたテーマを適用
@@ -319,11 +385,18 @@ namespace Illustra
             }
         }
 
-        protected override void OnExit(ExitEventArgs e)
+        protected override async void OnExit(ExitEventArgs e)
         {
             try
             {
                 LogHelper.LogWithTimestamp("アプリケーション終了処理を開始", LogHelper.Categories.UI);
+
+                // Web API ホストの停止
+                if (_mcpHost != null)
+                {
+                    await _mcpHost.StopAsync();
+                    LogHelper.LogWithTimestamp("MCP Web API ホストを停止しました", LogHelper.Categories.MCP);
+                }
 
                 // イメージプロパティサービスのリソース解放
                 if (_propertiesService is IDisposable disposableService)

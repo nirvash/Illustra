@@ -24,6 +24,7 @@ namespace Illustra.Helpers
             public const string UI = "UI";
             public const string Navigation = "NAVIGATION";
             public const string ImageCache = "IMAGE_CACHE";
+            public const string MCP = "MCP";
 
             // 解析用の特別なカテゴリ
             public const string Analysis = "ANALYSIS";
@@ -48,6 +49,8 @@ namespace Illustra.Helpers
             _enabledCategories[Categories.Database] = true;
             _enabledCategories[Categories.UI] = true;
             _enabledCategories[Categories.Navigation] = true;
+            _enabledCategories[Categories.ImageCache] = true;
+            _enabledCategories[Categories.MCP] = true;
             _enabledCategories[Categories.Analysis] = true;
             _enabledCategories[Categories.VisibilityDetection] = true;
             _enabledCategories[Categories.ScrollTracking] = true;

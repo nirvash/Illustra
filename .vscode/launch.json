@@ -9,7 +9,7 @@
       "program": "${workspaceFolder}/src/bin/Debug/net9.0-windows/Illustra.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/",
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "stopAtEntry": false,
       "justMyCode": false, // ここを追加
       "logging": {

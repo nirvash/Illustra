@@ -45,6 +45,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="MCPHost\**\*.cs" />
+    <Compile Remove="Shared\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Extended.Wpf.Toolkit" Version="4.7.25104.5739" />
     <PackageReference Include="GitVersionTask" Version="5.5.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -75,6 +79,10 @@
   <ItemGroup>
     <Resource Include="Resources\Strings.xaml" />
     <Resource Include="Resources\Strings.ja.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="MCPHost\Illustra.MCPHost.csproj" />
+    <ProjectReference Include="..\Shared\Illustra.Shared.csproj" />
   </ItemGroup>
 
   <Target Name="CreateGitVersionTag">

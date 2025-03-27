@@ -23,5 +23,6 @@
     "Skia",
     "viewmodels",
     "Virtualizable"
-  ]
+  ],
+  "terminal.explorerKind": "external"
 }

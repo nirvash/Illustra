@@ -1,0 +1,6 @@
+@Illustra.MCPHost_HostAddress = http://localhost:5149
+
+GET {{Illustra.MCPHost_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

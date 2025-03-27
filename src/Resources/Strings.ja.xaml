@@ -109,6 +109,7 @@
     <system:String x:Key="String_Settings_Developer_LogCategories">ログカテゴリ設定</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
     <system:String x:Key="String_Settings_Developer_CleanDatabase">データベース整理</system:String>
+    <system:String x:Key="String_Settings_Developer_EnableMcpHost">MCP Host を有効にする (再起動が必要)</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">データベース整理</system:String>
     <system:String x:Key="String_Settings_Developer_PreparingCleanup">データベースの整理を行います。</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupComplete"

@@ -17,6 +17,12 @@
                         Padding="10,3"
                         HorizontalAlignment="Left"/>
 
+                <CheckBox Content="{DynamicResource String_Settings_Developer_EnableMcpHost}"
+                          IsChecked="{Binding EnableMcpHost}"
+                          Margin="0,5,0,0"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding DeveloperMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
                 <!-- ログカテゴリ設定（開発者モードが有効な場合のみ表示） -->
                 <Expander Header="{DynamicResource String_Settings_Developer_LogCategories}"
                          Margin="0,5,0,0"
