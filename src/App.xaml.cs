@@ -349,7 +349,7 @@ namespace Illustra
             }
         }
 
-        protected override async void OnExit(ExitEventArgs e)
+        protected override void OnExit(ExitEventArgs e) // Changed to sync void
         {
             try
             {
@@ -358,8 +358,26 @@ namespace Illustra
                 // Web API ホストの停止
                 if (_mcpHost != null)
                 {
-                    await _mcpHost.StopAsync();
-                    LogHelper.LogWithTimestamp("MCP Web API ホストを停止しました", LogHelper.Categories.MCP);
+                    try
+                    {
+                        LogHelper.LogWithTimestamp("MCP Web API ホストの Dispose を開始します...", LogHelper.Categories.MCP);
+                        _mcpHost.Dispose(); // StopAsync を呼ばずに直接 Dispose
+                        LogHelper.LogWithTimestamp("MCP Web API ホストの Dispose が完了しました", LogHelper.Categories.MCP);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Dispose中にエラーが発生した場合
+                        LogHelper.LogError("MCP Web API ホストの Dispose 中にエラーが発生しました", ex);
+                    }
+                    finally
+                    {
+                        _mcpHost = null; // 参照をクリア
+                        LogHelper.LogWithTimestamp("MCP Web API ホストの参照を null に設定しました", LogHelper.Categories.MCP);
+                    }
+                }
+                else
+                {
+                    LogHelper.LogWithTimestamp("MCP Web API ホストは起動していませんでした", LogHelper.Categories.MCP);
                 }
 
                 // イメージプロパティサービスのリソース解放

@@ -9,19 +9,12 @@
       "program": "${workspaceFolder}/src/bin/Debug/net9.0-windows/Illustra.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/",
-      "console": "integratedTerminal",
+      "console": "externalTerminal", // Output to Debug Console
       "stopAtEntry": false,
       "justMyCode": false,
       "logging": {
         "moduleLoad": false
       }
-    },
-    {
-      "name": "Attach to MCP Host",
-      "type": "coreclr",
-      "request": "attach",
-      "processId": "${command:pickProcess}",
-      "justMyCode": false
     },
     {
       "name": ".NET Core NUnit Test",
@@ -33,15 +26,6 @@
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "console": "internalConsole"
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Debug Illustra + MCP Host",
-      "configurations": [
-        "Launch Illustra",
-        "Attach to MCP Host"
-      ]
     }
   ]
 }
