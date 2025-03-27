@@ -70,15 +70,16 @@
                                                 RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}},
                                                 Converter={StaticResource BooleanInverseConverter}}"/>
                         </MenuItem>
+                        <Separator/>
                         <MenuItem x:Name="CreateFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_CreateFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.CreateFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                       <MenuItem x:Name="RenameFolderMenuItem"
+                        <MenuItem x:Name="RenameFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_RenameFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.RenameFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                         <MenuItem x:Name="DeleteFolderMenuItem"
-                                   Header="{DynamicResource String_FileSystemTreeView_DeleteFolder}"
-                                   Command="{Binding Path=PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem x:Name="DeleteFolderMenuItem"
+                                  Header="{DynamicResource String_FileSystemTreeView_DeleteFolder}"
+                                  Command="{Binding Path=PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                     </ContextMenu>
                 </Setter.Value>
             </Setter>

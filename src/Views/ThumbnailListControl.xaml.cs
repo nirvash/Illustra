@@ -26,6 +26,7 @@ using System.Windows.Data; // 追加: FileNodeModelExtensionsを使用するた�
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Net.Http;
+using System; // IProgress を使うために追加
 
 namespace Illustra.Views
 {
@@ -293,7 +294,6 @@ namespace Illustra.Views
             SortDirectionText.Text = _isSortAscending ?
                 (string)Application.Current.FindResource("String_Thumbnail_SortAscending") :
                 (string)Application.Current.FindResource("String_Thumbnail_SortDescending");
-
 
             _initialSelectedFilePath = _appSettings.SelectLastFileOnStartup ? _appSettings.LastSelectedFilePath : null;
             _isInitialized = true;
@@ -2022,54 +2022,106 @@ namespace Illustra.Views
             {
                 if (string.IsNullOrEmpty(_currentFolderPath))
                     return new List<string>();
-
                 var db = ContainerLocator.Container.Resolve<DatabaseManager>();
                 var fileOp = new FileOperationHelper(db);
 
                 // フォルダパスを取得
                 string targetFolder = _currentFolderPath ?? "";
-                var processedFiles = await fileOp.ExecuteFileOperation(files, targetFolder, isCopy);
 
-                foreach (var path in processedFiles)
+                // --- 進捗ダイアログと後処理コールバックを設定 ---
+                List<string> processedFiles = new List<string>(); // 処理されたファイルのリスト
+                string dialogTitle = isCopy ? (string)FindResource("String_Dialog_FileCopyTitle") : (string)FindResource("String_Dialog_FileMoveTitle");
+
+                // オーナーウィンドウとして Application.Current.MainWindow を使用
+                var owner = Application.Current.MainWindow;
+
+                // owner が null または MetroWindow でない場合はエラー処理
+                if (owner == null || !(owner is MahApps.Metro.Controls.MetroWindow))
                 {
-                    if (!FileHelper.IsImageFile(path)) continue;
-
-                    // 既存のファイルノードをチェック
-                    if (_viewModel.Items.Any(x => x.FullPath == path))
-                    {
-                        Debug.WriteLine($"File already exists in the list: {path}");
-                        continue;
-                    }
-
-                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
-                    if (fileNode != null)
-                    {
-                        // ソート順に従って適切な位置に挿入
-                        _viewModel.AddItem(fileNode);
-
-                        _ = Task.Run(async () =>
-                        {
-                            await _viewModel.UpdatePromptCacheAsync(path);
-
-                            // RefreshFiltering を await で完了を待ってから次の処理に進む
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                _viewModel.RefreshFiltering();
-                            }).Task;  // Task を取得して await
-
-                            // サムネイル生成をトリガー
-                            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-                            var index = filteredItems.IndexOf(fileNode);
-                            if (index >= 0)
-                            {
-                                // フィルタされたアイテムのインデックスで明示的にサムネイル生成を要求
-                                await _thumbnailLoader.CreateThumbnailAsync(index, CancellationToken.None);
-                            }
-                        });
-                    }
+                    throw new InvalidOperationException("Owner window could not be determined.");
                 }
 
-                // ペーストされたファイルの最初のファイルを選択
+                var cts = new CancellationTokenSource(); // CancellationTokenSource を生成
+                (IProgress<FileOperationProgressInfo> progress, Action closeDialog) = (null, null); // 初期化
+
+                try
+                {
+                    // 進捗ダイアログを表示し、progress と closeDialog を取得 (静的呼び出しに戻す)
+                    (progress, closeDialog) =
+                        await DialogHelper.ShowProgressDialogAsync(owner, dialogTitle, cts); // cts を渡す
+
+                    // 実際のファイル操作は Task.Run でバックグラウンド実行
+                    processedFiles = await Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // Define postProcessAction lambda first
+                            Action<string> postProcessAction = (processedPath) =>
+                            {
+                                // --- ファイルごとの後処理 (UIスレッドで実行) ---
+                                _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+                                {
+                                    if (!FileHelper.IsImageFile(processedPath)) return;
+
+                                    // 既存のファイルノードをチェック
+                                    if (_viewModel.Items.Any(x => x.FullPath == processedPath))
+                                    {
+                                        Debug.WriteLine($"File already exists in the list: {processedPath}");
+                                        return;
+                                    }
+
+                                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(processedPath);
+                                    if (fileNode != null)
+                                    {
+                                        // ソート順に従って適切な位置に挿入
+                                        _viewModel.AddItem(fileNode);
+
+                                        // キャッシュ更新とサムネイル生成はバックグラウンドで実行
+                                        _ = Task.Run(async () =>
+                                        {
+                                            await _viewModel.UpdatePromptCacheAsync(processedPath);
+                                            // RefreshFiltering を UI スレッドで実行
+                                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                                            {
+                                                _viewModel.RefreshFiltering();
+                                            });
+
+                                            // サムネイル生成をトリガー
+                                            var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+                                            var index = filteredItems.IndexOf(fileNode);
+                                            if (index >= 0)
+                                            {
+                                                await _thumbnailLoader.CreateThumbnailAsync(index, CancellationToken.None);
+                                            }
+                                        });
+                                    }
+                                });
+                                // --- 後処理ここまで ---
+                            };
+
+                            // Call ExecuteFileOperation with the defined action and token
+                            return await fileOp.ExecuteFileOperation(files, targetFolder, isCopy, progress, postProcessAction, cts.Token); // Pass CancellationToken
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Handle cancellation (e.g., log, update UI if needed)
+                            System.Diagnostics.Debug.WriteLine("File operation cancelled in ThumbnailListControl.");
+                            return new List<string>(); // Return empty list or handle as appropriate
+                        }
+                    });
+                }
+                finally
+                {
+                    // キャンセルされていなければダイアログを閉じる
+                    if (cts != null && !cts.IsCancellationRequested)
+                    {
+                        closeDialog?.Invoke();
+                    }
+                    cts?.Dispose(); // Dispose CancellationTokenSource
+                }
+
+
+                // ペーストされたファイルの最初のファイルを選択 (processedFiles を使用)
                 try
                 {
                     if (processedFiles.Count > 0)
@@ -2102,6 +2154,8 @@ namespace Illustra.Views
                     (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Copy") :
                     (string)Application.Current.FindResource("String_Thumbnail_FileOperation_Move");
 
+                LogHelper.LogError($"[ファイル操作] {operation} 失敗: {ex.Message}");
+
                 MessageBox.Show(
                     string.Format((string)Application.Current.FindResource("String_Thumbnail_FileOperationError"),
                     operation, ex.Message),
@@ -2113,6 +2167,7 @@ namespace Illustra.Views
             }
         }
 
+        // async void に変更し、UIスレッドで非同期実行
         public async void ThumbnailItemsControl_Drop(IDropInfo e)
         {
             var dataObject = e.Data as IDataObject;
@@ -2213,7 +2268,9 @@ namespace Illustra.Views
             if (fileList.Any())
             {
                 bool isCopy = isVirtual || (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+                // Task.Run を削除し、UIスレッドで ProcessImageFiles を await する
                 var processed = await ProcessImageFiles(fileList, isCopy);
+                // ドロップ操作の結果に基づいてエフェクトを設定
                 e.Effects = processed.Any()
                     ? (isCopy ? DragDropEffects.Copy : DragDropEffects.Move)
                     : DragDropEffects.None;
@@ -3514,7 +3571,3 @@ namespace Illustra.Views
 
     }
 }
-
-
-
-

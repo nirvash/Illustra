@@ -11,6 +11,11 @@ using GongSolutions.Wpf.DragDrop;
 using Illustra.Models;
 using Illustra.Controls;
 using System.Windows.Documents;
+// using Illustra.Views; // ProgressDialog は DialogHelper で使うので不要
+using System.Threading.Tasks; // Task を使うために追加
+using System; // IProgress を使うために追加
+// using MahApps.Metro.Controls; // MetroWindow は DialogHelper で使うので不要
+using Illustra.Helpers; // DialogHelper を使うために追加
 
 namespace Illustra.Views
 {
@@ -19,6 +24,7 @@ namespace Illustra.Views
         private ObservableCollection<FavoriteFolderModel> _favoriteFolders = [];
         private AppSettingsModel _appSettings;
         private IEventAggregator? _eventAggregator;
+        // DialogHelper フィールドを削除
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FavoriteFolders";
 
@@ -142,7 +148,42 @@ namespace Illustra.Views
                     bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
                     var db = ContainerLocator.Container.Resolve<DatabaseManager>();
                     var fileOperationHelper = new FileOperationHelper(db);
-                    await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetModel.Path, isCopy);
+
+                    // --- DialogHelper を使用してファイル操作を実行 ---
+                    // FindResource と Window.GetWindow は _parent を介して呼び出す
+                    string dialogTitle = isCopy ? (string)_parent.FindResource("String_Dialog_FileCopyTitle") : (string)_parent.FindResource("String_Dialog_FileMoveTitle");
+                    var cts = new CancellationTokenSource(); // CancellationTokenSource を生成
+                    (IProgress<FileOperationProgressInfo> progress, Action closeDialog) = (null, null); // 初期化
+
+                    try
+                    {
+                        // 新しい DialogHelper を使用してダイアログを表示 (静的呼び出しに戻す)
+                        (progress, closeDialog) =
+                            await DialogHelper.ShowProgressDialogAsync(
+                                Window.GetWindow(_parent), // this の代わりに _parent を渡す
+                                dialogTitle,
+                                cts); // cts を渡す
+
+                            // ExecuteFileOperation を Task.Run でバックグラウンド実行
+                            await Task.Run(async () =>
+                            {
+                                await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetModel.Path, isCopy, progress, null, cts.Token); // Pass CancellationToken
+                            });
+                        }
+                        catch (OperationCanceledException)
+                    {
+                        // Handle cancellation (e.g., log, update UI if needed)
+                        System.Diagnostics.Debug.WriteLine("File operation cancelled in FavoriteFoldersControl.");
+                    }
+                    finally
+                    {
+                        // キャンセルされていなければダイアログを閉じる
+                        if (cts != null && !cts.IsCancellationRequested)
+                        {
+                            closeDialog?.Invoke();
+                        }
+                        cts?.Dispose(); // Dispose CancellationTokenSource
+                    }
                 }
                 catch (Exception ex)
                 {

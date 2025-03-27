@@ -4,6 +4,8 @@ using Prism.Mvvm;
 using Illustra.Views;
 using Illustra.Views.Settings;
 using Illustra.Helpers;
+using MahApps.Metro.Controls.Dialogs; // IDialogCoordinator を使うために追加
+using System; // ArgumentNullException を使うために追加
 
 namespace Illustra.ViewModels
 {
@@ -12,6 +14,10 @@ namespace Illustra.ViewModels
         private string _statusMessage = "";
         private bool _isLightTheme;
         private bool _isDarkTheme;
+        // private readonly IDialogCoordinator _dialogCoordinator; // 削除
+
+        // DialogCoordinator プロパティを追加
+        public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
 
         public string StatusMessage
         {
@@ -38,8 +44,11 @@ namespace Illustra.ViewModels
         public DelegateCommand SetLightThemeCommand { get; }
         public DelegateCommand SetDarkThemeCommand { get; }
 
+        // コンストラクタから IDialogCoordinator の注入を削除
         public MainWindowViewModel()
         {
+            // _dialogCoordinator = dialogCoordinator ?? throw new ArgumentNullException(nameof(dialogCoordinator)); // 削除
+
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
             OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
             OpenAdvancedSettingsCommand = new DelegateCommand(ExecuteOpenAdvancedSettings);
@@ -137,5 +146,7 @@ namespace Illustra.ViewModels
             settings.Theme = "Dark";
             SettingsHelper.SaveSettings(settings);
         }
+
+        // ShowProgressDialogAsync メソッドを削除
     }
 }

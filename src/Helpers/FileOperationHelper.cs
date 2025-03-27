@@ -1,3 +1,4 @@
+using Illustra.Models; // FileOperationProgressInfo を使うために追加
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -53,8 +54,11 @@ namespace Illustra.Helpers
         /// <param name="files">操作対象のファイルパスリスト</param>
         /// <param name="targetFolder">コピー/移動先のフォルダパス</param>
         /// <param name="isCopy">trueの場合はコピー、falseの場合は移動</param>
-        /// <returns>操作の完了を表すTask</returns>
-        public async Task<List<string>> ExecuteFileOperation(List<string> files, string targetFolder, bool isCopy)
+        /// <param name="progress">ファイル単位の進捗を報告するための IProgress インスタンス</param>
+        /// <param name="postProcessAction">各ファイルの処理完了後に呼び出されるアクション</param>
+        /// <param name="cancellationToken">キャンセルトークン</param>
+        /// <returns>操作が成功したファイルのパスリスト</returns>
+        public async Task<List<string>> ExecuteFileOperation(List<string> files, string targetFolder, bool isCopy, IProgress<FileOperationProgressInfo>? progress = null, Action<string>? postProcessAction = null, CancellationToken cancellationToken = default)
         {
             if (files == null || files.Count == 0)
                 throw new ArgumentException("ファイルリストが空です", nameof(files));
@@ -66,41 +70,71 @@ namespace Illustra.Helpers
                 throw new DirectoryNotFoundException($"ターゲットフォルダが見つかりません: {targetFolder}");
 
             var processedFiles = new List<string>();
+            int totalFiles = files.Count;
+            int processedCount = 0;
 
             foreach (var file in files)
             {
+                cancellationToken.ThrowIfCancellationRequested(); // Check for cancellation before processing each file
+                processedCount++;
+                string currentFileName = Path.GetFileName(file);
+                // 処理開始前に進捗を報告 (処理済みファイル数はまだ前の値)
+                progress?.Report(new FileOperationProgressInfo(currentFileName, totalFiles, processedCount - 1));
+
                 if (!File.Exists(file))
+                {
+                    // ファイルが存在しない場合はスキップして進捗を更新
+                    progress?.Report(new FileOperationProgressInfo(currentFileName, totalFiles, processedCount));
                     continue;
+                }
 
                 string destPath = GetUniqueDestinationPath(file, targetFolder);
 
                 try
                 {
+                    // FileSystem を使うメソッドを呼び出す (showUI=false でダイアログ非表示)
                     if (isCopy)
                     {
-                        await CopyFile(file, destPath);
+                        // CopyFile は destFolderPath を期待するので修正 -> destPath を渡す
+                        await CopyFile(file, destPath, showUI: false);
                     }
                     else
                     {
-                        await MoveFile(file, destPath);
+                        // MoveFile は destFolderPath を期待するので修正 -> destPath を渡す
+                        await MoveFile(file, destPath, showUI: false);
                     }
                     processedFiles.Add(destPath);
+                    // 処理完了後に進捗を更新
+                    progress?.Report(new FileOperationProgressInfo(currentFileName, totalFiles, processedCount));
+                    // ファイルごとの後処理を実行
+                    postProcessAction?.Invoke(destPath);
                 }
                 catch (Exception ex)
                 {
-                    throw new FileOperationException($"ファイル操作中にエラーが発生しました: {ex.Message}", ex);
+                    // エラーが発生した場合も進捗を進める
+                    progress?.Report(new FileOperationProgressInfo(currentFileName, totalFiles, processedCount));
+                    // エラー処理: ログ記録やユーザーへの通知など
+                    LogHelper.LogError($"ファイル操作エラー ({(isCopy ? "コピー" : "移動")}): {file} -> {destPath} - {ex.Message}");
+                    // 例外を再スローするか、処理を続行するかは要件による
+                    // throw new FileOperationException($"ファイル操作中にエラーが発生しました: {ex.Message}", ex);
                 }
             }
 
+            // Ensure final progress report indicates completion
+            progress?.Report(new FileOperationProgressInfo(string.Empty, totalFiles, totalFiles)); // Report completion
             return processedFiles;
         }
 
         /// <summary>
         /// ファイルを移動し、関連するデータベース情報も更新します
         /// </summary>
-        public async Task MoveFile(string srcPath, string destFolderPath, bool showUI = true, bool requireConfirmation = false)
+        /// <param name="srcPath">移動元のファイルパス</param>
+        /// <param name="destPath">移動先のファイルパス（フォルダではない）</param>
+        /// <param name="showUI">操作中にUIを表示するかどうか (ExecuteFileOperationからは常にfalse)</param>
+        /// <param name="requireConfirmation">確認ダイアログを表示するかどうか (ExecuteFileOperationからは常にfalse)</param>
+        public async Task MoveFile(string srcPath, string destPath, bool showUI = true, bool requireConfirmation = false)
         {
-            ValidateFilePaths(srcPath, destFolderPath);
+            ValidateFilePaths(srcPath, destPath); // destPath はファイルパス
 
             try
             {
@@ -110,30 +144,37 @@ namespace Illustra.Helpers
 
                 // ファイル移動
                 // UIオプションの設定
-                UIOption uiOption = showUI ? UIOption.AllDialogs : UIOption.OnlyErrorDialogs;
+                Microsoft.VisualBasic.FileIO.UIOption uiOption = showUI ? Microsoft.VisualBasic.FileIO.UIOption.AllDialogs : Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs;
 
-                // 上書きオプションの設定
-                UICancelOption cancelOption = UICancelOption.DoNothing;
+                // 上書きオプションの設定 (Copy/MoveFile は上書き確認しないため DoNothing)
+                Microsoft.VisualBasic.FileIO.UICancelOption cancelOption = Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing;
 
-                // ファイルの移動
-                FileSystem.MoveFile(
+                // ファイルの移動 (Microsoft.VisualBasic.FileIO を明示的に使用)
+                Microsoft.VisualBasic.FileIO.FileSystem.MoveFile(
                     srcPath,
-                    destFolderPath,
+                    destPath, // フォルダではなくファイルパスを渡す
                     showUI: uiOption,
                     onUserCancel: cancelOption);
 
                 // データベース更新
-                await UpdateDatabaseAfterFileOperation(srcPath, destFolderPath, rating, true);
+                await UpdateDatabaseAfterFileOperation(srcPath, destPath, rating, true);
             }
             catch (Exception ex)
             {
-                throw new FileOperationException($"ファイルの移動中にエラーが発生しました: {srcPath} から {destFolderPath} へ", ex);
+                throw new FileOperationException($"ファイルの移動中にエラーが発生しました: {srcPath} から {destPath} へ", ex);
             }
         }
 
-        public async Task CopyFile(string srcPath, string destFolderPath, bool showUI = true, bool requireConfirmation = false)
+        /// <summary>
+        /// ファイルをコピーし、関連するデータベース情報も更新します
+        /// </summary>
+        /// <param name="srcPath">コピー元のファイルパス</param>
+        /// <param name="destPath">コピー先のファイルパス（フォルダではない）</param>
+        /// <param name="showUI">操作中にUIを表示するかどうか (ExecuteFileOperationからは常にfalse)</param>
+        /// <param name="requireConfirmation">確認ダイアログを表示するかどうか (ExecuteFileOperationからは常にfalse)</param>
+        public async Task CopyFile(string srcPath, string destPath, bool showUI = true, bool requireConfirmation = false)
         {
-            ValidateFilePaths(srcPath, destFolderPath);
+            ValidateFilePaths(srcPath, destPath); // destPath はファイルパス
 
             try
             {
@@ -142,24 +183,24 @@ namespace Illustra.Helpers
                 var rating = sourceNode?.Rating ?? 0;
 
                 // UIオプションの設定
-                UIOption uiOption = showUI ? UIOption.AllDialogs : UIOption.OnlyErrorDialogs;
+                Microsoft.VisualBasic.FileIO.UIOption uiOption = showUI ? Microsoft.VisualBasic.FileIO.UIOption.AllDialogs : Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs;
 
-                // 上書きオプションの設定
-                UICancelOption cancelOption = UICancelOption.DoNothing;
+                // 上書きオプションの設定 (Copy/MoveFile は上書き確認しないため DoNothing)
+                Microsoft.VisualBasic.FileIO.UICancelOption cancelOption = Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing;
 
-                // ファイルのコピー
-                FileSystem.CopyFile(
+                // ファイルのコピー (Microsoft.VisualBasic.FileIO を明示的に使用)
+                Microsoft.VisualBasic.FileIO.FileSystem.CopyFile(
                     srcPath,
-                    destFolderPath,
+                    destPath, // フォルダではなくファイルパスを渡す
                     showUI: uiOption,
                     onUserCancel: cancelOption);
 
                 // データベース更新（コピーの場合は元ファイルのノードは削除しない）
-                await UpdateDatabaseAfterFileOperation(srcPath, destFolderPath, rating, false);
+                await UpdateDatabaseAfterFileOperation(srcPath, destPath, rating, false);
             }
             catch (Exception ex)
             {
-                throw new FileOperationException($"ファイルのコピー中にエラーが発生しました: {srcPath} から {destFolderPath} へ", ex);
+                throw new FileOperationException($"ファイルのコピー中にエラーが発生しました: {srcPath} から {destPath} へ", ex);
             }
         }
 

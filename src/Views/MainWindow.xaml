@@ -7,6 +7,8 @@
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:prism="http://prismlibrary.com/"
+        xmlns:dialogs="clr-namespace:MahApps.Metro.Controls.Dialogs;assembly=MahApps.Metro"
+        dialogs:DialogParticipation.Register="{Binding}"
         WindowTransitionsEnabled="False"
         KeyDown="MainWindow_OnKeyDown"
         mc:Ignorable="d"

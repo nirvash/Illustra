@@ -13,6 +13,8 @@ using Illustra.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using Illustra.Events;
+using Illustra.Helpers; // DialogHelper を使うために追加
+using System; // IProgress を使うために追加
 
 namespace Illustra.Views
 {
@@ -501,7 +503,41 @@ namespace Illustra.Views
 
                 // コピーまたは移動操作を実行
                 bool isCopy = ((dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey);
-                await _fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolderPath, isCopy);
+
+                // --- DialogHelper を使用してファイル操作を実行 ---
+                string dialogTitle = isCopy ? (string)FindResource("String_Dialog_FileCopyTitle") : (string)FindResource("String_Dialog_FileMoveTitle");
+                var cts = new CancellationTokenSource(); // CancellationTokenSource を生成
+                (IProgress<FileOperationProgressInfo> progress, Action closeDialog) = (null, null); // 初期化
+
+                try
+                {
+                    // 新しい DialogHelper を使用してダイアログを表示 (静的呼び出しに戻す)
+                    (progress, closeDialog) =
+                        await DialogHelper.ShowProgressDialogAsync(
+                            Window.GetWindow(this), // FileSystemTreeView は UserControl なので this でOK
+                            dialogTitle,
+                            cts); // cts を渡す
+
+                    // ExecuteFileOperation を Task.Run でバックグラウンド実行
+                    await Task.Run(async () =>
+                    {
+                        await _fileOperationHelper.ExecuteFileOperation(files.ToList(), targetFolderPath, isCopy, progress, null, cts.Token); // Pass CancellationToken
+                    });
+                }
+                catch (OperationCanceledException)
+                {
+                    // Handle cancellation (e.g., log, update UI if needed)
+                    System.Diagnostics.Debug.WriteLine("File operation cancelled in FileSystemTreeView.");
+                }
+                finally
+                {
+                    // キャンセルされていなければダイアログを閉じる
+                    if (cts != null && !cts.IsCancellationRequested)
+                    {
+                        closeDialog?.Invoke();
+                    }
+                    cts?.Dispose(); // Dispose CancellationTokenSource
+                }
             }
             catch (Exception ex)
             {

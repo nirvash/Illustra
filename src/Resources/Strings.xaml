@@ -16,6 +16,7 @@
     <system:String x:Key="String_Common_Save">Save</system:String>
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
     <system:String x:Key="String_Common_Start">Start</system:String>
+    <system:String x:Key="String_Common_Close">Close</system:String>
     <system:String x:Key="String_Common_Copy">Copy</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
     <system:String x:Key="String_Menu_CopyText">Copy text</system:String>
@@ -97,6 +98,7 @@
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_ValidationError">Invalid input values. Please check all settings.</system:String>
     <system:String x:Key="String_Settings_SaveCompleted">Settings have been saved.</system:String>
+    <system:String x:Key="String_Dialog_FileOperationCancelled">Cancelled</system:String>
     <system:String x:Key="String_Error">Error</system:String>
 
     <!-- Settings -->
@@ -306,6 +308,12 @@
     <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_LanguageSettingsWindow_Title">Language Settings</system:String>
 
+    <!-- Progress Dialog -->
+    <system:String x:Key="String_Dialog_FileCopyTitle">Copying Files</system:String>
+    <system:String x:Key="String_Dialog_FileMoveTitle">Moving Files</system:String>
+    <system:String x:Key="String_Dialog_FileProgressFormat" xml:space="preserve">{0}/{1} files processed
+{2}</system:String>
+    <system:String x:Key="String_Dialog_FileProgressCountFormat">{0}/{1} files</system:String>
     <!-- Tag Filtering -->
     <system:String x:Key="String_TagFilter_Title">Tag Filter</system:String>
     <system:String x:Key="String_TagFilter_Description">Enter tags to filter images that contain these tags in their prompt.</system:String>
@@ -329,8 +337,8 @@
     <!-- Folder Operations -->
     <system:String x:Key="String_FileSystemTreeView_CreateFolder">Create Folder</system:String>
     <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">New Folder</system:String>
-    <system:String x:Key="String_FileSystemTreeView_RenameFolder">Rename</system:String>
-    <system:String x:Key="String_FileSystemTreeView_RenameTitle">Rename</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameFolder">Rename Folder</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameTitle">Rename Folder</system:String>
     <system:String x:Key="String_FileSystemTreeView_SameNameExists">A folder with the same name already exists.</system:String>
     <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">Invalid folder name.</system:String>
     <system:String x:Key="String_FileSystemTreeView_RenameError">Failed to rename the folder: {0}</system:String>

@@ -1,0 +1,55 @@
+<dialogs:BaseMetroDialog x:Class="Illustra.Views.CustomProgressDialog"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:dialogs="clr-namespace:MahApps.Metro.Controls.Dialogs;assembly=MahApps.Metro"
+                         xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+                         mc:Ignorable="d"
+                         Padding="10"
+                         Title="{Binding Title, RelativeSource={RelativeSource Self}, FallbackValue='Progress'}"
+                         DialogTitleFontSize="15"
+                         DialogContentMargin="10"
+                         Height="200" MaxWidth="600" MinWidth="450" MinHeight="160">
+    <Grid Margin="15,15,15,10" HorizontalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 処理個数 -->
+            <RowDefinition Height="Auto"/> <!-- ファイル名 -->
+            <RowDefinition Height="*"/>    <!-- スペーサー -->
+            <RowDefinition Height="Auto"/> <!-- プログレスバー -->
+            <RowDefinition Height="Auto"/> <!-- ボタン -->
+        </Grid.RowDefinitions>
+
+        <!-- 処理個数表示 -->
+        <TextBlock x:Name="CountTextBlock" Grid.Row="0" Margin="0,0,0,5"
+                   Text="{Binding CountText, RelativeSource={RelativeSource AncestorType=dialogs:BaseMetroDialog}, FallbackValue='0/0'}"
+                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                   Style="{DynamicResource MahApps.Styles.TextBlock}"/>
+
+        <!-- ファイル名表示 -->
+        <TextBlock x:Name="FileNameTextBlock" Grid.Row="1" Margin="0,0,0,10"
+                   Text="{Binding FileNameText, RelativeSource={RelativeSource AncestorType=dialogs:BaseMetroDialog}, FallbackValue='Processing...'}"
+                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                   Style="{DynamicResource MahApps.Styles.TextBlock}"/>
+
+        <!-- プログレスバー -->
+        <ProgressBar x:Name="ProgressBar" Grid.Row="3" Minimum="0" Maximum="100"
+                     Value="{Binding ProgressValue, RelativeSource={RelativeSource AncestorType=dialogs:BaseMetroDialog}, FallbackValue=0}"
+                     Margin="0,10,0,15"/>
+
+        <!-- ボタンエリア -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <!-- キャンセルボタン -->
+            <Button x:Name="CancelButton" Content="{DynamicResource String_Common_Cancel}"
+                    MinWidth="80" Margin="0,0,10,0"
+                    Click="CancelButton_Click" IsEnabled="{Binding IsCancelable, RelativeSource={RelativeSource AncestorType=dialogs:BaseMetroDialog}, FallbackValue=False}"
+                    Style="{DynamicResource MahApps.Styles.Button.Dialogs}"/>
+            <!-- 閉じるボタン (最初は無効) -->
+            <Button x:Name="CloseButton" Content="{DynamicResource String_Common_Close}"
+                    MinWidth="80" Visibility="Visible" IsEnabled="False"
+                    Click="CloseButton_Click"
+                    Style="{DynamicResource MahApps.Styles.Button.Dialogs}"/>
+        </StackPanel>
+    </Grid>
+
+</dialogs:BaseMetroDialog>

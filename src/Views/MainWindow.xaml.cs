@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using DryIoc.ImTools;
 using Illustra.Models;
 using MahApps.Metro.Controls;
+using System.Windows.Media;
 
 namespace Illustra.Views
 {
@@ -53,6 +54,9 @@ namespace Illustra.Views
             _eventAggregator = eventAggregator;
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             DataContext = _viewModel;
+            // ViewModelにDialogCoordinatorを設定
+            _viewModel.MahAppsDialogCoordinator = MahApps.Metro.Controls.Dialogs.DialogCoordinator.Instance;
+            this.OverlayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#99000000")); // ダイアログのオーバーレイ色
 
             // 設定の読み込み
             _appSettings = SettingsHelper.GetSettings();

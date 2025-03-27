@@ -16,6 +16,7 @@
     <system:String x:Key="String_Common_Cancel">キャンセル</system:String>
     <system:String x:Key="String_Common_Start">開始</system:String>
     <system:String x:Key="String_Common_Copy">コピー</system:String>
+    <system:String x:Key="String_Common_Close">閉じる</system:String>
     <system:String x:Key="String_Common_Information">情報</system:String>
     <system:String x:Key="String_Menu_CopyText">テキストをコピー</system:String>
     <system:String x:Key="String_Common_CopyCompleted">バージョン情報をクリップボードにコピーしました。</system:String>
@@ -97,6 +98,7 @@
     <system:String x:Key="String_Error">エラー</system:String>
 
     <!-- Settings -->
+    <system:String x:Key="String_Dialog_FileOperationCancelled">キャンセルしました</system:String>
     <system:String x:Key="String_Settings_FileOperation_Section">ファイル操作</system:String>
     <system:String x:Key="String_Settings_FileOperation_DeleteMode">ファイル削除時の動作</system:String>
     <system:String x:Key="String_Settings_FileOperation_DeleteMode_RecycleBin">ごみ箱に移動</system:String>
@@ -310,6 +312,12 @@
     <system:String x:Key="String_Thumbnail_CopyAllPrompt">プロンプト全体をコピー</system:String>
     <system:String x:Key="String_Thumbnail_PromptCopied">プロンプトをコピーしました</system:String>
 
+    <!-- 進捗ダイアログ -->
+    <system:String x:Key="String_Dialog_FileCopyTitle">ファイルのコピー中</system:String>
+    <system:String x:Key="String_Dialog_FileMoveTitle">ファイルの移動中</system:String>
+    <system:String x:Key="String_Dialog_FileProgressFormat" xml:space="preserve">{0}/{1} 個のファイルを処理しました
+{2}</system:String>
+    <system:String x:Key="String_Dialog_FileProgressCountFormat">{0}/{1} 個</system:String>
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">デフォルト設定に戻す</system:String>
     <system:String x:Key="String_Settings_FunctionId">機能ID:</system:String>
@@ -325,8 +333,8 @@
     <!-- Folder Operations -->
     <system:String x:Key="String_FileSystemTreeView_CreateFolder">フォルダを作成</system:String>
     <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">新しいフォルダ</system:String>
-    <system:String x:Key="String_FileSystemTreeView_RenameFolder">名前の変更</system:String>
-    <system:String x:Key="String_FileSystemTreeView_RenameTitle">名前の変更</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameFolder">フォルダ名の変更</system:String>
+    <system:String x:Key="String_FileSystemTreeView_RenameTitle">フォルダ名の変更</system:String>
     <system:String x:Key="String_FileSystemTreeView_SameNameExists">同名のフォルダが既に存在します。</system:String>
     <system:String x:Key="String_FileSystemTreeView_InvalidFolderName">無効なフォルダ名です。</system:String>
     <system:String x:Key="String_FileSystemTreeView_RenameError">フォルダ名の変更に失敗しました: {0}</system:String>
