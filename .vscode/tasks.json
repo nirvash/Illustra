@@ -7,7 +7,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/src/Illustra.csproj",
+        "${workspaceFolder}/Illustra.sln",
         "--verbosity",
         "detailed"
       ],
@@ -16,6 +16,20 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "build-tests",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/tests/Illustra.Tests.csproj",
+        "--no-dependencies", // Add --no-dependencies
+        "--verbosity",
+        "detailed"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build"
     },
     {
       "label": "publish",

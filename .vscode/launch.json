@@ -9,7 +9,7 @@
       "program": "${workspaceFolder}/src/bin/Debug/net9.0-windows/Illustra.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/",
-      "console": "externalTerminal", // Output to Debug Console
+      "console": "externalTerminal",
       "stopAtEntry": false,
       "justMyCode": false,
       "logging": {
@@ -17,15 +17,35 @@
       }
     },
     {
-      "name": ".NET Core NUnit Test",
+      "name": "Run Illustra Tests",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build",
-      "program": "${workspaceFolder}/tests/bin/Debug/net9.0-windows/Illustra.Tests.dll",
-      "args": [],
+      "preLaunchTask": "build-tests",
+      "program": "dotnet",
+      "args": [
+        "test",
+        "${workspaceFolder}/tests/Illustra.Tests.csproj"
+      ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "console": "internalConsole"
+    },
+    {
+      "name": "Debug Illustra Tests",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-tests", // Use build-tests task again
+      "program": "dotnet",
+      "args": [
+        "test",
+        // "--no-build", // Remove --no-build
+        "${workspaceFolder}/tests/Illustra.Tests.csproj",
+        // "--filter", "FullyQualifiedName=Illustra.Tests.MCPHost.McpControllerTests.Invoke_ListToolsRequest_ReturnsToolList"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "justMyCode": false // Keep true to avoid framework PDB issues
     }
   ]
 }

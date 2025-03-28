@@ -8,7 +8,8 @@
     "source.fixAll": "explicit"
   },
   "dotnet-test-explorer.testProjectPath": "**/*.Tests.csproj",
-  "dotnet-test-explorer.useBuildHost": true,
+  "dotnet-test-explorer.testArguments": "--logger trx --results-directory ./TestResults",
+  "dotnet-test-explorer.useBuildHost": false,
   "dotnet-test-explorer.pathToDotnet": "dotnet",
   "omnisharp.enableRoslynAnalyzers": true,
   "omnisharp.enableEditorConfigSupport": true,
