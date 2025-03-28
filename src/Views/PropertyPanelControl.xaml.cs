@@ -188,7 +188,7 @@ namespace Illustra.Views
         {
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread);
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderChanged); // Renamed
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderChanged, ThreadOption.UIThread); // Renamed
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
 
