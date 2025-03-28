@@ -15,6 +15,9 @@
     <PackageReference Include="coverlet.collector" Version="3.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="9.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.3" />
+    <!-- Updated version to 9.0.3 -->
+    <!-- Added NewtonsoftJson -->
   </ItemGroup>
 
   <ItemGroup>

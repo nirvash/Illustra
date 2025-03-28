@@ -1,3 +1,4 @@
+using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -165,13 +166,13 @@ namespace Illustra.Views
                                 dialogTitle,
                                 cts); // cts を渡す
 
-                            // ExecuteFileOperation を Task.Run でバックグラウンド実行
-                            await Task.Run(async () =>
-                            {
-                                await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetModel.Path, isCopy, progress, null, cts.Token); // Pass CancellationToken
-                            });
-                        }
-                        catch (OperationCanceledException)
+                        // ExecuteFileOperation を Task.Run でバックグラウンド実行
+                        await Task.Run(async () =>
+                        {
+                            await fileOperationHelper.ExecuteFileOperation(files.ToList(), targetModel.Path, isCopy, progress, null, cts.Token); // Pass CancellationToken
+                        });
+                    }
+                    catch (OperationCanceledException)
                     {
                         // Handle cancellation (e.g., log, update UI if needed)
                         System.Diagnostics.Debug.WriteLine("File operation cancelled in FavoriteFoldersControl.");

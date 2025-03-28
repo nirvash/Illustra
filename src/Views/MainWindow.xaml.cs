@@ -1,3 +1,4 @@
+using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.IO;
 using System.Windows;
 using System.Windows.Controls; // Add this for MenuItem

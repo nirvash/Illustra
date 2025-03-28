@@ -1,9 +1,15 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Prism.Events;
-using Illustra.Shared.Models; // Updated namespace
-// using Illustra.Services; // Removed - No longer needed
-// using System.Windows.Threading; // Removed - No longer needed
+using Illustra.Shared.Models; // For McpBaseEventArgs
+using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent, McpOpenFolderEventArgs, IToolExecutor
+using Newtonsoft.Json.Linq; // Added for JObject
+using Microsoft.Extensions.Logging; // Added for ILogger
+using System; // For IServiceProvider, NotSupportedException, ArgumentException
+using System.Reflection; // For Assembly
+using System.Linq; // For Linq extensions
+using Microsoft.Extensions.DependencyInjection; // For IServiceProvider, GetRequiredService
+using Illustra.Shared.Attributes; // For McpToolAttribute
 
 
 namespace Illustra.MCPHost
@@ -11,142 +17,137 @@ namespace Illustra.MCPHost
     /// <summary>
     /// Handles communication between the Web API and the WPF application logic.
     /// Uses IEventAggregator to publish events that WPF ViewModels/Services subscribe to.
+    /// Discovers and executes tools defined in the Shared assembly.
     /// </summary>
     // using Illustra.Services; is no longer needed
     public class APIService
     {
         private readonly IEventAggregator _eventAggregator;
-        // private readonly IDispatcherService _dispatcherService; // Removed dependency
+        private readonly ILogger<APIService> _logger; // Added logger
+        private readonly IServiceProvider _serviceProvider; // To resolve tool instances
 
-        public APIService(IEventAggregator eventAggregator) // Removed IDispatcherService injection
+        public APIService(IEventAggregator eventAggregator, ILogger<APIService> logger, IServiceProvider serviceProvider) // Added IServiceProvider injection
         {
             _eventAggregator = eventAggregator;
-            // _dispatcherService = dispatcherService; // Removed assignment
+            _logger = logger; // Assign logger
+            _serviceProvider = serviceProvider; // Assign service provider
         }
 
         /// <summary>
-        /// ツールを非同期に実行し、結果を返します。
+        /// Invokes the specified tool with the given arguments by finding and executing the corresponding IToolExecutor.
         /// </summary>
-        /// <param name="toolName">実行するツール名</param>
-        /// <param name="parameters">ツールのパラメータ</param>
-        /// <returns>実行結果</returns>
-        public virtual async Task<object> ExecuteToolAsync(string toolName, object parameters)
+        /// <param name="toolName">The name of the tool to invoke.</param>
+        /// <param name="arguments">The arguments for the tool.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task representing the asynchronous operation, returning the result from the tool executor.</returns>
+        public virtual async Task<object> InvokeToolAsync(string toolName, JObject arguments, CancellationToken cancellationToken)
         {
-            return await ExecuteToolAsync(toolName, parameters, CancellationToken.None);
-        }
+            _logger.LogInformation("Attempting to invoke tool: {ToolName}", toolName);
 
-        /// <summary>
-        /// ツールを非同期に実行し、結果を返します。
-        /// </summary>
-        /// <param name="toolName">実行するツール名</param>
-        /// <param name="parameters">ツールのパラメータ</param>
-        /// <param name="cancellationToken">キャンセルトークン</param>
-        /// <returns>実行結果</returns>
-        public virtual async Task<object> ExecuteToolAsync(string toolName, object parameters, CancellationToken cancellationToken)
-        {
-            var tcs = new TaskCompletionSource<object>();
-            var args = new McpExecuteToolEventArgs // Renamed
+            // Find the tool executor type based on the McpToolAttribute name
+            var executorType = FindToolExecutorType(toolName);
+
+            if (executorType == null)
             {
-                ToolName = toolName,
-                Parameters = parameters,
-                ResultCompletionSource = tcs,
-                CancellationToken = cancellationToken
-            };
+                _logger.LogWarning("Tool executor not found for tool: {ToolName}", toolName);
+                throw new NotSupportedException($"Tool '{toolName}' is not supported or not found.");
+            }
 
-            // Dispatcherを使ってUIスレッドでPublish (必要に応じて)
-            // await _dispatcher.InvokeAsync(() => _eventAggregator.GetEvent<McpExecuteToolEvent>().Publish(args));
-            // 現状 Execute はUIスレッド不要かもしれないので直接Publish
-            _eventAggregator.GetEvent<McpExecuteToolEvent>().Publish(args); // Renamed
-            return await tcs.Task;
-        }
-
-        /// <summary>
-        /// ツールに関する情報を非同期に取得します。
-        /// </summary>
-        /// <param name="toolName">情報を取得するツール名</param>
-        /// <returns>取得した情報</returns>
-        public virtual async Task<object> GetInfoAsync(string toolName)
-        {
-            return await GetInfoAsync(toolName, null, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// ツールに関する情報を非同期に取得します。
-        /// </summary>
-        /// <param name="toolName">情報を取得するツール名</param>
-        /// <param name="filePath">関連するファイルパス</param>
-        /// <returns>取得した情報</returns>
-        public virtual async Task<object> GetInfoAsync(string toolName, string filePath)
-        {
-            return await GetInfoAsync(toolName, filePath, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// ツールに関する情報を非同期に取得します。
-        /// </summary>
-        /// <param name="toolName">情報を取得するツール名</param>
-        /// <param name="filePath">関連するファイルパス</param>
-        /// <param name="cancellationToken">キャンセルトークン</param>
-        /// <returns>取得した情報</returns>
-        public virtual async Task<object> GetInfoAsync(string toolName, string filePath, CancellationToken cancellationToken)
-        {
-            var tcs = new TaskCompletionSource<object>();
-            var args = new McpGetInfoEventArgs // Renamed
+            // Resolve the tool executor instance from the service provider
+            IToolExecutor executorInstance;
+            try
             {
-                ToolName = toolName,
-                FilePath = filePath,
-                ResultCompletionSource = tcs,
-                CancellationToken = cancellationToken
-            };
-
-            // Dispatcherを使ってUIスレッドでPublish (必要に応じて)
-            // await _dispatcher.InvokeAsync(() => _eventAggregator.GetEvent<McpGetInfoEvent>().Publish(args));
-            // 現状 GetInfo はUIスレッド不要かもしれないので直接Publish
-            _eventAggregator.GetEvent<McpGetInfoEvent>().Publish(args); // Renamed
-            return await tcs.Task; // Return the task result
-        }
-
-        /// <summary>
-        /// 指定されたフォルダを開くよう要求します。
-        /// </summary>
-        /// <param name="folderPath">開くフォルダのパス</param>
-        /// <param name="sourceId">リクエスト元を識別するID</param>
-        /// <returns>成功した場合はtrue、それ以外はfalse</returns>
-        public virtual async Task<bool> OpenFolderAsync(string folderPath, string sourceId)
-        {
-            var tcs = new TaskCompletionSource<object>();
-            var args = new McpOpenFolderEventArgs
+                // Use GetRequiredService to ensure the tool is registered in DI
+                executorInstance = (IToolExecutor)_serviceProvider.GetRequiredService(executorType);
+            }
+            catch (Exception ex)
             {
-                FolderPath = folderPath,
-                SourceId = sourceId,
-                ResultCompletionSource = tcs
-            };
+                _logger.LogError(ex, "Failed to resolve tool executor for type: {ExecutorType}", executorType.FullName);
+                throw new InvalidOperationException($"Could not resolve executor for tool '{toolName}'. Ensure it's registered in DI.", ex);
+            }
 
-            System.Diagnostics.Debug.WriteLine($"[APIService] Publishing McpOpenFolderEvent for path: {folderPath}, SourceId: {sourceId}");
-            // Publish directly, handler will manage thread if needed
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(args);
-            System.Diagnostics.Debug.WriteLine($"[APIService] Waiting for McpOpenFolderEvent result...");
-            var result = await tcs.Task;
-            System.Diagnostics.Debug.WriteLine($"[APIService] Received McpOpenFolderEvent result: {result}");
-            return result is bool boolResult && boolResult;
+
+            _logger.LogInformation("Found executor {ExecutorType} for tool {ToolName}. Executing...", executorType.Name, toolName);
+            try
+            {
+                // Execute the tool
+                // Pass dependencies (eventAggregator, logger) to the executor method
+                // Note: We pass ILogger<APIService> cast to ILogger. Consider injecting ILoggerFactory if specific logger categories are needed per tool.
+                return await executorInstance.ExecuteAsync(arguments, _eventAggregator, _logger, cancellationToken);
+            }
+            catch (ArgumentException argEx) // Catch argument validation errors from the tool itself
+            {
+                 _logger.LogWarning(argEx, "Argument error during execution of tool '{ToolName}'.", toolName);
+                 throw; // Re-throw argument exceptions to be potentially handled as BadRequest by the controller
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during execution of tool '{ToolName}'.", toolName);
+                // TODO: Send SSE error event if required by spec
+                throw; // Re-throw other exceptions to be potentially handled as 500 by the controller
+            }
         }
+
+        private Type FindToolExecutorType(string toolName)
+        {
+            // Search in the assembly containing the tool definitions (Illustra.Shared)
+            // Assumes tool classes implement IToolExecutor and have McpToolAttribute
+            var toolTypes = typeof(Illustra.Shared.Models.Tools.IToolExecutor).Assembly.GetTypes()
+                .Where(t => typeof(Illustra.Shared.Models.Tools.IToolExecutor).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+            foreach (var type in toolTypes)
+            {
+                var attr = type.GetCustomAttribute<Illustra.Shared.Attributes.McpToolAttribute>();
+                if (attr != null && attr.Name.Equals(toolName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return type;
+                }
+            }
+            return null; // Not found
+        }
+
+
+        // Removed ExecuteToolAsync methods (2 overloads)
+        // Removed GetInfoAsync methods (3 overloads)
+        // Removed OpenFolderAsync method as its logic is now within OpenFolderTool.ExecuteAsync
 
         /// <summary>
         /// 利用可能なツール（APIエンドポイント）のリストを取得します。
         /// </summary>
         /// <param name="cancellationToken">キャンセルトークン</param>
-        /// <returns>利用可能なツールのリスト</returns>
+        /// <returns>利用可能なツールの定義リストを含むオブジェクト</returns>
         public virtual Task<object> GetAvailableToolsAsync(CancellationToken cancellationToken)
         {
-            // TODO: 将来的にはリフレクションなどで動的に生成する
-            var tools = new[]
-            {
-                new { Name = "execute", Method = "POST", Path = "/api/execute/{toolName}", Description = "Executes a specified tool with given parameters." },
-                new { Name = "open_folder", Method = "POST", Path = "/api/commands/open_folder", Description = "Opens a specified folder in the Illustra application." },
-                new { Name = "get_info", Method = "GET", Path = "/api/info/{toolName}", Description = "Gets information about a specific tool or lists available tools (use 'available_tools' as toolName)." }
-                // 今後ツールが増えたらここに追加
-            };
-            return Task.FromResult<object>(tools);
+            // Use reflection to find tool definitions in the Shared assembly
+            var toolDefinitions = typeof(Illustra.Shared.Models.IMcpToolDefinition).Assembly.GetTypes()
+                .Where(t => typeof(Illustra.Shared.Models.IMcpToolDefinition).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+                .Select(t => t.GetCustomAttributes(typeof(Illustra.Shared.Attributes.McpToolAttribute), false).FirstOrDefault())
+                .OfType<Illustra.Shared.Attributes.McpToolAttribute>() // Filter out nulls and cast
+                .Select(attr =>
+                {
+                    try
+                    {
+                        // Parse the JSON schema string into an object
+                        var schemaObject = Newtonsoft.Json.JsonConvert.DeserializeObject(attr.InputSchemaJson);
+                        return new
+                        {
+                            name = attr.Name,
+                            description = attr.Description,
+                            inputSchema = schemaObject
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error parsing schema? For now, return null or a placeholder
+                        System.Diagnostics.Debug.WriteLine($"Error parsing schema for tool '{attr.Name}': {ex.Message}");
+                        return null;
+                    }
+                })
+                .Where(t => t != null) // Filter out tools with invalid schemas
+                .ToList();
+
+            // MCP 仕様に合わせた形式で返す { "tools": [...] }
+            return Task.FromResult<object>(new { tools = toolDefinitions });
         }
     }
 }

@@ -1,3 +1,4 @@
+using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;

@@ -5,8 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Prism.Events;
-// using Illustra.Services; // Removed - No longer needed
 using System.Linq;
+using Illustra.Shared.Models.Tools; // Added for tool registration
+using System; // For IServiceProvider
 
 namespace Illustra.MCPHost
 {
@@ -25,7 +26,8 @@ namespace Illustra.MCPHost
             System.Diagnostics.Debug.WriteLine("Configuring services...");
 
             services.AddControllers()
-                .AddApplicationPart(typeof(Controllers.McpController).Assembly);
+                .AddApplicationPart(typeof(Controllers.McpController).Assembly)
+                .AddNewtonsoftJson(); // Use Newtonsoft.Json for model binding
 
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen(options =>
@@ -38,8 +40,13 @@ namespace Illustra.MCPHost
                 });
             });
 
-            // IEventAggregator and IDispatcherService are registered in App.xaml.cs
-            services.AddScoped<APIService>(); // APIService depends on them
+            // Register tool executors (assuming transient lifetime is suitable)
+            services.AddTransient<OpenFolderTool>();
+            // Add other tool executor registrations here
+
+            // IEventAggregator is registered in App.xaml.cs
+            // APIService now depends on IServiceProvider as well
+            services.AddScoped<APIService>(); // Register APIService
 
             // List registered controllers
             var controllerTypes = typeof(Controllers.McpController).Assembly
@@ -73,12 +80,23 @@ namespace Illustra.MCPHost
                 options.RoutePrefix = "api/swagger";
             });
 
-            // Log all requests
+            // Log all requests with more details
             app.Use(async (context, next) =>
             {
-                System.Diagnostics.Debug.WriteLine($"Incoming request: {context.Request.Method} {context.Request.Path}");
-                await next();
-                System.Diagnostics.Debug.WriteLine($"Response status: {context.Response.StatusCode}");
+                var start = System.Diagnostics.Stopwatch.GetTimestamp();
+                var request = context.Request;
+                var response = context.Response;
+
+                // Log incoming request details
+                var headers = string.Join(", ", request.Headers.Select(h => $"{h.Key}={h.Value}")); // Format headers
+                System.Diagnostics.Debug.WriteLine($"--> {request.Method} {request.Path}{request.QueryString} | Headers: [{headers}]");
+
+                await next(); // Call the next middleware
+
+                var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+
+                // Log outgoing response details
+                System.Diagnostics.Debug.WriteLine($"<-- {request.Method} {request.Path}{request.QueryString} - {response.StatusCode} in {elapsedMs:0.000} ms");
             });
 
             app.UseRouting();
@@ -106,9 +124,11 @@ namespace Illustra.MCPHost
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapGet("/", async context =>
+                // Redirect root path "/" to "/events"
+                endpoints.MapGet("/", context =>
                 {
-                    await context.Response.WriteAsync("Illustra MCP Host is running.");
+                    context.Response.Redirect("/events", permanent: false); // Use temporary redirect
+                    return Task.CompletedTask;
                 });
             });
 

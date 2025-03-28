@@ -1,3 +1,4 @@
+using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;

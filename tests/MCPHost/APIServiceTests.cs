@@ -5,170 +5,57 @@ using Moq;
 using NUnit.Framework;
 using Prism.Events;
 using Illustra.MCPHost;
+using Microsoft.Extensions.Logging; // Added for ILogger
+using Illustra.Shared.Models.Tools; // Added for OpenFolderTool
 using Illustra.Shared.Models; // Updated namespace
+using Microsoft.Extensions.DependencyInjection; // Added for GetRequiredService
 using Illustra.Services; // Added for IDispatcherService
 
 namespace Illustra.Tests.MCPHost
 {
-    [TestFixture]
     public class APIServiceTests
     {
         private Mock<IEventAggregator> _mockEventAggregator;
-        private Mock<McpExecuteToolEvent> _mockExecuteToolEvent; // Renamed
-        private Mock<McpGetInfoEvent> _mockGetInfoEvent; // Renamed
+        private Mock<ILogger<APIService>> _mockLogger;
+        private Mock<IServiceProvider> _mockServiceProvider;
+        // Removed: private Mock<IDispatcherService> _mockDispatcherService; // No longer needed here
         private APIService _apiService;
 
         [SetUp]
         public void Setup()
         {
             _mockEventAggregator = new Mock<IEventAggregator>();
-            _mockExecuteToolEvent = new Mock<McpExecuteToolEvent>(); // Renamed
-            _mockGetInfoEvent = new Mock<McpGetInfoEvent>(); // Renamed
+            _mockLogger = new Mock<ILogger<APIService>>();
+            _mockServiceProvider = new Mock<IServiceProvider>();
+            // Removed: _mockDispatcherService = new Mock<IDispatcherService>();
 
-            _mockEventAggregator
-                .Setup(x => x.GetEvent<McpExecuteToolEvent>()) // Renamed
-                .Returns(_mockExecuteToolEvent.Object);
+            // Removed setup for McpExecuteToolEvent
+            // Removed setup for McpGetInfoEvent
 
-            _mockEventAggregator
-                .Setup(x => x.GetEvent<McpGetInfoEvent>()) // Renamed
-                .Returns(_mockGetInfoEvent.Object);
+            // Removed unnecessary local mockDispatcherService and its setup
 
-            // Add mock for IDispatcherService
-            var mockDispatcherService = new Mock<IDispatcherService>();
-            // Setup InvokeAsync to execute the action immediately for testing
-            // For InvokeAsync that returns Task, setup needs to return Task.CompletedTask
-            // mockDispatcherService.Setup(d => d.InvokeAsync(It.IsAny<Action>())) // No longer needed
-            //                      .Callback<Action>(action => action())
-            //                      .Returns(Task.CompletedTask);
-            _apiService = new APIService(_mockEventAggregator.Object); // Removed dispatcher service mock
+            _apiService = new APIService(_mockEventAggregator.Object, _mockLogger.Object, _mockServiceProvider.Object);
+
+            // Setup IServiceProvider mock to resolve OpenFolderTool (which no longer requires IDispatcherService)
+            var openFolderToolInstance = new OpenFolderTool(); // Create instance without dispatcher
+            _mockServiceProvider.Setup(sp => sp.GetService(typeof(OpenFolderTool)))
+                                .Returns(openFolderToolInstance);
+            // Setup GetRequiredService as well
+             _mockServiceProvider.Setup(sp => sp.GetRequiredService(typeof(OpenFolderTool)))
+                                .Returns(openFolderToolInstance);
+
+            // Removed setup for mock dispatcher service
         }
 
-        [Test]
-        public async Task ExecuteToolAsync_ValidCall_PublishesCorrectEvent()
-        {
-            // Arrange
-            var toolName = "test-tool";
-            var parameters = new { param1 = "value1" };
-            McpExecuteToolEventArgs capturedArgs = null; // Renamed
+        // TODO: Add tests for the new InvokeToolAsync logic, including:
+        // - Finding the correct tool executor
+        // - Resolving the executor from IServiceProvider
+        // - Calling ExecuteAsync on the executor
+        // - Handling ArgumentException from executor
+        // - Handling NotSupportedException for unknown tools
+        // - Handling general exceptions during resolution or execution
+        // Removed ExecuteToolAsync tests (3 tests)
 
-            _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
-                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act
-            var task = _apiService.ExecuteToolAsync(toolName, parameters);
-
-            // Assert
-            Assert.That(capturedArgs, Is.Not.Null);
-            Assert.That(capturedArgs.ToolName, Is.EqualTo(toolName));
-            Assert.That(capturedArgs.Parameters, Is.EqualTo(parameters));
-            Assert.That(capturedArgs.ResultCompletionSource, Is.Not.Null);
-            Assert.That(capturedArgs.CancellationToken, Is.EqualTo(CancellationToken.None));
-
-            // Complete the task to avoid test hanging
-            capturedArgs.ResultCompletionSource.SetResult("test-result");
-            await task;
-        }
-
-        [Test]
-        public async Task ExecuteToolAsync_SubscriberSetsResult_ReturnsResult()
-        {
-            // Arrange
-            var expectedResult = "test-result";
-            McpExecuteToolEventArgs capturedArgs = null; // Renamed
-
-            _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
-                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act
-            var task = _apiService.ExecuteToolAsync("test-tool", new { });
-            capturedArgs.ResultCompletionSource.SetResult(expectedResult);
-            var result = await task;
-
-            // Assert
-            Assert.That(result, Is.EqualTo(expectedResult));
-        }
-
-        [Test]
-        public void ExecuteToolAsync_SubscriberSetsException_ThrowsException()
-        {
-            // Arrange
-            var expectedException = new Exception("Test error");
-            McpExecuteToolEventArgs capturedArgs = null; // Renamed
-
-            _mockExecuteToolEvent
-                .Setup(x => x.Publish(It.IsAny<McpExecuteToolEventArgs>())) // Renamed
-                .Callback<McpExecuteToolEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act & Assert
-            var task = _apiService.ExecuteToolAsync("test-tool", new { });
-            capturedArgs.ResultCompletionSource.SetException(expectedException);
-            Assert.ThrowsAsync<Exception>(() => task);
-        }
-
-        [Test]
-        public async Task GetInfoAsync_ValidCall_PublishesCorrectEvent()
-        {
-            // Arrange
-            var toolName = "test-tool";
-            var filePath = "test/path";
-            McpGetInfoEventArgs capturedArgs = null; // Renamed
-
-            _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
-                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act
-            var task = _apiService.GetInfoAsync(toolName, filePath);
-
-            // Assert
-            Assert.That(capturedArgs, Is.Not.Null);
-            Assert.That(capturedArgs.ToolName, Is.EqualTo(toolName));
-            Assert.That(capturedArgs.FilePath, Is.EqualTo(filePath));
-            Assert.That(capturedArgs.ResultCompletionSource, Is.Not.Null);
-            Assert.That(capturedArgs.CancellationToken, Is.EqualTo(CancellationToken.None));
-
-            // Complete the task to avoid test hanging
-            capturedArgs.ResultCompletionSource.SetResult("test-info");
-            await task;
-        }
-
-        [Test]
-        public async Task GetInfoAsync_SubscriberSetsResult_ReturnsResult()
-        {
-            // Arrange
-            var expectedResult = "test-info";
-            McpGetInfoEventArgs capturedArgs = null; // Renamed
-
-            _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
-                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act
-            var task = _apiService.GetInfoAsync("test-tool");
-            capturedArgs.ResultCompletionSource.SetResult(expectedResult);
-            var result = await task;
-
-            // Assert
-            Assert.That(result, Is.EqualTo(expectedResult));
-        }
-
-        [Test]
-        public void GetInfoAsync_SubscriberSetsException_ThrowsException()
-        {
-            // Arrange
-            var expectedException = new Exception("Test error");
-            McpGetInfoEventArgs capturedArgs = null; // Renamed
-
-            _mockGetInfoEvent
-                .Setup(x => x.Publish(It.IsAny<McpGetInfoEventArgs>())) // Renamed
-                .Callback<McpGetInfoEventArgs>(args => capturedArgs = args); // Renamed
-
-            // Act & Assert
-            var task = _apiService.GetInfoAsync("test-tool");
-            capturedArgs.ResultCompletionSource.SetException(expectedException);
-            Assert.ThrowsAsync<Exception>(() => task);
-        }
+        // Removed GetInfoAsync tests (3 tests)
     }
 }
