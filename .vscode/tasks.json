@@ -110,6 +110,11 @@
         "reveal": "always",
         "panel": "new"
       },
+      "options": {
+        "shell": {
+          "executable": "powershell.exe"
+        }
+      },
       "problemMatcher": []
     },
   ]
