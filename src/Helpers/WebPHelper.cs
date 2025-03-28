@@ -151,10 +151,7 @@ namespace Illustra.Helpers
                         throw new Exception("WebView2 Runtime がインストールされていません！");
                     }
                     // WebView2 のインスタンスを初期化
-                    var options = new CoreWebView2EnvironmentOptions("--no-sandbox");
-                    string userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WebView2UserData");
-                    var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
-                    await webView.EnsureCoreWebView2Async(environment);
+                    await EnsureCoreWebView2Async(webView);
                 }
 
                 string htmlContent = GenerateAnimationHtml(filePath, fitToScreen);
@@ -208,10 +205,21 @@ namespace Illustra.Helpers
         {
             if (webView.CoreWebView2 == null)
             {
-                var options = new CoreWebView2EnvironmentOptions("--no-sandbox");
+                // ネットワーク接続禁止
+                var options = new CoreWebView2EnvironmentOptions("--no-sandbox --no-proxy-server --disable-features=NetworkService,OutOfBlinkCors");
                 string userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WebView2UserData");
                 var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
                 await webView.EnsureCoreWebView2Async(environment);
+
+                // ネットワーク接続禁止
+                webView.CoreWebView2.WebResourceRequested += (s, e) =>
+                    {
+                        var uri = e.Request.Uri;
+                        if (!uri.StartsWith("file://"))
+                        {
+                            e.Response = webView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Forbidden", null);
+                        }
+                    };
                 return true;
             }
             return false;

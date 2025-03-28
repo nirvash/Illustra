@@ -154,6 +154,7 @@
                 DefaultBackgroundColor="Transparent"
                 Visibility="Collapsed"/>
             <controls:ZoomControl x:Name="ImageZoomControl"
+                Focusable="False"
                 Source="{Binding ImageSource}"
                 PreviewMouseWheel="MainImage_PreviewMouseWheel"/>
 
