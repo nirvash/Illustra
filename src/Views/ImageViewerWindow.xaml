@@ -163,9 +163,10 @@
            <localControls:VideoPlayerControl x:Name="VideoPlayerControl"
                                              Grid.Column="0"
                                              Visibility="Collapsed"
-                                             IsFullScreen="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType=mahcontrols:MetroWindow}}"/>
+                                             IsFullScreen="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType=mahcontrols:MetroWindow}}"
+                                             BackgroundDoubleClick="VideoPlayerControl_BackgroundDoubleClick"/>
 
-           <!-- レーティング表示（全体の左上に配置） -->
+          <!-- レーティング表示（全体の左上に配置） -->
            <controls:RatingStarControl
                 x:Name="RatingStarMark"
                 Grid.ColumnSpan="3"

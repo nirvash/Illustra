@@ -10,13 +10,15 @@
              d:DesignHeight="450" d:DesignWidth="800"
              Background="Transparent"
              PreviewMouseMove="VideoPlayerRoot_PreviewMouseMove"
-             MouseLeave="VideoPlayerRoot_MouseLeave">
-    <Grid>
-        <Grid.RowDefinitions>
+             MouseLeave="VideoPlayerRoot_MouseLeave"
+             MouseDoubleClick="VideoPlayerRoot_MouseDoubleClick">
+   <Grid>
+       <Grid.RowDefinitions>
             <RowDefinition Height="*" /> <!-- 動画表示領域 -->
             <RowDefinition Height="Auto" /> <!-- コントロール領域 -->
         </Grid.RowDefinitions>
         <Border x:Name="VideoPlayerContainer" Grid.Row="0"
+            Background="Transparent"
             SizeChanged="VideoPlayerContainer_SizeChanged">
             <MediaElement x:Name="VideoPlayer"
                         Grid.Row="0"

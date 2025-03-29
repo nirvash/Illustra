@@ -37,6 +37,17 @@ namespace Illustra.Controls
             set { SetValue(IsFullScreenProperty, value); }
         }
 
+        // Routed event for background double click
+        public static readonly RoutedEvent BackgroundDoubleClickEvent =
+            EventManager.RegisterRoutedEvent("BackgroundDoubleClick", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(VideoPlayerControl));
+
+        // CLR event wrapper
+        public event RoutedEventHandler BackgroundDoubleClick
+        {
+            add { AddHandler(BackgroundDoubleClickEvent, value); }
+            remove { RemoveHandler(BackgroundDoubleClickEvent, value); }
+        }
+
         private static void OnIsFullScreenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var control = d as VideoPlayerControl;
@@ -773,6 +784,51 @@ namespace Illustra.Controls
                 InitializeHideControlsTimer();
                 _hideControlsTimer?.Stop();
                 _hideControlsTimer?.Start();
+            }
+        }
+
+        private void VideoPlayerRoot_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var originalSource = e.OriginalSource as DependencyObject;
+            bool allowDoubleClick = false;
+
+            // Case 1: Click is directly on the UserControl background
+            if (originalSource == this)
+            {
+                allowDoubleClick = true;
+            }
+            else
+            {
+                // Case 2: Walk up the tree from the source
+                DependencyObject? current = originalSource;
+                while (current != null && current != this)
+                {
+                    // If we hit the VideoPlayer or its container first, allow it.
+                    if (current == VideoPlayer || current == VideoPlayerContainer)
+                    {
+                        allowDoubleClick = true;
+                        break; // Allowed, no need to check further up
+                    }
+                    // If we hit the VideoControls panel first, disallow it.
+                    if (current == VideoControls)
+                    {
+                        allowDoubleClick = false;
+                        break; // Disallowed, no need to check further up
+                    }
+                    current = VisualTreeHelper.GetParent(current);
+                }
+                // If the loop completes without hitting VideoControls or VideoPlayer/Container,
+                // and the source wasn't 'this', it means the click was on some other element
+                // within the UserControl but outside the explicitly allowed/disallowed areas.
+                // In this case, we don't raise the event (allowDoubleClick remains false).
+            }
+
+            if (allowDoubleClick)
+            {
+                // Raise the custom routed event
+                RaiseEvent(new RoutedEventArgs(BackgroundDoubleClickEvent, this));
+                // Optionally mark the event as handled if the parent shouldn't process the standard double click further
+                // e.Handled = true;
             }
         }
     }
