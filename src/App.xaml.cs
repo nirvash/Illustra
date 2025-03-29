@@ -1,5 +1,5 @@
 ﻿using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
-﻿using System;
+using System;
 using System.Windows;
 using Prism.Ioc;
 using Prism.DryIoc;
@@ -268,6 +268,19 @@ namespace Illustra
                 Resources.MergedDictionaries.Remove(oldTheme);
             }
             Resources.MergedDictionaries.Add(newTheme);
+
+            // Sliderスタイルリソースを常に最後に追加して上書き
+            var sliderStyleUri = new Uri("Themes/SliderStyles.xaml", UriKind.Relative);
+            var existingSliderStyle = Resources.MergedDictionaries
+                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("SliderStyles.xaml"));
+
+            if (existingSliderStyle != null)
+            {
+                Resources.MergedDictionaries.Remove(existingSliderStyle);
+            }
+
+            var sliderStyleDict = new ResourceDictionary { Source = sliderStyleUri };
+            Resources.MergedDictionaries.Add(sliderStyleDict);
         }
 
         public void UpdateResourceDictionaries()

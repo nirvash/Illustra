@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style TargetType="Slider" x:Key="IllustraCustomSlider" BasedOn="{x:Null}">
+        <Setter Property="IsMoveToPointEnabled" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid>
+                        <!-- トラック全体 -->
+                        <Track x:Name="PART_Track"
+                            IsDirectionReversed="False"
+                            Focusable="False">
+                            <!-- 進捗部分 -->
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton IsEnabled="False"
+                                            Foreground="{DynamicResource MahApps.Brushes.SliderTrackForeground}"
+                                            Background="{DynamicResource MahApps.Brushes.SliderTrackForeground}"
+                                            Height="6" Margin="0"/>
+                            </Track.DecreaseRepeatButton>
+
+                            <!-- サム（つまみ） -->
+                            <Track.Thumb>
+                                <Thumb x:Name="Thumb"
+                                    Width="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag, FallbackValue=20}"
+                                    Height="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag, FallbackValue=20}"                                    Background="{DynamicResource MahApps.Brushes.SliderThumbBackground}"
+                                    BorderBrush="{DynamicResource MahApps.Brushes.SliderThumbBorder}"
+                                    BorderThickness="0"
+                                    VerticalAlignment="Center"/>
+                            </Track.Thumb>
+
+                            <!-- 残り部分 -->
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton IsEnabled="False"
+                                            Background="{DynamicResource MahApps.Brushes.SliderThumbBackground}"
+                                            Height="6" Margin="0"/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 
 namespace Illustra.Helpers
 {
@@ -7,14 +8,31 @@ namespace Illustra.Helpers
         public static bool IsImageFile(string filePath)
         {
             var extension = Path.GetExtension(filePath).ToLowerInvariant();
-            return extension == ".jpg" || extension == ".jpeg" || extension == ".png" ||
-                   extension == ".gif" || extension == ".bmp" || extension == ".webp";
+            return SupportedImageExtensions.Contains(extension);
         }
 
-        public static string[] SupportedExtensions => new[]
+        public static bool IsVideoFile(string filePath)
+        {
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return SupportedVideoExtensions.Contains(extension);
+        }
+
+        public static bool IsMediaFile(string filePath)
+        {
+            return IsImageFile(filePath) || IsVideoFile(filePath);
+        }
+
+        public static string[] SupportedImageExtensions => new[]
         {
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
         };
+
+        public static string[] SupportedVideoExtensions => new[]
+        {
+            ".mp4"
+        };
+
+        public static string[] SupportedExtensions => SupportedImageExtensions.Concat(SupportedVideoExtensions).ToArray();
 
         public static bool IsValidFileName(string fileName)
         {

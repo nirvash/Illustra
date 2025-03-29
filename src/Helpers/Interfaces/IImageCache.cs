@@ -29,6 +29,7 @@ namespace Illustra.Helpers.Interfaces
         /// </summary>
         /// <param name="files">ファイルノードのリスト</param>
         /// <param name="currentIndex">現在の画像のインデックス</param>
+        /// <remarks>このメソッドの実装は、動画ファイルを除外してキャッシュを更新する必要があります。</remarks>
         void UpdateCache(List<FileNodeModel> files, int currentIndex);
 
         /// <summary>

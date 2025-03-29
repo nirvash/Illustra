@@ -139,6 +139,7 @@ namespace Illustra.Views
                     if (Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
                     {
                         string ext = Path.GetExtension(uri.LocalPath).ToLowerInvariant();
+                        // Use FileHelper.SupportedExtensions which includes video extensions
                         string[] allowedExts = FileHelper.SupportedExtensions;
 
                         if (!string.IsNullOrEmpty(ext) && allowedExts.Contains(ext))
@@ -847,7 +848,8 @@ namespace Illustra.Views
         public void OnFileCreated(string path)
         {
             Debug.WriteLine($"[サムネイル] ファイル作成: {path}");
-            if (!FileHelper.IsImageFile(path)) return;
+            // 画像ファイルと動画ファイルの両方を対象にする
+            if (!FileHelper.IsMediaFile(path)) return;
 
             Dispatcher.Invoke(async () =>
             {

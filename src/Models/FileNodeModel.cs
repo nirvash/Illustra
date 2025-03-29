@@ -29,7 +29,7 @@ namespace Illustra.Models
             FolderPath = Path.GetDirectoryName(filePath) ?? string.Empty;
             FileType = Path.GetExtension(filePath);
             FileName = Path.GetFileName(filePath);
-            IsImage = IsImageExtension(FileType);
+            IsImage = FileHelper.IsImageFile(filePath); // Use FileHelper
             if (File.Exists(filePath))
             {
                 var fileInfo = new FileInfo(filePath);
@@ -46,13 +46,7 @@ namespace Illustra.Models
             }
         }
 
-        private bool IsImageExtension(string extension)
-        {
-            if (string.IsNullOrEmpty(extension)) return false;
-            extension = extension.ToLowerInvariant();
-            return extension == ".jpg" || extension == ".jpeg" || extension == ".png" ||
-                   extension == ".gif" || extension == ".bmp" || extension == ".webp";
-        }
+        // Removed IsImageExtension method as it's now handled by FileHelper
 
         private bool _isSelected = false;
         public bool IsSelected
@@ -157,20 +151,21 @@ namespace Illustra.Models
         [Column, NotNull]
         public string FileType { get; set; } = string.Empty;
 
-        private bool _isAnimated;
+        private bool _isVideo;
         [LinqToDB.Mapping.NotColumn]
-        public bool IsAnimated
+        public bool IsVideo
         {
-            get => _isAnimated;
+            get => _isVideo;
             set
             {
-                if (_isAnimated != value)
+                if (_isVideo != value)
                 {
-                    _isAnimated = value;
-                    OnPropertyChanged(nameof(IsAnimated));
+                    _isVideo = value;
+                    OnPropertyChanged(nameof(IsVideo));
                 }
             }
         }
+
 
         private int _rating;
 

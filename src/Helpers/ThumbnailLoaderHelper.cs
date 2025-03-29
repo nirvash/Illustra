@@ -762,25 +762,37 @@ public class ThumbnailLoaderHelper
             {
                 // バックグラウンドスレッドでサムネイル生成
                 LogHelper.LogWithTimestamp($"画像処理開始: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
+                // 動画ファイルかどうかをチェック
+                bool isVideo = FileHelper.IsVideoFile(fileNode.FullPath);
+
                 // サムネイル生成とアニメーション判定を同時に行う
-                var (thumbnailImage, isAnimated) = await Task.Run(() =>
+                thumbnail = await Task.Run<BitmapSource?>(() =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var thumb = ThumbnailHelper.CreateThumbnailOptimized(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
 
-                    // WebPファイルで500KB以上の場合のみアニメーション判定を行う
-                    var isAnim = false;
+                    // 動画の場合は通常のCreateThumbnailを使用
+                    // 動画ファイルはCreateThumbnailを使用
+                    if (isVideo)
+                    {
+                        fileNode.IsVideo = true;  // 動画ファイルはIsVideoをtrue
+                        return ThumbnailHelper.CreateThumbnail(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+                    }
+
+                    // WebPファイルで500KB以上の場合はアニメーション判定
                     if (Path.GetExtension(fileNode.FullPath).ToLowerInvariant() == ".webp" &&
                         new FileInfo(fileNode.FullPath).Length >= 512000) // 500KB = 512000バイト
                     {
-                        isAnim = WebPHelper.IsAnimatedWebP(fileNode.FullPath);
+                        var isAnim = WebPHelper.IsAnimatedWebP(fileNode.FullPath);
+                        if (isAnim)
+                        {
+                            fileNode.IsVideo = true;  // アニメーションWebPはIsVideoをtrue
+                        }
                     }
 
-                    return (thumb, isAnim);
+                    // 通常の画像はCreateThumbnailOptimizedを使用
+                    var thumb = ThumbnailHelper.CreateThumbnailOptimized(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+                    return thumb;
                 }, cancellationToken);
-
-                thumbnail = thumbnailImage;
-                fileNode.IsAnimated = isAnimated;
 
                 LogHelper.LogWithTimestamp($"画像処理完了: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
             }
@@ -861,12 +873,9 @@ public class ThumbnailLoaderHelper
             var sw = new Stopwatch();
             sw.Start();
 
-            // サポートされている画像ファイル拡張子
-            string[] supportedExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
-
-            // フォルダ内のファイルを取得 (大文字小文字は区別されないのでこれでOK)
+            // サポートされている拡張子をFileHelperから取得
             var files = new List<string>();
-            foreach (var extension in supportedExtensions)
+            foreach (var extension in FileHelper.SupportedExtensions)
             {
                 files.AddRange(Directory.GetFiles(folderPath, $"*{extension}", SearchOption.TopDirectoryOnly));
             }

@@ -435,7 +435,7 @@
                                      VerticalAlignment="Top"
                                      Margin="0,2,2,0"
                                      Foreground="White"
-                                     Visibility="{Binding IsAnimated, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                     Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock.Effect>
                                     <DropShadowEffect Color="Black"
                                                     Direction="315"

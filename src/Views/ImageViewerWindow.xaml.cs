@@ -139,11 +139,22 @@ namespace Illustra.Views
             hideCursorTimer.Tick += (s, args) =>
             {
                 if (!IsFullScreen) return; // フルスクリーン時のみカーソルを隠す
+
+                // VideoPlayerControl が表示されていて、かつそのコントロール上にマウスがある場合は隠さない
+                if (VideoPlayerControl.Visibility == Visibility.Visible && VideoPlayerControl.IsMouseOverControls)
+                {
+                    // カーソルを隠さず、タイマーを停止するだけ
+                    hideCursorTimer.Stop();
+                    return;
+                }
+
+                // 上記以外の場合で、カーソルが表示されているなら隠す
                 if (Mouse.OverrideCursor == Cursors.Arrow || Mouse.OverrideCursor == null)
                 {
-                    // マウスカーソルを非表示にする
                     Mouse.OverrideCursor = Cursors.None;
                 }
+
+                // タイマーは常に停止させる（再開はMouseMoveで行う）
                 hideCursorTimer.Stop();
             };
 
@@ -180,8 +191,8 @@ namespace Illustra.Views
 
         private async void OnWindowLoaded()
         {
-            // 画像の読み込みとキャッシュはSwitchToImageに委譲
-            await SwitchToImage(_currentFilePath, true);
+            // コンテンツの読み込みとキャッシュはSwitchToContentに委譲
+            await SwitchToContent(_currentFilePath, true);
 
             // ウィンドウ固有の初期化処理のみ残す
             await Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
@@ -508,7 +519,7 @@ namespace Illustra.Views
             string? previousFilePath = Parent.GetPreviousImage(_currentFilePath);
             if (!string.IsNullOrEmpty(previousFilePath))
             {
-                _ = SwitchToImage(previousFilePath, true);
+                _ = SwitchToContent(previousFilePath, true); // Use SwitchToContent
             }
         }
 
@@ -521,7 +532,7 @@ namespace Illustra.Views
             string? nextFilePath = Parent.GetNextImage(_currentFilePath);
             if (!string.IsNullOrEmpty(nextFilePath))
             {
-                _ = SwitchToImage(nextFilePath, true);
+                _ = SwitchToContent(nextFilePath, true); // Use SwitchToContent
             }
             else if (_isSlideshowActive)
             {
@@ -531,8 +542,62 @@ namespace Illustra.Views
                 ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
             }
         }
+
+        // Renamed from LoadAndDisplayImage
+        private async Task LoadAndDisplayContent(string filePath)
+        {
+            // Stop video if playing
+            if (VideoPlayerControl.Visibility == Visibility.Visible)
+            {
+                VideoPlayerControl.StopVideo();
+                VideoPlayerControl.Visibility = Visibility.Collapsed;
+            }
+
+            if (FileHelper.IsVideoFile(filePath))
+            {
+                ShowVideo(filePath);
+            }
+            else // Image or Animated WebP
+            {
+                // Hide video player
+                VideoPlayerControl.Visibility = Visibility.Collapsed;
+
+                var IsWebView2Available = WebPHelper.IsWebView2Installed();
+                if (IsWebView2Available && WebPHelper.IsAnimatedWebP(filePath))
+                {
+                    // Animated WebP logic (existing)
+                    try
+                    {
+                        WebView.Visibility = Visibility.Visible;
+                        ImageZoomControl.Visibility = Visibility.Collapsed;
+                        var settings = ViewerSettingsHelper.LoadSettings();
+                        await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath, settings.FitSmallAnimationToScreen);
+                        Mouse.OverrideCursor = Cursors.Arrow;
+                        hideCursorTimer.Stop();
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.LogError($"WebView2の初期化中にエラーが発生: {ex.Message}", ex);
+                        ShowStaticImage(filePath); // Fallback to static image
+                    }
+                }
+                else
+                {
+                    ShowStaticImage(filePath); // Static image logic
+                }
+            }
+        }
+
+        // Keep LoadAndDisplayImage for now, maybe make private or remove later if not needed elsewhere
         private async Task LoadAndDisplayImage(string filePath)
         {
+            // Hide video player if visible
+            if (VideoPlayerControl.Visibility == Visibility.Visible)
+            {
+                VideoPlayerControl.StopVideo();
+                VideoPlayerControl.Visibility = Visibility.Collapsed;
+            }
+
             var IsWebView2Available = WebPHelper.IsWebView2Installed();
             if (IsWebView2Available && WebPHelper.IsAnimatedWebP(filePath))
             {
@@ -559,8 +624,25 @@ namespace Illustra.Views
             }
         }
 
+        private void ShowVideo(string filePath)
+        {
+            // Hide other controls
+            ImageZoomControl.Visibility = Visibility.Collapsed;
+            WebView.Visibility = Visibility.Collapsed;
+
+            // Show video player and set source
+            VideoPlayerControl.Visibility = Visibility.Visible;
+            VideoPlayerControl.FilePath = filePath; // Set FilePath to trigger loading in the control
+        }
+
         private void ShowStaticImage(string filePath)
         {
+            // Hide video player if visible
+            if (VideoPlayerControl.Visibility == Visibility.Visible)
+            {
+                VideoPlayerControl.StopVideo();
+                VideoPlayerControl.Visibility = Visibility.Collapsed;
+            }
             WebView.Visibility = Visibility.Collapsed;
             ImageZoomControl.Visibility = Visibility.Visible;
 
@@ -597,15 +679,21 @@ namespace Illustra.Views
             }
         }
 
-        // 新しい画像を読み込む
-        private async Task SwitchToImage(string filePath, bool notifyFileSelection)
+        // 新しいコンテンツを読み込む (Renamed from SwitchToImage)
+        private async Task SwitchToContent(string filePath, bool notifyFileSelection)
         {
             try
             {
                 if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
                 {
-                    // 同じ画像の場合は何もしない
+                    // 同じファイルの場合は何もしない
                     return;
+                }
+
+                // Stop video if playing before switching content
+                if (VideoPlayerControl.Visibility == Visibility.Visible)
+                {
+                    VideoPlayerControl.StopVideo();
                 }
 
                 hideCursorTimer.Start();
@@ -613,44 +701,29 @@ namespace Illustra.Views
                 // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
 
-                // 2. まず現在の画像を表示（キャッシュミス時は自動で読み込まれる）
-                await LoadAndDisplayImage(filePath);
+                // 2. コンテンツを表示
+                await LoadAndDisplayContent(filePath); // Call LoadAndDisplayContent
 
-                // 3. ズームをリセット
-                ImageZoomControl.ResetZoom();
+                // 3. 画像の場合のみズームをリセット
+                if (ImageZoomControl.Visibility == Visibility.Visible)
+                {
+                    ImageZoomControl.ResetZoom();
+                }
 
                 // 4. MainViewModelを取得
                 var viewModel = MainViewModel;
                 if (viewModel != null)
                 {
-                    // 5. 前後の画像をキャッシュ
+                    // 5. 前後のファイルをキャッシュ対象とするが、動画はキャッシュしない
                     var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                     var currentIndex = files.FindIndex(f => f.FullPath == filePath);
                     if (currentIndex >= 0)
                     {
-                        // キャッシュ更新前のインデックスを取得
-                        var cachedIndexesBefore = _imageCache.CachedItems.Keys
-                            .Select(p => files.FindIndex(f => f.FullPath == p))
-                            .Where(i => i >= 0)
-                            .OrderBy(i => i);
-
-                        LogHelper.LogWithTimestamp(
-                            $"UpdateCache: Current index = {currentIndex}\n" +
-                            $"Cached indexes before: [{string.Join(", ", cachedIndexesBefore)}]",
-                            LogHelper.Categories.ImageCache);
-
-                        _imageCache.UpdateCache(files, currentIndex);
-
-                        // キャッシュ更新後のインデックスを取得
-                        var cachedIndexesAfter = _imageCache.CachedItems.Keys
-                            .Select(p => files.FindIndex(f => f.FullPath == p))
-                            .Where(i => i >= 0)
-                            .OrderBy(i => i);
-
-                        LogHelper.LogWithTimestamp(
-                            $"UpdateCache: After update - Current index = {currentIndex}\n" +
-                            $"Cached indexes after: [{string.Join(", ", cachedIndexesAfter)}]",
-                            LogHelper.Categories.ImageCache);
+                        // UpdateCache内で画像ファイルのみキャッシュするように修正が必要（IImageCacheの実装による）
+                        // ここでは呼び出し側でチェックする例を示す
+                        // _imageCache.UpdateCache(files.Where(f => FileHelper.IsImageFile(f.FullPath)).ToList(), currentIndex);
+                        // もしくは、UpdateCacheメソッド自体が動画を除外するように修正する
+                        _imageCache.UpdateCache(files, currentIndex); // IImageCache側で動画を除外すると仮定
                     }
                 }
 
@@ -664,8 +737,8 @@ namespace Illustra.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading image: {ex.Message}");
-                MessageBox.Show($"画像の読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"Error loading content: {ex.Message}");
+                MessageBox.Show($"コンテンツの読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1058,7 +1131,7 @@ namespace Illustra.Views
                 // 次の画像があれば表示、なければビューアを閉じる
                 if (!string.IsNullOrEmpty(nextFilePath))
                 {
-                    _ = SwitchToImage(nextFilePath, true);
+                    _ = SwitchToContent(nextFilePath, true);
                 }
                 else
                 {
@@ -1084,8 +1157,8 @@ namespace Illustra.Views
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                 if (files.Any())
                 {
-                    // 先頭の画像に切り替え
-                    _ = SwitchToImage(files.First().FullPath, true);
+                    // 先頭のコンテンツに切り替え
+                    _ = SwitchToContent(files.First().FullPath, true);
                 }
             }
         }
@@ -1100,17 +1173,17 @@ namespace Illustra.Views
                 var files = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
                 if (files.Any())
                 {
-                    // 末尾の画像に切り替え
-                    _ = SwitchToImage(files.Last().FullPath, true);
+                    // 末尾のコンテンツに切り替え
+                    _ = SwitchToContent(files.Last().FullPath, true);
                 }
             }
         }
 
         /// <summary>
-        /// 指定されたパスの画像をロードします
+        /// 指定されたパスのコンテンツをロードします
         /// </summary>
-        /// <param name="filePath">画像ファイルのパス</param>
-        public void LoadImageFromPath(string filePath, bool notifyFileSelection = true)
+        /// <param name="filePath">ファイルのパス</param>
+        public void LoadContentFromPath(string filePath, bool notifyFileSelection = true)
         {
             if (string.IsNullOrEmpty(filePath))
                 return;
@@ -1120,16 +1193,23 @@ namespace Illustra.Views
 
             if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
             {
-                // 同じ画像の場合は何もしない
+                // 同じファイルの場合は何もしない
                 return;
             }
 
-            _ = SwitchToImage(filePath, notifyFileSelection);
+            _ = SwitchToContent(filePath, notifyFileSelection);
+        }
+
+        // 互換性のために一時的に維持（後で削除予定）
+        [Obsolete("Use LoadContentFromPath instead")]
+        public void LoadImageFromPath(string filePath, bool notifyFileSelection = true)
+        {
+            LoadContentFromPath(filePath, notifyFileSelection);
         }
 
         private void OnFileSelected(SelectedFileModel args)
         {
-            LoadImageFromPath(args.FullPath, notifyFileSelection: false);
+            LoadContentFromPath(args.FullPath, notifyFileSelection: false);
         }
     }
 }

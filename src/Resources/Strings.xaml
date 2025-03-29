@@ -184,12 +184,13 @@
     <system:String x:Key="String_WebView2_Status_Description">Runtime required for animated WebP</system:String>
     <system:String x:Key="String_WebView2_DownloadLink">Download page</system:String>
 
-    <!-- Animation Settings -->
-    <system:String x:Key="String_Settings_Animation_Section">Animation</system:String>
-    <system:String x:Key="String_Settings_Animation_FitToScreen">Fit small animations to screen</system:String>
+
+    <!-- Media Display Settings (Applies to Animations and Videos) -->
+        <system:String x:Key="String_Settings_Media_Section">Media Display</system:String>
+        <system:String x:Key="String_Settings_Media_FitToScreen">Fit videos to screen</system:String>
+        <system:String x:Key="String_Settings_Media_FitToScreen_Tooltip">Enlarge small animations and videos to fit the screen.</system:String>
 
     <!-- Thumbnail List -->
-    <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String>
     <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">Open</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">Open with</system:String>

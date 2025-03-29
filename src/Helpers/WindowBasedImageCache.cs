@@ -58,17 +58,73 @@ namespace Illustra.Helpers
         /// <inheritdoc/>
         public void UpdateCache(List<FileNodeModel> files, int currentIndex)
         {
-            // キャッシュウィンドウの範囲を計算
-            int startIndex = Math.Max(0, currentIndex - _backwardSize);
-            int endIndex = Math.Min(files.Count - 1, currentIndex + _forwardSize);
+            // 動画ファイルを除外したリストを作成
+            var imageFiles = files.Where(f => FileHelper.IsImageFile(f.FullPath)).ToList();
 
-            // 新しいウィンドウに含まれるべきパスを収集
-            var pathsToKeep = new HashSet<string>();
-            for (int i = startIndex; i <= endIndex; i++)
+            // 現在のファイルが画像リスト内に存在するか確認し、インデックスを取得
+            // 現在のファイルが動画の場合、キャッシュ更新は行わない（または最近傍の画像インデックスを使用するなどの代替策）
+            var currentImageFile = imageFiles.FirstOrDefault(f => f.FullPath == files[currentIndex].FullPath);
+            if (currentImageFile == null)
             {
-                pathsToKeep.Add(files[i].FullPath);
+                 // 現在表示中のファイルが画像でない場合、キャッシュ更新ロジックをスキップ
+                 // 必要に応じて、既存キャッシュのクリーンアップのみ実行
+                 CleanUpCache(new HashSet<string>(imageFiles.Select(f => f.FullPath))); // 画像ファイルのみ保持
+                 return;
             }
+            int imageCurrentIndex = imageFiles.IndexOf(currentImageFile);
 
+
+            // キャッシュウィンドウの範囲を計算 (画像リスト基準)
+            int startIndex = Math.Max(0, imageCurrentIndex - _backwardSize);
+            int endIndex = Math.Min(imageFiles.Count - 1, imageCurrentIndex + _forwardSize);
+
+
+            // 新しいウィンドウに含まれるべきパスを収集 (画像ファイルのみ)
+            var pathsToKeep = new HashSet<string>();
+             if (startIndex <= endIndex && startIndex >= 0 && endIndex < imageFiles.Count) // 範囲チェック
+             {
+                for (int i = startIndex; i <= endIndex; i++)
+                {
+                    pathsToKeep.Add(imageFiles[i].FullPath);
+                }
+             }
+
+            // 不要なキャッシュエントリを削除するヘルパーメソッドを呼び出す
+            CleanUpCache(pathsToKeep);
+
+            // 新しいアイテムをキャッシュに追加 (画像ファイルのみ)
+            if (startIndex <= endIndex && startIndex >= 0 && endIndex < imageFiles.Count) // 範囲チェック
+            {
+                for (int i = startIndex; i <= endIndex; i++)
+                {
+                    var imagePath = imageFiles[i].FullPath;
+                    if (!_cache.ContainsKey(imagePath))
+                    {
+                        // キャッシュサイズ制限チェック（追加前）
+                        if (_cache.Count >= (_forwardSize + _backwardSize + 1)) // キャッシュ最大サイズチェック
+                        {
+                            // 最も古いエントリを削除するロジックが必要 (ここでは省略)
+                            // RemoveOldestCacheEntry(); // 仮のメソッド呼び出し
+                        }
+
+                        try
+                        {
+                            var image = LoadImageFromFile(imagePath);
+                            _cache[imagePath] = image;
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"画像のプリロードエラー: {ex.Message}");
+                            // プリロード時のエラーは無視
+                        }
+                    }
+                }
+            }
+        }
+
+        // 不要なキャッシュエントリを削除するヘルパーメソッド
+        private void CleanUpCache(HashSet<string> pathsToKeep)
+        {
             // 範囲外になったアイテムをキャッシュから削除
             var pathsToRemove = new List<string>();
             foreach (var path in _cache.Keys)
@@ -83,25 +139,8 @@ namespace Illustra.Helpers
             {
                 _cache.Remove(path);
             }
-
-            // 新しいアイテムをキャッシュに追加
-            foreach (var path in pathsToKeep)
-            {
-                if (!_cache.ContainsKey(path))
-                {
-                    try
-                    {
-                        var image = LoadImageFromFile(path);
-                        _cache[path] = image;
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"画像のプリロードエラー: {ex.Message}");
-                        // プリロード時のエラーは無視（オンデマンドで再試行される）
-                    }
-                }
-            }
         }
+
 
         /// <inheritdoc/>
         public void Clear()

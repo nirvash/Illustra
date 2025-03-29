@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:System="clr-namespace:System;assembly=PresentationFramework"
                     xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Taupe.xaml"/>
@@ -12,7 +13,7 @@
     <Color x:Key="GrayLightBorderColor">#AAAAAA</Color>  <!-- 境界線 -->
 
     <!-- アクセントカラーの設定 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayLightPrimaryColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayLightHighlightColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.AccentBrush" Color="{StaticResource GrayLightPrimaryColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayLightDarkColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayLightHighlightColor}" />
@@ -35,18 +36,28 @@
     <SolidColorBrush x:Key="MahApps.Brushes.StatusBarForeground" Color="Black" />
     <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBorder" Color="#CCCCCC" />
 
-    <!-- スライダーの背景（スライドバー全体） -->
-    <SolidColorBrush x:Key="SliderHelper.ThumbFillHoverBrush" Color="#444444" />
+    <!-- FlatSliderの色 -->
 
-    <!-- スライダーの進捗部分 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.SliderTrackForeground" Color="#777777" />
+    <!-- FlatSliderの色 -->
+    <!-- トラック全体（背景） -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderTrackFill" Color="#CCCCCC"/>
+    <!-- 進捗部分 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderTrackValueFill" Color="#007ACC"/>
+    <!-- サム（つまみ）の背景 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBackground" Color="#007ACC"/>
+    <!-- サムの枠線 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBorder" Color="#555555"/>
+    <!-- ホバー時のサム背景 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbHoverBackground" Color="#0055AA"/>
+    <!-- ホバー時のサム枠線 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbHoverBorder" Color="#333333"/>
+    <!-- 押下時のサム背景 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbPressedBackground" Color="#003377"/>
+    <!-- 押下時のサム枠線 -->
+    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbPressedBorder" Color="#222222"/>
 
-    <!-- スライダーの枠 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.SliderBorder" Color="#666666" />
-
-    <!-- スライダーのつまみ（Thumb） -->
-    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBackground" Color="#888888" />
-    <SolidColorBrush x:Key="MahApps.Brushes.SliderThumbBorder" Color="#AAAAAA" />
+    <!-- カスタムスライダーサイズ -->
+    <System:Double x:Key="IllustraDefaultThumbSize">20</System:Double>
 
     <!-- ボーダー（枠）や GlowBrush -->
     <SolidColorBrush x:Key="MahApps.Brushes.BorderBrush" Color="{StaticResource GrayLightBorderColor}" />

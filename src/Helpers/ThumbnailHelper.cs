@@ -1,3 +1,6 @@
+using Microsoft.WindowsAPICodePack.Shell;
+using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
@@ -9,6 +12,44 @@ using System.Globalization;
 
 namespace Illustra.Helpers
 {
+    public static class VideoThumbnailHelper
+    {
+        /// <summary>
+        /// 動画ファイルからサムネイルを作成します
+        /// </summary>
+        /// <param name="videoPath">動画ファイルのパス</param>
+        /// <returns>サムネイル画像。失敗した場合はnull</returns>
+        public static BitmapSource? GetVideoThumbnail(string videoPath)
+        {
+            try
+            {
+                using (var shellFile = ShellFile.FromFilePath(videoPath))
+                {
+                    var bitmap = shellFile.Thumbnail.ExtraLargeBitmap;
+                    if (bitmap == null) return null;
+
+                    using var memory = new MemoryStream();
+                    bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
+                    memory.Position = 0;
+
+                    var bitmapImage = new BitmapImage();
+                    bitmapImage.BeginInit();
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.StreamSource = memory;
+                    bitmapImage.EndInit();
+                    bitmapImage.Freeze();
+
+                    return bitmapImage;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"動画サムネイル生成エラー ({videoPath}): {ex.Message}");
+                return null;
+            }
+        }
+    }
+
     public static class ThumbnailHelper
     {
         /// <summary>
@@ -19,15 +60,27 @@ namespace Illustra.Helpers
         /// <param name="height">サムネイルの高さ</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
         /// <returns>BitmapSourceとしてのサムネイル画像</returns>
-        public static BitmapSource CreateThumbnail(string imagePath, int width, int height, CancellationToken cancellationToken = default)
+        public static BitmapSource CreateThumbnail(string filePath, int width, int height, CancellationToken cancellationToken = default)
         {
             try
             {
                 // キャンセルされたかチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // mp4ファイルの場合は専用の処理を使用
+                if (Path.GetExtension(filePath).ToLower() == ".mp4")
+                {
+                    var videoThumbnail = VideoThumbnailHelper.GetVideoThumbnail(filePath);
+                    if (videoThumbnail != null)
+                    {
+                        return videoThumbnail;
+                    }
+                    return GenerateVideoErrorThumbnail(width, height);
+                }
+
+                // 以下、既存の画像サムネイル生成処理
                 // ファイルからビットマップデータを読み込む
-                using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 using var inputStream = new SKManagedStream(fileStream);
 
                 // 既存の実装を維持（互換性のため）
@@ -76,12 +129,17 @@ namespace Illustra.Helpers
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {imagePath}");
+                Debug.WriteLine($"[CANCELLED] サムネイルの作成処理がキャンセルされました: {filePath}");
                 throw; // キャンセル例外は上位に伝播
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"サムネイル作成エラー ({imagePath}): {ex.Message}");
+                Debug.WriteLine($"サムネイル作成エラー ({filePath}): {ex.Message}");
+                // 動画ファイルのエラーの場合は専用サムネイルを返す
+                if (Path.GetExtension(filePath).ToLower() == ".mp4")
+                {
+                    return GenerateVideoErrorThumbnail(width, height);
+                }
                 return GenerateErrorThumbnail(width, height, "サムネイル作成エラー");
             }
         }
@@ -428,5 +486,71 @@ namespace Illustra.Helpers
 
             return errorBitmap;
         }
+
+        /// <summary>
+        /// 動画ファイル用のエラーサムネイルを生成します
+        /// </summary>
+        public static BitmapSource GenerateVideoErrorThumbnail(int width, int height)
+        {
+            var info = new SKImageInfo(width, height);
+            using var surface = SKSurface.Create(info);
+            var canvas = surface.Canvas;
+
+            // 背景を灰色で塗る
+            canvas.Clear(new SKColor(240, 240, 240));
+
+            // 枠線を描画
+            using var borderPaint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = new SKColor(180, 180, 180),
+                StrokeWidth = 2
+            };
+            canvas.DrawRect(2, 2, width - 4, height - 4, borderPaint);
+
+            // 再生アイコンを描画
+            using var playPaint = new SKPaint
+            {
+                Style = SKPaintStyle.Fill,
+                Color = new SKColor(180, 180, 180),
+                IsAntialias = true
+            };
+
+            // 中央に三角形を描画
+            float centerX = width / 2;
+            float centerY = height / 2;
+            float size = Math.Min(width, height) * 0.3f;
+
+            var path = new SKPath();
+            path.MoveTo(centerX - size/2, centerY - size/2);
+            path.LineTo(centerX + size/2, centerY);
+            path.LineTo(centerX - size/2, centerY + size/2);
+            path.Close();
+            canvas.DrawPath(path, playPaint);
+
+            // "Video" テキストを表示
+            using var textPaint = new SKPaint
+            {
+                Color = SKColors.Gray,
+                TextSize = 12,
+                IsAntialias = true,
+                TextAlign = SKTextAlign.Center
+            };
+            canvas.DrawText("Video", width / 2, height * 0.85f, textPaint);
+
+            // SKImageからWriteableBitmapに変換
+            using var skImage = surface.Snapshot();
+            using var skBitmap = SKBitmap.FromImage(skImage);
+
+            var videoBitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            videoBitmap.Lock();
+            CopySkBitmapToWriteableBitmap(skBitmap, videoBitmap);
+            videoBitmap.AddDirtyRect(new Int32Rect(0, 0, width, height));
+            videoBitmap.Unlock();
+            videoBitmap.Freeze();
+
+            return videoBitmap;
+        }
+
     }
 }
