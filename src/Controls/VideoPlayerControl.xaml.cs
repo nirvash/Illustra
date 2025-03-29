@@ -100,6 +100,7 @@ namespace Illustra.Controls
 
             _seekBarUpdateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _seekBarUpdateTimer.Tick += SeekBarUpdateTimer_Tick;
+
             ApplyInitialStretchMode(); // Apply initial stretch mode based on settings
         }
 
@@ -193,8 +194,9 @@ namespace Illustra.Controls
                 // Load volume from settings
                 var settings = ViewerSettingsHelper.LoadSettings();
                 VideoPlayer.Volume = settings.VideoVolume; // Apply saved volume
+                VideoPlayer.IsMuted = settings.VideoIsMuted; // Apply saved mute state
                 VolumeSlider.Value = VideoPlayer.Volume; // Set slider value
-                UpdateVolumeIcon(); // Update icon based on loaded volume
+                UpdateVolumeIcon(); // Update icon based on loaded volume and mute state
 
                 ApplyInitialStretchMode(); // Apply stretch mode now that dimensions are known
                 Play(); // MediaOpened後に再生開始
@@ -486,6 +488,7 @@ namespace Illustra.Controls
                 // We just need to reset the dragging flag.
                 _isVolumeSliderDragging = false;
 
+                HandleVolumeChangeCompletion(); // Add this line
                 // e.Handled = true; // Optionally mark handled if needed
             }
         }
@@ -657,18 +660,12 @@ namespace Illustra.Controls
         {
             if (VideoPlayer != null)
             {
-                VideoPlayer.Volume = VolumeSlider.Value;
-                // Slider操作時はミュート解除
-                if (VolumeSlider.Value > 0)
-                {
-                    VideoPlayer.IsMuted = false;
-                }
-                UpdateVolumeIcon();
-
-                // Save the new volume setting
                 var settings = ViewerSettingsHelper.LoadSettings();
-                settings.VideoVolume = VideoPlayer.Volume;
-                ViewerSettingsHelper.SaveSettings(settings);
+                // ValueChangedイベントでは、VideoPlayerのVolumeプロパティのみを更新し、
+                // アイコンの更新を行う。ミュート状態の変更や設定の保存は
+                // ユーザーの操作完了時(DragCompleted, PreviewMouseLeftButtonUp)に行う。
+                VideoPlayer.Volume = VolumeSlider.Value;
+                UpdateVolumeIcon();
             }
         }
 
@@ -678,6 +675,12 @@ namespace Illustra.Controls
             {
                 VideoPlayer.IsMuted = !VideoPlayer.IsMuted;
                 UpdateVolumeIcon();
+
+                // Save the new mute state
+                var settings = ViewerSettingsHelper.LoadSettings();
+                settings.VideoIsMuted = VideoPlayer.IsMuted;
+                ViewerSettingsHelper.SaveSettings(settings);
+
                 // ミュート状態に応じてスライダーの値も更新 (任意だがUX向上)
                 if (VideoPlayer.IsMuted)
                 {
@@ -831,5 +834,55 @@ namespace Illustra.Controls
                 // e.Handled = true;
             }
         }
+
+        public void VolumeSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            // VolumeSliderのドラッグ完了時に呼び出される
+            if (_isVolumeSliderDragging)
+            {
+                // マウスキャプチャを解放 (PreviewMouseLeftButtonDown でキャプチャした場合)
+                if (Mouse.Captured is Thumb capturedThumb && capturedThumb == FindVisualChild<Thumb>(VolumeSlider))
+                {
+                    Mouse.Capture(null);
+                }
+
+                // 音量変更の完了処理を呼び出す
+                HandleVolumeChangeCompletion();
+            }
+        }
+
+        private void HandleVolumeChangeCompletion()
+        {
+            if (VideoPlayer != null)
+            {
+                var settings = ViewerSettingsHelper.LoadSettings();
+                bool settingsChanged = false;
+
+                // Check if unmuting is needed due to user interaction
+                if (VolumeSlider.Value > 0 && VideoPlayer.IsMuted)
+                {
+                    VideoPlayer.IsMuted = false;
+                    settings.VideoIsMuted = false; // Update setting
+                    settingsChanged = true;
+                    UpdateVolumeIcon(); // Update icon after changing mute state
+                }
+
+                // Check if volume setting needs saving
+                // Compare with loaded setting to avoid unnecessary saves
+                if (settings.VideoVolume != VideoPlayer.Volume)
+                {
+                    settings.VideoVolume = VideoPlayer.Volume;
+                    settingsChanged = true;
+                }
+
+                // Save settings only if something actually changed
+                if (settingsChanged)
+                {
+                    ViewerSettingsHelper.SaveSettings(settings);
+                }
+            }
+        }
     }
 }
+
+

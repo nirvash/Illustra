@@ -108,6 +108,7 @@
                             Minimum="0" Maximum="1" LargeChange="0.1" SmallChange="0.05"
                             VerticalAlignment="Center"
                             IsMoveToPointEnabled="True"
+                            Thumb.DragCompleted="VolumeSlider_DragCompleted"
                             Style="{DynamicResource FlatSlider}"
                             ValueChanged="VolumeSlider_ValueChanged"/>
                 </Border>

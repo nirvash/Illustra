@@ -86,5 +86,6 @@ namespace Illustra.Helpers
         public bool FitSmallAnimationToScreen { get; set; } = false; // デフォルトは1:1表示
         // Video Player Settings
         public double VideoVolume { get; set; } = 0.5; // Default volume
+        public bool VideoIsMuted { get; set; } = false; // Default is not muted
     }
 }
