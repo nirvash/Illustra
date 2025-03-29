@@ -2288,21 +2288,49 @@ namespace Illustra.Views
                     {
                         LogHelper.LogAnalysis($"[URL] 画像URL: {url}");
 
-                        string fileNameForURL = Path.GetFileName(uri.LocalPath);
-                        if (string.IsNullOrWhiteSpace(Path.GetExtension(fileNameForURL)))
-                            fileNameForURL += ".jpg";
+                        // URLからファイル名を取得（拡張子がない場合もある）
+                        string baseFileName = Path.GetFileNameWithoutExtension(uri.LocalPath);
+                        // ファイル名が無効な文字を含む場合は置換するか、デフォルト名を使用
+                        if (string.IsNullOrWhiteSpace(baseFileName) || !FileHelper.IsValidFileName(baseFileName + ".tmp")) // 一時的な拡張子で検証
+                        {
+                            baseFileName = "downloaded_image"; // デフォルトのファイル名
+                        }
 
-                        string tempPath = Path.Combine(Path.GetTempPath(), fileNameForURL);
+                        string tempPath; // 一時ファイルのフルパス
 
                         using (var client = new HttpClient())
                         {
                             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
                             var bytes = await client.GetByteArrayAsync(uri);
+
+                            // ダウンロードしたバイトデータから拡張子を判定
+                            string? actualExtension = FileHelper.GetImageExtensionFromBytes(bytes);
+                            if (string.IsNullOrEmpty(actualExtension))
+                            {
+                                // 判定できなかった場合はURLの拡張子を確認
+                                actualExtension = Path.GetExtension(uri.LocalPath)?.ToLowerInvariant();
+                                // URLの拡張子がサポートされている形式（画像または動画）でない場合はデフォルトで.jpgとする
+                                // (CanAcceptImageDropで既にチェックされているはずだが念のため)
+                                if (string.IsNullOrEmpty(actualExtension) || !FileHelper.SupportedExtensions.Contains(actualExtension))
+                                {
+                                    LogHelper.LogAnalysis($"[URL] 拡張子不明または非対応 ({actualExtension})。デフォルトで.jpgを使用します。");
+                                    actualExtension = ".jpg"; // デフォルト拡張子
+                                }
+                                else
+                                {
+                                    LogHelper.LogAnalysis($"[URL] バイト判定失敗。URLの拡張子 ({actualExtension}) を使用します。");
+                                }
+                            }
+
+                            // 正しい拡張子で一時ファイル名を生成
+                            string finalFileName = baseFileName + actualExtension;
+                            tempPath = Path.Combine(Path.GetTempPath(), finalFileName);
+
+                            // ファイルに書き込み
                             await File.WriteAllBytesAsync(tempPath, bytes);
                             fileList.Add(tempPath);
                         }
-
                         isVirtual = true;
                     }
                 }
