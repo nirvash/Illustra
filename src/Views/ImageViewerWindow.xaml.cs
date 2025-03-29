@@ -774,7 +774,7 @@ namespace Illustra.Views
                                 RoutedEvent = PreviewMouseWheelEvent
                             };
                             LogHelper.LogAnalysis($"WebView_WebMessageReceived: Wheel event - deltaY: {deltaY}");
-                            RaiseEvent(wheelEventArgs);
+                            WebView.RaiseEvent(wheelEventArgs);
                             break;
 
                         case "dblclick":

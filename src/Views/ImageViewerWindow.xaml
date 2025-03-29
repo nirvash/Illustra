@@ -22,7 +22,6 @@
                          PreviewKeyDown="Window_PreviewKeyDown"
                          PreviewMouseDown="Window_PreviewMouseDown"
                          MouseDoubleClick="Window_MouseDoubleClick"
-                         PreviewMouseWheel="MainImage_PreviewMouseWheel"
                          SizeChanged="Window_SizeChanged">
 
     <mahcontrols:MetroWindow.Resources>
@@ -149,6 +148,7 @@
             <!-- アニメーション用 WebView2 -->
             <wv2:WebView2 x:Name="WebView"
                 Grid.Column="0"
+                PreviewMouseWheel="MainImage_PreviewMouseWheel"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 IsHitTestVisible="True"
@@ -161,6 +161,7 @@
 
            <!-- 動画再生用コントロール -->
            <localControls:VideoPlayerControl x:Name="VideoPlayerControl"
+                                             PreviewMouseWheel="MainImage_PreviewMouseWheel"
                                              Grid.Column="0"
                                              Visibility="Collapsed"
                                              IsFullScreen="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType=mahcontrols:MetroWindow}}"
