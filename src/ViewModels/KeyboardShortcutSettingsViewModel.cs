@@ -103,7 +103,7 @@ namespace Illustra.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     var viewModel = dialog.DataContext as KeyboardShortcutSettingDialogViewModel;
-                    if (viewModel != null && dialog.SelectedKey != Key.None && !shortcut.Keys.Contains(dialog.SelectedKey))
+                    if (viewModel != null && dialog.SelectedKey != Key.None)
                     {
                         var modifiers = ModifierKeys.None;
                         if (viewModel.IsCtrlPressed) modifiers |= ModifierKeys.Control;
@@ -112,6 +112,20 @@ namespace Illustra.ViewModels
                         if (viewModel.IsWindowsPressed) modifiers |= ModifierKeys.Windows;
 
                         var newKey = dialog.SelectedKey;
+
+                        // 重複チェックは対象グループごとに行う必要がある。今はチェックしない
+                        /*
+                        if (IsDuplicate(newKey, modifiers, shortcut))
+                        {
+                            MessageBox.Show(
+                                string.Format((string)Application.Current.FindResource("String_Settings_ShortcutDuplicateWarning"), $"{modifiers}+{newKey}"),
+                                (string)Application.Current.FindResource("String_WarningTitle"),
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                            return; // 重複があれば追加しない
+                        }
+                        */
+                        // 重複がなければ追加
                         shortcut.Keys.Add(newKey);
                         shortcut.UpdateModifiers(newKey, modifiers);
                         SaveShortcutsToSettings();
@@ -161,7 +175,20 @@ namespace Illustra.ViewModels
                     var shortcut = wrapper.ParentShortcut;
                     var oldKey = wrapper.Key;
                     var newKey = dialog.SelectedKey;
-
+                    // 重複チェックは対象グループごとに行う必要がある。今はチェックしない
+                    /*
+                                        // 重複チェック (編集前のキーは除外)
+                                        if (IsDuplicate(newKey, modifiers, shortcut, oldKey))
+                                        {
+                                            MessageBox.Show(
+                                                string.Format((string)Application.Current.FindResource("String_Settings_ShortcutDuplicateWarning"), $"{modifiers}+{newKey}"),
+                                                (string)Application.Current.FindResource("String_WarningTitle"),
+                                                MessageBoxButton.OK,
+                                                MessageBoxImage.Warning);
+                                            return; // 重複があれば編集しない
+                                        }
+                    */
+                    // 重複がなければ編集
                     shortcut.Modifiers.Remove(oldKey);
                     shortcut.ReplaceKey(oldKey, newKey);
                     shortcut.UpdateModifiers(newKey, modifiers);
@@ -191,6 +218,30 @@ namespace Illustra.ViewModels
             SaveShortcutsToSettings();
             CloseRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        private bool IsDuplicate(Key key, ModifierKeys modifiers, KeyboardShortcutModel currentShortcut, Key? keyToRemove = null)
+        {
+            foreach (var shortcut in Shortcuts)
+            {
+                foreach (var existingKey in shortcut.Keys)
+                {
+                    // EditKeyの場合、編集前のキーはチェック対象外
+                    if (keyToRemove.HasValue && shortcut == currentShortcut && existingKey == keyToRemove.Value)
+                    {
+                        continue;
+                    }
+
+                    shortcut.Modifiers.TryGetValue(existingKey, out var existingModifiers); // default is None
+
+                    if (existingKey == key && existingModifiers == modifiers)
+                    {
+                        return true; // 重複あり
+                    }
+                }
+            }
+            return false; // 重複なし
+        }
+
 
         private void ExecuteCancel()
         {
