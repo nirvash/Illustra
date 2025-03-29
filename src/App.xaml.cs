@@ -144,28 +144,37 @@ namespace Illustra
             // MCP Host の起動制御
             if (settings.EnableMcpHost)
             {
-                // Web API ホストを起動（ポート5149を使用 - launchSettings.json に合わせる）
-                // IEventAggregator instance is already resolved
+                try
+                {
+                    // Web API ホストを起動（ポート5149を使用 - launchSettings.json に合わせる）
+                    // IEventAggregator instance is already resolved
 
-                _mcpHost = Host.CreateDefaultBuilder()
-                    .ConfigureServices((hostContext, services) => // Add ConfigureServices here
-                    {
-                        // Register the existing IEventAggregator instance as a singleton
-                        services.AddSingleton(eventAggregator);
-                        // Register the WPF Dispatcher instance as a singleton
-                        services.AddSingleton(Application.Current.Dispatcher);
-                    })
-                    .ConfigureWebHostDefaults(webBuilder =>
-                    {
-                        // Use Startup class for configuration
-                        webBuilder.UseStartup<Illustra.MCPHost.Startup>();
-                        // Set the URL
-                        webBuilder.UseUrls("http://localhost:5149");
-                    })
-                    .Build();
+                    _mcpHost = Host.CreateDefaultBuilder()
+                        .ConfigureServices((hostContext, services) => // Add ConfigureServices here
+                        {
+                            // Register the existing IEventAggregator instance as a singleton
+                            services.AddSingleton(eventAggregator);
+                            // Register the WPF Dispatcher instance as a singleton
+                            services.AddSingleton(Application.Current.Dispatcher);
+                        })
+                        .ConfigureWebHostDefaults(webBuilder =>
+                        {
+                            // Use Startup class for configuration
+                            webBuilder.UseStartup<Illustra.MCPHost.Startup>();
+                            // Set the URL
+                            webBuilder.UseUrls("http://localhost:5149");
+                        })
+                        .Build();
 
-                await _mcpHost.StartAsync();
-                LogHelper.LogWithTimestamp("MCP Web API ホストを起動しました (Port: 5149)", LogHelper.Categories.MCP);
+                    await _mcpHost.StartAsync();
+                    LogHelper.LogWithTimestamp("MCP Web API ホストを起動しました (Port: 5149)", LogHelper.Categories.MCP);
+                }
+                catch (Exception ex)
+                {
+                    // MCPホストの起動に失敗しても、エラーログを記録してアプリケーションの起動は続行する
+                    LogHelper.LogError("MCP ホストの起動中にエラーが発生しました", ex);
+                    _mcpHost = null; // 念のためホスト参照をクリア
+                }
             }
             else
             {
