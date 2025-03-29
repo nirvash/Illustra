@@ -24,6 +24,8 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - 📝 Stable Diffusion のプロンプト表示対応
 - 🏷️ プロンプトのタグによるフィルタリング機能
 - 🌓 ライト/ダークテーマの切り替え機能
+- 🎬 MP4 動画ファイルの再生
+- 🎞️ アニメーション WebP ファイルの再生
 
 ### 開発チーム
 
@@ -187,6 +189,8 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - 📝 Stable Diffusion prompt display support
 - 🏷️ Filtering by prompt tags
 - 🌓 Light/Dark theme switching
+- 🎬 MP4 video file playback
+- 🎞️ Animated WebP file playback
 
 ### System Requirements
 
