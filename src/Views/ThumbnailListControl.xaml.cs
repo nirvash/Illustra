@@ -234,8 +234,8 @@ namespace Illustra.Views
             // 設定を読み込む
             _appSettings = SettingsHelper.GetSettings();
 
-            // ViewModelの初期化
-            _viewModel = new MainViewModel();
+            // ViewModelをDIコンテナから取得
+            _viewModel = ContainerLocator.Container.Resolve<MainViewModel>();
             DataContext = _viewModel;
 
             // アプリケーション全体で共有するコンテキストにViewModelを設定
@@ -474,6 +474,12 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
+            // ViewModelからのコマンド実行要求イベントを購読
+            _eventAggregator.GetEvent<RequestCopyEvent>().Subscribe(OnRequestCopy, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<RequestPasteEvent>().Subscribe(OnRequestPaste, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<RequestSelectAllEvent>().Subscribe(OnRequestSelectAll, ThreadOption.UIThread);
+
+
             // ListView の ScrollViewer を取得
             if (ThumbnailItemsControl.Template.FindName("ScrollViewer", ThumbnailItemsControl) is ScrollViewer scrollViewer)
             {
@@ -503,6 +509,37 @@ namespace Illustra.Views
                 ThumbnailItemsControl.Focus();
             }
         }
+
+        #region ViewModel Event Handlers
+
+        private void OnRequestCopy()
+        {
+            // 実際のコピー処理を実行
+            if (_viewModel.CopyCommand.CanExecute(null)) // Use CanExecute method of the command
+            {
+                CopySelectedImagesToClipboard();
+            }
+        }
+
+        private void OnRequestPaste()
+        {
+            // 実際の貼り付け処理を実行
+            // PasteのCanExecuteはViewModel側でフォルダパスのみチェックしているため、
+            // ここでクリップボードの状態を最終確認する
+            if (Clipboard.ContainsFileDropList() && !string.IsNullOrEmpty(_currentFolderPath))
+            {
+                PasteFilesFromClipboard();
+            }
+        }
+
+        private void OnRequestSelectAll()
+        {
+            // 実際の全選択処理を実行
+            ThumbnailItemsControl.SelectAll();
+        }
+
+        #endregion
+
 
         private void OnShortcutKeyReceived(ShortcutKeyEventArgs args)
         {
@@ -614,7 +651,7 @@ namespace Illustra.Views
             // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
             await LoadFileNodesAsync(folderPath, args.SelectedFilePath); // Changed property name
 
-//            ThumbnailItemsControl.Visibility = Visibility.Visible;
+            //            ThumbnailItemsControl.Visibility = Visibility.Visible;
         }
 
         public void SetCurrentSettings()
@@ -1096,6 +1133,12 @@ namespace Illustra.Views
                     _isFirstLoad = false;
                     _isProcessingOnFileNodesLoaded = false;
                     ThumbnailItemsControl.Visibility = Visibility.Visible;
+
+                    // Global Command として強制再評価させる
+                    Application.Current.Dispatcher.BeginInvoke((Action)(() =>
+                    {
+                        CommandManager.InvalidateRequerySuggested();
+                    }));
                 }
             }
             catch (Exception ex)
@@ -2568,6 +2611,7 @@ namespace Illustra.Views
                 _thumbnailLoadCts = new CancellationTokenSource();
 
                 _currentFolderPath = path;
+                _viewModel.CurrentFolderPath = path; // ViewModelにフォルダパスを設定
 
                 // 処理中フラグを設定
                 _processingFolderPath = path;
@@ -3573,5 +3617,8 @@ namespace Illustra.Views
             _scrollStopTimer.Start();
         }
 
+
+
     }
 }
+

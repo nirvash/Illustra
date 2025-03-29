@@ -9,7 +9,7 @@
       "program": "${workspaceFolder}/src/bin/Debug/net9.0-windows/Illustra.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/",
-      "console": "externalTerminal",
+      "console": "internalConsole",
       "stopAtEntry": false,
       "justMyCode": false,
       "logging": {

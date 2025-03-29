@@ -6,6 +6,10 @@ using Illustra.Views.Settings;
 using Illustra.Helpers;
 using MahApps.Metro.Controls.Dialogs; // IDialogCoordinator を使うために追加
 using System; // ArgumentNullException を使うために追加
+using Prism.Events; // IEventAggregator を使うために追加
+using Illustra.Events; // ShortcutSettingsChangedEvent を使うために追加
+using System.Windows.Input; // ICommand を使うために追加
+using Illustra.Models; // IllustraAppContext を使うために追加 (仮)
 
 namespace Illustra.ViewModels
 {
@@ -14,7 +18,9 @@ namespace Illustra.ViewModels
         private string _statusMessage = "";
         private bool _isLightTheme;
         private bool _isDarkTheme;
+        private readonly IEventAggregator _eventAggregator;
         // private readonly IDialogCoordinator _dialogCoordinator; // 削除
+        private readonly MainViewModel _mainViewModel;
 
         // DialogCoordinator プロパティを追加
         public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
@@ -41,13 +47,23 @@ namespace Illustra.ViewModels
         public DelegateCommand OpenShortcutSettingsCommand { get; }
         public DelegateCommand OpenAdvancedSettingsCommand { get; }
         public DelegateCommand OpenImageGenerationWindowCommand { get; }
+
+        // MainViewModel からコマンドを公開
+        public ICommand CopyCommand => _mainViewModel.CopyCommand;
+        public ICommand PasteCommand => _mainViewModel.PasteCommand;
+        public ICommand SelectAllCommand => _mainViewModel.SelectAllCommand;
+
         public DelegateCommand SetLightThemeCommand { get; }
         public DelegateCommand SetDarkThemeCommand { get; }
 
-        // コンストラクタから IDialogCoordinator の注入を削除
         public MainWindowViewModel()
         {
-            // _dialogCoordinator = dialogCoordinator ?? throw new ArgumentNullException(nameof(dialogCoordinator)); // 削除
+            // IllustraAppContext から MainViewModel を取得
+            var appContext = ContainerLocator.Container.Resolve<IllustraAppContext>(); // using Illustra.Models; が必要
+            _mainViewModel = appContext?.MainViewModel ?? throw new InvalidOperationException("MainViewModel could not be resolved from AppContext.");
+
+            // IEventAggregator を解決してフィールドに設定
+            _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>(); // using Prism.Events; が必要
 
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
             OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
@@ -84,6 +100,7 @@ namespace Illustra.ViewModels
                 Owner = Application.Current.MainWindow
             };
             shortcutSettingsWindow.ShowDialog();
+            _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Publish(); // イベントを発行 (ShowDialogの後)
             StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
         }
 

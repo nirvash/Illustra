@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows; // Clipboard クラスを使用するために追加
 using System.Windows.Data;
 using Illustra.Models;
 using Illustra.Helpers;
@@ -10,6 +11,7 @@ using Illustra.Views;
 using System.Linq;
 using System.IO;
 using Illustra.Events;
+using System.Windows.Input;
 
 namespace Illustra.ViewModels
 {
@@ -21,6 +23,8 @@ namespace Illustra.ViewModels
         private ICollectionView _filteredItems;
         private IEventAggregator _eventAggregator = null!;
         private DatabaseManager _db = null!;
+
+        private string _currentFolderPath = string.Empty;
 
         public bool SortByDate
         {
@@ -48,6 +52,11 @@ namespace Illustra.ViewModels
             }
         }
 
+        public ICommand CopyCommand { get; }
+        public ICommand PasteCommand { get; }
+        public ICommand SelectAllCommand { get; }
+
+
         public MainViewModel()
         {
             // 初期設定を読み込む
@@ -67,7 +76,14 @@ namespace Illustra.ViewModels
             {
                 OnPropertyChanged(nameof(SelectedItems));
                 UpdateLastSelectedFlag();
+                RaiseCommandCanExecuteChanged(); // コマンド状態を更新
             };
+
+            // コマンドの初期化
+            CopyCommand = new RelayCommand(ExecuteCopy, CanExecuteCopy);
+            PasteCommand = new RelayCommand(ExecutePaste, CanExecutePaste);
+            SelectAllCommand = new RelayCommand(ExecuteSelectAll, CanExecuteSelectAll);
+
         }
 
         // レーティングをデータベースに永続化する
@@ -113,12 +129,14 @@ namespace Illustra.ViewModels
         {
             Items.Clear();
             SelectedItems.Clear();
+            RaiseCommandCanExecuteChanged(); // 選択状態変更時にコマンド状態を更新
         }
 
         public void AddItem(FileNodeModel item)
         {
             var index = FindSortedInsertIndex(item);
             Items.Insert(index, item);
+            RaiseCommandCanExecuteChanged(); // コマンド状態を更新
         }
 
         private int FindSortedInsertIndex(FileNodeModel newItem)
@@ -167,6 +185,7 @@ namespace Illustra.ViewModels
             SortHelper.SortFileNodes(sortedItems, sortByDate, sortAscending);
             Items.ReplaceAll(sortedItems);
 
+            RaiseCommandCanExecuteChanged(); // コマンド状態を更新
             // フィルタ条件が変わっていないので、フィルタの Refresh は不要
         }
 
@@ -409,6 +428,64 @@ namespace Illustra.ViewModels
             _tagFilters.Clear();
         }
 
+
+        public string CurrentFolderPath
+        {
+            get => _currentFolderPath;
+            set
+            {
+                if (SetProperty(ref _currentFolderPath, value)) // propertyName is automatically set by CallerMemberName
+                {
+                    // フォルダパス変更時にPasteコマンドの状態を更新
+                    (PasteCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        #region Command Implementations
+
+        private void ExecuteCopy()
+        {
+            _eventAggregator.GetEvent<RequestCopyEvent>().Publish();
+        }
+
+        private bool CanExecuteCopy()
+        {
+            return SelectedItems.Any();
+        }
+
+        private void ExecutePaste()
+        {
+            _eventAggregator.GetEvent<RequestPasteEvent>().Publish();
+        }
+
+        private bool CanExecutePaste()
+        {
+            // フォルダパスが空でなく、かつクリップボードにファイルまたは画像データが含まれている場合に有効
+            return !string.IsNullOrEmpty(CurrentFolderPath) &&
+                   (Clipboard.ContainsFileDropList() || Clipboard.ContainsImage());
+        }
+
+        private void ExecuteSelectAll()
+        {
+            _eventAggregator.GetEvent<RequestSelectAllEvent>().Publish();
+        }
+
+        private bool CanExecuteSelectAll()
+        {
+            return Items.Any();
+        }
+
+        // コマンドのCanExecute状態を更新するためのヘルパーメソッド
+        private void RaiseCommandCanExecuteChanged()
+        {
+            (CopyCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (PasteCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (SelectAllCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
+
+        #endregion
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void UpdateSelectionAfterFilter(FileNodeModel? previousSelected)
         {
@@ -457,6 +534,20 @@ namespace Illustra.ViewModels
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            // Items または SelectedItems が変更されたらコマンド状態を更新
+            if (propertyName == nameof(Items) || propertyName == nameof(SelectedItems))
+            {
+                RaiseCommandCanExecuteChanged();
+            }
         }
+
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
     }
 }

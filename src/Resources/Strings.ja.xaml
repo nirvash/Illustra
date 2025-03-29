@@ -29,6 +29,11 @@
     <system:String x:Key="String_Menu_Settings">設定</system:String>
     <system:String x:Key="String_Menu_Tools">ツール</system:String>
     <system:String x:Key="String_Menu_Help">ヘルプ</system:String>
+    <!-- Edit Menu -->
+    <system:String x:Key="String_Menu_Edit_Copy">コピー</system:String>
+    <system:String x:Key="String_Menu_Edit_Paste">貼り付け</system:String>
+    <system:String x:Key="String_Menu_Edit_SelectAll">すべて選択</system:String>
+
 
     <!-- Filter Menu -->
     <system:String x:Key="String_Menu_Filter_Prompt">プロンプト情報あり</system:String>

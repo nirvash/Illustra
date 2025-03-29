@@ -222,7 +222,7 @@ namespace Illustra.Views
         }
 
 
-        public async void OnFileSelected(SelectedFileModel selectedFile)
+        public void OnFileSelected(SelectedFileModel selectedFile)
         {
             if (selectedFile == null
                 || string.IsNullOrEmpty(selectedFile.FullPath)

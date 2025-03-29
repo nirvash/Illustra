@@ -31,10 +31,10 @@ namespace Illustra.Models
             set => SetProperty(ref _mainViewModel, value);
         }
 
-        public IllustraAppContext()
+        public IllustraAppContext(MainViewModel mainViewModel) // MainViewModel を注入
         {
             _currentProperties = new ImagePropertiesModel();
-            // ThumbnailListControlがMainViewModelのライフサイクルを管理するため、ここでは初期化しない
+            _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel)); // 注入されたインスタンスを設定
             LogHelper.LogWithTimestamp("初期化完了", LogHelper.Categories.UI);
         }
     }

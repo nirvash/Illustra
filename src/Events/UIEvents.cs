@@ -220,6 +220,12 @@ namespace Illustra.Events
     /// </summary>
     public class SortOrderChangedEvent : PubSubEvent<SortOrderChangedEventArgs> { }
 
+
+    // --- ViewModelからViewへのコマンド実行要求イベント ---
+    public class RequestCopyEvent : PubSubEvent { }
+    public class RequestPasteEvent : PubSubEvent { }
+    public class RequestSelectAllEvent : PubSubEvent { }
+
     // ViewerSettingsが変更されたときのイベント
     public class ViewerSettingsChangedEvent : PubSubEvent { }
 }

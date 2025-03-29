@@ -45,6 +45,18 @@
                 <MenuItem Header="{DynamicResource String_Menu_Exit}"
                           Click="ExitMenuItem_Click"/>
             </MenuItem>
+            <MenuItem Header="{DynamicResource String_Menu_Edit}">
+                <MenuItem x:Name="CopyMenuItem"
+                          Header="{DynamicResource String_Menu_Edit_Copy}"
+                          Command="{Binding CopyCommand}"/>
+                <MenuItem x:Name="PasteMenuItem"
+                          Header="{DynamicResource String_Menu_Edit_Paste}"
+                          Command="{Binding PasteCommand}"/>
+                <MenuItem x:Name="SelectAllMenuItem"
+                          Header="{DynamicResource String_Menu_Edit_SelectAll}"
+                          Command="{Binding SelectAllCommand}"/>
+            </MenuItem>
+
             <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">
                 <MenuItem x:Name="SortByDateMenuItem"
                           Header="{DynamicResource String_Menu_View_SortByDate}"

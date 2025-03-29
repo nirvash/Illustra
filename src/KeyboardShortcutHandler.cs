@@ -79,6 +79,27 @@ namespace Illustra
             return currentModifiers;
         }
 
+
+        public string GetShortcutText(FuncId functionId)
+        {
+            var shortcut = _shortcuts.FirstOrDefault(s => s.FunctionId == functionId);
+            if (shortcut == null || !shortcut.Keys.Any())
+                return string.Empty;
+
+            var key = shortcut.Keys.First(); // 最初のキーを使用
+            var modifiers = shortcut.Modifiers.TryGetValue(key, out var mods) ? mods : ModifierKeys.None;
+
+            var text = new List<string>();
+            if (modifiers.HasFlag(ModifierKeys.Control)) text.Add("Ctrl");
+            if (modifiers.HasFlag(ModifierKeys.Alt)) text.Add("Alt");
+            if (modifiers.HasFlag(ModifierKeys.Shift)) text.Add("Shift");
+            if (modifiers.HasFlag(ModifierKeys.Windows)) text.Add("Win");
+
+            text.Add(key.ToString());
+
+            return string.Join("+", text);
+        }
+
         // ショートカットの設定が変更されたときに呼び出されるメソッド
         public void ReloadShortcuts()
         {

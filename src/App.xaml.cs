@@ -1,4 +1,4 @@
-﻿using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
+﻿﻿using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
 using System;
 using System.Windows;
 using Prism.Ioc;
@@ -84,6 +84,7 @@ namespace Illustra
             // アプリケーションライフサイクルと同じライフタイムを保証するためシングルトンとして登録
             containerRegistry.RegisterSingleton<IllustraAppContext>();
             containerRegistry.RegisterSingleton<IImagePropertiesService, ImagePropertiesService>();
+            containerRegistry.RegisterSingleton<MainViewModel>(); // MainViewModel をシングルトンで登録
 
             // ビューの登録
             containerRegistry.Register<LanguageSettingsViewModel>();

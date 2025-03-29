@@ -32,6 +32,11 @@
     <system:String x:Key="String_Menu_Settings">Settings</system:String>
     <system:String x:Key="String_Menu_Tools">Tools</system:String>
     <system:String x:Key="String_Menu_Help">Help</system:String>
+    <!-- Edit Menu -->
+    <system:String x:Key="String_Menu_Edit_Copy">Copy</system:String>
+    <system:String x:Key="String_Menu_Edit_Paste">Paste</system:String>
+    <system:String x:Key="String_Menu_Edit_SelectAll">Select All</system:String>
+
 
     <!-- Filter Menu -->
     <system:String x:Key="String_Menu_Filter_Prompt">Has Prompt</system:String>

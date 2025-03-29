@@ -69,6 +69,7 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+            _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
 
             // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
@@ -112,6 +113,15 @@ namespace Illustra.Views
                 shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
             }
         }
+
+        private void UpdateEditMenuShortcuts()
+        {
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+            CopyMenuItem.InputGestureText = shortcutHandler.GetShortcutText(FuncId.Copy);
+            PasteMenuItem.InputGestureText = shortcutHandler.GetShortcutText(FuncId.Paste);
+            SelectAllMenuItem.InputGestureText = shortcutHandler.GetShortcutText(FuncId.SelectAll);
+        }
+
 
         protected void MainWindow_OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -201,6 +211,9 @@ namespace Illustra.Views
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // 編集メニューのショートカットキー表示を更新
+            UpdateEditMenuShortcuts();
+
             // スプリッター位置の復元はUIスレッドで行う
             RestoreSplitterPositions();
 
