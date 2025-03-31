@@ -1,4 +1,3 @@
-using Illustra.Models; // FileOperationProgressInfo を使うために追加
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using Illustra.Models;
+using Illustra.Models; // FileOperationProgressInfo を使うために追加
 using Microsoft.VisualBasic.FileIO;
 
 namespace Illustra.Helpers

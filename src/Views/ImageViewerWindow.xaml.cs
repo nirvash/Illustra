@@ -1231,12 +1231,6 @@ namespace Illustra.Views
             // e.Handled = true;
         }
 
-        // 互換性のために一時的に維持（後で削除予定）
-        [Obsolete("Use LoadContentFromPath instead")]
-        public void LoadImageFromPath(string filePath, bool notifyFileSelection = true)
-        {
-            LoadContentFromPath(filePath, notifyFileSelection);
-        }
 
         private void OnFileSelected(SelectedFileModel args)
         {

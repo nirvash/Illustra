@@ -13,7 +13,6 @@ using Illustra.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using Illustra.Events;
-using Illustra.Helpers; // DialogHelper を使うために追加
 using System; // IProgress を使うために追加
 
 namespace Illustra.Views
@@ -28,7 +27,6 @@ namespace Illustra.Views
         private IEventAggregator? _eventAggregator;
         private AppSettingsModel? _appSettings;
         private FileOperationHelper _fileOperationHelper;
-        private bool _isScrollingProgrammatically = false; // カスタムスクロール実行中フラグ
         private const string FAVORITES_CONTROL_ID = "FavoriteFolders";
 
         public class CustomDropHandler : IDropTarget

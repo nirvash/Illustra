@@ -156,7 +156,7 @@ namespace Illustra.Tests.MCPHost
         {
             // Arrange
             // Use an anonymous object or dictionary for serialization if InvokeRequest is complex
-            var requestPayload = new { tool_name = (string)null, arguments = new { } };
+            var requestPayload = new { tool_name = (string?)null, arguments = new { } }; // CS8600 Fix: Cast null to nullable string
 
             // Act
             // Need to serialize manually as PostAsJsonAsync might handle nulls differently
@@ -252,7 +252,7 @@ namespace Illustra.Tests.MCPHost
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
             // Wait for the tool result event using SpinWait
-            SseEvent receivedEvent = null;
+            SseEvent? receivedEvent = null; // CS8600 Fix: Declare as nullable
             var waitResult = SpinWait.SpinUntil(() =>
             {
                 lock (_receivedSseEvents)
@@ -286,7 +286,7 @@ namespace Illustra.Tests.MCPHost
         public async Task Invoke_ListTools_ReturnsOkWithToolList()
         {
             // Arrange
-            var request = new InvokeRequest { ToolName = "list_tools", Arguments = null }; // Changed McpController.InvokeRequest to InvokeRequest
+            var request = new InvokeRequest { ToolName = "list_tools", Arguments = new JObject() }; // CS8625 Fix: Provide empty JObject instead of null
 
             // Define expected response based on the reflection result (inputSchema is now parsed object)
             // Removed expectedExecuteSchema definition
@@ -369,7 +369,7 @@ namespace Illustra.Tests.MCPHost
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted)); // Invoke should still return Accepted
 
             // Wait for the error event using SpinWait
-            SseEvent receivedEvent = null;
+            SseEvent? receivedEvent = null; // CS8600 Fix: Declare as nullable
             var waitResult = SpinWait.SpinUntil(() =>
             {
                 lock (_receivedSseEvents)
@@ -415,7 +415,7 @@ namespace Illustra.Tests.MCPHost
             // Wait for connection and the ready event using SpinWait
             Assert.That(await sseConnected.Task.WaitAsync(TimeSpan.FromSeconds(2)), Is.True, "SSE should connect");
 
-            SseEvent receivedEvent = null;
+            SseEvent? receivedEvent = null; // CS8600 Fix: Declare as nullable
             var waitResult = SpinWait.SpinUntil(() =>
             {
                 lock (_receivedSseEvents)
@@ -460,8 +460,8 @@ namespace Illustra.Tests.MCPHost
                 // Correct StreamReader constructor: stream, encoding, detectEncodingFromByteOrderMarks, bufferSize, leaveOpen
                 using var reader = new StreamReader(stream, Encoding.UTF8, true, 1024, true);
 
-                string line;
-                string currentEvent = null;
+                string? line; // CS8600 Fix: Declare as nullable to match ReadLineAsync return type
+                string? currentEvent = null; // CS8600 Fix: Declare as nullable
                 StringBuilder dataBuilder = new StringBuilder();
 
                 while (!cancellationToken.IsCancellationRequested && (line = await reader.ReadLineAsync(cancellationToken)) != null)
@@ -509,8 +509,8 @@ namespace Illustra.Tests.MCPHost
         // Helper class to store parsed SSE events
         public class SseEvent // Changed to public
         {
-            public string Event { get; set; }
-            public string Data { get; set; }
+            public string? Event { get; set; } // CS8618 Fix: Allow null
+            public string? Data { get; set; } // CS8618 Fix: Allow null
         }
     } // End of McpControllerTests class
 } // End of namespace

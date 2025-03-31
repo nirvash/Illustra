@@ -12,13 +12,13 @@ namespace Illustra.MCPHost.Models
         /// The name of the tool to execute.
         /// </summary>
         [JsonProperty("tool_name")]
-        public string ToolName { get; set; }
+        public string? ToolName { get; set; } // CS8618 Fix: Allow null
 
         /// <summary>
         /// The arguments for the tool, as a JSON object.
         /// Can be JObject for flexibility or a specific type if known.
         /// </summary>
         [JsonProperty("arguments")]
-        public JObject Arguments { get; set; } // Using JObject for flexibility
+        public JObject? Arguments { get; set; } // CS8618 Fix: Allow null, Using JObject for flexibility
     }
 }

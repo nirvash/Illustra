@@ -113,7 +113,7 @@ namespace Illustra.Models
         }
 
         // INotifyPropertyChanged の実装
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {

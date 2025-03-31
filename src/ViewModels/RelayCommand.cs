@@ -14,18 +14,18 @@ namespace Illustra.ViewModels
             _canExecute = canExecute;
         }
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged // CS8612 Fix: Make event nullable
         {
             add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
         }
 
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
             return _canExecute?.Invoke() ?? true;
         }
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             _execute();
         }
@@ -47,18 +47,18 @@ namespace Illustra.ViewModels
             _canExecute = canExecute;
         }
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged // CS8612 Fix: Make event nullable
         {
             add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
         }
 
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter) // CS8767 Fix: Make parameter nullable
         {
             return _canExecute?.Invoke((T)parameter) ?? true;
         }
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter) // CS8767 Fix: Make parameter nullable
         {
             _execute((T)parameter);
         }

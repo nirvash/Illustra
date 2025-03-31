@@ -61,14 +61,14 @@ namespace Illustra.Views
             set => SetValue(ImagePropertiesProperty, value);
         }
 
-        public static readonly DependencyProperty FontSizeProperty =
+        public new static readonly DependencyProperty FontSizeProperty =
             DependencyProperty.Register(
                 nameof(FontSize),
                 typeof(double),
                 typeof(PropertyPanelControl),
                 new PropertyMetadata(12.0));
 
-        public double FontSize
+        public new double FontSize
         {
             get => (double)GetValue(FontSizeProperty);
             set => SetValue(FontSizeProperty, value);

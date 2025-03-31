@@ -64,7 +64,7 @@ namespace Illustra.MCPHost.Controllers
         public async Task<IActionResult> Invoke() // Keep parameter removed for manual reading
         {
             // Manually read and deserialize the request body as [FromBody] fails in TestServer with Newtonsoft.Json
-            InvokeRequest request = null;
+            InvokeRequest? request = null; // CS8600 Fix: Declare as nullable
             string requestBody = string.Empty; // Store body for logging
             try
             {
@@ -174,7 +174,7 @@ namespace Illustra.MCPHost.Controllers
             Response.Headers.Append("Cache-Control", "no-cache");
             Response.Headers.Append("Connection", "keep-alive");
 
-            StreamWriter clientWriter = null;
+            StreamWriter? clientWriter = null; // CS8600 Fix: Declare as nullable
             try
             {
                 // Use Response.Body directly for async writing

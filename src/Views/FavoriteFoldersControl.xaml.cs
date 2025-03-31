@@ -12,11 +12,9 @@ using GongSolutions.Wpf.DragDrop;
 using Illustra.Models;
 using Illustra.Controls;
 using System.Windows.Documents;
-// using Illustra.Views; // ProgressDialog は DialogHelper で使うので不要
 using System.Threading.Tasks; // Task を使うために追加
 using System; // IProgress を使うために追加
-// using MahApps.Metro.Controls; // MetroWindow は DialogHelper で使うので不要
-using Illustra.Helpers; // DialogHelper を使うために追加
+// using Illustra.Helpers; // CS0105 Fix: Redundant using (DialogHelper を使うために追加)
 using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views

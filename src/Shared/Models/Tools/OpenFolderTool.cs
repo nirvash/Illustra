@@ -46,7 +46,7 @@ namespace Illustra.Shared.Models.Tools
                 logger.LogWarning("Missing or invalid 'folderPath' argument for 'open_folder' tool.");
                 throw new ArgumentException("Missing or invalid 'folderPath' argument.");
             }
-            string folderPath = folderPathToken.Value<string>();
+            string? folderPath = folderPathToken.Value<string>(); // CS8600 Fix: Allow null initially
             if (string.IsNullOrEmpty(folderPath))
             {
                 logger.LogWarning("'folderPath' argument cannot be empty for 'open_folder' tool.");
@@ -54,7 +54,7 @@ namespace Illustra.Shared.Models.Tools
             }
 
             // Optional: Extract selectedFilePath if present
-            string selectedFilePath = null;
+            string? selectedFilePath = null; // CS8600 Fix: Explicitly declare as nullable
             if (arguments.TryGetValue("selectedFilePath", StringComparison.OrdinalIgnoreCase, out var selectedPathToken) && selectedPathToken.Type == JTokenType.String)
             {
                 selectedFilePath = selectedPathToken.Value<string>();
@@ -106,7 +106,7 @@ namespace Illustra.Shared.Models.Tools
 
     public class McpOpenFolderEventArgs : McpBaseEventArgs
     {
-        public string FolderPath { get; set; }
+        public string? FolderPath { get; set; } // CS8618 Fix: Allow null
         public string? SelectedFilePath { get; set; } // Optional file to select after opening
     }
 

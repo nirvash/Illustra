@@ -33,12 +33,15 @@ namespace Illustra.Helpers
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                          "Illustra", "WindowPlacements.json");
 
+#pragma warning disable CS0618 // Type or member is obsolete
         private static Dictionary<string, WINDOWPLACEMENT> _placements;
+#pragma warning restore CS0618 // Type or member is obsolete
 
         public string SettingsIdentifier { get; set; } = "Default";
 
         private WINDOWPLACEMENT? _placement;
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public WINDOWPLACEMENT Placement
         {
             get
@@ -63,6 +66,7 @@ namespace Illustra.Helpers
             }
             set => _placement = value;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         public bool UpgradeSettings { get; set; } = false;
 
@@ -72,7 +76,9 @@ namespace Illustra.Helpers
 
         public void Save()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             Placement.length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
+#pragma warning restore CS0618 // Type or member is obsolete
             _placements[SettingsIdentifier] = this.Placement;
             SavePlacements();
         }
@@ -101,17 +107,23 @@ namespace Illustra.Helpers
                 if (File.Exists(SettingsFilePath))
                 {
                     var json = File.ReadAllText(SettingsFilePath);
+#pragma warning disable CS0618 // Type or member is obsolete
                     _placements = JsonConvert.DeserializeObject<Dictionary<string, WINDOWPLACEMENT>>(json)
                                   ?? new Dictionary<string, WINDOWPLACEMENT>();
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
                 else
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     _placements = new Dictionary<string, WINDOWPLACEMENT>();
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
             }
             catch
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 _placements = new Dictionary<string, WINDOWPLACEMENT>();
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
 

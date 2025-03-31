@@ -2479,7 +2479,7 @@ namespace Illustra.Views
                 }
 
                 // 画像を読み込んでウィンドウを表示
-                _imageViewerWindow.LoadImageFromPath(filePath, true);
+                _imageViewerWindow.LoadContentFromPath(filePath, true); // CS0618 Fix: Use recommended method
                 _imageViewerWindow.Show();
                 _imageViewerWindow.Focus(); // ビューアウィンドウにフォーカスを設定
             }

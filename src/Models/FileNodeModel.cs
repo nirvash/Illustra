@@ -200,7 +200,7 @@ namespace Illustra.Models
 
         // 最後に存在チェックした日時. 後から追加する場合 NotNull を付ける場合 Alter Table で工夫が必要
         [Column, LinqToDB.Mapping.Nullable]
-        public DateTime LastCheckedTime { get; set; } = DateTime.MinValue;
+        public DateTime? LastCheckedTime { get; set; } // CS8073 Fix: Make property nullable to match DB schema and allow null checks
 
         private bool _isLastSelected;
         [LinqToDB.Mapping.NotColumn]
