@@ -356,28 +356,37 @@ namespace Illustra.Views
             }
         }
 
-        private void ShowContextMenu(FrameworkElement element)
+        /// <summary>
+        /// 指定されたアイテムのコンテキストメニューを表示します。
+        /// </summary>
+        /// <param name="clickedItem">右クリックされたアイテムのFileNodeModel</param>
+        /// <param name="placementTarget">メニューを表示する基準要素</param>
+        private void ShowContextMenu(FileNodeModel clickedItem, FrameworkElement placementTarget)
         {
-            if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
+            if (clickedItem == null) return;
 
-            // 現在のプロパティを取得
+            // 右クリックされたアイテムのプロパティを取得 (必要に応じて非同期で取得)
+            // この例では同期的にAppContextから取得していますが、
+            // 必要であれば clickedItem.FullPath を使ってDBなどから取得してください。
+            // var itemProperties = await GetPropertiesForItemAsync(clickedItem.FullPath);
+            // 現状は選択中のアイテムのプロパティを表示する仕様のままにします。
+            // 右クリックアイテムのプロパティを表示したい場合は、AppContext.CurrentProperties の更新が必要です。
             var currentProperties = _appContext.CurrentProperties;
 
             // コンテキストメニューを作成
             var menu = new ContextMenu();
 
-            // プロンプトをコピー
-            // プロンプト情報がある場合のみメニューを表示
-            if (currentProperties?.StableDiffusionResult != null) // null 条件演算子を追加
+            // --- プロンプト関連メニュー (選択中のアイテムのプロパティを使用) ---
+            if (currentProperties?.StableDiffusionResult != null)
             {
                 var copyPromptItem = new MenuItem
                 {
                     Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
                 };
+                // CopyPromptは選択中のアイテムを対象とするため、引数は不要
                 copyPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Positive);
                 menu.Items.Add(copyPromptItem);
 
-                // ネガティブプロンプトをコピー (存在する場合のみ)
                 if (!string.IsNullOrEmpty(currentProperties.StableDiffusionResult.NegativePrompt))
                 {
                     var copyNegativePromptItem = new MenuItem
@@ -388,7 +397,6 @@ namespace Illustra.Views
                     menu.Items.Add(copyNegativePromptItem);
                 }
 
-                // プロンプト全体をコピー
                 var copyAllPromptItem = new MenuItem
                 {
                     Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
@@ -397,23 +405,24 @@ namespace Illustra.Views
                 menu.Items.Add(copyAllPromptItem);
             }
 
+            // --- 右クリックされたアイテムに対する操作 ---
             // 名前の変更
             var renameItem = new MenuItem
             {
                 Header = (string)Application.Current.FindResource("String_Thumbnail_ContextMenu_Rename")
             };
-            renameItem.Click += async (s, e) =>
-            {
-                // selectedItem はメソッド冒頭で取得済みなので再取得不要
-                await DoRenameAsync(selectedItem);
-            };
+            // DoRenameAsyncには右クリックされたアイテムを渡す
+            renameItem.Click += async (s, e) => await DoRenameAsync(clickedItem);
             menu.Items.Add(renameItem);
+
+            // TODO: 他の右クリックアイテムに対する操作メニュー項目をここに追加
+            // 例: 削除、パスをコピーなど
 
             // メニュー項目が1つもない場合は表示しない
             if (menu.Items.Count == 0) return;
 
             // メニューを表示
-            menu.PlacementTarget = element;
+            menu.PlacementTarget = placementTarget; // 引数で受け取った要素を基準にする
             menu.IsOpen = true;
         }
 
@@ -463,10 +472,28 @@ namespace Illustra.Views
             // ThumbnailItemsControlの右クリックイベントを設定
             ThumbnailItemsControl.PreviewMouseRightButtonDown += (s, e) =>
             {
-                if (e.OriginalSource is FrameworkElement element)
+                // 右クリックされた位置のListViewItemを取得
+                var listViewItem = UIHelper.FindVisualParent<ListViewItem>(e.OriginalSource as DependencyObject);
+                if (listViewItem != null && listViewItem.DataContext is FileNodeModel clickedItem)
                 {
-                    ShowContextMenu(element);
-                    e.Handled = true;
+                    // 右クリックされたアイテムを選択状態にする
+                    if (!ThumbnailItemsControl.SelectedItems.Contains(clickedItem))
+                    {
+                        ThumbnailItemsControl.SelectedItems.Clear();
+                        ThumbnailItemsControl.SelectedItems.Add(clickedItem);
+                    }
+                    // ViewModelの選択状態も更新 (UI->ViewModel)
+                    _viewModel.SelectedItems.Clear();
+                    _viewModel.SelectedItems.Add(clickedItem);
+
+                    // 右クリックされたアイテムのコンテキストメニューを表示
+                    ShowContextMenu(clickedItem, listViewItem);
+                    e.Handled = true; // イベントを処理済みにする
+                }
+                else
+                {
+                     // アイテム外で右クリックされた場合は何もしないか、別のメニューを表示するなど
+                     e.Handled = false; // デフォルトのコンテキストメニューなどを許可する場合
                 }
             };
 
@@ -888,7 +915,7 @@ namespace Illustra.Views
         }
 
         /// <summary>
-        /// サムネイルのロード完了時に前回選択したファイルを選択する処理
+        /// ファイルシステムの変更を処理するためのインターフェースの実装
         /// </summary>
         #region IFileSystemChangeHandler Implementation
         public void OnFileCreated(string path)
