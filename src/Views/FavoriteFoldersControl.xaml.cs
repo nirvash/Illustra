@@ -461,7 +461,7 @@ namespace Illustra.Views
         }
 
         // 表示名を設定するメニューのクリックイベントハンドラ
-        private async void SetDisplayName_Click(object sender, RoutedEventArgs e)
+        private void SetDisplayName_Click(object sender, RoutedEventArgs e) // CS1998 Fix: Removed unnecessary async
         {
             if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder)
             {

@@ -88,7 +88,7 @@ namespace Illustra.MCPHost
             }
         }
 
-        private Type FindToolExecutorType(string toolName)
+        private Type? FindToolExecutorType(string toolName) // CS8603 Fix: Return type can be null
         {
             // Search in the assembly containing the tool definitions (Illustra.Shared)
             // Assumes tool classes implement IToolExecutor and have McpToolAttribute

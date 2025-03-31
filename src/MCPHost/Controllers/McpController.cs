@@ -53,7 +53,6 @@ namespace Illustra.MCPHost.Controllers
         /// <summary>
         /// MCP Invoke endpoint. Executes a tool requested by the client.
         /// </summary>
-        /// <param name="request">Request body containing tool_name and arguments.</param> // Parameter name kept for documentation
         /// <returns>HTTP 202 Accepted if the request is received, or an error status.</returns>
         [HttpPost("/invoke")]
         [ProducesResponseType(StatusCodes.Status202Accepted)]
@@ -126,7 +125,7 @@ namespace Illustra.MCPHost.Controllers
                     _ = Task.Run(async () => {
                         try
                         {
-                            await _apiService.InvokeToolAsync(request.ToolName, request.Arguments, cancellationToken);
+                            await _apiService.InvokeToolAsync(request.ToolName, request.Arguments ?? new JObject(), cancellationToken);
                             // Success/error logging and potential SSE events are handled within InvokeToolAsync/OpenFolderAsync
                         }
                         catch (ArgumentException argEx) // Catch specific argument errors from InvokeToolAsync

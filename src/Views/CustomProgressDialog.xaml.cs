@@ -94,7 +94,7 @@ namespace Illustra.Views
             IsCancelable = _cancellationTokenSource != null; // Enable button if CTS is provided
         }
 
-        private async void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e) // CS1998 Fix: Removed unnecessary async
         {
             if (!_isCancelled)
             {

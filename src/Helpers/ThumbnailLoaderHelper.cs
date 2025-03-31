@@ -608,7 +608,7 @@ public class ThumbnailLoaderHelper
 
             // DBからFileNodeModelを取得（バックグラウンドで実行）
             // 注意: DBアクセスは時間がかかる操作なのでバックグラウンドスレッドで実行
-            var fileNode = await _db.CreateFileNodeAsync(path);
+            var fileNode = _db.CreateFileNode(path); // CS1061 Fix: Use renamed synchronous method
 
             if (fileNode == null)
             {
@@ -635,8 +635,8 @@ public class ThumbnailLoaderHelper
                     // ダミー画像を設定
                     fileNode.ThumbnailInfo = new ThumbnailInfo(GetDummyImage(), ThumbnailState.NotLoaded);
                     // 拡張メソッドを使用してプロパティを設定
-                    fileNode.HasThumbnail = false;
-                    fileNode.IsLoadingThumbnail = false;
+                    // fileNode.HasThumbnail = false; // CS1656 Fix: Property is read-only, derived from ThumbnailInfo.State
+                    // fileNode.IsLoadingThumbnail = false; // CS1656 Fix: Property is read-only, derived from ThumbnailInfo.State
                 }, System.Windows.Threading.DispatcherPriority.Normal);
             }
             else
@@ -650,8 +650,8 @@ public class ThumbnailLoaderHelper
                         fileNode.ThumbnailInfo = new ThumbnailInfo(GetDummyImage(), ThumbnailState.NotLoaded);
                     }
                     // 拡張メソッドを使用してプロパティを設定
-                    fileNode.HasThumbnail = false;
-                    fileNode.IsLoadingThumbnail = false;
+                    // fileNode.HasThumbnail = false; // CS1656 Fix: Property is read-only, derived from ThumbnailInfo.State
+                    // fileNode.IsLoadingThumbnail = false; // CS1656 Fix: Property is read-only, derived from ThumbnailInfo.State
                 }, System.Windows.Threading.DispatcherPriority.Normal);
             }
 

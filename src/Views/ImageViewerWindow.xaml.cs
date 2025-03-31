@@ -400,7 +400,7 @@ namespace Illustra.Views
             }
         }
 
-        private async void SetRating(int rating)
+        private void SetRating(int rating) // CS1998 Fix: Removed unnecessary async
         {
             if (Properties == null || string.IsNullOrEmpty(_currentFilePath)) return;
 
@@ -829,7 +829,7 @@ namespace Illustra.Views
             }
         }
 
-        private void MainWindow_StateChanged(object sender, System.EventArgs e)
+        private void MainWindow_StateChanged(object? sender, System.EventArgs e) // CS8622 Fix: Make sender nullable
         {
             if (this.WindowState == WindowState.Maximized && this.WindowStyle == WindowStyle.None)
             {

@@ -39,8 +39,11 @@ namespace Illustra.Helpers
 
         public string SettingsIdentifier { get; set; } = "Default";
 
+#pragma warning disable CS0618 // Type or member is obsolete
         private WINDOWPLACEMENT? _placement;
 
+#pragma warning restore CS0618 // Type or member is obsolete
+// Pragma moved to cover the entire property definition
 #pragma warning disable CS0618 // Type or member is obsolete
         public WINDOWPLACEMENT Placement
         {
@@ -66,6 +69,7 @@ namespace Illustra.Helpers
             }
             set => _placement = value;
         }
+// Pragma moved to cover the entire property definition
 #pragma warning restore CS0618 // Type or member is obsolete
 
         public bool UpgradeSettings { get; set; } = false;

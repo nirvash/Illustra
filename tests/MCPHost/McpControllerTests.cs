@@ -143,9 +143,9 @@ namespace Illustra.Tests.MCPHost
                 x => x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Received /start request.")),
+                    It.Is<It.IsAnyType>((v, t) => v != null && v.GetType() == typeof(string) && ((string)v).Contains("Received /start request.")), // CS8122/CS8602 Fix: Use GetType() and cast instead of 'is' pattern
                     null,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()), // CS8620 Fix: Match nullable exception type
                 Times.Once);
         }
 
@@ -269,7 +269,8 @@ namespace Illustra.Tests.MCPHost
             Assert.That(receivedEvent.Event, Is.EqualTo("tool_result"));
 
             // Parse the event data and verify it matches the expected result
-            var eventData = JObject.Parse(receivedEvent.Data);
+            Assert.That(receivedEvent.Data, Is.Not.Null, "SSE event data should not be null."); // Add null check for data
+            var eventData = JObject.Parse(receivedEvent.Data!); // CS8604 Fix: Use null-forgiving operator after check
             Assert.That(JToken.DeepEquals(eventData, expectedResult), Is.True);
 
             // Clean up SSE listener

@@ -239,7 +239,7 @@ namespace Illustra.Helpers
                 // 古いパスのノードが見つからない場合は新規作成
                 if (fileNode == null)
                 {
-                    return await CreateFileNodeAsync(newPath, cancellationToken);
+                    return CreateFileNode(newPath, cancellationToken); // CS0103 Fix: Use renamed synchronous method
                 }
 
                 // ファイル情報を更新
@@ -273,7 +273,7 @@ namespace Illustra.Helpers
             }
         }
 
-        public async Task<FileNodeModel> CreateFileNodeAsync(string filePath, CancellationToken cancellationToken = default)
+        public FileNodeModel CreateFileNode(string filePath, CancellationToken cancellationToken = default) // CS1998 Fix: Removed unnecessary async and Task<>
         {
             var folderPath = Path.GetDirectoryName(filePath);
             var fileName = Path.GetFileName(filePath);

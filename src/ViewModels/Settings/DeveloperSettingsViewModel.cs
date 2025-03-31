@@ -55,7 +55,7 @@ namespace Illustra.ViewModels.Settings
         {
             _settings = settings;
             _databaseManager = ContainerLocator.Container.Resolve<DatabaseManager>();
-            CleanupDatabaseCommand = new RelayCommand(CleanupDatabaseAsync);
+            CleanupDatabaseCommand = new RelayCommand(CleanupDatabase); // Rename method call
         }
 
         private void UpdateLogCategoriesVisibility()
@@ -83,7 +83,7 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
-        private async void CleanupDatabaseAsync()
+        private void CleanupDatabase() // Rename method definition
         {
             try
             {

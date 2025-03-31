@@ -625,7 +625,7 @@ namespace Illustra.Views
             UpdateStatusBar();
         }
 
-        private async void OnDateSortChanged(object sender, RoutedEventArgs e)
+        private void OnDateSortChanged(object sender, RoutedEventArgs e) // CS1998 Fix: Removed unnecessary async
         {
             var menuItem = sender as MenuItem;
             if (menuItem == null) return;

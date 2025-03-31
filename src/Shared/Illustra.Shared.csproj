@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
-    <PackageReference Include="System.Text.Json" Version="8.0.3" />
+    <!-- <PackageReference Include="System.Text.Json" Version="8.0.3" /> -->    <!-- NU1903 Fix: Remove explicit reference, rely on SDK version -->
     <PackageReference Include="Prism.Core" Version="9.0.537" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <!-- Added Newtonsoft.Json -->

@@ -1144,7 +1144,7 @@ namespace Illustra.Views
                     ThumbnailItemsControl.Visibility = Visibility.Visible;
 
                     // Global Command として強制再評価させる
-                    Application.Current.Dispatcher.BeginInvoke((Action)(() =>
+                    _ = Application.Current.Dispatcher.BeginInvoke((Action)(() => // CS4014 Fix: Discard the result as we don't need to wait for completion
                     {
                         CommandManager.InvalidateRequerySuggested();
                     }));
@@ -1714,7 +1714,7 @@ namespace Illustra.Views
                     var selectedItem = _viewModel.SelectedItems.FirstOrDefault() as FileNodeModel;
                     if (selectedItem != null)
                     {
-                        DoRenameAsync(selectedItem);
+                        await DoRenameAsync(selectedItem); // CS4014 Fix: Await the async method call
                     }
                 }
                 e.Handled = true;
