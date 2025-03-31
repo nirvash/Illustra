@@ -914,9 +914,20 @@ namespace Illustra.Views
                         // ソート順に従って適切な位置に挿入
                         _viewModel.AddItem(fileNode);
 
-                        var focused = Keyboard.FocusedElement;
                         // TreeViewやその子孫がフォーカス中ならフォーカスしない
-                        if (UIHelper.IsParentWindowActive(this) && focused is DependencyObject d && !IsInsideTreeView(d))
+                        var focused = Keyboard.FocusedElement;
+                        var requestFocus = (UIHelper.IsParentWindowActive(this) && focused is DependencyObject d && !IsInsideTreeView(d));
+
+                        // 新規ファイル自動選択の処理
+                        if (_appSettings.AutoSelectNewFile)
+                        {
+                            // UIスレッドで選択処理とフォーカスを実行
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                SelectThumbnail(fileNode.FullPath, requestFocus); // requestFocusをtrueにして選択とフォーカスを行う
+                            });
+                        }
+                        else if (requestFocus)
                         {
                             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                             ThumbnailItemsControl.Focus();
