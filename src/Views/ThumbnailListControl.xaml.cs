@@ -357,14 +357,13 @@ namespace Illustra.Views
 
             // 現在のプロパティを取得
             var currentProperties = _appContext.CurrentProperties;
-            if (currentProperties?.StableDiffusionResult == null) return;
 
             // コンテキストメニューを作成
             var menu = new ContextMenu();
 
             // プロンプトをコピー
             // プロンプト情報がある場合のみメニューを表示
-            if (currentProperties.StableDiffusionResult != null)
+            if (currentProperties?.StableDiffusionResult != null) // null 条件演算子を追加
             {
                 var copyPromptItem = new MenuItem
                 {
@@ -389,12 +388,13 @@ namespace Illustra.Views
             };
             renameItem.Click += async (s, e) =>
             {
-                if (_viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
-                {
-                    await DoRenameAsync(selectedItem);
-                }
+                // selectedItem はメソッド冒頭で取得済みなので再取得不要
+                await DoRenameAsync(selectedItem);
             };
             menu.Items.Add(renameItem);
+
+            // メニュー項目が1つもない場合は表示しない
+            if (menu.Items.Count == 0) return;
 
             // メニューを表示
             menu.PlacementTarget = element;
