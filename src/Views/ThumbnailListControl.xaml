@@ -220,6 +220,7 @@
                            IsTabStop="True"
                            TabIndex="3"
                            FocusVisualStyle="{x:Null}"
+                           dd:DragDrop.DragPreviewMaxItemsCount="9999"
                            PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
                     <ListView.Template>
                         <ControlTemplate TargetType="ListView">
@@ -234,15 +235,24 @@
                     </ListView.Template>
             <dd:DragDrop.DragAdornerTemplate>
                 <DataTemplate>
-                    <Border BorderBrush="#AA000000"
-                            BorderThickness="1"
+                    <!-- Item全体の枠 (サイズは維持) --><!-- 全体の枠は見えないように -->
+                    <Border BorderBrush="Transparent"
+                            BorderThickness="0"
                             Width="120"
                             Height="120"
                             Margin="0 0 0 20">
-                        <Image Source="{Binding ThumbnailInfo.Image}"
-                               Width="120"
-                               Height="120"
-                               Stretch="UniformToFill"/>
+                        <!-- Imageとその枠を左下に配置 -->
+                        <Border BorderBrush="#AA000000"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                MaxWidth="118"
+                                MaxHeight="118"> <!-- 全体の枠サイズからBorderThicknessを引いた値 -->
+                                <Image Source="{Binding ThumbnailInfo.Image}"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
+                        </Border>
                     </Border>
                 </DataTemplate>
             </dd:DragDrop.DragAdornerTemplate>
@@ -261,14 +271,23 @@
 
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderBrush="#AA000000"
-                                        BorderThickness="1"
+                                <!-- Item全体の枠 (サイズは維持) --><!-- 全体の枠は見えないように -->
+                                <Border BorderBrush="Transparent"
+                                        BorderThickness="0"
                                         Width="100"
                                         Height="100">
-                                    <Image Source="{Binding ThumbnailInfo.Image}"
-                                           Width="100"
-                                           Height="100"
-                                           Stretch="UniformToFill"/>
+                                    <!-- Imageとその枠を左下に配置 -->
+                                    <Border BorderBrush="#AA000000"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            MaxWidth="98"
+                                            MaxHeight="98"><!-- 全体の枠サイズからBorderThicknessを引いた値 -->
+                                        <Image Source="{Binding ThumbnailInfo.Image}"
+                                               Stretch="Uniform"
+                                               HorizontalAlignment="Left"
+                                               VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
+                                    </Border>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
