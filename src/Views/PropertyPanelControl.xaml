@@ -357,8 +357,16 @@
                                                            Text="{DynamicResource String_Property_Model}"
                                                            Margin="0,0,10,5"/>
                                                 <TextBox Grid.Column="1"
+                                                         PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
                                                          Text="{Binding StableDiffusionResult.Model, Mode=OneWay}"
-                                                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                                                         Style="{StaticResource ReadOnlyTextBoxStyle}">
+                                                    <TextBox.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                    Click="CopyTag_Click"/>
+                                                        </ContextMenu>
+                                                    </TextBox.ContextMenu>
+                                                </TextBox>
                                         </Grid>
 
                                         <!-- プロンプトタグ -->
@@ -476,7 +484,15 @@
                                                                                  Style="{StaticResource NegativeTagTextBoxStyle}"
                                                                                  IsReadOnlyCaretVisible="True"
                                                                                  VerticalAlignment="Center"
-                                                                                 MinWidth="20"/>
+                                                                                 MinWidth="20"
+                                                                                 PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown">
+                                                                          <TextBox.ContextMenu>
+                                                                              <ContextMenu>
+                                                                                  <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                          Click="CopyTag_Click"/>
+                                                                              </ContextMenu>
+                                                                          </TextBox.ContextMenu>
+                                                                      </TextBox>
                                                                 </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
