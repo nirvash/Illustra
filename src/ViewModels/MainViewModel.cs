@@ -99,29 +99,9 @@ namespace Illustra.ViewModels
             }
         }
 
-        private readonly ObservableCollection<FileNodeModel> _selectedItems = new();
-        public ObservableCollection<FileNodeModel> SelectedItems => _selectedItems;
-
-        // 通知なしで選択状態を更新するメソッド
-        public void UpdateSelectedItemsSilently(IEnumerable<FileNodeModel> items)
-        {
-            _selectedItems.Clear();
-            foreach (var item in items)
-            {
-                _selectedItems.Add(item);
-            }
-        }
-
-        // 単一アイテムの追加・削除用メソッド
-        public void AddSelectedItemSilently(FileNodeModel item)
-        {
-            _selectedItems.Add(item);
-        }
-
-        public void RemoveSelectedItemSilently(FileNodeModel item)
-        {
-            _selectedItems.Remove(item);
-        }
+        // SelectedItems も BulkObservableCollection を使用する
+        private readonly BulkObservableCollection<FileNodeModel> _selectedItems = [];
+        public BulkObservableCollection<FileNodeModel> SelectedItems => _selectedItems;
 
         public ICollectionView FilteredItems => _filteredItems;
 

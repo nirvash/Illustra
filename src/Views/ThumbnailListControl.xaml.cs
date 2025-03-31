@@ -772,28 +772,20 @@ namespace Illustra.Views
             // ListViewの選択状態が変更されたときのイベントハンドラを追加
             ThumbnailItemsControl.SelectionChanged += (s, args) =>
             {
+                // UIからの更新ループを防ぐ / ViewModel更新中の処理をスキップ
                 if (_isUpdatingSelection) return;
-                _isUpdatingSelection = true;
 
+                // ViewModelの選択状態をUIの選択状態に同期させる (UI -> ViewModel)
                 try
                 {
-                    // 削除された項目を処理
-                    foreach (FileNodeModel item in args.RemovedItems)
-                    {
-                        _viewModel.RemoveSelectedItemSilently(item);
-                    }
+                    _isUpdatingSelection = true; // ViewModel更新中のフラグ
 
-                    // 選択アイテムの更新（ViewModelのCollectionChangedイベントでIsLastSelectedが更新される）
-                    foreach (FileNodeModel item in args.AddedItems)
-                    {
-                        _viewModel.AddSelectedItemSilently(item);
-                    }
+                    // ViewModelの選択リストを効率的に更新
+                    // (ViewModelにAddRange/RemoveRangeのようなメソッドがあれば、それを使うのが理想)
+                    var currentUiSelection = ThumbnailItemsControl.SelectedItems.Cast<FileNodeModel>().ToList();
 
-                    // 削除された項目を処理
-                    foreach (FileNodeModel item in args.RemovedItems)
-                    {
-                        _viewModel.RemoveSelectedItemSilently(item);
-                    }
+                    // ViewModelの選択リストを一括更新
+                    _viewModel.SelectedItems.ReplaceAll(currentUiSelection);
 
                     // イベントの発行（最後に選択されたアイテムがある場合のみ）
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
@@ -801,8 +793,11 @@ namespace Illustra.Views
                     {
                         var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath);
                         _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
-                        LoadFilePropertiesAsync(lastSelected.FullPath);
                     }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[選択同期エラー] UI->ViewModel同期中にエラー: {ex.Message}");
                 }
                 finally
                 {
@@ -811,11 +806,7 @@ namespace Illustra.Views
             };
         }
 
-        private void LoadFilePropertiesAsync(string fullPath)
-        {
-            // TBD ファイルのプロパティをロードして表示する処理
-            // ファイル選択イベントの発行によってこの処理は不要になる可能性がある
-        }
+
 
         /// <summary>
         /// 指定されたファイルパスの前の画像ファイルパスを取得します
