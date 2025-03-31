@@ -317,7 +317,9 @@ namespace Illustra.Views
             }
         }
 
-        private void CopyPrompt(bool copyAll = false)
+        private enum PromptCopyType { Positive, Negative, All }
+
+        private void CopyPrompt(PromptCopyType type)
         {
             if (_viewModel.SelectedItems.LastOrDefault() is not FileNodeModel selectedItem) return;
 
@@ -326,24 +328,27 @@ namespace Illustra.Views
 
             try
             {
-                string textToCopy;
-                if (copyAll)
-                {
-                    // UserCommentそのものをコピー
-                    textToCopy = currentProperties.UserComment;
-                }
-                else
-                {
-                    var result = currentProperties.StableDiffusionResult;
-                    var sb = new StringBuilder();
+                string textToCopy = "";
+                var result = currentProperties.StableDiffusionResult;
 
-                    // ポジティブプロンプトのみを追加
-                    sb.AppendLine(result.Prompt);
-                    textToCopy = sb.ToString().Trim();
+                switch (type)
+                {
+                    case PromptCopyType.Positive:
+                        textToCopy = result.Prompt;
+                        break;
+                    case PromptCopyType.Negative:
+                        textToCopy = result.NegativePrompt;
+                        break;
+                    case PromptCopyType.All:
+                        textToCopy = currentProperties.UserComment; // UserComment全体をコピー
+                        break;
                 }
 
-                Clipboard.SetText(textToCopy);
-                ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                if (!string.IsNullOrEmpty(textToCopy))
+                {
+                    Clipboard.SetText(textToCopy.Trim());
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
             }
             catch (Exception ex)
             {
@@ -369,15 +374,26 @@ namespace Illustra.Views
                 {
                     Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
                 };
-                copyPromptItem.Click += (s, e) => CopyPrompt(false);
+                copyPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Positive);
                 menu.Items.Add(copyPromptItem);
+
+                // ネガティブプロンプトをコピー (存在する場合のみ)
+                if (!string.IsNullOrEmpty(currentProperties.StableDiffusionResult.NegativePrompt))
+                {
+                    var copyNegativePromptItem = new MenuItem
+                    {
+                        Header = (string)Application.Current.FindResource("String_Thumbnail_CopyNegativePrompt")
+                    };
+                    copyNegativePromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Negative);
+                    menu.Items.Add(copyNegativePromptItem);
+                }
 
                 // プロンプト全体をコピー
                 var copyAllPromptItem = new MenuItem
                 {
                     Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
                 };
-                copyAllPromptItem.Click += (s, e) => CopyPrompt(true);
+                copyAllPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.All);
                 menu.Items.Add(copyAllPromptItem);
             }
 

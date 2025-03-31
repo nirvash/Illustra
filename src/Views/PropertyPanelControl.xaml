@@ -488,6 +488,11 @@
                                                     Margin="0,0,10,0"
                                                     Padding="10,5"
                                                     Click="CopyPromptContent_Click"/>
+                                            <Button Content="{DynamicResource String_Thumbnail_CopyNegativePrompt}"
+                                                    Margin="0,0,10,0"
+                                                    Padding="10,5"
+                                                    Click="CopyNegativePrompt_Click"
+                                                    Visibility="{Binding StableDiffusionResult.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>
                                             <Button Content="{DynamicResource String_Thumbnail_CopyAllPrompt}"
                                                     Margin="0,0,10,0"
                                                     Padding="10,5"

@@ -310,6 +310,24 @@ namespace Illustra.Views
             }
         }
 
+        private void CopyNegativePrompt_Click(object sender, RoutedEventArgs e)
+        {
+            if (_appContext.CurrentProperties?.StableDiffusionResult?.NegativePrompt != null)
+            {
+                try
+                {
+                    Clipboard.SetText(_appContext.CurrentProperties.StableDiffusionResult.NegativePrompt.Trim());
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+
         private void CopyOriginalText_Click(object sender, RoutedEventArgs e)
         {
             if (_appContext.CurrentProperties?.StableDiffusionResult != null)
