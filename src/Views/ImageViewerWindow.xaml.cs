@@ -22,6 +22,7 @@ using Microsoft.Web.WebView2.Wpf;
 using Microsoft.Web.WebView2.Core;
 using Illustra.Controls;
 using System.Windows.Documents;
+using MahApps.Metro.IconPacks; // 追加
 
 namespace Illustra.Views
 {
@@ -420,11 +421,32 @@ namespace Illustra.Views
             }
         }
 
-        private void ShowNotification(string message, int fontSize = 24)
+        private void ShowNotification(PackIconMaterialDesignKind? iconKind = null, string? message = null, int fontSize = 32)
         {
-            NotificationText.Text = message;
-            NotificationText.FontSize = fontSize;
+            // いったん両方非表示にする
+            NotificationIcon.Visibility = Visibility.Collapsed;
+            NotificationText.Visibility = Visibility.Collapsed;
+
+            if (iconKind.HasValue)
+            {
+                NotificationIcon.Kind = iconKind.Value;
+                NotificationIcon.Visibility = Visibility.Visible;
+                // アイコンサイズはXAMLで固定 (Width="48", Height="48")
+            }
+            else if (!string.IsNullOrEmpty(message))
+            {
+                NotificationText.Text = message;
+                NotificationText.FontSize = fontSize; // テキストの場合のみフォントサイズ適用
+                NotificationText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // 両方nullなら何もしない（通知自体を表示しない）
+                return;
+            }
+
             var storyboard = (Storyboard)FindResource("ShowNotificationStoryboard");
+            // 通知ボーダー自体をターゲットにする
             storyboard.Begin(Notification);
         }
 
@@ -440,10 +462,10 @@ namespace Illustra.Views
             // タイマーの間隔を更新
             UpdateSlideshowInterval();
 
-            // 通知を表示
-            ShowNotification(string.Format(
+            // 通知を表示 (テキストのみ)
+            ShowNotification(message: string.Format(
                 (string)FindResource("String_Slideshow_IntervalFormat"),
-                newInterval), 32);
+                newInterval), fontSize: 32);
         }
 
         private void UpdateSlideshowInterval()
@@ -458,14 +480,14 @@ namespace Illustra.Views
             {
                 _slideshowTimer.Stop();
                 _isSlideshowActive = false;
-                ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
+                ShowNotification(iconKind: PackIconMaterialDesignKind.Pause); // アイコン表示に変更
             }
             else
             {
                 UpdateSlideshowInterval();
                 _slideshowTimer.Start();
                 _isSlideshowActive = true;
-                ShowNotification((string)FindResource("String_Slideshow_PlayIcon"), 48);
+                ShowNotification(iconKind: PackIconMaterialDesignKind.PlayArrow); // アイコン表示に変更
             }
         }
 
@@ -555,7 +577,7 @@ namespace Illustra.Views
                 // 次の画像がない場合はスライドショーを停止
                 _slideshowTimer.Stop();
                 _isSlideshowActive = false;
-                ShowNotification((string)FindResource("String_Slideshow_PauseIcon"), 48);
+                ShowNotification(iconKind: PackIconMaterialDesignKind.Pause); // アイコン表示に変更
             }
         }
 

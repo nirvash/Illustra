@@ -2492,6 +2492,7 @@ namespace Illustra.Views
                     (string)Application.Current.FindResource("String_Thumbnail_FileOperationErrorTitle"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+                LogHelper.LogError($"[画像表示] エラー: {ex.Message}");
 
                 // エラー時はインスタンスをクリア
                 _imageViewerWindow = null;

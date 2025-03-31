@@ -9,6 +9,7 @@
                          xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
                          xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
                          xmlns:localControls="clr-namespace:Illustra.Controls"
+                         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                          mc:Ignorable="d"
                          Height="600"
                          Width="800"
@@ -227,15 +228,27 @@
                     Opacity="0"
                     Padding="16,8">
                 <Grid>
+                    <!-- アイコン表示用 -->
+                    <iconPacks:PackIconMaterialDesign x:Name="NotificationIcon"
+                                                        Kind="PlayArrow"
+                                                        Width="48"
+                                                        Height="48"
+                                                        Foreground="White"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="Collapsed"/> <!-- 初期状態は非表示 -->
+
+                    <!-- テキスト表示用 -->
                     <TextBlock x:Name="NotificationText"
                             IsHitTestVisible="False"
-                            Text="▶"
-                            FontSize="48"
+                            Text=""
+                            FontSize="32"
                             Foreground="White"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             MaxWidth="380"
-                            TextWrapping="Wrap"/>
+                            TextWrapping="Wrap"
+                            Visibility="Collapsed"/> <!-- 初期状態は非表示 -->
                 </Grid>
             </Border>
 
