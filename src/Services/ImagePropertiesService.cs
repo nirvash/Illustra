@@ -109,7 +109,10 @@ namespace Illustra.Services
                     LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
                 }
 
-                _appContext.CurrentProperties = properties;
+                // _appContext.CurrentProperties = properties; // 直接代入は不可
+                // UpdateCurrentPropertiesAsync を呼び出して更新を依頼する
+                // 注意: これによりプロパティが再度読み込まれる
+                await _appContext.UpdateCurrentPropertiesAsync(filePath);
 
                 LogHelper.LogWithTimestamp("プロパティ再読み込み完了", LogHelper.Categories.UI);
             }
@@ -140,7 +143,10 @@ namespace Illustra.Services
                     properties.Rating = fileNode.Rating;
                     LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
                 }
-                _appContext.CurrentProperties = properties;
+                // _appContext.CurrentProperties = properties; // 直接代入は不可
+                // UpdateCurrentPropertiesAsync を呼び出して更新を依頼する
+                // 注意: これによりプロパティが再度読み込まれる
+                await _appContext.UpdateCurrentPropertiesAsync(model.FullPath);
             }
             catch (Exception ex)
             {

@@ -469,13 +469,15 @@ namespace Illustra.Views
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
 
-            // ThumbnailItemsControlの右クリックイベントを設定
-            ThumbnailItemsControl.PreviewMouseRightButtonDown += (s, e) =>
+            // ThumbnailItemsControlの右クリックイベントを設定 (async void に変更)
+            ThumbnailItemsControl.PreviewMouseRightButtonDown += async (s, e) =>
             {
                 // 右クリックされた位置のListViewItemを取得
                 var listViewItem = UIHelper.FindVisualParent<ListViewItem>(e.OriginalSource as DependencyObject);
                 if (listViewItem != null && listViewItem.DataContext is FileNodeModel clickedItem)
                 {
+                    e.Handled = true; // イベントを先に処理済みにする
+
                     // 右クリックされたアイテムを選択状態にする
                     if (!ThumbnailItemsControl.SelectedItems.Contains(clickedItem))
                     {
@@ -486,9 +488,20 @@ namespace Illustra.Views
                     _viewModel.SelectedItems.Clear();
                     _viewModel.SelectedItems.Add(clickedItem);
 
-                    // 右クリックされたアイテムのコンテキストメニューを表示
-                    ShowContextMenu(clickedItem, listViewItem);
-                    e.Handled = true; // イベントを処理済みにする
+                    try
+                    {
+                        // AppContextのプロパティを非同期で更新し、完了を待つ
+                        await _appContext.UpdateCurrentPropertiesAsync(clickedItem.FullPath);
+
+                        // プロパティ更新後にコンテキストメニューを表示
+                        ShowContextMenu(clickedItem, listViewItem);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.LogError($"コンテキストメニュー表示前のプロパティ更新中にエラー: {clickedItem.FullPath}", ex);
+                        // エラーが発生した場合でも、基本的なメニューは表示試行する（オプション）
+                        // ShowContextMenu(clickedItem, listViewItem);
+                    }
                 }
                 else
                 {
