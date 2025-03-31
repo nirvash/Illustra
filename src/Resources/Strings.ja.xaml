@@ -187,12 +187,13 @@
     <system:String x:Key="String_WebView2_DownloadLink">ダウンロードページへ</system:String>
 
 
-        <!-- メディア表示設定 (アニメーションと動画に適用) -->
-        <system:String x:Key="String_Settings_Media_Section">メディア表示</system:String>
-        <system:String x:Key="String_Settings_Media_FitToScreen">動画を画面に合わせて拡大</system:String>
-        <system:String x:Key="String_Settings_Media_FitToScreen_Tooltip">小さいアニメーションや動画を画面に合わせて拡大表示します。</system:String>
+    <!-- メディア表示設定 (アニメーションと動画に適用) -->
+    <system:String x:Key="String_Settings_Media_Section">メディア表示</system:String>
+    <system:String x:Key="String_Settings_Media_FitToScreen">動画を画面に合わせて拡大</system:String>
+    <system:String x:Key="String_Settings_Media_FitToScreen_Tooltip">小さいアニメーションや動画を画面に合わせて拡大表示します。</system:String>
 
-        <!-- Tag Filtering -->
+    <!-- Tag Filtering -->
+    <system:String x:Key="String_TagFilter_Title">タグフィルター</system:String>
     <system:String x:Key="String_TagFilter_Description">プロンプトに含まれるタグで画像をフィルタリングします。</system:String>
     <system:String x:Key="String_TagFilter_EnterTag">タグ:</system:String>
     <system:String x:Key="String_TagFilter_AddTag">追加</system:String>
@@ -337,6 +338,12 @@
     <system:String x:Key="String_KeyboardShortcutSettingDialog_PressKey">キーを押してください</system:String>
     <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">キーボードショートカット設定</system:String>
     <system:String x:Key="String_LanguageSettingsWindow_Title">言語設定</system:String>
+    <!-- お気に入りフォルダ表示名 -->
+    <system:String x:Key="String_Dialog_SetDisplayNameTitle">表示名の設定</system:String>
+    <system:String x:Key="String_Dialog_SetDisplayNameFullPathLabel">フルパス:</system:String>
+    <system:String x:Key="String_Dialog_SetDisplayNameDisplayNameLabel">表示名:</system:String>
+    <system:String x:Key="String_FavoriteFolders_SetDisplayName">表示名を設定</system:String>
+    <system:String x:Key="String_FavoriteFolders_RemoveDisplayName">表示名を解除</system:String>
     <!-- Folder Operations -->
     <system:String x:Key="String_FileSystemTreeView_CreateFolder">フォルダを作成</system:String>
     <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">新しいフォルダ</system:String>

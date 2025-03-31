@@ -17,6 +17,8 @@
                BasedOn="{StaticResource {x:Type TreeViewItem}}">
             <Setter Property="Padding"
                     Value="0,0,0,0"/>
+            <!-- ToolTip を追加 -->
+            <Setter Property="ToolTip" Value="{Binding Path}"/>
 
             <!-- イベントハンドラの関連付け -->
             <EventSetter Event="MouseEnter"
@@ -59,6 +61,13 @@
                   ContextMenuOpening="FavoriteFoldersTreeView_ContextMenuOpening">
             <TreeView.ContextMenu>
                 <ContextMenu>
+                    <MenuItem x:Name="SetDisplayNameMenuItem"
+                              Header="{DynamicResource String_FavoriteFolders_SetDisplayName}"
+                              Click="SetDisplayName_Click"/>
+                    <MenuItem x:Name="RemoveDisplayNameMenuItem"
+                              Header="{DynamicResource String_FavoriteFolders_RemoveDisplayName}"
+                              Click="RemoveDisplayName_Click"/>
+                    <Separator/>
                     <MenuItem x:Name="RemoveFromFavoritesMenuItem"
                               Header="{DynamicResource String_FavoriteFolders_RemoveFromFavorites}"
                               Click="RemoveFromFavorites_Click"/>
@@ -72,7 +81,8 @@
                                    FontFamily="Segoe UI Emoji"
                                    Margin="0,0,5,0"/>
                         <!-- フォルダ名を表示 -->
-                        <TextBlock Text="{Binding DisplayName}"/>
+                        <!-- 表示名を DisplayMember にバインド -->
+                        <TextBlock Text="{Binding DisplayMember}"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>

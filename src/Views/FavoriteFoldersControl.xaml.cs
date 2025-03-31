@@ -30,25 +30,7 @@ namespace Illustra.Views
         private bool ignoreSelectedChangedOnce;
         private const string CONTROL_ID = "FavoriteFolders";
 
-        private ObservableCollection<FavoriteFolderModel> ConvertToModels(ObservableCollection<string> paths)
-        {
-            var models = new ObservableCollection<FavoriteFolderModel>();
-            foreach (var path in paths)
-            {
-                models.Add(new FavoriteFolderModel(path));
-            }
-            return models;
-        }
-
-        private ObservableCollection<string> ConvertToPaths(ObservableCollection<FavoriteFolderModel> models)
-        {
-            var paths = new ObservableCollection<string>();
-            foreach (var model in models)
-            {
-                paths.Add(model.Path);
-            }
-            return paths;
-        }
+        // ConvertToModels と ConvertToPaths は不要になったため削除
 
         #region IActiveAware Implementation
 #pragma warning disable 0067 // 使用されていませんという警告を無視
@@ -204,7 +186,8 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // お気に入りフォルダの初期化
-            _favoriteFolders = ConvertToModels(_appSettings.FavoriteFolders);
+            // AppSettingsModel の FavoriteFolders は ObservableCollection<FavoriteFolderModel> になったので直接代入
+            _favoriteFolders = _appSettings.FavoriteFolders;
             FavoriteFoldersTreeView.ItemsSource = _favoriteFolders;
             DataContext = this;
         }
@@ -218,7 +201,7 @@ namespace Illustra.Views
 
             // お気に入り関連イベントの設定
             _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(AddFavoriteFolder);
-            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(RemoveFavoriteFolder);
+            _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(HandleRemoveFromFavoritesEvent); // 新しいハンドラを登録
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FavoriteFoldersTreeView, new CustomDropHandler(this));
             GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(FavoriteFoldersTreeView, new DefaultDragHandler());
@@ -255,7 +238,8 @@ namespace Illustra.Views
         public void SetCurrentSettings()
         {
             // お気に入りフォルダの設定を保存
-            _appSettings.FavoriteFolders = ConvertToPaths(_favoriteFolders);
+            // AppSettingsModel の FavoriteFolders は ObservableCollection<FavoriteFolderModel> になったので直接代入
+            _appSettings.FavoriteFolders = _favoriteFolders;
         }
 
         private void FavoriteFoldersTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -309,14 +293,24 @@ namespace Illustra.Views
             }
         }
 
-        public void RemoveFavoriteFolder(string folderPath)
+        // 引数を FavoriteFolderModel に変更
+        public void RemoveFavoriteFolder(FavoriteFolderModel folder)
         {
-            var folder = _favoriteFolders.FirstOrDefault(f => f.Path == folderPath);
-            if (folder != null)
+            if (folder != null && _favoriteFolders.Contains(folder))
             {
                 _favoriteFolders.Remove(folder);
                 SetCurrentSettings();
                 SettingsHelper.SaveSettings(_appSettings);
+            }
+        }
+
+        // RemoveFromFavoritesEvent を処理するメソッド
+        private void HandleRemoveFromFavoritesEvent(string folderPath)
+        {
+            var folder = _favoriteFolders.FirstOrDefault(f => f.Path == folderPath);
+            if (folder != null)
+            {
+                RemoveFavoriteFolder(folder); // FavoriteFolderModel を引数とするメソッドを呼び出す
             }
         }
 
@@ -384,34 +378,82 @@ namespace Illustra.Views
         private void FavoriteFoldersTreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
             var treeView = sender as TreeView;
-            if (treeView == null) return;
+            if (treeView?.ContextMenu == null) return;
 
-            // イベントの発生元を見つける
-            if (e.OriginalSource is DependencyObject source)
+            // イベントの発生元から TreeViewItem と FavoriteFolderModel を取得
+            var treeViewItem = FindVisualParent<TreeViewItem>(e.OriginalSource as DependencyObject);
+            var selectedFolder = treeViewItem?.DataContext as FavoriteFolderModel;
+
+            // メニュー項目を取得
+            var setDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "SetDisplayNameMenuItem");
+            var removeDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveDisplayNameMenuItem");
+            var removeFavoriteMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
+
+            // 選択されたアイテムがない場合、すべてのカスタムメニューを無効化
+            if (selectedFolder == null || string.IsNullOrEmpty(selectedFolder.Path))
             {
-                var treeViewItem = FindVisualParent<TreeViewItem>(source);
-                if (treeViewItem != null)
-                {
-                    var selectedFolder = treeViewItem.DataContext as FavoriteFolderModel;
-                    if (selectedFolder != null && !string.IsNullOrEmpty(selectedFolder.Path))
-                    {
-                        var removeMenuItem = treeView.ContextMenu?.Items.OfType<MenuItem>()
-                            .FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
+                if (setDisplayNameMenuItem != null) setDisplayNameMenuItem.IsEnabled = false;
+                if (removeDisplayNameMenuItem != null) removeDisplayNameMenuItem.IsEnabled = false;
+                if (removeFavoriteMenuItem != null) removeFavoriteMenuItem.IsEnabled = false;
+                return;
+            }
 
-                        if (removeMenuItem != null)
-                        {
-                            removeMenuItem.CommandParameter = selectedFolder.Path;
-                        }
-                    }
+            // 各メニュー項目の CommandParameter と IsEnabled を設定
+            if (setDisplayNameMenuItem != null)
+            {
+                setDisplayNameMenuItem.CommandParameter = selectedFolder;
+                setDisplayNameMenuItem.IsEnabled = true;
+            }
+            if (removeDisplayNameMenuItem != null)
+            {
+                removeDisplayNameMenuItem.CommandParameter = selectedFolder;
+                // DisplayName が設定されている場合のみ有効
+                removeDisplayNameMenuItem.IsEnabled = selectedFolder.HasDisplayName;
+            }
+            if (removeFavoriteMenuItem != null)
+            {
+                removeFavoriteMenuItem.CommandParameter = selectedFolder; // CommandParameter を FavoriteFolderModel に変更
+                removeFavoriteMenuItem.IsEnabled = true;
+            }
+        }
+
+        // 表示名を設定するメニューのクリックイベントハンドラ
+        private async void SetDisplayName_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder)
+            {
+                var dialog = new SetDisplayNameDialog(folder)
+                {
+                    Owner = Window.GetWindow(this) // ダイアログの親ウィンドウを設定
+                };
+
+                // MetroWindow.ShowDialog() は bool? を返すため、true と比較する
+                if (dialog.ShowDialog() == true)
+                {
+                    folder.DisplayName = dialog.ResultDisplayName; // ダイアログで設定された表示名を取得 (プロパティ名を変更)
+                    SetCurrentSettings();
+                    SettingsHelper.SaveSettings(_appSettings);
                 }
             }
         }
 
+        // 表示名を解除するメニューのクリックイベントハンドラ
+        private void RemoveDisplayName_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder)
+            {
+                folder.DisplayName = null; // 表示名をクリア
+                SetCurrentSettings();
+                SettingsHelper.SaveSettings(_appSettings);
+            }
+        }
+
+        // お気に入りから削除するメニューのクリックイベントハンドラ (CommandParameter の型を変更)
         private void RemoveFromFavorites_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem menuItem && menuItem.CommandParameter is string path)
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder)
             {
-                RemoveFavoriteFolder(path);
+                RemoveFavoriteFolder(folder); // 修正されたメソッドを呼び出す
             }
         }
 

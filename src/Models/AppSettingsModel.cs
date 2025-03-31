@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows;
+// using Newtonsoft.Json; // 不要になった
+using System.Text.Json.Serialization; // System.Text.Json の JsonConverter 属性を使うために追加
+using Illustra.Helpers; // FavoriteFolderModelListConverter を使うために追加
 
 namespace Illustra.Models
 {
@@ -43,7 +46,10 @@ namespace Illustra.Models
         public bool MainPropertyPanelVisible { get; set; } = true;
 
         // お気に入りフォルダ
-        public ObservableCollection<string> FavoriteFolders { get; set; } = new ObservableCollection<string>();
+        // カスタムコンバーターを適用して旧設定ファイルとの互換性を保つ
+        // カスタムコンバーターを適用 (System.Text.Json 用)
+        [System.Text.Json.Serialization.JsonConverter(typeof(FavoriteFolderModelListConverter))]
+        public ObservableCollection<FavoriteFolderModel> FavoriteFolders { get; set; } = new ObservableCollection<FavoriteFolderModel>();
 
         // アプリケーションの言語設定
         public string Language { get; set; } = CultureInfo.CurrentUICulture.Name;

@@ -1,7 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:system="clr-namespace:System;assembly=mscorlib"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
 
     <!-- Folder Navigation -->
     <system:String x:Key="String_FolderTree_EnterAddress">Enter folder address</system:String>
@@ -16,13 +15,11 @@
     <system:String x:Key="String_Common_Save">Save</system:String>
     <system:String x:Key="String_Common_Cancel">Cancel</system:String>
     <system:String x:Key="String_Common_Start">Start</system:String>
-    <system:String x:Key="String_Common_Close">Close</system:String>
     <system:String x:Key="String_Common_Copy">Copy</system:String>
+    <system:String x:Key="String_Common_Close">Close</system:String>
     <system:String x:Key="String_Common_Information">Information</system:String>
     <system:String x:Key="String_Menu_CopyText">Copy text</system:String>
     <system:String x:Key="String_Common_CopyCompleted">The version information has been copied to the clipboard.</system:String>
-    <system:String x:Key="String_Common_Delete">delete</system:String>
-    <system:String x:Key="String_Common_Move">move</system:String>
 
     <!-- Menu -->
     <system:String x:Key="String_Menu_File">File</system:String>
@@ -65,14 +62,19 @@
     <system:String x:Key="String_Menu_Settings_CyclicNavigation">Enable Cyclic Navigation</system:String>
     <system:String x:Key="String_Menu_About">About</system:String>
 
-    <!-- Settings Categories -->
+    <!-- スライドショー -->
+    <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
+    <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>
+    <system:String x:Key="String_Slideshow_IntervalFormat">{0:F1} sec</system:String>
+
+    <!-- 設定画面のカテゴリ -->
     <system:String x:Key="String_Settings_General_Category">General</system:String>
     <system:String x:Key="String_Settings_Thumbnail_Category">Thumbnail View</system:String>
     <system:String x:Key="String_Settings_Viewer_Category">Viewer</system:String>
     <system:String x:Key="String_Settings_PropertyPanel_Category">Property Panel</system:String>
     <system:String x:Key="String_Settings_Developer_Category">Developer Options</system:String>
 
-    <!-- Display Settings -->
+    <!-- 表示設定 -->
     <system:String x:Key="String_Settings_Display_Section">Display Settings</system:String>
     <system:String x:Key="String_Settings_Display_FileName">Show File Name</system:String>
     <system:String x:Key="String_Settings_Display_Rating">Show Rating</system:String>
@@ -80,11 +82,6 @@
     <system:String x:Key="String_Settings_Display_StableDiffusion">Show Stable Diffusion</system:String>
     <system:String x:Key="String_Settings_Display_Comment">Show Comment</system:String>
     <system:String x:Key="String_Settings_Display_FontSize">Font Size:</system:String>
-
-    <!-- Slideshow -->
-    <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
-    <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>
-    <system:String x:Key="String_Slideshow_IntervalFormat">{0:F1} sec</system:String>
 
     <!-- Settings -->
     <system:String x:Key="String_Settings_Title">Settings</system:String>
@@ -103,10 +100,10 @@
     <system:String x:Key="String_Settings_SaveError">An error occurred while saving settings.</system:String>
     <system:String x:Key="String_Settings_ValidationError">Invalid input values. Please check all settings.</system:String>
     <system:String x:Key="String_Settings_SaveCompleted">Settings have been saved.</system:String>
-    <system:String x:Key="String_Dialog_FileOperationCancelled">Cancelled</system:String>
     <system:String x:Key="String_Error">Error</system:String>
 
     <!-- Settings -->
+    <system:String x:Key="String_Dialog_FileOperationCancelled">Cancelled</system:String>
     <system:String x:Key="String_Settings_FileOperation_Section">File Operations</system:String>
     <system:String x:Key="String_Settings_FileOperation_DeleteMode">File deletion behavior</system:String>
     <system:String x:Key="String_Settings_FileOperation_DeleteMode_RecycleBin">Move to Recycle Bin</system:String>
@@ -183,19 +180,40 @@
     <system:String x:Key="String_Property_Comment">Comment</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">Edit Prompt</system:String>
 
-    <!-- WebView2 -->
+    <!-- WebView2関連 -->
     <system:String x:Key="String_WebView2_Status_Installed">✓ Installed</system:String>
     <system:String x:Key="String_WebView2_Status_NotInstalled">✗ Not installed</system:String>
     <system:String x:Key="String_WebView2_Status_Description">Runtime required for animated WebP</system:String>
     <system:String x:Key="String_WebView2_DownloadLink">Download page</system:String>
 
 
-    <!-- Media Display Settings (Applies to Animations and Videos) -->
-        <system:String x:Key="String_Settings_Media_Section">Media Display</system:String>
-        <system:String x:Key="String_Settings_Media_FitToScreen">Fit videos to screen</system:String>
-        <system:String x:Key="String_Settings_Media_FitToScreen_Tooltip">Enlarge small animations and videos to fit the screen.</system:String>
+    <!-- メディア表示設定 (アニメーションと動画に適用) -->
+    <system:String x:Key="String_Settings_Media_Section">Media Display</system:String>
+    <system:String x:Key="String_Settings_Media_FitToScreen">Fit videos to screen</system:String>
+    <system:String x:Key="String_Settings_Media_FitToScreen_Tooltip">Enlarge small animations and videos to fit the screen.</system:String>
+
+    <!-- Tag Filtering -->
+    <system:String x:Key="String_TagFilter_Title">Tag Filter</system:String> <!-- Moved from original position -->
+    <system:String x:Key="String_TagFilter_Description">Enter tags to filter images that contain these tags in their prompt.</system:String>
+    <system:String x:Key="String_TagFilter_EnterTag">Tag:</system:String>
+    <system:String x:Key="String_TagFilter_AddTag">Add</system:String>
+    <system:String x:Key="String_TagFilter_RemoveTag">Remove</system:String>
+    <system:String x:Key="String_TagFilter_ClearAll">Clear All Tags</system:String>
+    <system:String x:Key="String_Filter_TagApplied">Tag filter applied</system:String>
+    <system:String x:Key="String_Menu_Filter_Tag">Filter by Tag...</system:String>
+    <system:String x:Key="String_Menu_AddTagToFilter">Add to Filter</system:String>
+    <system:String x:Key="String_Menu_RemoveTagFromFilter">Remove from Filter</system:String>
+
+    <!-- Status Bar -->
+    <system:String x:Key="String_Status_Folder">Folder</system:String>
+    <system:String x:Key="String_Status_CurrentFolder">Current Folder</system:String>
+    <system:String x:Key="String_Status_RatingFilter">Rating</system:String>
+    <system:String x:Key="String_Status_TagFilter">Tags</system:String>
+    <system:String x:Key="String_Status_PromptFilter">Prompt Filter Enabled</system:String>
+    <system:String x:Key="String_Status_Enabled">Enabled</system:String>
 
     <!-- Thumbnail List -->
+    <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String> <!-- Added -->
     <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">Open</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">Open with</system:String>
@@ -205,9 +223,6 @@
     <system:String x:Key="String_Thumbnail_ContextMenu_Properties">Properties</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">Set rating</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_AddTags">Add tags</system:String>
-    <system:String x:Key="String_Thumbnail_CopyPrompt">Copy Prompt</system:String>
-    <system:String x:Key="String_Thumbnail_CopyAllPrompt">Copy All Prompt</system:String>
-    <system:String x:Key="String_Thumbnail_PromptCopied">Prompt copied to clipboard</system:String>
 
     <!-- Thumbnail List Controls -->
     <system:String x:Key="String_Thumbnail_Size">Thumbnail Size</system:String>
@@ -220,12 +235,6 @@
     <system:String x:Key="String_Thumbnail_SortByName">Name</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
-
-    <!-- Language Settings -->
-    <system:String x:Key="String_Settings_Language_SavedTitle">Settings Saved</system:String>
-    <system:String x:Key="String_Settings_Language_SavedMessage">Language settings have been saved.</system:String>
-    <system:String x:Key="String_Settings_Error_Title">Error</system:String>
-    <system:String x:Key="String_Settings_Error_SaveFailed">An error occurred while saving settings: {0}</system:String>
 
     <!-- Keyboard Shortcuts -->
     <system:String x:Key="String_Function_NavigateUp">Navigate Up</system:String>
@@ -262,6 +271,12 @@
     <system:String x:Key="String_Function_PreviousImage">Previous Image</system:String>
     <system:String x:Key="String_Function_NextImage">Next Image</system:String>
     <system:String x:Key="String_Function_ZoomReset">Reset Zoom</system:String>
+
+    <!-- Language Settings -->
+    <system:String x:Key="String_Settings_Language_SavedTitle">Settings Saved</system:String>
+    <system:String x:Key="String_Settings_Language_SavedMessage">Language settings have been saved.</system:String>
+    <system:String x:Key="String_Settings_Error_Title">Error</system:String>
+    <system:String x:Key="String_Settings_Error_SaveFailed">An error occurred while saving settings: {0}</system:String>
 
     <!-- Keyboard Shortcuts -->
     <system:String x:Key="String_Settings_ResetConfirm"
@@ -301,7 +316,16 @@
     <system:String x:Key="String_Thumbnail_ImageCopied">Image copied to clipboard</system:String>
     <system:String x:Key="String_Thumbnail_FilesCopied">Files copied</system:String>
     <system:String x:Key="String_Thumbnail_FilesMoved">Files moved</system:String>
+    <system:String x:Key="String_Thumbnail_CopyPrompt">Copy Prompt</system:String>
+    <system:String x:Key="String_Thumbnail_CopyAllPrompt">Copy All Prompt</system:String>
+    <system:String x:Key="String_Thumbnail_PromptCopied">Prompt copied to clipboard</system:String>
 
+    <!-- 進捗ダイアログ -->
+    <system:String x:Key="String_Dialog_FileCopyTitle">Copying Files</system:String>
+    <system:String x:Key="String_Dialog_FileMoveTitle">Moving Files</system:String>
+    <system:String x:Key="String_Dialog_FileProgressFormat" xml:space="preserve">{0}/{1} files processed
+{2}</system:String>
+    <system:String x:Key="String_Dialog_FileProgressCountFormat">{0}/{1} files</system:String>
     <!-- Settings and Dialog -->
     <system:String x:Key="String_Settings_ResetToDefault">Reset to Default</system:String>
     <system:String x:Key="String_Settings_FunctionId">Function ID:</system:String>
@@ -314,33 +338,12 @@
     <system:String x:Key="String_KeyboardShortcutSettingDialog_PressKey">Press a key</system:String>
     <system:String x:Key="String_KeyboardShortcutSettingsWindow_Title">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_LanguageSettingsWindow_Title">Language Settings</system:String>
-
-    <!-- Progress Dialog -->
-    <system:String x:Key="String_Dialog_FileCopyTitle">Copying Files</system:String>
-    <system:String x:Key="String_Dialog_FileMoveTitle">Moving Files</system:String>
-    <system:String x:Key="String_Dialog_FileProgressFormat" xml:space="preserve">{0}/{1} files processed
-{2}</system:String>
-    <system:String x:Key="String_Dialog_FileProgressCountFormat">{0}/{1} files</system:String>
-    <!-- Tag Filtering -->
-    <system:String x:Key="String_TagFilter_Title">Tag Filter</system:String>
-    <system:String x:Key="String_TagFilter_Description">Enter tags to filter images that contain these tags in their prompt.</system:String>
-    <system:String x:Key="String_TagFilter_AddTag">Add</system:String>
-    <system:String x:Key="String_TagFilter_RemoveTag">Remove</system:String>
-    <system:String x:Key="String_TagFilter_ClearAll">Clear All Tags</system:String>
-    <system:String x:Key="String_TagFilter_EnterTag">Tag:</system:String>
-    <system:String x:Key="String_Filter_TagApplied">Tag filter applied</system:String>
-    <system:String x:Key="String_Menu_Filter_Tag">Filter by Tag...</system:String>
-    <system:String x:Key="String_Menu_AddTagToFilter">Add to Filter</system:String>
-    <system:String x:Key="String_Menu_RemoveTagFromFilter">Remove from Filter</system:String>
-
-    <!-- Status Bar -->
-    <system:String x:Key="String_Status_Folder">Folder</system:String>
-    <system:String x:Key="String_Status_CurrentFolder">Current Folder</system:String>
-    <system:String x:Key="String_Status_RatingFilter">Rating</system:String>
-    <system:String x:Key="String_Status_TagFilter">Tags</system:String>
-    <system:String x:Key="String_Status_PromptFilter">Prompt Filter Enabled</system:String>
-    <system:String x:Key="String_Status_Enabled">Enabled</system:String>
-
+    <!-- お気に入りフォルダ表示名 -->
+    <system:String x:Key="String_Dialog_SetDisplayNameTitle">Set Display Name</system:String>
+    <system:String x:Key="String_Dialog_SetDisplayNameFullPathLabel">Full Path:</system:String>
+    <system:String x:Key="String_Dialog_SetDisplayNameDisplayNameLabel">Display Name:</system:String>
+    <system:String x:Key="String_FavoriteFolders_SetDisplayName">Set Display Name</system:String>
+    <system:String x:Key="String_FavoriteFolders_RemoveDisplayName">Remove Display Name</system:String>
     <!-- Folder Operations -->
     <system:String x:Key="String_FileSystemTreeView_CreateFolder">Create Folder</system:String>
     <system:String x:Key="String_FileSystemTreeView_DefaultFolderName">New Folder</system:String>

@@ -1,0 +1,58 @@
+<controls:MetroWindow x:Class="Illustra.Views.SetDisplayNameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:local="clr-namespace:Illustra.Views"
+        mc:Ignorable="d"
+        Title="{DynamicResource String_Dialog_SetDisplayNameTitle}"
+        MinHeight="200"
+        MinWidth="400"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        WindowTransitionsEnabled="False"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+        BorderThickness="1"
+        BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+        DataContext="{Binding RelativeSource={RelativeSource Self}}">
+
+    <!-- アイコンとタイトル表示 (MainWindow.xaml からコピー) -->
+    <controls:MetroWindow.TitleTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+                <!-- AppIcon は App.xaml で定義されている想定 -->
+                <Image Source="{StaticResource AppIcon}"
+                       Width="18" Height="18" Margin="5,0,0,0"/>
+                <!-- タイトルをリソースから動的にバインド -->
+                <TextBlock Text="{DynamicResource String_Dialog_SetDisplayNameTitle}"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           Margin="5,0,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </controls:MetroWindow.TitleTemplate>
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{DynamicResource String_Dialog_SetDisplayNameFullPathLabel}" FontWeight="Bold"/>
+        <!-- フルパスは長い可能性があるので TextWrapping を有効にする -->
+        <TextBlock Grid.Row="1" Text="{Binding FolderPath}" Margin="0,5,0,10" TextWrapping="Wrap"/>
+
+        <TextBlock Grid.Row="2" Text="{DynamicResource String_Dialog_SetDisplayNameDisplayNameLabel}" FontWeight="Bold"/>
+        <TextBox Grid.Row="3" x:Name="DisplayNameTextBox" Text="{Binding EditableDisplayName, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="0,5,0,10" VerticalContentAlignment="Center"/>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="{DynamicResource String_Common_Cancel}" IsCancel="True" MinWidth="80" Margin="0,0,10,0" Click="CancelButton_Click"/>
+            <Button Content="{DynamicResource String_Common_Ok}" IsDefault="True" MinWidth="80" Click="OkButton_Click"/>
+        </StackPanel>
+    </Grid>
+</controls:MetroWindow>

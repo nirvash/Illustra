@@ -243,7 +243,8 @@ namespace Illustra.Models
         {
             get
             {
-                var isFavorite = SettingsHelper.GetSettings()?.FavoriteFolders?.Contains(FullPath) ?? false;
+                // FavoriteFolders は FavoriteFolderModel のコレクションになったため、Path プロパティで比較する
+                var isFavorite = SettingsHelper.GetSettings()?.FavoriteFolders?.Any(f => f.Path == FullPath) ?? false;
                 // 状態が変化したら通知
                 if (_lastIsFavorite != isFavorite)
                 {
