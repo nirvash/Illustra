@@ -210,7 +210,11 @@
     <system:String x:Key="String_Status_RatingFilter">レーティング</system:String>
     <system:String x:Key="String_Status_TagFilter">タグ</system:String>
     <system:String x:Key="String_Status_PromptFilter">プロンプトフィルタ有効</system:String>
+    <system:String x:Key="String_Status_Filter_Prompt">プロンプト</system:String>
+    <system:String x:Key="String_Status_Filter_Tag">タグ: {0}</system:String>
+    <system:String x:Key="String_Status_Filter_Rating">評価: {0}</system:String>
     <system:String x:Key="String_Status_Enabled">有効</system:String>
+    <system:String x:Key="String_Status_SelectedItemsFormat">{0}個選択中</system:String>
 
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">表示する項目がありません</system:String>

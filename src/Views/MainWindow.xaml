@@ -267,11 +267,11 @@
                     BorderBrush="{DynamicResource MahApps.Brushes.StatusBarBorder}"
                     BorderThickness="0,1,0,0">
                 <StatusBarItem>
-                    <TextBlock x:Name="StatusBar"
-                            Margin="5,2"
-                            Padding="2"
-                            Text="{Binding StatusMessage}"
-                            Foreground="{DynamicResource MahApps.Brushes.StatusBarForeground}"/>
+                    <TextBlock x:Name="StatusTextBlock"
+                               Margin="5,2"
+                               Padding="2"
+                               Text="{Binding StatusMessage}"
+                               Foreground="{DynamicResource MahApps.Brushes.StatusBarForeground}"/>
                 </StatusBarItem>
             </StatusBar>
         </Grid>

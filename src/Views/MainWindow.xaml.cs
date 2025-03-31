@@ -37,6 +37,7 @@ namespace Illustra.Views
         private FavoriteFoldersControl? _favoriteFoldersControl;
         private FolderTreeControl? _folderTreeControl;
         private string _currentFolderPath = string.Empty;
+        private int _selectedItemCount = 0;
         private const string CONTROL_ID = "MainWindow";
         public bool EnableCyclicNavigation => App.Instance.EnableCyclicNavigation;
 
@@ -70,6 +71,7 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
             _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
+            _eventAggregator.GetEvent<SelectionCountChangedEvent>().Subscribe(OnSelectionCountChanged, ThreadOption.UIThread);
 
             // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
@@ -619,6 +621,7 @@ namespace Illustra.Views
             OnFilterChanged(filterArgs);
 
             // ステータスバーを更新
+            _selectedItemCount = 0; // フォルダが変わったら選択数をリセット
             UpdateStatusBar();
         }
 
@@ -714,43 +717,70 @@ namespace Illustra.Views
             }
         }
 
+        private void OnSelectionCountChanged(SelectionCountChangedEventArgs args)
+        {
+            _selectedItemCount = args.SelectedCount;
+            UpdateStatusBar();
+        }
+
+
         /// <summary>
         /// ステータスバーを更新します
         /// </summary>
         private void UpdateStatusBar()
         {
-            var statusItems = new List<string>();
-
-            // 現在のフォルダパスを追加
-            if (_currentFolderPath != null)
+            try
             {
-                statusItems.Add($"{FindResource("String_Status_CurrentFolder")}: {_currentFolderPath}");
-            }
+                var statusParts = new List<string>();
 
-            // レーティングフィルタが有効な場合、その情報を追加
-            if (_currentRatingFilter > 0)
-            {
-                statusItems.Add($"{FindResource("String_Status_RatingFilter")}: {_currentRatingFilter}+");
-            }
-
-            // タグフィルタが有効な場合、その情報を追加
-            if (_isTagFilterEnabled && _tagFilters.Count > 0)
-            {
-                string tagFilterText = string.Join(", ", _tagFilters);
-                statusItems.Add($"{FindResource("String_Status_TagFilter")}: {tagFilterText}");
-            }
-
-            Dispatcher.Invoke(() =>
-            {
-                // プロンプトフィルタが有効な場合、その情報を追加
-                if (_isPromptFilterEnabled)
+                // 現在のフォルダパス
+                if (!string.IsNullOrEmpty(_currentFolderPath))
                 {
-                    statusItems.Add($"{FindResource("String_Status_PromptFilter")}: {FindResource("String_Status_Enabled")}");
+                    statusParts.Add(_currentFolderPath);
+                }
+
+                // 選択中のアイテム数
+                if (_selectedItemCount > 0)
+                {
+                    // リソース文字列 String_Status_SelectedItemsFormat を使用
+                    statusParts.Add(string.Format((string)FindResource("String_Status_SelectedItemsFormat") ?? "{0} items selected", _selectedItemCount));
+                }
+
+
+                // フィルタ情報
+                var filterDescriptions = new List<string>();
+                if (IsPromptFilterEnabled)
+                {
+                    filterDescriptions.Add((string)FindResource("String_Status_Filter_Prompt"));
+                }
+                if (IsTagFilterEnabled && _tagFilters.Any())
+                {
+                    filterDescriptions.Add(string.Format((string)FindResource("String_Status_Filter_Tag"), string.Join(", ", _tagFilters)));
+                }
+                if (_currentRatingFilter > 0)
+                {
+                    filterDescriptions.Add(string.Format((string)FindResource("String_Status_Filter_Rating"), _currentRatingFilter));
+                }
+
+                if (filterDescriptions.Any())
+                {
+                    statusParts.Add($"[{string.Join(" | ", filterDescriptions)}]");
                 }
 
                 // ステータスバーに表示
-                StatusBar.Text = string.Join(" | ", statusItems);
-            });
+                StatusTextBlock.Text = string.Join("  ", statusParts);
+            }
+            catch (Exception ex)
+            {
+                // エラーログを出力
+                LogHelper.LogError($"ステータスバーの更新中にエラーが発生しました: {ex.Message}", ex);
+
+                // 開発者モードが有効な場合はステータスバーにエラーメッセージを表示
+                if (SettingsHelper.GetSettings().DeveloperMode)
+                {
+                    StatusTextBlock.Text = $"Error: {ex.Message}";
+                }
+            }
         }
 
         private void OnSortOrderChanged(SortOrderChangedEventArgs args)

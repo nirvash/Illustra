@@ -794,6 +794,8 @@ namespace Illustra.Views
                         var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath);
                         _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
                     }
+                    // 選択アイテム数を通知するイベントを発行
+                    _eventAggregator?.GetEvent<SelectionCountChangedEvent>()?.Publish(new SelectionCountChangedEventArgs(ThumbnailItemsControl.SelectedItems.Count));
                 }
                 catch (Exception ex)
                 {

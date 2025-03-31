@@ -210,7 +210,11 @@
     <system:String x:Key="String_Status_RatingFilter">Rating</system:String>
     <system:String x:Key="String_Status_TagFilter">Tags</system:String>
     <system:String x:Key="String_Status_PromptFilter">Prompt Filter Enabled</system:String>
+    <system:String x:Key="String_Status_Filter_Prompt">Prompt</system:String>
+    <system:String x:Key="String_Status_Filter_Tag">Tag: {0}</system:String>
+    <system:String x:Key="String_Status_Filter_Rating">Rating: {0}</system:String>
     <system:String x:Key="String_Status_Enabled">Enabled</system:String>
+    <system:String x:Key="String_Status_SelectedItemsFormat">{0} items selected</system:String>
 
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String> <!-- Added -->
