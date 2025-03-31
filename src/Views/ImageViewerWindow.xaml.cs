@@ -1076,6 +1076,20 @@ namespace Illustra.Views
 
         private void MainGrid_MouseMove(object sender, MouseEventArgs e)
         {
+            // GridSplitter上ならカーソル変更を優先し、タイマーをリセット
+            if (e.OriginalSource is GridSplitter splitter)
+            {
+                if (_isFullScreen)
+                {
+                    Mouse.OverrideCursor = null; // GridSplitterのCursorプロパティに任せる
+                    hideCursorTimer.Stop();
+                    hideCursorTimer.Start(); // タイマーはリセットしておく
+                    _lastMousePosition = e.GetPosition(this); // 位置も更新
+                }
+                // GridSplitter自体のCursorプロパティが適用されるように、以降の処理はスキップ
+                return;
+            }
+
             if (!_isFullScreen) return;
 
             var currentPosition = e.GetPosition(this);
