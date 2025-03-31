@@ -60,6 +60,7 @@
     <system:String x:Key="String_Menu_Settings_Language">Language Settings</system:String>
     <system:String x:Key="String_Menu_Settings_Shortcuts">Keyboard Shortcuts</system:String>
     <system:String x:Key="String_Menu_Settings_CyclicNavigation">Enable Cyclic Navigation</system:String>
+    <system:String x:Key="String_Menu_Settings_AutoSelectNewFile">Auto-select new file</system:String>
     <system:String x:Key="String_Menu_About">About</system:String>
 
     <!-- スライドショー -->

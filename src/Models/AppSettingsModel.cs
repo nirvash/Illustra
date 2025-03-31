@@ -95,5 +95,8 @@ namespace Illustra.Models
 
         // テーマ設定
         public string Theme { get; set; } = "Light";
+
+        // 新規ファイル追加時に自動選択するかどうか
+        public bool AutoSelectNewFile { get; set; } = false;
     }
 }

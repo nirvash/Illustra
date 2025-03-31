@@ -147,6 +147,11 @@
                           Header="{DynamicResource String_Menu_Settings_CyclicNavigation}"
                           IsCheckable="True"
                           Click="ToggleCyclicNavigation_Click"/>
+                <MenuItem x:Name="ToggleAutoSelectNewFile"
+                          Header="{DynamicResource String_Menu_Settings_AutoSelectNewFile}"
+                          IsCheckable="True"
+                          IsChecked="{Binding IsAutoSelectNewFileEnabled, Mode=TwoWay}"
+                          Click="ToggleAutoSelectNewFile_Click"/>
             </MenuItem>
         </Menu>
 

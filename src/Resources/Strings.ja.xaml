@@ -60,6 +60,7 @@
     <system:String x:Key="String_Menu_Settings_Language">言語設定</system:String>
     <system:String x:Key="String_Menu_Settings_Shortcuts">キーボードショートカット設定</system:String>
     <system:String x:Key="String_Menu_Settings_CyclicNavigation">循環移動を有効にする</system:String>
+    <system:String x:Key="String_Menu_Settings_AutoSelectNewFile">新規ファイル追加時に自動選択</system:String>
     <system:String x:Key="String_Menu_About">バージョン情報</system:String>
 
     <!-- スライドショー -->
