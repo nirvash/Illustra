@@ -39,6 +39,43 @@ namespace Illustra.Views
 #pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
+        public class FavoriteFolderDragHandler : DefaultDragHandler
+        {
+            public override void StartDrag(IDragInfo dragInfo)
+            {
+                // ドラッグするアイテム数を制限（ここでは単一選択のみ想定）
+                if (dragInfo.SourceItems.Cast<object>().Count() > 1)
+                {
+                    return;
+                }
+
+                var item = dragInfo.SourceItem as FavoriteFolderModel;
+                if (item != null)
+                {
+                    // ドラッグするデータを設定
+                    dragInfo.Data = item;
+                    dragInfo.Effects = DragDropEffects.Move; // Move に設定することでコピー操作を抑制
+
+                    // ドラッグプレビューテンプレートを設定
+                    if (dragInfo.VisualSource is FrameworkElement sourceElement)
+                    {
+                        var template = sourceElement.TryFindResource("FavoriteFolderDragAdornerTemplate") as DataTemplate;
+                        // XAML側で設定するため、ここでの設定は不要
+                        // if (template != null)
+                        // {
+                        //     // dragInfo.DragAdornerTemplate = template; // CS1061 エラーのため削除
+                        // }
+                    }
+                }
+                else
+                {
+                    // FavoriteFolderModel 以外はデフォルトの処理
+                    base.StartDrag(dragInfo);
+                }
+            }
+        }
+
+
         public class CustomDropHandler : DefaultDropHandler
         {
             private readonly FavoriteFoldersControl _parent = null;
@@ -54,16 +91,24 @@ namespace Illustra.Views
                 try
                 {
                     // お気に入りリスト並び替え
-                    if (e.Data is FavoriteFolderModel)
+                    if (e.Data is FavoriteFolderModel) // お気に入りフォルダの並び替え
                     {
-                        var isTreeViewItem = e.InsertPosition.HasFlag(RelativeInsertPosition.TargetItemCenter) && e.VisualTargetItem is TreeViewItem;
-                        if (isTreeViewItem)
+                        // ドロップ先がアイテム自体の上か、アイテムの間かを判定
+                        bool isOverItem = e.InsertPosition.HasFlag(RelativeInsertPosition.TargetItemCenter);
+
+                        if (isOverItem)
                         {
+                            // アイテム上へのドロップは許可しない
                             e.Effects = DragDropEffects.Move;
-                            e.DropTargetHintAdorner = DropTargetAdorners.Insert;
-                            e.DropTargetHintState = DropHintState.Error;
+                            e.DropTargetAdorner = null; // アドーナーも表示しない
                         }
-                        return;
+                        else
+                        {
+                            // アイテム間へのドロップ（挿入）は許可
+                            e.Effects = DragDropEffects.Move;
+                            e.DropTargetAdorner = DropTargetAdorners.Insert; // 挿入アドーナーを表示
+                        }
+                        return; // お気に入りフォルダ並び替えの場合は以降の処理は不要
                     }
 
                     var files = DragDropHelper.GetDroppedFiles(e);
@@ -204,7 +249,7 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<RemoveFromFavoritesEvent>().Subscribe(HandleRemoveFromFavoritesEvent); // 新しいハンドラを登録
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FavoriteFoldersTreeView, new CustomDropHandler(this));
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(FavoriteFoldersTreeView, new DefaultDragHandler());
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(FavoriteFoldersTreeView, new FavoriteFolderDragHandler()); // カスタムドラッグハンドラを設定
 
         }
 

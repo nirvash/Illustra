@@ -4,12 +4,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:models="clr-namespace:Illustra.Models"
              mc:Ignorable="d"
              d:DesignHeight="300"
              d:DesignWidth="300">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- ドラッグプレビュー用テンプレート -->
+        <DataTemplate x:Key="FavoriteFolderDragAdornerTemplate" DataType="{x:Type models:FavoriteFolderModel}">
+            <Border Background="{DynamicResource MahApps.Brushes.Control.Background}" BorderThickness="1" CornerRadius="3" Padding="5,2" Opacity="0.9">
+                <TextBlock Text="{Binding DisplayMember}"/>
+            </Border>
+        </DataTemplate>
 
         <!-- TreeViewItem の状態をバインド -->
         <Style x:Key="BoundTreeViewItemStyle"
@@ -57,6 +65,7 @@
                   VirtualizingStackPanel.IsVirtualizing="True"
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   ItemContainerStyle="{StaticResource BoundTreeViewItemStyle}"
+                  dd:DragDrop.DragAdornerTemplate="{StaticResource FavoriteFolderDragAdornerTemplate}"
                   Padding="-15 5 0 0"
                   ContextMenuOpening="FavoriteFoldersTreeView_ContextMenuOpening">
             <TreeView.ContextMenu>
