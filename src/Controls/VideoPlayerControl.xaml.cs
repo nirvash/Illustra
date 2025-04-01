@@ -101,6 +101,11 @@ namespace Illustra.Controls
             _seekBarUpdateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _seekBarUpdateTimer.Tick += SeekBarUpdateTimer_Tick;
 
+            // ViewerSettings からリピート状態を読み込み初期化
+            var viewerSettings = ViewerSettingsHelper.LoadSettings();
+            _isRepeatEnabled = viewerSettings.VideoRepeatEnabled;
+            UpdateRepeatButtonVisualState(); // ボタンの見た目を更新
+
             ApplyInitialStretchMode(); // Apply initial stretch mode based on settings
         }
 
@@ -493,11 +498,22 @@ namespace Illustra.Controls
             }
         }
 
+        private void UpdateRepeatButtonVisualState()
+        {
+            // リピート状態に応じてボタンの背景色などを変更
+            RepeatButton.Background = _isRepeatEnabled ? Brushes.LightSkyBlue : Brushes.Transparent;
+            // 必要に応じてアイコンの変更などもここで行う
+        }
+
         public void ToggleRepeat()
         {
             _isRepeatEnabled = !_isRepeatEnabled;
-            // TODO: XAML側でリピートボタンの表示状態を更新する (例: アイコン変更、背景色変更など)
-            // 例: RepeatButton.Background = _isRepeatEnabled ? Brushes.LightBlue : Brushes.Transparent;
+            UpdateRepeatButtonVisualState(); // ボタンの見た目を更新
+
+            // ViewerSettings に保存
+            var settings = ViewerSettingsHelper.LoadSettings();
+            settings.VideoRepeatEnabled = _isRepeatEnabled;
+            ViewerSettingsHelper.SaveSettings(settings);
         }
 
         private void ApplyInitialStretchMode()
