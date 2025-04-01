@@ -66,7 +66,20 @@ namespace Illustra.Models
                 // ImagePropertiesHelper.LoadPropertiesAsync は静的メソッドと仮定
                 // ImagePropertiesServiceと同様の静的メソッドを使用
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                CurrentProperties = properties ?? new ImagePropertiesModel { FilePath = filePath }; // 読み込めなかった場合も考慮
+                if (properties == null)
+                {
+                    properties = new ImagePropertiesModel { FilePath = filePath }; // 読み込めなかった場合は最低限の情報を設定
+                }
+
+                // MainViewModel から Rating を取得して設定
+                var fileNode = MainViewModel?.Items?.FirstOrDefault(n => n.FullPath == filePath);
+                if (fileNode != null)
+                {
+                    properties.Rating = fileNode.Rating;
+                    LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
+                }
+
+                CurrentProperties = properties; // 更新されたプロパティをセット
                 LogHelper.LogWithTimestamp($"プロパティ読み込み完了: {filePath}", LogHelper.Categories.UI);
             }
             catch (Exception ex)
