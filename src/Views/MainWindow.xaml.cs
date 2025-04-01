@@ -614,7 +614,7 @@ namespace Illustra.Views
             FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled;
         }
 
-        private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
+        private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type, removed async
         {
             // 現在のフォルダパスを更新
             _currentFolderPath = args.FolderPath; // Changed property name

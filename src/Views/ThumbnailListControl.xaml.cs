@@ -66,6 +66,7 @@ namespace Illustra.Views
         // 現在処理中のフォルダパス（OnFileNodesLoaded処理中のみ有効）
         private string? _processingFolderPath = null;
 
+        private bool _isLoadingFileNodes = false; // ファイルノード読み込み中フラグ
         private string? _initialSelectedFilePath;
 
         /// <summary>
@@ -1346,6 +1347,9 @@ namespace Illustra.Views
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            // ファイルノード読み込み中は処理しない
+            if (_isLoadingFileNodes) return;
+
             // スクロール中フラグを設定
             _isScrolling = true;
 
@@ -2674,6 +2678,7 @@ namespace Illustra.Views
         {
             try
             {
+                _isLoadingFileNodes = true; // ファイルノード読み込み開始
                 LogHelper.LogWithTimestamp($"[フォルダ切替] LoadFileNodes: {path}, 初期選択ファイル: {initialSelectedFilePath ?? "なし"}", LogHelper.Categories.ThumbnailLoader);
 
                 // スクロール位置をリセット
@@ -2758,6 +2763,7 @@ namespace Illustra.Views
             }
             finally
             {
+                _isLoadingFileNodes = false; // ファイルノード読み込み完了
                 _processingFolderPath = null;
             }
         }

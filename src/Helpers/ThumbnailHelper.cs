@@ -23,38 +23,44 @@ namespace Illustra.Helpers
         // async Task に変更
         public static async Task<BitmapSource?> GetVideoThumbnailAsync(string videoPath)
         {
-            try
+            // Wrap synchronous shell operations in Task.Run to avoid blocking and satisfy async/await pattern
+            return await Task.Run(() =>
             {
-                // await Task.Yield(); // UIスレッドでの実行が必要な場合に備える (任意)
-                using (var shellFile = ShellFile.FromFilePath(videoPath))
+                try
                 {
-                    var bitmap = shellFile.Thumbnail.ExtraLargeBitmap;
-                    if (bitmap == null)
+                    using (var shellFile = ShellFile.FromFilePath(videoPath))
                     {
-                         Debug.WriteLine($"動画サムネイル取得失敗 (bitmap is null): {videoPath}");
-                         return null;
+                        var bitmap = shellFile.Thumbnail.ExtraLargeBitmap;
+                        if (bitmap == null)
+                        {
+                            Debug.WriteLine($"動画サムネイル取得失敗 (bitmap is null): {videoPath}");
+                            return null;
+                        }
+
+                        using var memory = new MemoryStream();
+                        bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
+                        memory.Position = 0;
+
+                        // BitmapImage needs to be created and frozen on the UI thread if accessed directly,
+                        // but since we return it, the caller (likely on UI thread) will handle it.
+                        // However, creating it here is fine, but Freeze needs Dispatcher if not already frozen.
+                        // Let's create it here and freeze. Freeze() can be called from any thread.
+                        var bitmapImage = new BitmapImage();
+                        bitmapImage.BeginInit();
+                        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmapImage.StreamSource = memory;
+                        bitmapImage.EndInit();
+                        bitmapImage.Freeze(); // Freeze is thread-safe
+
+                        return bitmapImage;
                     }
-
-                    using var memory = new MemoryStream();
-                    // ここは同期操作のまま
-                    bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
-                    memory.Position = 0;
-
-                    var bitmapImage = new BitmapImage();
-                    bitmapImage.BeginInit();
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.StreamSource = memory;
-                    bitmapImage.EndInit();
-                    bitmapImage.Freeze();
-
-                    return bitmapImage;
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"動画サムネイル生成エラー ({videoPath}): {ex.Message}");
-                return null; // エラー時はnullを返す
-            }
+                catch (Exception ex) // Catch exceptions within Task.Run
+                {
+                    Debug.WriteLine($"動画サムネイル生成エラー (Task.Run) ({videoPath}): {ex.Message}");
+                    return null;
+                }
+            });
         }
     }
 
