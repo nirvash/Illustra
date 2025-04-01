@@ -46,6 +46,8 @@ namespace Illustra.Views
         private MenuItem? _sortByDateAscendingMenuItem;
         private MenuItem? _sortByDateDescendingMenuItem;
         private MenuItem? _sortByNameAscendingMenuItem;
+        private List<string> _currentExtensionFilters = new List<string>();
+        private bool _isExtensionFilterEnabled = false;
         private MenuItem? _sortByNameDescendingMenuItem;
 
         private readonly MainWindowViewModel _viewModel;
@@ -202,6 +204,8 @@ namespace Illustra.Views
             _tagFilters.Clear();
             _currentRatingFilter = 0;
             IsPromptFilterEnabled = false;
+            _currentExtensionFilters.Clear(); // 追加
+            _isExtensionFilterEnabled = false; // 追加
 
             // フィルタ変更イベントを発行（すべてのフィルタをクリア）
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
@@ -369,6 +373,46 @@ namespace Illustra.Views
                 .WithRatingFilter(_currentRatingFilter).Build());
             UpdateStatusBar();
         }
+
+        private void FilterExtensionSubMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem || menuItem.Tag is not string tag)
+                return;
+
+            var extensionsToToggle = tag.Split(',').ToList();
+            bool isChecked = menuItem.IsChecked;
+
+            if (isChecked)
+            {
+                // チェックされた場合、フィルタに追加
+                foreach (var ext in extensionsToToggle)
+                {
+                    if (!_currentExtensionFilters.Contains(ext))
+                    {
+                        _currentExtensionFilters.Add(ext);
+                    }
+                }
+            }
+            else
+            {
+                // チェックが外れた場合、フィルタから削除
+                foreach (var ext in extensionsToToggle)
+                {
+                    _currentExtensionFilters.Remove(ext);
+                }
+            }
+
+            _isExtensionFilterEnabled = _currentExtensionFilters.Any();
+            UpdateFilterMenu(); // メニューの状態を更新
+
+            // フィルタ変更イベントを発行
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID)
+                .WithExtensionFilter(_isExtensionFilterEnabled, new List<string>(_currentExtensionFilters)).Build());
+
+            UpdateStatusBar(); // ステータスバーを更新
+        }
+
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -591,6 +635,13 @@ namespace Illustra.Views
             if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
                 _isPromptFilterEnabled = args.IsPromptFilterEnabled;
 
+            // 拡張子フィルタの状態を更新 (追加)
+            if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged)
+            {
+                _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                _currentExtensionFilters = new List<string>(args.ExtensionFilters);
+            }
+
             UpdateFilterMenu();
             UpdateStatusBar();
         }
@@ -611,7 +662,20 @@ namespace Illustra.Views
             FilterRating5MenuItem.IsChecked = _currentRatingFilter == 5;
 
             // フィルタクリアメニューの有効/無効を更新
-            FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled;
+            FilterClearMenuItem.IsEnabled = _currentRatingFilter > 0 || _isPromptFilterEnabled || _isTagFilterEnabled || _isExtensionFilterEnabled;
+
+            // 拡張子フィルタのサブメニュー項目の状態を更新
+            foreach (var item in FilterExtensionMenuItem.Items.OfType<MenuItem>())
+            {
+                if (item.Tag is string tag)
+                {
+                    var extensionsInTag = tag.Split(',').ToList();
+                    // タグ内のすべての拡張子が現在のフィルタに含まれている場合にチェックを入れる
+                    item.IsChecked = extensionsInTag.All(ext => _currentExtensionFilters.Contains(ext));
+                }
+            }
+            // 親メニューのチェック状態も更新 (いずれかの子がチェックされていれば親もチェックされているように見せる - IsCheckable=Falseなので見た目だけ)
+            FilterExtensionMenuItem.IsChecked = FilterExtensionMenuItem.Items.OfType<MenuItem>().Any(mi => mi.IsChecked);
         }
 
         private void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type, removed async
@@ -624,6 +688,8 @@ namespace Illustra.Views
             _isPromptFilterEnabled = false;
             _tagFilters = new List<string>();
             _isTagFilterEnabled = false;
+            _currentExtensionFilters.Clear(); // 追加
+            _isExtensionFilterEnabled = false; // 追加
 
             // メニューの状態を更新
             UpdateFilterMenu();
@@ -773,6 +839,10 @@ namespace Illustra.Views
                 if (_currentRatingFilter > 0)
                 {
                     filterDescriptions.Add(string.Format((string)FindResource("String_Status_Filter_Rating"), _currentRatingFilter));
+                }
+                if (_isExtensionFilterEnabled && _currentExtensionFilters.Any()) // 追加
+                {
+                    filterDescriptions.Add(string.Format((string)FindResource("String_Status_Filter_Extension"), string.Join(", ", _currentExtensionFilters)));
                 }
 
                 if (filterDescriptions.Any())

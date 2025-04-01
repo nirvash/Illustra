@@ -112,6 +112,16 @@
                               IsCheckable="True"
                               Click="FilterRating5MenuItem_Click"/>
                 </MenuItem>
+                <MenuItem Header="{DynamicResource String_Menu_Filter_Extension}"
+                          x:Name="FilterExtensionMenuItem"
+                          IsCheckable="False">
+                    <MenuItem Header=".mp4" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".mp4"/>
+                    <MenuItem Header=".webp" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".webp"/>
+                    <MenuItem Header=".png" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".png"/>
+                    <MenuItem Header=".jpg / .jpeg" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".jpg,.jpeg"/>
+                    <MenuItem Header=".gif" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".gif"/>
+                    <MenuItem Header=".bmp" IsCheckable="True" Click="FilterExtensionSubMenuItem_Click" Tag=".bmp"/>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="{DynamicResource String_Menu_Filter_Clear}"
                           x:Name="FilterClearMenuItem"

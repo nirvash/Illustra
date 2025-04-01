@@ -90,6 +90,7 @@ namespace Illustra.Events
             PromptFilterChanged,
             RatingFilterChanged,
             TagFilterChanged,
+            ExtensionFilterChanged, // 追加
             Clear
         }
 
@@ -100,6 +101,8 @@ namespace Illustra.Events
         public string SourceId { get; set; } = string.Empty;
         public bool IsTagFilterEnabled { get; set; }
         public List<string> TagFilters { get; set; } = new List<string>();
+        public bool IsExtensionFilterEnabled { get; set; } // 追加
+        public List<string> ExtensionFilters { get; set; } = new List<string>(); // 追加
 
         // パラメータなしのコンストラクタ
         public FilterChangedEventArgs(string sourceId)
@@ -137,6 +140,14 @@ namespace Illustra.Events
             _args.IsTagFilterEnabled = isEnabled;
             _args.TagFilters = tags;
             _args.Type = FilterChangedEventArgs.FilterChangedType.TagFilterChanged;
+            return this;
+        }
+
+        public FilterChangedEventArgsBuilder WithExtensionFilter(bool isEnabled, List<string> extensions) // 追加
+        {
+            _args.IsExtensionFilterEnabled = isEnabled;
+            _args.ExtensionFilters = extensions ?? new List<string>(); // nullチェック追加
+            _args.Type = FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged;
             return this;
         }
 

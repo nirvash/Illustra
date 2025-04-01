@@ -183,6 +183,8 @@ namespace Illustra.ViewModels
         private readonly Dictionary<string, List<string>> _tagCache = [];
         private List<string> _tagFilters = [];
         private bool _isTagFilterEnabled;
+        private List<string> _extensionFilters = []; // 追加
+        private bool _isExtensionFilterEnabled; // 追加
 
         /// <summary>
         /// 現在適用されているレーティングフィルタの値を取得します
@@ -240,6 +242,22 @@ namespace Illustra.ViewModels
         }
 
         /// <summary>
+        /// 拡張子フィルタが有効かどうかを示す値を取得します
+        /// </summary>
+        public bool IsExtensionFilterEnabled
+        {
+            get => _isExtensionFilterEnabled;
+            private set
+            {
+                if (_isExtensionFilterEnabled != value)
+                {
+                    _isExtensionFilterEnabled = value;
+                    OnPropertyChanged(nameof(IsExtensionFilterEnabled));
+                }
+            }
+        }
+
+        /// <summary>
         /// フィルタ条件に基づいてアイテムをフィルタリングします
         /// </summary>
         private bool FilterItems(object item)
@@ -283,6 +301,16 @@ namespace Illustra.ViewModels
                 if (!_promptCache.TryGetValue(fileNode.FullPath, out bool hasPrompt) || !hasPrompt)
                     return false;
             }
+
+           // 拡張子フィルタ (追加)
+           if (IsExtensionFilterEnabled && _extensionFilters.Any())
+           {
+               string fileExtension = Path.GetExtension(fileNode.FullPath)?.ToLowerInvariant();
+               if (string.IsNullOrEmpty(fileExtension) || !_extensionFilters.Contains(fileExtension))
+               {
+                   return false;
+               }
+           }
 
             return true;
         }
@@ -356,7 +384,7 @@ namespace Illustra.ViewModels
         /// <summary>
         /// レーティングフィルターとタグフィルターを適用します
         /// </summary>
-        public async Task ApplyAllFilters(int ratingFilter, bool isPromptFilterEnabled, List<string> tagFilters, bool isTagFilterEnabled)
+        public async Task ApplyAllFilters(int ratingFilter, bool isPromptFilterEnabled, List<string> tagFilters, bool isTagFilterEnabled, List<string> extensionFilters, bool isExtensionFilterEnabled) // 引数追加
         {
             // レーティングフィルタの設定
             CurrentRatingFilter = ratingFilter;
@@ -369,6 +397,10 @@ namespace Illustra.ViewModels
             _tagFilters = new List<string>(tagFilters);
             _isTagFilterEnabled = isTagFilterEnabled;
             _tagCache.Clear();
+
+            // 拡張子フィルタの設定 (追加)
+            _extensionFilters = new List<string>(extensionFilters);
+            IsExtensionFilterEnabled = isExtensionFilterEnabled;
 
             // キャッシュの差分更新は未実装
             // 別スレッドでタグキャッシュを更新

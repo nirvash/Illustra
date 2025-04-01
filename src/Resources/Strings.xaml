@@ -39,6 +39,7 @@
     <system:String x:Key="String_Menu_Filter_Prompt">Has Prompt</system:String>
     <system:String x:Key="String_Menu_Filter_Rating">Filter by Rating</system:String>
     <system:String x:Key="String_Menu_Filter_Clear">Clear All Filters</system:String>
+    <system:String x:Key="String_Menu_Filter_Extension">Filter by Extension...</system:String>
 
     <!-- Tools Menu -->
     <system:String x:Key="String_Menu_Tools_ImageGeneration">Image Generation</system:String>
@@ -214,6 +215,7 @@
     <system:String x:Key="String_Status_Filter_Prompt">Prompt</system:String>
     <system:String x:Key="String_Status_Filter_Tag">Tag: {0}</system:String>
     <system:String x:Key="String_Status_Filter_Rating">Rating: {0}</system:String>
+    <system:String x:Key="String_Status_Filter_Extension">Extension: {0}</system:String>
     <system:String x:Key="String_Status_Enabled">Enabled</system:String>
     <system:String x:Key="String_Status_SelectedItemsFormat">{0} items selected</system:String>
 

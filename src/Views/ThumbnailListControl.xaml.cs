@@ -56,6 +56,8 @@ namespace Illustra.Views
         private List<string> _currentTagFilters = new List<string>();
         private bool _isTagFilterEnabled = false;
 
+        private List<string> _currentExtensionFilters = new List<string>();
+        private bool _isExtensionFilterEnabled = false;
         private bool _isScrolling = false;
         private DispatcherTimer _scrollStopTimer;
 
@@ -661,9 +663,15 @@ namespace Illustra.Views
                     // レーティングフィルタの変更
                     _viewModel.CurrentRatingFilter = args.RatingFilter;
                 }
+                else if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged) // 追加
+                {
+                    // 拡張子フィルタの変更
+                    _currentExtensionFilters = new List<string>(args.ExtensionFilters);
+                    _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                }
 
-                // 各フィルタを適用
-                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+                // 各フィルタを適用 (拡張子フィルタも引数に追加)
+                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled, _currentExtensionFilters, _isExtensionFilterEnabled);
 
                 // フィルタリング後の選択位置を更新
                 _thumbnailLoader.UpdateSelectionAfterFilter();
@@ -686,7 +694,9 @@ namespace Illustra.Views
             _viewModel.CurrentRatingFilter = 0;
             _currentTagFilters.Clear();
             _isTagFilterEnabled = false;
-            _viewModel.ClearAllFilters();
+            _currentExtensionFilters.Clear(); // 追加
+            _isExtensionFilterEnabled = false; // 追加
+            _viewModel.ClearAllFilters(); // ViewModel側のフィルタもクリア
 
             // フィルタ変更イベントは投げない
             // それぞれ onFolderChanged で処理する
@@ -2829,7 +2839,7 @@ namespace Illustra.Views
                 var focusedPath = focusedItem?.FullPath;
 
                 // フィルタを適用（ViewModelが状態を管理）
-                await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled);
+                await _viewModel.ApplyAllFilters(rating, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled, _currentExtensionFilters, _isExtensionFilterEnabled); // 引数追加
 
                 // フィルター変更イベントを発行して他のコントロールに通知
                 _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
