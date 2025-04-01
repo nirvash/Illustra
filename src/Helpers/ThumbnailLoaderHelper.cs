@@ -1,8 +1,5 @@
 using Illustra.Views;
 using Illustra.ViewModels;
-
-namespace Illustra.Helpers;
-
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -19,6 +16,8 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Windows.Threading;
 using System.Collections.Concurrent;
+
+namespace Illustra.Helpers;
 
 /// <summary>
 /// FileNodesLoadedEventArgsクラスを追加
@@ -1180,6 +1179,23 @@ public class ThumbnailLoaderHelper
         _requestQueue.EnqueueRequest(request);
 
         return tcs.Task;
+    }
+
+    /// <summary>
+    /// すべてのサムネイルの状態をリセットし、ダミー画像に置き換えます。
+    /// </summary>
+    public void ResetAllThumbnailStatus()
+    {
+        var dummyImage = GetDummyImage();
+        var fileNodes = _viewModel.Items.Cast<FileNodeModel>().ToList();
+        foreach (var node in fileNodes)
+        {
+            // 状態をNotLoadedにし、画像をダミー画像に設定
+            node.ThumbnailInfo = new ThumbnailInfo(dummyImage, ThumbnailState.NotLoaded);
+        }
+        // キューもクリアする
+        _requestQueue.ClearQueue();
+        LogHelper.LogWithTimestamp("すべてのサムネイルの状態をリセットしました", LogHelper.Categories.ThumbnailLoader);
     }
 }
 

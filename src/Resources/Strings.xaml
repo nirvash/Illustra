@@ -242,6 +242,7 @@
     <system:String x:Key="String_Thumbnail_SortByName">Name</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
+    <system:String x:Key="String_Thumbnail_ReloadTooltip">Reload Thumbnails</system:String>
 
     <!-- Keyboard Shortcuts -->
     <system:String x:Key="String_Function_NavigateUp">Navigate Up</system:String>

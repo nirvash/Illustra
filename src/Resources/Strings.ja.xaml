@@ -241,6 +241,7 @@
     <system:String x:Key="String_Thumbnail_SortByDate">日付</system:String>
     <system:String x:Key="String_Thumbnail_SortByName">名前</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">昇順/降順の切り替え</system:String>
+    <system:String x:Key="String_Thumbnail_ReloadTooltip">サムネイルを再読み込み</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">日付/名前でソート</system:String>
 
     <!-- Keyboard Shortcuts -->

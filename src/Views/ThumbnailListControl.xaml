@@ -9,6 +9,7 @@
              xmlns:local="clr-namespace:Illustra.Controls"
              xmlns:converters="clr-namespace:Illustra.Converters"
              xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:iconpack="http://metro.mahapps.com/winfx/xaml/iconpacks"
              mc:Ignorable="d"
              d:DesignHeight="450"
              d:DesignWidth="800">
@@ -76,6 +77,18 @@
 
             <StackPanel Orientation="Horizontal"
                         Grid.Column="0">
+                <Button x:Name="ReloadThumbnailsButton"
+                        Click="ReloadThumbnailsButton_Click"
+                        ToolTip="{DynamicResource String_Thumbnail_ReloadTooltip}"
+                        Margin="5,0,5,0"
+                        Padding="3"
+                        Focusable="False">
+                    <iconpack:PackIconMaterialDesign
+                        Kind="Refresh"
+                        Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"/>
+                </Button>
                 <TextBlock Text="{DynamicResource String_Thumbnail_Size}"
                            VerticalAlignment="Center"
                            Margin="5,0,5,0"/>

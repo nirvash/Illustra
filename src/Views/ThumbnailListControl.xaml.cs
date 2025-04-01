@@ -3723,6 +3723,40 @@ namespace Illustra.Views
         }
 
 
+        private async void ReloadThumbnailsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_thumbnailLoader == null) return;
+
+            // すべてのサムネイルの状態をリセット
+            _thumbnailLoader.ResetAllThumbnailStatus();
+
+            // 現在表示されている範囲のサムネイルを再読み込み
+            var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+            if (scrollViewer != null)
+            {
+                // 既存の読み込み処理をキャンセル
+                if (_thumbnailLoadCts != null)
+                {
+                    _thumbnailLoadCts.Cancel();
+                    _thumbnailLoadCts.Dispose();
+                }
+                _thumbnailLoadCts = new CancellationTokenSource();
+
+                // 表示範囲のサムネイルを読み込む (高優先度で)
+                (int firstIndex, int lastIndex) = GetVisibleRangeWithBuffer(scrollViewer, bufferSize: 5); // 小さめのバッファでまず表示
+                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndex, lastIndex, _thumbnailLoadCts.Token, isHighPriority: true);
+
+                // 少し待ってから広範囲を読み込む (オプション)
+                _ = Task.Delay(500, _thumbnailLoadCts.Token).ContinueWith(async _ =>
+                {
+                    if (!_thumbnailLoadCts.IsCancellationRequested)
+                    {
+                        (int preloadFirst, int preloadLast) = GetVisibleRangeWithBuffer(scrollViewer, bufferSize: 30); // 広めのバッファ
+                        await _thumbnailLoader.LoadMoreThumbnailsAsync(preloadFirst, preloadLast, _thumbnailLoadCts.Token, isHighPriority: false);
+                    }
+                }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            }
+        }
 
     }
 }
