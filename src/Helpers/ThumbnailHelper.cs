@@ -9,6 +9,7 @@ using SkiaSharp;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Globalization;
+using System.Threading.Tasks; // Task のために追加
 
 namespace Illustra.Helpers
 {
@@ -19,16 +20,23 @@ namespace Illustra.Helpers
         /// </summary>
         /// <param name="videoPath">動画ファイルのパス</param>
         /// <returns>サムネイル画像。失敗した場合はnull</returns>
-        public static BitmapSource? GetVideoThumbnail(string videoPath)
+        // async Task に変更
+        public static async Task<BitmapSource?> GetVideoThumbnailAsync(string videoPath)
         {
             try
             {
+                // await Task.Yield(); // UIスレッドでの実行が必要な場合に備える (任意)
                 using (var shellFile = ShellFile.FromFilePath(videoPath))
                 {
                     var bitmap = shellFile.Thumbnail.ExtraLargeBitmap;
-                    if (bitmap == null) return null;
+                    if (bitmap == null)
+                    {
+                         Debug.WriteLine($"動画サムネイル取得失敗 (bitmap is null): {videoPath}");
+                         return null;
+                    }
 
                     using var memory = new MemoryStream();
+                    // ここは同期操作のまま
                     bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
                     memory.Position = 0;
 
@@ -45,7 +53,7 @@ namespace Illustra.Helpers
             catch (Exception ex)
             {
                 Debug.WriteLine($"動画サムネイル生成エラー ({videoPath}): {ex.Message}");
-                return null;
+                return null; // エラー時はnullを返す
             }
         }
     }
@@ -60,7 +68,8 @@ namespace Illustra.Helpers
         /// <param name="height">サムネイルの高さ</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
         /// <returns>BitmapSourceとしてのサムネイル画像</returns>
-        public static BitmapSource CreateThumbnail(string filePath, int width, int height, CancellationToken cancellationToken = default)
+        // async Task に変更
+        public static async Task<BitmapSource> CreateThumbnailAsync(string filePath, int width, int height, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -70,7 +79,8 @@ namespace Illustra.Helpers
                 // mp4ファイルの場合は専用の処理を使用
                 if (Path.GetExtension(filePath).ToLower() == ".mp4")
                 {
-                    var videoThumbnail = VideoThumbnailHelper.GetVideoThumbnail(filePath);
+                    // GetVideoThumbnailAsync を await で呼び出す
+                    var videoThumbnail = await VideoThumbnailHelper.GetVideoThumbnailAsync(filePath);
                     if (videoThumbnail != null)
                     {
                         return videoThumbnail;
@@ -79,8 +89,8 @@ namespace Illustra.Helpers
                 }
 
                 // 以下、既存の画像サムネイル生成処理
-                // ファイルからビットマップデータを読み込む
-                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                // ファイルからビットマップデータを読み込む (FileShare.Read を追加)
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var inputStream = new SKManagedStream(fileStream);
 
                 // 既存の実装を維持（互換性のため）
@@ -152,7 +162,8 @@ namespace Illustra.Helpers
         /// <param name="height">サムネイルの高さ</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
         /// <returns>BitmapSourceとしてのサムネイル画像</returns>
-        public static BitmapSource CreateThumbnailOptimized(string imagePath, int width, int height, CancellationToken cancellationToken = default)
+        // async Task に変更
+        public static async Task<BitmapSource> CreateThumbnailOptimizedAsync(string imagePath, int width, int height, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -201,7 +212,8 @@ namespace Illustra.Helpers
                 // デコード
                 using var bitmap = SKBitmap.Decode(codec, options);
                 if (bitmap == null)
-                    return CreateThumbnail(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
+                    // CreateThumbnailAsync を await で呼び出す
+                    return await CreateThumbnailAsync(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -212,7 +224,8 @@ namespace Illustra.Helpers
                 {
                     finalBitmap = bitmap.Resize(new SKImageInfo(targetWidth, targetHeight), SKFilterQuality.Medium);
                     if (finalBitmap == null)
-                        return CreateThumbnail(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
+                        // CreateThumbnailAsync を await で呼び出す
+                        return await CreateThumbnailAsync(imagePath, width, height, cancellationToken); // 失敗時は通常の方法で;
                 }
                 else
                 {
@@ -248,7 +261,8 @@ namespace Illustra.Helpers
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"サムネイル作成エラー ({imagePath}): {ex.Message}");
+                Debug.WriteLine($"サムネイル作成エラー (Optimized) ({imagePath}): {ex.Message}");
+                // async Task<BitmapSource> なので BitmapSource を直接返す
                 return GenerateErrorThumbnail(width, height, "サムネイル作成エラー");
             }
         }

@@ -734,9 +734,25 @@ public class ThumbnailLoaderHelper
         if (fileNode == null)
             return;
 
-        // 既に処理中または処理済みの場合はスキップ
+        // 既に処理中または処理済み、または試行回数上限の場合はスキップ
         if (fileNode.ThumbnailInfo.IsLoadingThumbnail || fileNode.ThumbnailInfo.HasThumbnail)
             return;
+
+        // 試行回数上限チェック (5回)
+        const int MaxThumbnailAttempts = 5;
+        if (fileNode.ThumbnailAttemptCount >= MaxThumbnailAttempts)
+        {
+            LogHelper.LogWithTimestamp($"サムネイル作成試行回数上限スキップ: [{index}]{Path.GetFileName(fileNode.FullPath)} ({fileNode.ThumbnailAttemptCount}回)", LogHelper.Categories.ThumbnailLoader);
+            // エラー状態にしておく（再試行されないように）
+            if (fileNode.ThumbnailInfo.State != ThumbnailState.Error)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    fileNode.ThumbnailInfo = new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
+                }, DispatcherPriority.Send);
+            }
+            return;
+        }
 
         // フルスクリーンモード時はサムネイル作成を抑制
         if (_isFullscreenMode)
@@ -765,19 +781,17 @@ public class ThumbnailLoaderHelper
                 // 動画ファイルかどうかをチェック
                 bool isVideo = FileHelper.IsVideoFile(fileNode.FullPath);
 
-                // サムネイル生成とアニメーション判定を同時に行う
-                thumbnail = await Task.Run<BitmapSource?>(() =>
+                // サムネイル生成とアニメーション判定を直接awaitで実行 (Task.Runを削除)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (isVideo)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    // 動画の場合は通常のCreateThumbnailを使用
-                    // 動画ファイルはCreateThumbnailを使用
-                    if (isVideo)
-                    {
-                        fileNode.IsVideo = true;  // 動画ファイルはIsVideoをtrue
-                        return ThumbnailHelper.CreateThumbnail(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
-                    }
-
+                    fileNode.IsVideo = true;  // 動画ファイルはIsVideoをtrue
+                    // CreateThumbnailAsyncを直接await
+                    thumbnail = await ThumbnailHelper.CreateThumbnailAsync(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+                }
+                else
+                {
                     // WebPファイルで500KB以上の場合はアニメーション判定
                     if (Path.GetExtension(fileNode.FullPath).ToLowerInvariant() == ".webp" &&
                         new FileInfo(fileNode.FullPath).Length >= 512000) // 500KB = 512000バイト
@@ -788,11 +802,9 @@ public class ThumbnailLoaderHelper
                             fileNode.IsVideo = true;  // アニメーションWebPはIsVideoをtrue
                         }
                     }
-
-                    // 通常の画像はCreateThumbnailOptimizedを使用
-                    var thumb = ThumbnailHelper.CreateThumbnailOptimized(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
-                    return thumb;
-                }, cancellationToken);
+                    // 通常の画像はCreateThumbnailOptimizedAsyncを直接await
+                    thumbnail = await ThumbnailHelper.CreateThumbnailOptimizedAsync(fileNode.FullPath, ThumbnailSize, ThumbnailSize, cancellationToken);
+                }
 
                 LogHelper.LogWithTimestamp($"画像処理完了: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
             }
@@ -803,8 +815,21 @@ public class ThumbnailLoaderHelper
             }
             catch (Exception ex)
             {
-                LogHelper.LogError($"エラー: [{index}]{fileName}", ex);
-                thumbnail = GetErrorImage();
+                // エラーの種類をログに出力
+                LogHelper.LogError($"サムネイル作成エラー [{index}]{fileName}: {ex.GetType().Name} - {ex.Message}", ex);
+                thumbnail = GetErrorImage(); // エラー画像を設定
+
+                // IOException の場合のみ試行回数をインクリメント
+                if (ex is IOException)
+                {
+                    fileNode.ThumbnailAttemptCount++;
+                    LogHelper.LogWithTimestamp($"失敗(IOException)、試行回数: {fileNode.ThumbnailAttemptCount} [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
+                }
+                else // IOException 以外はリトライしない
+                {
+                    fileNode.ThumbnailAttemptCount = MaxThumbnailAttempts; // 試行回数を上限にして再試行をスキップ
+                    LogHelper.LogWithTimestamp($"失敗({ex.GetType().Name})、再試行不可に設定 [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
+                }
             }
 
             // UIスレッドでサムネイル設定
@@ -822,8 +847,10 @@ public class ThumbnailLoaderHelper
 
                     // 重要: SetThumbnailメソッドを使用して、すべての関連プロパティを一度に更新
                     fileNode.SetThumbnail(thumbnail);
+                    // 成功したので試行回数をリセット
+                    fileNode.ThumbnailAttemptCount = 0;
 
-                    LogHelper.LogWithTimestamp($"完了: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
+                    LogHelper.LogWithTimestamp($"完了、試行回数リセット: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
                 }, DispatcherPriority.Send);
             }
             else
@@ -832,8 +859,8 @@ public class ThumbnailLoaderHelper
                 {
                     // エラー状態を設定
                     fileNode.ThumbnailInfo = new ThumbnailInfo(GetErrorImage(), ThumbnailState.Error);
-                    fileNode.HasThumbnail = false;
-                    LogHelper.LogWithTimestamp($"エラー画像設定: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
+                    // HasThumbnail は ThumbnailInfo.State に連動するので不要
+                    LogHelper.LogWithTimestamp($"エラー画像設定（失敗時）: [{index}]{fileName}", LogHelper.Categories.ThumbnailLoader);
                 }, DispatcherPriority.Send);
             }
         }

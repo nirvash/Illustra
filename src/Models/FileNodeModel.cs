@@ -217,6 +217,22 @@ namespace Illustra.Models
             }
         }
 
+        private int _thumbnailAttemptCount = 0;
+        [LinqToDB.Mapping.NotColumn]
+        public int ThumbnailAttemptCount
+        {
+            get => _thumbnailAttemptCount;
+            set
+            {
+                if (_thumbnailAttemptCount != value)
+                {
+                    _thumbnailAttemptCount = value;
+                    OnPropertyChanged(nameof(ThumbnailAttemptCount));
+                }
+            }
+        }
+
+
         // List View に変更を通知する。データベースへの連携には使わないこと
         public event PropertyChangedEventHandler? PropertyChanged;
 
