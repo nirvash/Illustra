@@ -1,4 +1,4 @@
-<UserControl x:Class="Illustra.Views.FavoriteFoldersControl"
+ <UserControl x:Class="Illustra.Views.FavoriteFoldersControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -33,6 +33,10 @@
                          Handler="TreeViewItem_MouseEnter"/>
             <EventSetter Event="MouseLeave"
                          Handler="TreeViewItem_MouseLeave"/>
+            <!-- デフォルトのContentAlignmentバインディング警告を抑制 -->
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+
 
             <!-- SystemColorブラシをオーバーライド -->
             <Style.Resources>
@@ -83,7 +87,7 @@
                 </ContextMenu>
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                <DataTemplate>
                     <StackPanel Orientation="Horizontal">
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
@@ -93,7 +97,7 @@
                         <!-- 表示名を DisplayMember にバインド -->
                         <TextBlock Text="{Binding DisplayMember}"/>
                     </StackPanel>
-                </HierarchicalDataTemplate>
+                </DataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>
     </Grid>

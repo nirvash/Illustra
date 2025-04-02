@@ -84,6 +84,11 @@
                 </Setter.Value>
             </Setter>
 
+            <!-- デフォルトのContentAlignmentバインディング警告を抑制 -->
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+
+
             <!-- イベントハンドラの関連付け -->
             <EventSetter Event="MouseEnter"
                          Handler="TreeViewItem_MouseEnter"/>

@@ -43,6 +43,23 @@ namespace Illustra.ViewModels
             private set => SetProperty(ref _isDarkTheme, value);
         }
 
+        // 新規ファイル自動選択設定
+        public bool IsAutoSelectNewFileEnabled
+        {
+            get => SettingsHelper.GetSettings().AutoSelectNewFile;
+            set
+            {
+                var settings = SettingsHelper.GetSettings();
+                if (settings.AutoSelectNewFile != value)
+                {
+                    settings.AutoSelectNewFile = value;
+                    SettingsHelper.SaveSettings(settings);
+                    RaisePropertyChanged(nameof(IsAutoSelectNewFileEnabled)); // プロパティ変更を通知
+                }
+            }
+        }
+
+
         public DelegateCommand OpenLanguageSettingsCommand { get; }
         public DelegateCommand OpenShortcutSettingsCommand { get; }
         public DelegateCommand OpenAdvancedSettingsCommand { get; }

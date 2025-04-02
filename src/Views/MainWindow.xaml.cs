@@ -40,7 +40,6 @@ namespace Illustra.Views
         private int _selectedItemCount = 0;
         private const string CONTROL_ID = "MainWindow";
         public bool EnableCyclicNavigation => App.Instance.EnableCyclicNavigation;
-        public bool IsAutoSelectNewFileEnabled { get; set; }
 
         // ソートメニューアイテム
         private MenuItem? _sortByDateAscendingMenuItem;
@@ -257,7 +256,6 @@ namespace Illustra.Views
             _appSettings.SortByDate = _sortByDate;
             _appSettings.SortAscending = _sortAscending;
             _appSettings.EnableCyclicNavigation = App.Instance.EnableCyclicNavigation;
-            _appSettings.AutoSelectNewFile = IsAutoSelectNewFileEnabled;
 
             try
             {
@@ -296,12 +294,6 @@ namespace Illustra.Views
             SettingsHelper.SaveSettings(_appSettings);
         }
 
-        private void ToggleAutoSelectNewFile_Click(object sender, RoutedEventArgs e)
-        {
-            IsAutoSelectNewFileEnabled = ToggleAutoSelectNewFile.IsChecked;
-            _appSettings.AutoSelectNewFile = IsAutoSelectNewFileEnabled;
-            SettingsHelper.SaveSettings(_appSettings);
-        }
 
         private void FilterPromptMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -450,9 +442,8 @@ namespace Illustra.Views
             ToggleCyclicNavigation.IsChecked = App.Instance.EnableCyclicNavigation;
             SortDescendingMenuItem.IsChecked = !_sortAscending;
 
-            // 新規ファイル自動選択の設定を適用
-            IsAutoSelectNewFileEnabled = _appSettings.AutoSelectNewFile;
-            ToggleAutoSelectNewFile.IsChecked = IsAutoSelectNewFileEnabled;
+            // 新規ファイル自動選択の設定を適用 (ViewModelに移動)
+            // ToggleAutoSelectNewFile.IsChecked = _viewModel.IsAutoSelectNewFileEnabled; // ViewModelのプロパティにバインドされているため不要
         }
 
         private void RestoreWindowLocation()
