@@ -2513,9 +2513,9 @@ namespace Illustra.Views
         {
             try
             {
-                // 表示中のウィンドウがない場合は新しく作成
                 if (_imageViewerWindow == null)
                 {
+                    // 新規作成処理
                     _imageViewerWindow = new ImageViewerWindow()
                     {
                         Parent = this
@@ -2541,12 +2541,26 @@ namespace Illustra.Views
                         // インスタンスをクリア
                         _imageViewerWindow = null;
                     };
-                }
 
-                // 画像を読み込んでウィンドウを表示
-                _imageViewerWindow.LoadContentFromPath(filePath, true); // CS0618 Fix: Use recommended method
-                _imageViewerWindow.Show();
-                _imageViewerWindow.Focus(); // ビューアウィンドウにフォーカスを設定
+                    // 画像を読み込んでウィンドウを表示・フォーカス
+                    _imageViewerWindow.LoadContentFromPath(filePath, true);
+                    _imageViewerWindow.Show();
+                    _imageViewerWindow.Activate(); // ウィンドウを前面に表示しアクティブにする
+                    _imageViewerWindow.Focus();
+                }
+                else
+                {
+                    // 既存ウィンドウの処理
+                    // 最小化されている場合は通常状態に戻す
+                    if (_imageViewerWindow.WindowState == WindowState.Minimized)
+                    {
+                        _imageViewerWindow.WindowState = WindowState.Normal;
+                    }
+                    // ウィンドウをアクティブにする
+                    _imageViewerWindow.Activate();
+                    // 新しい画像を読み込む
+                    _imageViewerWindow.LoadContentFromPath(filePath, true);
+                }
             }
             catch (Exception ex)
             {
