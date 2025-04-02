@@ -50,8 +50,8 @@
 
 ## ビューモデル
 
-### メインビューモデル
-- `src/ViewModels/MainViewModel.cs`: メインロジックの実装
+### サムネイルリストビューモデル
+- `src/ViewModels/ThumbnailListViewModel.cs`: サムネイルリスト関連のロジックの実装
   - ファイルリスト管理
   - フィルタリング
   - ソート機能
