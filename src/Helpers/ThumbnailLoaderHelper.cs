@@ -50,7 +50,7 @@ public class ThumbnailLoaderHelper
     private int _thumbnailSize = 120;
     private AppSettingsModel _appSettings;
     private readonly ThumbnailListControl _control;
-    private readonly MainViewModel _viewModel;
+    private readonly ThumbnailListViewModel _viewModel;
     private readonly Action<string, bool> _selectCallback;
     private readonly DatabaseManager _db;
     private bool _isFileNodesLoadedEventFiring = false;
@@ -140,7 +140,7 @@ public class ThumbnailLoaderHelper
         ItemsControl thumbnailListBox,
         Action<string, bool> selectCallback,
         ThumbnailListControl control,
-        MainViewModel viewModel,
+        ThumbnailListViewModel viewModel,
         DatabaseManager db,
         IThumbnailProcessorService thumbnailProcessor)
     {

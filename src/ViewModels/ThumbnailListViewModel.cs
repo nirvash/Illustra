@@ -15,7 +15,7 @@ using System.Windows.Input;
 
 namespace Illustra.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class ThumbnailListViewModel : INotifyPropertyChanged
     {
         private bool _sortByDate;
         private bool _sortAscending;
@@ -57,7 +57,7 @@ namespace Illustra.ViewModels
         public ICommand SelectAllCommand { get; }
 
 
-        public MainViewModel()
+        public ThumbnailListViewModel()
         {
             // 初期設定を読み込む
             var settings = SettingsHelper.GetSettings();
@@ -302,15 +302,15 @@ namespace Illustra.ViewModels
                     return false;
             }
 
-           // 拡張子フィルタ (追加)
-           if (IsExtensionFilterEnabled && _extensionFilters.Any())
-           {
-               string fileExtension = Path.GetExtension(fileNode.FullPath)?.ToLowerInvariant();
-               if (string.IsNullOrEmpty(fileExtension) || !_extensionFilters.Contains(fileExtension))
-               {
-                   return false;
-               }
-           }
+            // 拡張子フィルタ (追加)
+            if (IsExtensionFilterEnabled && _extensionFilters.Any())
+            {
+                string fileExtension = Path.GetExtension(fileNode.FullPath)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(fileExtension) || !_extensionFilters.Contains(fileExtension))
+                {
+                    return false;
+                }
+            }
 
             return true;
         }

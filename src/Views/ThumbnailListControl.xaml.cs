@@ -36,7 +36,7 @@ namespace Illustra.Views
     public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
     {
         private IEventAggregator _eventAggregator = null!;
-        private MainViewModel _viewModel;
+        private ThumbnailListViewModel _viewModel;
         private IllustraAppContext _appContext;
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
@@ -238,7 +238,7 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // ViewModelをDIコンテナから取得
-            _viewModel = ContainerLocator.Container.Resolve<MainViewModel>();
+            _viewModel = ContainerLocator.Container.Resolve<ThumbnailListViewModel>();
             DataContext = _viewModel;
 
             // アプリケーション全体で共有するコンテキストにViewModelを設定
@@ -508,8 +508,8 @@ namespace Illustra.Views
                 }
                 else
                 {
-                     // アイテム外で右クリックされた場合は何もしないか、別のメニューを表示するなど
-                     e.Handled = false; // デフォルトのコンテキストメニューなどを許可する場合
+                    // アイテム外で右クリックされた場合は何もしないか、別のメニューを表示するなど
+                    e.Handled = false; // デフォルトのコンテキストメニューなどを許可する場合
                 }
             };
 
@@ -814,7 +814,7 @@ namespace Illustra.Views
             // プロパティ変更通知の購読
             ((INotifyPropertyChanged)_viewModel).PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(MainViewModel.SelectedItems))
+                if (e.PropertyName == nameof(ThumbnailListViewModel.SelectedItems))
                 {
                     UpdateUISelection();
                 }
@@ -2578,7 +2578,7 @@ namespace Illustra.Views
             }
         }
 
-        public MainViewModel GetViewModel()
+        public ThumbnailListViewModel GetViewModel()
         {
             return _viewModel;
         }

@@ -54,7 +54,7 @@
     </UserControl.Resources>
 
     <UserControl.DataContext>
-        <viewmodels:MainViewModel/>
+        <viewmodels:ThumbnailListViewModel/>
     </UserControl.DataContext>
 
     <Grid>

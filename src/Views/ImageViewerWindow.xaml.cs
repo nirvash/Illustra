@@ -60,7 +60,7 @@ namespace Illustra.Views
         public ImagePropertiesModel Properties { get; set; } = new ImagePropertiesModel();
 
         // MainViewModelへの参照を追加
-        public MainViewModel? MainViewModel => _appContext?.MainViewModel;
+        public ThumbnailListViewModel? MainViewModel => _appContext?.MainViewModel;
 
         private BitmapSource? _imageSource = null;
         public BitmapSource? ImageSource

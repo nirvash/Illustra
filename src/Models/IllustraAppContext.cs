@@ -29,15 +29,15 @@ namespace Illustra.Models
             }
         }
 
-        private MainViewModel _mainViewModel;
-        public MainViewModel MainViewModel
+        private ThumbnailListViewModel _mainViewModel;
+        public ThumbnailListViewModel MainViewModel
         {
             get => _mainViewModel;
             set => SetProperty(ref _mainViewModel, value);
         }
 
         // DatabaseManager を注入するようにコンストラクタを変更
-        public IllustraAppContext(MainViewModel mainViewModel, DatabaseManager dbManager)
+        public IllustraAppContext(ThumbnailListViewModel mainViewModel, DatabaseManager dbManager)
         {
             _currentProperties = new ImagePropertiesModel();
             _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));

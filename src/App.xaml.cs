@@ -85,11 +85,11 @@ namespace Illustra
             // IllustraAppContext の登録時に DatabaseManager を注入
             containerRegistry.RegisterSingleton<IllustraAppContext>(resolver =>
                 new IllustraAppContext(
-                    resolver.Resolve<MainViewModel>(), // MainViewModel も解決して渡す
+                    resolver.Resolve<ThumbnailListViewModel>(), // MainViewModel も解決して渡す
                     resolver.Resolve<DatabaseManager>()
                 ));
             containerRegistry.RegisterSingleton<IImagePropertiesService, ImagePropertiesService>();
-            containerRegistry.RegisterSingleton<MainViewModel>(); // MainViewModel をシングルトンで登録
+            containerRegistry.RegisterSingleton<ThumbnailListViewModel>(); // MainViewModel をシングルトンで登録
 
             // ビューの登録
             containerRegistry.Register<LanguageSettingsViewModel>();

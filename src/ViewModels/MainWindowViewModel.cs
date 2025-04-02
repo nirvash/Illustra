@@ -20,7 +20,7 @@ namespace Illustra.ViewModels
         private bool _isDarkTheme;
         private readonly IEventAggregator _eventAggregator;
         // private readonly IDialogCoordinator _dialogCoordinator; // 削除
-        private readonly MainViewModel _mainViewModel;
+        private readonly ThumbnailListViewModel _mainViewModel;
 
         // DialogCoordinator プロパティを追加
         public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
