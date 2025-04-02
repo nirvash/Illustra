@@ -72,6 +72,7 @@
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.2.8" />

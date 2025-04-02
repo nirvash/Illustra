@@ -221,6 +221,7 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/> <!-- Added row for Exposure Info -->
                                         </Grid.RowDefinitions>
 
                                         <!-- ファイルサイズ -->
@@ -271,61 +272,74 @@
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
                                                  Visibility="{Binding Resolution, Converter={StaticResource StringToVisibilityConverter}}"/>
 
+
+                                        <!-- 再生時間 (動画のみ) -->
+                                        <TextBlock Grid.Row="5"
+                                                   Grid.Column="0"
+                                                   Text="{DynamicResource String_Property_Duration}"
+                                                   Margin="0,0,10,5"
+                                                   Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBox Grid.Row="5"
+                                                 Grid.Column="1"
+                                                 Text="{Binding DurationFormatted, Mode=OneWay}"
+                                                 Style="{StaticResource ReadOnlyTextBoxStyle}"
+                                                 Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
                                         <!-- 画像形式 -->
-                                        <TextBlock Grid.Row="4"
+                                        <TextBlock Grid.Row="6"
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_ImageFormat}"
                                                    Margin="0,0,10,5"
                                                    Visibility="{Binding ImageFormat, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                        <TextBox Grid.Row="4"
+                                        <TextBox Grid.Row="6"
                                                  Grid.Column="1"
                                                  Text="{Binding ImageFormat, Mode=OneWay}"
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
                                                  Visibility="{Binding ImageFormat, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                                         <!-- 色深度 -->
-                                        <TextBlock Grid.Row="5"
+                                        <TextBlock Grid.Row="7"
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_ColorDepth}"
                                                    Margin="0,0,10,5"
                                                    Visibility="Collapsed"/>
-                                        <TextBox Grid.Row="5"
+                                        <TextBox Grid.Row="7"
                                                  Grid.Column="1"
                                                  Text="{Binding ColorDepth, Mode=OneWay}"
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
                                                  Visibility="Collapsed"/>
 
                                         <!-- 撮影日時 -->
-                                        <TextBlock Grid.Row="6"
+                                        <TextBlock Grid.Row="8"
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_DateTaken}"
                                                    Margin="0,0,10,5"
                                                    Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
-                                        <TextBox Grid.Row="6"
+                                        <TextBox Grid.Row="8"
                                                  Grid.Column="1"
                                                  Text="{Binding DateTaken, StringFormat=yyyy/MM/dd HH:mm:ss, Mode=OneWay}"
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
                                                  Visibility="{Binding DateTaken, Converter={StaticResource DateTimeToVisibilityConverter}}"/>
 
                                         <!-- カメラ情報 -->
-                                        <TextBlock Grid.Row="7"
+                                        <TextBlock Grid.Row="9"
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_Camera}"
                                                    Margin="0,0,10,5"
                                                    Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                        <TextBox Grid.Row="7"
+                                        <TextBox Grid.Row="9"
                                                  Grid.Column="1"
                                                  Text="{Binding CameraModel, Mode=OneWay}"
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
                                                  Visibility="{Binding CameraModel, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                                         <!-- 撮影情報 -->
-                                        <TextBlock Grid.Row="8"
+                                        <TextBlock Grid.Row="10"
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_ExposureInfo}"
                                                    Margin="0,0,10,5"
                                                    Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                        <StackPanel Grid.Row="8"
+                                        <StackPanel Grid.Row="10"
                                                     Grid.Column="1"
                                                     Margin="0,0,0,5"
                                                     Visibility="{Binding ExposureTime, Converter={StaticResource StringToVisibilityConverter}}">

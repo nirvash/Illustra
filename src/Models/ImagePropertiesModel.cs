@@ -13,6 +13,7 @@ using StableDiffusionTools;
 using System.Diagnostics;
 using System.Text;
 using DryIoc.ImTools;
+using TagLib; // Changed from MediaInfo
 
 namespace Illustra.Models
 {
@@ -21,7 +22,7 @@ namespace Illustra.Models
         private string _filePath = string.Empty;
         private string _fileName = string.Empty;
         private long _fileSize;
-        private string _dimensions = string.Empty;
+        // private string _dimensions = string.Empty; // Removed as it's calculated by Dimensions property
         private string _createdDate = string.Empty;
         private string _modifiedDate = string.Empty;
         private int _rating;
@@ -43,7 +44,10 @@ namespace Illustra.Models
         private bool _folderPathExpanded = false;
         private string _folderPathShort = string.Empty;
         private StableDiffusionParser.ParseResult? _stableDiffusionResult;
+        private bool _isVideo;
+        private TimeSpan _duration;
         private bool _stableDiffusionExpanded = false;
+        public string DurationFormatted => _duration.ToString(@"hh\:mm\:ss");
 
         public string FilePath
         {
@@ -92,28 +96,14 @@ namespace Illustra.Models
 
         public string Dimensions
         {
-            get => _dimensions;
-            set
-            {
-                if (_dimensions != value)
-                {
-                    _dimensions = value;
-                    OnPropertyChanged(nameof(Dimensions));
-                }
-            }
+            get => $"{_width} x {_height} ピクセル"; // 動画・画像共通で幅x高さを返す
+            // Setter は不要。値は Width/Height から計算されるため。
         }
 
         public string Resolution
         {
-            get => _dimensions;
-            set
-            {
-                if (_dimensions != value)
-                {
-                    _dimensions = value;
-                    OnPropertyChanged(nameof(Resolution));
-                }
-            }
+            get => Dimensions; // Return the calculated Dimensions property
+            // Setter は不要。値は Dimensions プロパティから取得されるため。
         }
 
         public string CreatedDate
@@ -274,6 +264,8 @@ namespace Illustra.Models
                 {
                     _width = value;
                     OnPropertyChanged(nameof(Width));
+                    OnPropertyChanged(nameof(Dimensions)); // Notify Dimensions change
+                    OnPropertyChanged(nameof(Resolution)); // Notify Resolution change
                 }
             }
         }
@@ -287,6 +279,8 @@ namespace Illustra.Models
                 {
                     _height = value;
                     OnPropertyChanged(nameof(Height));
+                    OnPropertyChanged(nameof(Dimensions)); // Notify Dimensions change
+                    OnPropertyChanged(nameof(Resolution)); // Notify Resolution change
                 }
             }
         }
@@ -490,7 +484,7 @@ namespace Illustra.Models
             FilePath = string.Empty;
             FileName = string.Empty;
             FileSize = 0;
-            Dimensions = string.Empty;
+            // Dimensions is calculated, no need to clear
             CreatedDate = string.Empty;
             ModifiedDate = string.Empty;
             Rating = 0;
@@ -498,6 +492,8 @@ namespace Illustra.Models
             FileType = string.Empty;
             Width = 0;
             Height = 0;
+            IsVideo = false; // Clear video flag
+            Duration = TimeSpan.Zero; // Clear duration
             ImageFormat = string.Empty;
             ColorDepth = string.Empty;
             UserComment = string.Empty;
@@ -508,6 +504,7 @@ namespace Illustra.Models
             CameraModel = string.Empty;
             FolderPath = string.Empty;
             FolderPathShort = string.Empty;
+            StableDiffusionResult = null; // Clear SD data
         }
 
         /// <summary>
@@ -519,49 +516,99 @@ namespace Illustra.Models
 
             try
             {
-                if (!File.Exists(filePath))
+                if (!System.IO.File.Exists(filePath)) // Use fully qualified name
                     return properties;
 
                 properties.FilePath = filePath;
                 properties.FileName = Path.GetFileName(filePath);
-                properties.FolderPath = Path.GetDirectoryName(filePath);
+                properties.FolderPath = Path.GetDirectoryName(filePath) ?? string.Empty; // Handle null case
 
                 var fileInfo = new FileInfo(filePath);
-                properties.FileSizeBytes = fileInfo.Length;
-                properties.CreationTime = fileInfo.CreationTime;
-                properties.LastModified = fileInfo.LastWriteTime;
+                properties.FileSizeBytes = fileInfo.Length; // Use setter for FileSize
+                properties.CreationTime = fileInfo.CreationTime; // Use setter
+                properties.LastModified = fileInfo.LastWriteTime; // Use setter
+                properties.FileType = Path.GetExtension(filePath).ToLowerInvariant(); // Use setter
 
-                await Task.Run(() =>
+                // FileHelper を使用してファイルタイプに基づいて処理を分岐
+                if (FileHelper.IsVideoFile(filePath))
                 {
-                    try
+                    properties.IsVideo = true; // Use setter
+                    await Task.Run(() => // TagLib processing in background thread
                     {
-                        using (var stream = File.OpenRead(filePath))
-                        using (var skStream = new SKManagedStream(stream))
-                        using (var codec = SKCodec.Create(skStream))
+                        try
                         {
-                            if (codec != null)
+                            using (var tagFile = TagLib.File.Create(filePath))
                             {
-                                var info = codec.Info;
-                                properties.Width = info.Width;
-                                properties.Height = info.Height;
-                                properties.ImageFormat = codec.EncodedFormat.ToString();
-                                properties.Resolution = $"{info.Width} x {info.Height} ピクセル";
-                                properties.ColorDepth = GetColorDepth(codec);
+                                properties.Width = tagFile.Properties.VideoWidth; // Use setter
+                                properties.Height = tagFile.Properties.VideoHeight; // Use setter
+                                properties.Duration = tagFile.Properties.Duration; // TagLib Duration is TimeSpan
+                                properties.ImageFormat = tagFile.Properties.Description; // Use Description for format/codec info
                             }
                         }
-
-                        // Exif情報の読み取り
-                        ReadExifData(filePath, properties);
-                    }
-                    catch (Exception ex)
+                        catch (CorruptFileException ex)
+                        {
+                            Debug.WriteLine($"TagLib CorruptFileException ({filePath}): {ex.Message}");
+                            // Try to load basic info even if tags are corrupt
+                            try
+                            {
+                                using (var tagFile = TagLib.File.Create(filePath, ReadStyle.None))
+                                {
+                                    properties.Width = tagFile.Properties.VideoWidth;
+                                    properties.Height = tagFile.Properties.VideoHeight;
+                                    properties.Duration = tagFile.Properties.Duration;
+                                }
+                            }
+                            catch (Exception innerEx)
+                            {
+                                Debug.WriteLine($"TagLib fallback ReadStyle.None failed ({filePath}): {innerEx.Message}");
+                            }
+                        }
+                        catch (UnsupportedFormatException ex)
+                        {
+                            Debug.WriteLine($"TagLib UnsupportedFormatException ({filePath}): {ex.Message}");
+                        }
+                        catch (Exception ex) // Catch other potential TagLib errors
+                        {
+                            Debug.WriteLine($"TagLib 読み取りエラー ({filePath}): {ex.Message}");
+                        }
+                    });
+                }
+                else if (FileHelper.IsImageFile(filePath)) // 画像ファイルの場合
+                {
+                    properties.IsVideo = false; // Use setter
+                    await Task.Run(() => // Image processing in background thread
                     {
-                        System.Diagnostics.Debug.WriteLine($"画像プロパティ読み取りエラー: {ex.Message}");
-                    }
-                });
+                        try
+                        {
+                            // SkiaSharp を使用して画像の基本情報を読み取る
+                            using (var stream = System.IO.File.OpenRead(filePath)) // Use fully qualified name
+                            using (var skStream = new SKManagedStream(stream))
+                            using (var codec = SKCodec.Create(skStream))
+                            {
+                                if (codec != null)
+                                {
+                                    var info = codec.Info;
+                                    properties.Width = info.Width; // Use setter
+                                    properties.Height = info.Height; // Use setter
+                                    properties.ImageFormat = codec.EncodedFormat.ToString(); // Use setter
+                                    properties.ColorDepth = GetColorDepth(codec); // Use setter
+                                }
+                            }
+
+                            // Exif情報の読み取り (画像ファイルのみ)
+                            ReadExifData(filePath, properties);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"画像プロパティ読み取りエラー ({filePath}): {ex.Message}");
+                        }
+                    });
+                }
+                // else: Handle unsupported file types if necessary
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"プロパティ読み込みエラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"プロパティ読み込みエラー ({filePath}): {ex.Message}");
             }
 
             return properties;
@@ -758,5 +805,36 @@ namespace Illustra.Models
             OnPropertyChanged(nameof(FolderPathExpanded));
             OnPropertyChanged(nameof(StableDiffusionExpanded));
         }
+
+        // --- Video/Duration Related Properties ---
+        public bool IsVideo
+        {
+            get => _isVideo;
+            private set // Set internally by LoadFromFileAsync
+            {
+                if (_isVideo != value)
+                {
+                    _isVideo = value;
+                    OnPropertyChanged(nameof(IsVideo));
+                    OnPropertyChanged(nameof(Dimensions)); // Dimensions depends on IsVideo
+                }
+            }
+        }
+
+        public TimeSpan Duration
+        {
+            get => _duration;
+            private set // Set internally by LoadFromFileAsync
+            {
+                if (_duration != value)
+                {
+                    _duration = value;
+                    OnPropertyChanged(nameof(Duration));
+                    OnPropertyChanged(nameof(DurationFormatted)); // Formatted string depends on this
+                    if (IsVideo) OnPropertyChanged(nameof(Dimensions)); // Dimensions depends on Duration for video
+                }
+            }
+        }
     }
+
 }
