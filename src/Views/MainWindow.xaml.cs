@@ -2,6 +2,7 @@ using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.IO;
 using System.Windows;
 using System.Windows.Controls; // Add this for MenuItem
+using System.Windows.Controls.Primitives; // Add this for Thumb
 using System.Windows.Input;   // Add this for KeyEventArgs
 using Illustra.Helpers;
 using Illustra.Functions;     // Add this for FuncId
@@ -239,12 +240,61 @@ namespace Illustra.Views
             });
         }
 
+        // Removed methods related to MainTabControl.Loaded and ItemContainerGenerator.StatusChanged
+        // Using ItemContainerStyle.Loaded event instead.
+
+        /// <summary>
+        /// 指定された型の最初のビジュアル子要素を検索します。(TabItem_MouseRightButtonUpで使用)
+        /// </summary>
+        public static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child != null && child is T t)
+                {
+                    return t;
+                }
+                else
+                {
+                    T? childOfChild = FindVisualChild<T>(child);
+                    if (childOfChild != null)
+                    {
+                        return childOfChild;
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        // DragablzItem_Loaded メソッドは ItemContainerStyle で EventSetter を使うため不要になりました。
+
         /// <summary>
         /// タブアイテムが右クリックされたときにコンテキストメニューを表示する
         /// </summary>
-        private void TabItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void TabItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) // メソッド名を変更
         {
-            if (sender is DragablzItem tabItem && tabItem.DataContext is TabViewModel tabViewModel && DataContext is MainWindowViewModel mainWindowViewModel)
+            DragablzItem? tabItem = null;
+            // イベントソースがThumbかDragablzItemかを確認
+            if (sender is Thumb thumb)
+            {
+                // Thumbから親のDragablzItemを探す
+                DependencyObject parent = VisualTreeHelper.GetParent(thumb);
+                while (parent != null && !(parent is DragablzItem))
+                {
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+                tabItem = parent as DragablzItem;
+            }
+            else if (sender is DragablzItem item) // TextBlockからのイベントは削除したので、これは不要かもしれないが念のため残す
+            {
+                tabItem = item;
+            }
+
+            if (tabItem != null && tabItem.DataContext is TabViewModel tabViewModel && DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 var contextMenu = new ContextMenu();
 
@@ -255,7 +305,6 @@ namespace Illustra.Views
                     Command = mainWindowViewModel.CloseTabCommand,
                     CommandParameter = tabViewModel
                 };
-                // CanExecute を評価して IsEnabled を設定
                 closeItem.IsEnabled = mainWindowViewModel.CloseTabCommand.CanExecute(tabViewModel);
                 contextMenu.Items.Add(closeItem);
 
@@ -266,7 +315,6 @@ namespace Illustra.Views
                     Command = mainWindowViewModel.CloseOtherTabsCommand,
                     CommandParameter = tabViewModel
                 };
-                // CanExecute を評価して IsEnabled を設定
                 closeOthersItem.IsEnabled = mainWindowViewModel.CloseOtherTabsCommand.CanExecute(tabViewModel);
                 contextMenu.Items.Add(closeOthersItem);
 
@@ -277,11 +325,10 @@ namespace Illustra.Views
                     Command = mainWindowViewModel.DuplicateTabCommand,
                     CommandParameter = tabViewModel
                 };
-                // CanExecute を評価して IsEnabled を設定
                 duplicateItem.IsEnabled = mainWindowViewModel.DuplicateTabCommand.CanExecute(tabViewModel);
                 contextMenu.Items.Add(duplicateItem);
 
-                // ContextMenuService を使って表示 (推奨)
+                // ContextMenuService を使って表示
                 ContextMenuService.SetContextMenu(tabItem, contextMenu);
                 contextMenu.IsOpen = true;
 
