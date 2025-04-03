@@ -9,6 +9,7 @@
         xmlns:prism="http://prismlibrary.com/"
         xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
         xmlns:dialogs="clr-namespace:MahApps.Metro.Controls.Dialogs;assembly=MahApps.Metro"
+        xmlns:vm="clr-namespace:Illustra.ViewModels"
         dialogs:DialogParticipation.Register="{Binding}"
         WindowTransitionsEnabled="False"
         KeyDown="MainWindow_OnKeyDown"
@@ -58,10 +59,21 @@
                                      Margin="0"
                                      ItemsSource="{Binding DataContext.Tabs, RelativeSource={RelativeSource AncestorType=Window}}"
                                      SelectedItem="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
-                                     Height="30" VerticalAlignment="Bottom">
+                                     Height="30" VerticalAlignment="Bottom"
+                                     ShowDefaultCloseButton="{Binding DataContext.ShowCloseButton, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <!-- カスタム追加ボタン -->
+                    <dragablz:TabablzControl.HeaderSuffixContent>
+                        <Button Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                ToolTip="{DynamicResource String_Tab_Add}"
+                                Margin="4,0,0,0" Padding="4,2">
+                            <TextBlock Text="+" FontSize="16" VerticalAlignment="Center"/>
+                        </Button>
+                    </dragablz:TabablzControl.HeaderSuffixContent>
                     <dragablz:TabablzControl.HeaderItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}"
+                        <DataTemplate DataType="{x:Type vm:TabViewModel}">
+                            <TextBlock Text="{Binding DisplayName, FallbackValue='[Tab?]'}"
                                     Margin="8,4"/>
                         </DataTemplate>
                     </dragablz:TabablzControl.HeaderItemTemplate>

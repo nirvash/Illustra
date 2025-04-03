@@ -238,6 +238,9 @@ namespace Illustra.Views
             {
                 // UIに関係ない非同期処理をここに書く
             });
+
+            // ViewModel に初期タブ状態のイベント発行を指示
+            _viewModel.PublishInitialTabState();
         }
 
         // Removed methods related to MainTabControl.Loaded and ItemContainerGenerator.StatusChanged

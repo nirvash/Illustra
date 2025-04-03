@@ -473,6 +473,7 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<SelectedTabChangedEvent>().Subscribe(OnSelectedTabChanged, ThreadOption.UIThread);
 
+
             // ThumbnailItemsControlの右クリックイベントを設定 (async void に変更)
             ThumbnailItemsControl.PreviewMouseRightButtonDown += async (s, e) =>
             {
@@ -724,24 +725,6 @@ namespace Illustra.Views
             {
                 ThumbnailItemsControl.Visibility = Visibility.Visible;
             }
-        }
-
-        /// <summary>
-        /// タブ切り替え時のフォルダ読み込み処理
-        /// </summary>
-        private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
-        {
-            if (args?.NewTabState == null)
-                return;
-
-            // 同じフォルダの場合はスキップ
-            if (args.NewTabState.FolderPath == _currentFolderPath)
-            {
-                Debug.WriteLine($"[タブ切替] 同じフォルダなのでスキップ: {_currentFolderPath}");
-                return;
-            }
-
-            await HandleFolderChangeAsync(args.NewTabState.FolderPath);
         }
 
         public void SetCurrentSettings()
@@ -2721,7 +2704,7 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたフォルダのファイルノードを読み込みます
         /// </summary>
-        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null)
+        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null)
         {
             try
             {
@@ -2767,13 +2750,33 @@ namespace Illustra.Views
                 try
                 {
                     // ファイル一覧を読み込む - サムネイルトークンは渡さない
+                    // ファイル一覧を読み込む
                     await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath);
 
-                    // 重要: ファイル一覧の読み込み完了後、UIの更新を待機
+                    // フィルタとソート設定を適用 (読み込み後)
+                    if (filterSettings != null)
+                    {
+                        await _viewModel.ApplyAllFilters(
+                            filterSettings.Rating,
+                            filterSettings.HasPrompt,
+                            filterSettings.Tags,
+                            filterSettings.Tags.Any(),
+                            filterSettings.Extensions,
+                            filterSettings.Extensions.Any()
+                        );
+                    }
+                    if (sortSettings != null)
+                    {
+                         _viewModel.SortByDate = sortSettings.SortByDate;
+                         _viewModel.SortAscending = sortSettings.SortAscending;
+                        _viewModel.SortItems(_viewModel.SortByDate, _viewModel.SortAscending);
+                    }
+
+                    // 重要: ファイル一覧の読み込みとフィルタ/ソート適用後、UIの更新を待機
                     await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                    // アイテムが読み込まれたことを確認
-                    if (ThumbnailItemsControl.Items.Count > 0)
+                    // アイテムが読み込まれたことを確認 (フィルタ適用後なのでFilteredItemsで確認)
+                    if (_viewModel.FilteredItems.Cast<object>().Any())
                     {
                         LogHelper.LogWithTimestamp($"[フォルダ切替] {ThumbnailItemsControl.Items.Count}件のアイテムが読み込まれました", LogHelper.Categories.ThumbnailLoader);
                     }
@@ -3794,6 +3797,95 @@ namespace Illustra.Views
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
         }
+
+        /// <summary>
+        /// SelectedTabChangedEvent を受信したときの処理 (Control側)
+        /// OnMcpFolderSelected と同様のロジックでフォルダを読み込む。
+        /// </summary>
+        private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
+        {
+            var newState = args?.NewTabState;
+            if (newState == null || string.IsNullOrEmpty(newState.FolderPath))
+            {
+                // 選択されたタブがない、またはフォルダパスがない場合
+                _viewModel.ClearItems(); // ViewModelのアイテムをクリア
+                _currentFolderPath = null;
+                if (_fileSystemMonitor.IsMonitoring)
+                {
+                    _fileSystemMonitor.StopMonitoring();
+                }
+                Debug.WriteLine("[タブ変更] 新しいタブの状態が無効です。クリアします。");
+                return;
+            }
+
+            string folderPath = newState.FolderPath;
+            string? selectedFilePath = newState.SelectedItemPath;
+            var sortSettings = newState.SortSettings;
+            var filterSettings = newState.FilterSettings;
+
+            Debug.WriteLine($"[タブ変更] フォルダ: {folderPath}, 選択: {selectedFilePath ?? "なし"}, ソート: {sortSettings.SortByDate}/{sortSettings.SortAscending}, フィルタ: R{filterSettings.Rating}/P{filterSettings.HasPrompt}/T{filterSettings.Tags.Count}/E{filterSettings.Extensions.Count}");
+
+            // 同じフォルダが既に開かれている場合はリロードしない
+            // FilterChangedEventも発行してUIを更新
+
+            if (folderPath == _currentFolderPath)
+            {
+                Debug.WriteLine("[タブ変更] 同じフォルダのため、リロードをスキップします。");
+                return;
+            }
+
+            // --- フォルダ変更処理 ---
+            ThumbnailItemsControl.Visibility = Visibility.Hidden; // ちらつき防止
+
+            // 1. ViewModelの状態をクリア（フィルタ、アイテム、選択）
+            _viewModel.ClearAllFilters();
+            _viewModel.ClearItems();
+            _currentTagFilters.Clear(); // Control側のフィルタ状態もクリア
+            _isTagFilterEnabled = false;
+            _isPromptFilterEnabled = false;
+            _currentExtensionFilters.Clear();
+            _isExtensionFilterEnabled = false;
+
+            // 2. ファイルシステム監視を更新
+            if (_fileSystemMonitor.IsMonitoring)
+            {
+                _fileSystemMonitor.StopMonitoring();
+            }
+            _fileSystemMonitor.StartMonitoring(folderPath);
+
+            // 3. ViewModelに新しい状態を適用 (フィルタとソート)
+            _viewModel.SortByDate = sortSettings.SortByDate;
+            _viewModel.SortAscending = sortSettings.SortAscending;
+            // ApplyAllFilters は LoadFileNodesAsync 内で呼び出されるように変更する想定
+            // await _viewModel.ApplyAllFilters(
+            //     filterSettings.Rating,
+            //     filterSettings.HasPrompt,
+            //     filterSettings.Tags,
+            //     filterSettings.Tags.Any(),
+            //     filterSettings.Extensions,
+            //     filterSettings.Extensions.Any()
+            // );
+
+            // 4. ファイルノードとサムネイルをロード (選択ファイルパスとフィルタ/ソート設定を渡す)
+            // LoadFileNodesAsync の引数を変更する必要がある
+            await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings);
+
+            // 6. UIを表示 (OnFileNodesLoaded で表示される想定)
+            // FilterChangedEventも発行してUIを更新
+            var filterArgsBuilder = new FilterChangedEventArgsBuilder(CONTROL_ID)
+                .WithRatingFilter(filterSettings.Rating)
+                .WithPromptFilter(filterSettings.HasPrompt)
+                .WithTagFilter(filterSettings.Tags.Any(), filterSettings.Tags)
+                .WithExtensionFilter(filterSettings.Extensions.Any(), filterSettings.Extensions);
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(filterArgsBuilder.Build());
+
+            // ThumbnailItemsControl.Visibility = Visibility.Visible;
+
+            // 7. ソート/フィルタ状態をUIに反映させるイベントを発行
+             _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                 new SortOrderChangedEventArgs(_viewModel.SortByDate, _viewModel.SortAscending, CONTROL_ID));
+        }
+
 
     }
 }

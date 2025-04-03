@@ -88,6 +88,13 @@ namespace Illustra.ViewModels
             }
         }
 
+        /// <summary>
+        /// 閉じるボタンを表示するかどうかを示す値。
+        /// タブが2つ以上ある場合に true になります。
+        /// </summary>
+        public bool ShowCloseButton => Tabs.Count > 1;
+
+
         public DelegateCommand OpenLanguageSettingsCommand { get; }
         public DelegateCommand OpenShortcutSettingsCommand { get; }
         public DelegateCommand OpenAdvancedSettingsCommand { get; }
@@ -164,6 +171,9 @@ namespace Illustra.ViewModels
                 SelectedTab = Tabs[0]; // 最初のタブを選択
                                        // SelectedTab のセッター内でイベントが発行される
             }
+            // タブコレクションの変更を監視して ShowCloseButton の変更通知を発行
+            Tabs.CollectionChanged += (s, e) => RaisePropertyChanged(nameof(ShowCloseButton));
+
         }
 
         private void ExecuteOpenLanguageSettings()
@@ -278,6 +288,7 @@ namespace Illustra.ViewModels
             // コマンドの実行可能状態を更新
             CloseTabCommand.RaiseCanExecuteChanged();
             CloseOtherTabsCommand.RaiseCanExecuteChanged();
+            RaisePropertyChanged(nameof(ShowCloseButton)); // タブ数変更後に通知
         }
         private bool CanExecuteCloseTab(TabViewModel tabToClose) => tabToClose != null && Tabs.Count > 1; // 最後のタブは閉じられない
 
@@ -295,6 +306,7 @@ namespace Illustra.ViewModels
             // コマンドの実行可能状態を更新
             CloseTabCommand.RaiseCanExecuteChanged();
             CloseOtherTabsCommand.RaiseCanExecuteChanged();
+            RaisePropertyChanged(nameof(ShowCloseButton)); // タブ数変更後に通知
         }
         private bool CanExecuteCloseOtherTabs(TabViewModel tabToKeep) => tabToKeep != null && Tabs.Count > 1;
 
@@ -322,6 +334,7 @@ namespace Illustra.ViewModels
             // コマンドの実行可能状態を更新
             CloseTabCommand.RaiseCanExecuteChanged();
             CloseOtherTabsCommand.RaiseCanExecuteChanged();
+            RaisePropertyChanged(nameof(ShowCloseButton)); // タブ数変更後に通知
         }
         private bool CanExecuteDuplicateTab(TabViewModel tabToDuplicate) => tabToDuplicate != null;
 
@@ -335,6 +348,8 @@ namespace Illustra.ViewModels
             var newTab = new TabViewModel(newState);
             Tabs.Add(newTab);
             SelectedTab = newTab; // 新しいタブを選択状態にする
+            // AddNewTab は DuplicateTab からも呼ばれるため、ここで通知
+            RaisePropertyChanged(nameof(ShowCloseButton));
         }
 
         /// <summary>
@@ -365,13 +380,15 @@ namespace Illustra.ViewModels
                     var tabViewModel = new TabViewModel(state);
                     Tabs.Add(tabViewModel);
                 }
+                // 読み込み完了後にも通知
+                RaisePropertyChanged(nameof(ShowCloseButton));
                 // TODO: 最後にアクティブだったタブを選択するロジックを追加
                 // とりあえず最初のタブを選択
                 if (Tabs.Count > 0)
                 {
                     // 最初のタブを選択する (セッター内でイベントが発行される)
+                    // 最初のタブを選択する (セッター内でイベントが発行されるが、Loaded イベントで別途発行する)
                     SelectedTab = Tabs[0];
-                    // セッターでイベントが発行されるため、ここでの ApplyTabState 呼び出しは不要
                 }
             }
         }
@@ -381,17 +398,31 @@ namespace Illustra.ViewModels
         /// <param name="path">選択されたフォルダのパス</param>
         public void HandleFolderSelected(string path)
         {
-            if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
             if (string.IsNullOrEmpty(path)) return; // パスが無効な場合は何もしない
 
-            // アクティブなタブの状態を更新
-            SelectedTab.State.FolderPath = path;
-            // SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する（オプション）
+            // 既存のタブで同じパスが開かれているか確認
+            var existingTab = Tabs.FirstOrDefault(t => t.State?.FolderPath == path);
 
-            // サムネイルリストに更新を通知
-            // EventAggregator を使用してイベントを発行
-            _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
-                new SelectedTabChangedEventArgs(SelectedTab.State));
+            if (existingTab != null)
+            {
+                // 既存のタブが見つかった場合は、それを選択状態にする
+                // SelectedTab のセッター内でイベントが発行される
+                SelectedTab = existingTab;
+            }
+            else
+            {
+                // 既存のタブがない場合は、現在アクティブなタブのパスを更新する (元の動作)
+                if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
+
+                // アクティブなタブの状態を更新
+                SelectedTab.State.FolderPath = path;
+                // SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する（オプション）
+
+                // サムネイルリストに更新を通知
+                // EventAggregator を使用してイベントを発行
+                _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
+                    new SelectedTabChangedEventArgs(SelectedTab.State));
+            }
         }
 
         /// <summary>
@@ -425,5 +456,26 @@ namespace Illustra.ViewModels
         {
             HandleFolderSelected(args.FolderPath);
         }
+
+        /// <summary>
+        /// MainWindow の Loaded イベント後に呼び出され、
+        /// 初期選択タブの状態変更イベントを発行します。
+        /// </summary>
+        public void PublishInitialTabState()
+        {
+            // LoadTabStates で SelectedTab が設定されているはず
+            if (_selectedTab != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PublishInitialTabState] Publishing SelectedTabChangedEvent for: {_selectedTab.State?.FolderPath}");
+                _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
+                    new SelectedTabChangedEventArgs(_selectedTab.State));
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[PublishInitialTabState] SelectedTab is null, skipping event publish.");
+            }
+        }
+
+
     }
 }
