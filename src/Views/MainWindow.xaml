@@ -15,6 +15,35 @@
         mc:Ignorable="d"
         Height="600"
         Width="900">
+    <controls:MetroWindow.Resources>
+        <ResourceDictionary>
+            <!-- Style for MainWindow Tab Items, based on MahApps theme + EventSetter + Triggers -->
+            <Style x:Key="MainWindowDragablzItemStyle" TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}">
+                <EventSetter Event="PreviewMouseRightButtonDown" Handler="TabItem_PreviewMouseRightButtonDown"/>
+                <!-- Default Background (optional, can rely on BaseOn or False trigger) -->
+                <!-- <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Gray8}"/> -->
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <!-- Use MahApps brushes for selected state -->
+                        <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Accent}"/>
+                        <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Selected.Foreground}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource MahApps.Brushes.Accent}"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="False">
+                         <!-- Use MahApps brushes for non-selected state -->
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Text}"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                    </Trigger>
+                     <!-- Optional: Add IsMouseOver trigger if needed -->
+                     <Trigger Property="IsMouseOver" Value="True">
+                          <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Highlight}"/>
+                     </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </controls:MetroWindow.Resources>
+
 
     <controls:MetroWindow.TitleTemplate>
         <DataTemplate>
@@ -39,7 +68,28 @@
                     <!-- タブアイテムのスタイルと右クリックイベントハンドラ -->
                     <dragablz:TabablzControl.ItemContainerStyle>
                         <Style TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}">
+                            <!-- Right-click event handler -->
                             <EventSetter Event="PreviewMouseRightButtonDown" Handler="TabItem_PreviewMouseRightButtonDown"/>
+
+                            <!-- Removed direct Background setter -->
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <!-- Use MahApps brushes for selected state -->
+                                    <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Accent}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Selected.Foreground}"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource MahApps.Brushes.Accent}"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                     <!-- Use MahApps brushes for non-selected state -->
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Text}"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                </Trigger>
+                                 <!-- Optional: Add IsMouseOver trigger if needed -->
+                                 <Trigger Property="IsMouseOver" Value="True">
+                                      <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Highlight}"/>
+                                 </Trigger>
+                            </Style.Triggers>
                         </Style>
                     </dragablz:TabablzControl.ItemContainerStyle>
                 </dragablz:TabablzControl>
@@ -309,3 +359,4 @@
         </StatusBar>
     </Grid>
 </controls:MetroWindow>
+

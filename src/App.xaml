@@ -4,7 +4,8 @@
                         xmlns:local="clr-namespace:Illustra"
                         xmlns:helpers="clr-namespace:Illustra.Helpers"
                         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
-                        xmlns:prism="http://prismlibrary.com/">
+                        xmlns:prism="http://prismlibrary.com/"
+                        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -83,6 +84,19 @@
                     </Trigger>
                 </Style.Triggers>
             </Style>
+
+            <!-- Style from Dragablz MahApps Sample -->
+            <Style TargetType="{x:Type dragablz:TabablzControl}" x:Key="MahAppsTabablzControlStyle">
+                <Setter Property="Background" Value="{DynamicResource WhiteColorBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentColorBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BlackColorBrush}"/>
+                <!-- Adjust offset to reduce spacing between tabs -->
+                <Setter Property="AdjacentHeaderItemOffset" Value="-18" />
+                <Setter Property="ItemContainerStyle" Value="{StaticResource MahAppsTrapezoidDragableTabItemStyle}" />
+            </Style>
+            <!-- Apply MahAppsTabablzControlStyle as the default for TabablzControl -->
+            <Style TargetType="{x:Type dragablz:TabablzControl}" BasedOn="{StaticResource MahAppsTabablzControlStyle}" />
+
         </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>
