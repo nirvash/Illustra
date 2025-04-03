@@ -471,6 +471,7 @@ namespace Illustra.Views
 
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _eventAggregator.GetEvent<SelectedTabChangedEvent>().Subscribe(OnSelectedTabChanged, ThreadOption.UIThread);
 
             // ThumbnailItemsControlの右クリックイベントを設定 (async void に変更)
             ThumbnailItemsControl.PreviewMouseRightButtonDown += async (s, e) =>
@@ -523,8 +524,6 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
             // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
@@ -681,44 +680,68 @@ namespace Illustra.Views
                 Debug.WriteLine($"フィルタ変更処理中にエラーが発生しました: {ex.Message}");
             }
         }
-
-        private async void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
+        /// <summary>
+        /// フォルダを変更するときの共通処理
+        /// </summary>
+        /// <summary>
+        /// フォルダ選択時の共通処理
+        /// MCPのフォルダ選択とタブ切り替えの両方で使用
+        /// </summary>
+        private async Task HandleFolderChangeAsync(string folderPath, string? selectedFilePath = null)
         {
-            Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.FolderPath}"); // Changed property name
-            string folderPath = args.FolderPath; // Changed property name
             if (folderPath == _currentFolderPath)
                 return;
 
-            // フォルダが変わったらすべてのフィルタを自動的に解除
-            ThumbnailItemsControl.Visibility = Visibility.Hidden;
-            _viewModel.CurrentRatingFilter = 0;
-            _currentTagFilters.Clear();
-            _isTagFilterEnabled = false;
-            _currentExtensionFilters.Clear(); // 追加
-            _isExtensionFilterEnabled = false; // 追加
-            _viewModel.ClearAllFilters(); // ViewModel側のフィルタもクリア
+            Debug.WriteLine($"[フォルダ変更] フォルダパス: {folderPath}, 選択ファイル: {selectedFilePath ?? "なし"}");
 
-            // フィルタ変更イベントは投げない
-            // それぞれ onFolderChanged で処理する
-            // フォルダ読み込み時にフィルタは反映される
-
-            // 以前のフォルダの監視を停止
-            if (_fileSystemMonitor.IsMonitoring)
+            try
             {
-                _fileSystemMonitor.StopMonitoring();
+                // UI を非表示
+                ThumbnailItemsControl.Visibility = Visibility.Hidden;
+
+                // フィルターをクリア
+                _viewModel.CurrentRatingFilter = 0;
+                _currentTagFilters.Clear();
+                _isTagFilterEnabled = false;
+                _currentExtensionFilters.Clear();
+                _isExtensionFilterEnabled = false;
+                _viewModel.ClearAllFilters();
+
+                // フォルダ監視の更新
+                if (_fileSystemMonitor.IsMonitoring)
+                {
+                    _fileSystemMonitor.StopMonitoring();
+                }
+                _fileSystemMonitor.StartMonitoring(folderPath);
+
+        // サムネイルをクリア
+        _viewModel.ClearItems();
+
+                // ファイルノードをロード
+                await LoadFileNodesAsync(folderPath, selectedFilePath);
+            }
+            finally
+            {
+                ThumbnailItemsControl.Visibility = Visibility.Visible;
+            }
+        }
+
+        /// <summary>
+        /// タブ切り替え時のフォルダ読み込み処理
+        /// </summary>
+        private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
+        {
+            if (args?.NewTabState == null)
+                return;
+
+            // 同じフォルダの場合はスキップ
+            if (args.NewTabState.FolderPath == _currentFolderPath)
+            {
+                Debug.WriteLine($"[タブ切替] 同じフォルダなのでスキップ: {_currentFolderPath}");
+                return;
             }
 
-            // 前のフォルダのサムネイルをクリア
-            // クリアしないとロード中に前のノードにサムネイルを設定してしまう
-            _viewModel.ClearItems();
-
-            // 新しいフォルダの監視を開始
-            _fileSystemMonitor.StartMonitoring(folderPath);
-
-            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            await LoadFileNodesAsync(folderPath, args.SelectedFilePath); // Changed property name
-
-            //            ThumbnailItemsControl.Visibility = Visibility.Visible;
+            await HandleFolderChangeAsync(args.NewTabState.FolderPath);
         }
 
         public void SetCurrentSettings()

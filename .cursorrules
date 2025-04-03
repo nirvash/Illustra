@@ -4,6 +4,7 @@
 - 文言を使用した場合は @\src\Resources\Strings.xaml と @\src\Resources\Strings.ja.xaml に翻訳を追加してください。
 - 関数を追加する場合は挿入位置に注意してください。他の関数の間に挿入しないようにしてください。
 - xaml のタグの中にコメントは入れないでください。xaml のタグの中にコメントを入れると、ビルドエラーになります。
+- This is a C# WPF application. Follow standard C# coding conventions (e.g., Microsoft's C# Coding Conventions).
 
 ## 1. Adhere to Project Coding Standards
 - **Always** consult `docs/Rule.md` for project-specific coding standards, patterns, and implementation details before making changes.

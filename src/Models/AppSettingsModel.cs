@@ -98,5 +98,9 @@ namespace Illustra.Models
 
         // 新規ファイル追加時に自動選択するかどうか
         public bool AutoSelectNewFile { get; set; } = false;
+
+        // タブの状態リスト
+        public List<TabState> TabStates { get; set; } = new List<TabState>();
+
     }
 }

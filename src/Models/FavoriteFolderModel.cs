@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel; // INotifyPropertyChanged を使うために追加
 using System.Runtime.CompilerServices; // CallerMemberName を使うために追加
 using System.IO; // Path クラスを使うために追加
-
 namespace Illustra.Models
 {
     public class FavoriteFolderModel : INotifyPropertyChanged // INotifyPropertyChanged を実装
@@ -88,7 +87,6 @@ namespace Illustra.Models
         // DisplayName が設定されているかどうかを示すプロパティ (ContextMenu の IsEnabled に使う)
         [Newtonsoft.Json.JsonIgnore] // 設定ファイルには保存しない
         public bool HasDisplayName => !string.IsNullOrEmpty(DisplayName);
-
         // Children プロパティは現状不要そうなのでコメントアウト (必要なら戻す)
         // public ObservableCollection<FavoriteFolderModel> Children { get; } = new ObservableCollection<FavoriteFolderModel>();
 
@@ -119,5 +117,6 @@ namespace Illustra.Models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
     }
 }

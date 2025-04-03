@@ -7,6 +7,7 @@
         xmlns:local="clr-namespace:Illustra.Views"
         xmlns:helpers="clr-namespace:Illustra.Helpers"
         xmlns:prism="http://prismlibrary.com/"
+        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
         xmlns:dialogs="clr-namespace:MahApps.Metro.Controls.Dialogs;assembly=MahApps.Metro"
         dialogs:DialogParticipation.Register="{Binding}"
         WindowTransitionsEnabled="False"
@@ -15,7 +16,6 @@
         Height="600"
         Width="900">
 
-    <!-- アイコンサイズを変更 -->
     <controls:MetroWindow.TitleTemplate>
         <DataTemplate>
             <StackPanel Orientation="Horizontal">
@@ -25,6 +25,30 @@
                            VerticalAlignment="Center"
                            FontSize="14"
                            Margin="5,0,0,0"/>
+                <dragablz:TabablzControl x:Name="MainTabControl"
+                                     Margin="0"
+                                     ItemsSource="{Binding DataContext.Tabs, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     SelectedItem="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                     Height="30" VerticalAlignment="Bottom">
+                    <dragablz:TabablzControl.HeaderItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}"
+                                    Margin="8,4"/>
+                        </DataTemplate>
+                    </dragablz:TabablzControl.HeaderItemTemplate>
+                    <dragablz:TabablzControl.ContentTemplate>
+                        <DataTemplate>
+                            <!-- タブコンテンツは空のままで、共有コントロールを使用 -->
+                            <Grid/>
+                        </DataTemplate>
+                    </dragablz:TabablzControl.ContentTemplate>
+                    <!-- タブアイテムのスタイルと右クリックイベントハンドラ -->
+                    <dragablz:TabablzControl.ItemContainerStyle>
+                        <Style TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource {x:Type dragablz:DragablzItem}}">
+                            <EventSetter Event="MouseRightButtonUp" Handler="TabItem_MouseRightButtonUp"/>
+                        </Style>
+                    </dragablz:TabablzControl.ItemContainerStyle>
+                </dragablz:TabablzControl>
             </StackPanel>
         </DataTemplate>
     </controls:MetroWindow.TitleTemplate>
@@ -231,9 +255,10 @@
                           Cursor="SizeWE"
                           KeyboardNavigation.TabNavigation="None"/>
 
-            <!-- 右側：メインコンテンツエリア -->
+            <!-- 右側：メインコンテンツエリア（共有コントロール） -->
             <Grid Grid.Column="2"
-                  x:Name="RightPanelGrid">
+                  x:Name="RightPanelGrid"
+                  DataContext="{Binding ThumbnailListViewModel}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>

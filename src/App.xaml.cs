@@ -435,6 +435,17 @@ namespace Illustra
                     LogHelper.LogWithTimestamp("MCP Web API ホストは起動していませんでした", LogHelper.Categories.MCP);
                 }
 
+                // MainWindowViewModel の SaveTabStates を呼び出す
+                try
+                {
+                    var mainWindowViewModel = Container.Resolve<MainWindowViewModel>();
+                    mainWindowViewModel?.SaveTabStates();
+                    LogHelper.LogWithTimestamp("タブ状態を保存しました", LogHelper.Categories.UI);
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError("タブ状態の保存中にエラーが発生しました", ex);
+                }
                 // イメージプロパティサービスのリソース解放
                 if (_propertiesService is IDisposable disposableService)
                 {

@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using Illustra.Events;
 using System.Threading.Tasks;
+using Dragablz; // DragablzItem を使用するために追加
 using System;
 using Illustra.ViewModels;
 using System.Collections.Generic;
@@ -67,14 +68,14 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // イベント購読
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected); // Renamed
+            // McpOpenFolderEvent の購読は ViewModel で行うため削除
+            // FilterChangedEvent, SortOrderChangedEvent, ShortcutSettingsChangedEvent, SelectionCountChangedEvent の購読はそのまま
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
             _eventAggregator.GetEvent<SelectionCountChangedEvent>().Subscribe(OnSelectionCountChanged, ThreadOption.UIThread);
-
             // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             _favoriteFoldersControl = FavoriteFolders;
@@ -228,12 +229,64 @@ namespace Illustra.Views
 
             // ツールメニューの表示/非表示を設定
             UpdateToolsMenuVisibility();
+            // EventAggregator で OpenInNewTabEvent を購読
+            _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => _viewModel.HandleOpenInNewTab(args.FolderPath));
 
             // 非同期処理が必要な他の初期化はここで行う
             await Task.Run(() =>
             {
                 // UIに関係ない非同期処理をここに書く
             });
+        }
+
+        /// <summary>
+        /// タブアイテムが右クリックされたときにコンテキストメニューを表示する
+        /// </summary>
+        private void TabItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DragablzItem tabItem && tabItem.DataContext is TabViewModel tabViewModel && DataContext is MainWindowViewModel mainWindowViewModel)
+            {
+                var contextMenu = new ContextMenu();
+
+                // 閉じる
+                var closeItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_Close"), // リソースから取得
+                    Command = mainWindowViewModel.CloseTabCommand,
+                    CommandParameter = tabViewModel
+                };
+                // CanExecute を評価して IsEnabled を設定
+                closeItem.IsEnabled = mainWindowViewModel.CloseTabCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(closeItem);
+
+                // 他のタブを閉じる
+                var closeOthersItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_CloseOthers"), // リソースから取得
+                    Command = mainWindowViewModel.CloseOtherTabsCommand,
+                    CommandParameter = tabViewModel
+                };
+                // CanExecute を評価して IsEnabled を設定
+                closeOthersItem.IsEnabled = mainWindowViewModel.CloseOtherTabsCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(closeOthersItem);
+
+                // 複製
+                var duplicateItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_Duplicate"), // リソースから取得
+                    Command = mainWindowViewModel.DuplicateTabCommand,
+                    CommandParameter = tabViewModel
+                };
+                // CanExecute を評価して IsEnabled を設定
+                duplicateItem.IsEnabled = mainWindowViewModel.DuplicateTabCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(duplicateItem);
+
+                // ContextMenuService を使って表示 (推奨)
+                ContextMenuService.SetContextMenu(tabItem, contextMenu);
+                contextMenu.IsOpen = true;
+
+                e.Handled = true; // イベントの伝播を停止
+            }
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)

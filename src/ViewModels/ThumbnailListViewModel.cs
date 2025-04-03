@@ -84,6 +84,8 @@ namespace Illustra.ViewModels
             PasteCommand = new RelayCommand(ExecutePaste, CanExecutePaste);
             SelectAllCommand = new RelayCommand(ExecuteSelectAll, CanExecuteSelectAll);
 
+            // SelectedTabChangedEvent を購読
+            _eventAggregator.GetEvent<SelectedTabChangedEvent>().Subscribe(OnSelectedTabChanged, ThreadOption.UIThread);
         }
 
         // レーティングをデータベースに永続化する
@@ -559,6 +561,137 @@ namespace Illustra.ViewModels
             field = value;
             OnPropertyChanged(propertyName);
             return true;
+        }
+
+
+        /// <summary>
+        /// 指定されたタブの状態をViewModelに適用します。
+        /// </summary>
+        /// <param name="state">適用するタブの状態</param>
+        public async Task ApplyTabState(TabState state)
+        {
+            if (state == null) return;
+
+            // 1. ソート設定を適用
+            SortByDate = state.SortSettings.SortByDate;
+            SortAscending = state.SortSettings.SortAscending;
+
+            // 2. フィルタ設定を適用 (ApplyAllFilters を呼び出す)
+            // ApplyAllFilters は内部でキャッシュ更新とフィルタ適用を行う
+            // フォルダ読み込み前にフィルタ条件を設定しておく
+            await ApplyAllFilters(
+                state.FilterSettings.Rating,
+                state.FilterSettings.HasPrompt,
+                state.FilterSettings.Tags,
+                state.FilterSettings.Tags.Any(), // isTagFilterEnabled
+                state.FilterSettings.Extensions,
+                state.FilterSettings.Extensions.Any() // isExtensionFilterEnabled
+            );
+
+            // 3. フォルダパスを適用 (これによりアイテムの再読み込みがトリガーされる想定)
+            // CurrentFolderPath の setter がアイテム読み込みロジックを呼び出すか確認が必要
+            if (CurrentFolderPath != state.FolderPath)
+            {
+                CurrentFolderPath = state.FolderPath;
+                // TODO: CurrentFolderPath の setter がアイテム読み込みをトリガーしない場合、
+                // ここで明示的にアイテム読み込み処理を呼び出す必要がある。
+                // 例: await LoadItemsForCurrentFolderAsync();
+            }
+            // else
+            // {
+            //     // フォルダパスが同じ場合、フィルタとソートは既に適用済みのはず
+            //     // 必要であればここで明示的に Refresh や Sort を呼ぶことも検討
+            // }
+
+            // 4. 選択状態を復元
+            if (!string.IsNullOrEmpty(state.SelectedItemPath))
+            {
+                var itemToSelect = Items.FirstOrDefault(i => i.FullPath.Equals(state.SelectedItemPath, StringComparison.OrdinalIgnoreCase));
+                if (itemToSelect != null)
+                {
+                    // TODO: ThumbnailListControl 側の選択処理を呼び出すか、イベントを発行する必要がある
+                    // 例: _eventAggregator.GetEvent<SelectFileRequestEvent>().Publish(itemToSelect.FullPath);
+                    //     または、SelectedItems プロパティを直接操作する (UI連動に注意)
+                    SelectedItems.Clear();
+                    SelectedItems.Add(itemToSelect);
+                }
+                else
+                {
+                    SelectedItems.Clear(); // 見つからない場合は選択解除
+                }
+            }
+            else
+            {
+                SelectedItems.Clear(); // 選択パスがなければ選択解除
+            }
+        }
+
+
+        /// <summary>
+        /// SelectedTabChangedEvent を受信したときの処理
+        /// </summary>
+        /// <summary>
+        /// フォルダの内容を読み込みます
+        /// </summary>
+        public async Task LoadFolder(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+
+            try
+            {
+                // 現在のフォルダパスを更新
+                CurrentFolderPath = path;
+
+                // アイテムをクリア
+                Items.Clear();
+
+                // フォルダ内の画像ファイルを列挙
+                var files = Directory.GetFiles(path)
+                    .Where(file => FileHelper.SupportedExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                    .ToList();
+
+                // FileNodeModel に変換
+                var fileNodes = files.Select(file => new FileNodeModel
+                {
+                    FullPath = file,
+                    FileName = Path.GetFileName(file),
+                    CreationTime = File.GetCreationTime(file)
+                }).ToList();
+
+                // アイテムに追加
+                Items.AddRange(fileNodes);
+
+                // ソートを適用
+                SortItems(SortByDate, SortAscending);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"フォルダの読み込み中にエラーが発生: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// タブ状態が変更されたときの処理
+        /// </summary>
+        private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
+        {
+            if (args?.NewTabState != null)
+            {
+                await ApplyTabState(args.NewTabState);
+
+                // フォルダ内容の読み込み
+                if (!string.IsNullOrEmpty(args.NewTabState.FolderPath))
+                {
+                    await LoadFolder(args.NewTabState.FolderPath);
+                }
+            }
+            else
+            {
+                // 選択されたタブがない場合
+                Items.Clear();
+                CurrentFolderPath = string.Empty;
+            }
         }
 
     }

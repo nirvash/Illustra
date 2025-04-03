@@ -64,6 +64,13 @@
     <system:String x:Key="String_Menu_Settings_AutoSelectNewFile">Auto-select new file</system:String>
     <system:String x:Key="String_Menu_About">About</system:String>
 
+    <!-- Tab Menu -->
+    <system:String x:Key="String_Tab_OpenInNewTab">Open in new tab</system:String>
+    <system:String x:Key="String_Tab_Close">Close Tab</system:String>
+    <system:String x:Key="String_Tab_CloseOthers">Close Other Tabs</system:String>
+    <system:String x:Key="String_Tab_Duplicate">Duplicate Tab</system:String>
+
+
     <!-- スライドショー -->
     <system:String x:Key="String_Slideshow_PlayIcon">▶</system:String>
     <system:String x:Key="String_Slideshow_PauseIcon">⏸</system:String>

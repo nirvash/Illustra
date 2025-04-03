@@ -11,6 +11,7 @@ using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Shared.Models; // Added for MCP events
 using Illustra.Views;
+using Prism.Commands; // DelegateCommand を使用するために追加
 
 namespace Illustra.Models
 {
@@ -36,7 +37,7 @@ namespace Illustra.Models
         private ICommand? _createFolderCommand;
         private ICommand? _renameFolderCommand;
         private ICommand? _deleteFolderCommand;
-
+        private ICommand? _openInNewTabCommand; // 追加
         public ICommand RenameFolderCommand
         {
             get => _renameFolderCommand ??= new DelegateCommand(ExecuteRenameFolder, CanExecuteRenameFolder);
@@ -237,6 +238,28 @@ namespace Illustra.Models
                     .Publish(FullPath),
                 () => !IsFavorite)
                 .ObservesProperty(() => IsFavorite);
+        }
+
+        public ICommand OpenInNewTabCommand
+        {
+            get => _openInNewTabCommand ??= new DelegateCommand(ExecuteOpenInNewTab, CanExecuteOpenInNewTab);
+        }
+
+        private bool CanExecuteOpenInNewTab()
+        {
+            // フォルダの場合のみ有効
+            return IsFolder;
+        }
+
+        private void ExecuteOpenInNewTab()
+        {
+            if (CanExecuteOpenInNewTab())
+            {
+                // EventAggregator を使用してイベントを発行
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator?.GetEvent<OpenInNewTabEvent>().Publish(
+                    new OpenInNewTabEventArgs(FullPath, "FileSystemTree")); // SourceId を設定
+            }
         }
 
         public bool IsFavorite
