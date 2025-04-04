@@ -17,6 +17,11 @@
         Height="600"
         Width="900">
 
+
+    <controls:MetroWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </controls:MetroWindow.Resources>
+
     <controls:MetroWindow.TitleTemplate>
         <DataTemplate>
             <StackPanel Orientation="Horizontal">
@@ -31,7 +36,8 @@
                                      ItemsSource="{Binding DataContext.Tabs, RelativeSource={RelativeSource AncestorType=Window}}"
                                      SelectedItem="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                      Height="30" VerticalAlignment="Bottom"
-                                     ShowDefaultCloseButton="{Binding DataContext.ShowCloseButton, RelativeSource={RelativeSource AncestorType=Window}}">
+                                     ShowDefaultCloseButton="{Binding DataContext.ShowCloseButton, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     Visibility="{Binding DataContext.HasTabs, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <!-- カスタム追加ボタン -->
                     <dragablz:TabablzControl.HeaderSuffixContent>
                         <Button Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -40,8 +46,9 @@
                                 ToolTip="{DynamicResource String_Tab_Add}"
                                 HorizontalAlignment="Left"
                                 Width="Auto"
-                                Margin="4,0,0,0" Padding="4,2">
-                            <TextBlock Text="+" FontSize="16" VerticalAlignment="Center"/>
+                                Margin="4,0,0,0" Padding="4,2"
+                                >
+                           <TextBlock Text="+" FontSize="16" VerticalAlignment="Center"/>
                         </Button>
                     </dragablz:TabablzControl.HeaderSuffixContent>
                     <dragablz:TabablzControl.HeaderItemTemplate>

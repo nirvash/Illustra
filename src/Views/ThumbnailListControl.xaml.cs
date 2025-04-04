@@ -7,6 +7,8 @@ using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
 using Illustra.Models;
+using System.Collections.Specialized; // INotifyCollectionChanged を使うために追加
+using System.Runtime.CompilerServices; // CallerMemberName を使うために追加
 using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
@@ -33,11 +35,12 @@ using Illustra.Shared.Models; // Added for MCP events
 namespace Illustra.Views
 {
     [System.Windows.Markup.ContentProperty("Content")]
-    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
+    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler, INotifyPropertyChanged // INotifyPropertyChanged を追加
     {
         private IEventAggregator _eventAggregator = null!;
         private ThumbnailListViewModel _viewModel;
         private IllustraAppContext _appContext;
+        private MainWindowViewModel _mainWindowViewModel = null!; // MainWindowViewModel のフィールドを追加
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
         private string? _currentFolderPath;
@@ -70,6 +73,28 @@ namespace Illustra.Views
 
         private bool _isLoadingFileNodes = false; // ファイルノード読み込み中フラグ
         private string? _initialSelectedFilePath;
+
+        // ツールバーの表示状態を管理するプロパティを追加
+        private bool _isToolbarVisible = true;
+        public bool IsToolbarVisible
+        {
+            get => _isToolbarVisible;
+            set => SetProperty(ref _isToolbarVisible, value);
+        }
+
+        // INotifyPropertyChanged の実装
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = "")
+        {
+            if (EqualityComparer<T>.Default.Equals(storage, value)) return false;
+            storage = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -238,6 +263,8 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // ViewModelをDIコンテナから取得
+            // MainWindowViewModel を DI コンテナから取得
+            _mainWindowViewModel = ContainerLocator.Container.Resolve<MainWindowViewModel>();
             _viewModel = ContainerLocator.Container.Resolve<ThumbnailListViewModel>();
             DataContext = _viewModel;
 
@@ -310,6 +337,24 @@ namespace Illustra.Views
                 Interval = TimeSpan.FromMilliseconds(300)
             };
             _scrollStopTimer.Tick += ScrollStopTimer_Tick;
+
+            // 初期ツールバー状態を設定
+            UpdateToolbarState();
+
+            // Tabs コレクションの変更を監視
+            if (_mainWindowViewModel.Tabs is INotifyCollectionChanged tabsCollection)
+            {
+                tabsCollection.CollectionChanged += Tabs_CollectionChanged;
+            }
+
+            // ViewModel が破棄されるときにイベントハンドラを解除する処理も必要 (例: Unloaded イベント)
+            Unloaded += (s, e) =>
+            {
+                if (_mainWindowViewModel?.Tabs is INotifyCollectionChanged collection) // Nullチェック追加
+                {
+                    collection.CollectionChanged -= Tabs_CollectionChanged;
+                }
+            };
         }
 
         private void OnFileSelected(SelectedFileModel args)
@@ -3085,6 +3130,10 @@ namespace Illustra.Views
             {
                 await LoadVisibleThumbnailsAsync(scrollViewer);
             }
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_isSortByDate, _isSortAscending, CONTROL_ID));
         }
 
         private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
@@ -3107,6 +3156,10 @@ namespace Illustra.Views
             {
                 await LoadVisibleThumbnailsAsync(scrollViewer);
             }
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_isSortByDate, _isSortAscending, CONTROL_ID));
         }
 
         /// <summary>
@@ -3863,6 +3916,24 @@ namespace Illustra.Views
                 new SortOrderChangedEventArgs(_viewModel.SortByDate, _viewModel.SortAscending, CONTROL_ID));
         }
 
+
+
+        // Tabs コレクション変更時のイベントハンドラ
+        private void Tabs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            // UI スレッドで実行
+            Dispatcher.Invoke(() =>
+            {
+                UpdateToolbarState();
+            });
+        }
+
+        // ツールバーの表示状態を更新するメソッド
+        private void UpdateToolbarState()
+        {
+            IsToolbarVisible = _mainWindowViewModel.Tabs.Count > 0;
+            // Debug.WriteLine($"Toolbar Enabled: {IsToolbarEnabled} (Tab Count: {_mainWindowViewModel.Tabs.Count})");
+        }
 
     }
 }

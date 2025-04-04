@@ -105,6 +105,11 @@ namespace Illustra.ViewModels
         /// </summary>
         public bool ShowCloseButton => Tabs.Count > 1;
 
+        /// <summary>
+        /// タブが1つ以上存在するかどうかを示す値。
+        /// </summary>
+        public bool HasTabs => Tabs.Count > 0;
+
 
         public DelegateCommand OpenLanguageSettingsCommand { get; }
         public DelegateCommand OpenShortcutSettingsCommand { get; }
@@ -141,6 +146,8 @@ namespace Illustra.ViewModels
             // OpenInNewTabEvent を購読 (ステップ9の接続)
             _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => HandleOpenInNewTab(args.FolderPath));
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // ソート順変更イベントを購読 (自分以外から)
 
 
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelectedInTab, ThreadOption.UIThread);
@@ -168,27 +175,19 @@ namespace Illustra.ViewModels
             // アプリケーション起動時に保存されたタブ状態を読み込む
             LoadTabStates();
             // 初期タブがない場合はデフォルトタブを追加
-            // LoadTabStates でタブが復元されなかった場合のみデフォルトタブを追加
-            if (Tabs.Count == 0)
-            {
-                var initialPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                // 設定から最後に開いたフォルダを取得するロジックを追加しても良い
-                // var settings = SettingsHelper.GetSettings();
-                // if (!string.IsNullOrEmpty(settings.LastFolderPath) && System.IO.Directory.Exists(settings.LastFolderPath))
-                // {
-                //     initialPath = settings.LastFolderPath;
-                // }
-                AddNewTab(initialPath);
-            }
+
             // LoadTabStates でタブが復元された場合、最初のタブを選択して状態を適用
-            else if (SelectedTab == null && Tabs.Count > 0)
+            if (SelectedTab == null && Tabs.Count > 0)
             {
                 SelectedTab = Tabs[0]; // 最初のタブを選択
                                        // SelectedTab のセッター内でイベントが発行される
             }
             // タブコレクションの変更を監視して ShowCloseButton の変更通知を発行
-            Tabs.CollectionChanged += (s, e) => RaisePropertyChanged(nameof(ShowCloseButton));
-
+            Tabs.CollectionChanged += (s, e) =>
+            {
+                RaisePropertyChanged(nameof(ShowCloseButton));
+                RaisePropertyChanged(nameof(HasTabs)); // HasTabs の変更通知を追加
+            };
         }
 
         private void ExecuteOpenLanguageSettings()
@@ -378,6 +377,11 @@ namespace Illustra.ViewModels
         private void LoadTabStates()
         {
             var settings = SettingsHelper.GetSettings();
+            // StartupFolderMode が None の場合はタブを復元しない
+            if (settings.StartupMode == AppSettingsModel.StartupFolderMode.None)
+            {
+                return;
+            }
             if (settings.TabStates != null && settings.TabStates.Any())
             {
                 Tabs.Clear(); // 既存のタブ（もしあれば）をクリア
@@ -407,6 +411,13 @@ namespace Illustra.ViewModels
         public void HandleFolderSelected(string path)
         {
             if (string.IsNullOrEmpty(path)) return; // パスが無効な場合は何もしない
+
+            // タブが0個の場合は新しいタブを作成して開く
+            if (Tabs.Count == 0)
+            {
+                AddNewTab(path);
+                return; // 新しいタブを作成したので以降の処理は不要
+            }
 
             // アクティブなタブのパスを更新する (元の動作)
             if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
@@ -554,5 +565,33 @@ namespace Illustra.ViewModels
                 }
             }
         }
+
+        /// <summary>
+        /// UI (MainWindowなど) から SortOrderChangedEvent を受信したときの処理。
+        /// 現在のタブの SortSettings を更新します。
+        /// </summary>
+        private void OnSortOrderChanged(SortOrderChangedEventArgs args)
+        {
+            if (SelectedTab?.State?.SortSettings != null)
+            {
+                var sortSettings = SelectedTab.State.SortSettings;
+
+                if (sortSettings.SortByDate != args.IsByDate)
+                {
+                    sortSettings.SortByDate = args.IsByDate;
+                    // Debug.WriteLine($"[OnSortOrderChanged-VM] Updating SortByDate for Tab '{SelectedTab.State.FolderPath}' to: {args.IsByDate}");
+                }
+
+                if (sortSettings.SortAscending != args.IsAscending)
+                {
+                    sortSettings.SortAscending = args.IsAscending;
+                    // Debug.WriteLine($"[OnSortOrderChanged-VM] Updating SortAscending for Tab '{SelectedTab.State.FolderPath}' to: {args.IsAscending}");
+                }
+
+                // SaveTabStates はアプリ終了時に呼ばれるので、ここでは不要
+                // 必要であれば、ここで明示的に設定保存をトリガーすることも可能
+            }
+        }
+
     }
 }
