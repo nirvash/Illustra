@@ -377,8 +377,8 @@ namespace Illustra.ViewModels
         private void LoadTabStates()
         {
             var settings = SettingsHelper.GetSettings();
-            // StartupFolderMode が None の場合はタブを復元しない
-            if (settings.StartupMode == AppSettingsModel.StartupFolderMode.None)
+            // StartupFolderMode が None または Specified の場合はタブを復元しない
+            if (settings.StartupMode == AppSettingsModel.StartupFolderMode.None || settings.StartupMode == AppSettingsModel.StartupFolderMode.Specified)
             {
                 return;
             }
