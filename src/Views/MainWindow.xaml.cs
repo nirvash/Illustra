@@ -238,8 +238,55 @@ namespace Illustra.Views
                 // UIに関係ない非同期処理をここに書く
             });
 
-            // ViewModel に初期タブ状態のイベント発行を指示
+            // ViewModel に初期タブ状態のイベント発行を指示 (これは ThumbnailList など他のコントロールが初期状態を知るために必要)
             _viewModel.PublishInitialTabState();
+
+            // 起動時のタブ選択処理を実行
+            SelectInitialTab();
+        }
+
+        /// <summary>
+        /// 起動時に復元されたタブの中から、設定に基づいて初期選択タブを設定します。
+        /// </summary>
+        private void SelectInitialTab()
+        {
+            var settings = SettingsHelper.GetSettings();
+            TabViewModel? tabToSelect = null;
+
+            // 最後に開いていたタブを復元する場合
+            if (settings.StartupMode == AppSettingsModel.StartupFolderMode.LastOpened && _viewModel.Tabs.Count > 0)
+            {
+                if (settings.LastActiveTabIndex >= 0 && settings.LastActiveTabIndex < _viewModel.Tabs.Count)
+                {
+                    // タブの選択をUIスレッドで行う
+                    tabToSelect = _viewModel.Tabs[settings.LastActiveTabIndex];
+                }
+            }
+
+            // 選択すべきタブが見つからない、または他のモードの場合は最初のタブを選択 (タブが存在する場合)
+            if (tabToSelect == null && _viewModel.Tabs.Count > 0)
+            {
+                tabToSelect = _viewModel.Tabs[0];
+            }
+
+            // 実際にタブを選択 (View側で実行)
+            if (tabToSelect != null)
+            {
+                // 初回の Tabs 設定時は SelectedTab に関係なく最初のタブが選択されるため、ここで上書きする
+                _viewModel.SelectedTab = tabToSelect;
+
+                // 復元したアクティブパスが開かれたことを通知
+                _eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(
+                    new McpOpenFolderEventArgs()
+                    {
+                        FolderPath = tabToSelect.State.FolderPath,
+                        SourceId = CONTROL_ID // 自分のIDを設定
+                    });
+            }
+            else
+            {
+                Debug.WriteLine("[SelectInitialTab] No tab to select.");
+            }
         }
 
         // Removed methods related to MainTabControl.Loaded and ItemContainerGenerator.StatusChanged

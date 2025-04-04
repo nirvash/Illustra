@@ -367,7 +367,8 @@ namespace Illustra.ViewModels
             var settings = SettingsHelper.GetSettings();
             // 現在のタブの状態をリストに変換して保存
             settings.TabStates = Tabs.Select(vm => vm.State).ToList();
-            // TODO: 最後にアクティブだったタブのインデックスなども保存するとより良い
+            // 最後にアクティブだったタブのインデックスを保存
+            settings.LastActiveTabIndex = SelectedTab != null ? Tabs.IndexOf(SelectedTab) : -1;
             SettingsHelper.SaveSettings(settings);
         }
 
@@ -387,6 +388,12 @@ namespace Illustra.ViewModels
                 Tabs.Clear(); // 既存のタブ（もしあれば）をクリア
                 foreach (var state in settings.TabStates)
                 {
+                    // SelectLastFileOnStartup が false の場合は、最後に選択したファイルのパスをクリアする
+                    if (!settings.SelectLastFileOnStartup)
+                    {
+                        state.SelectedItemPath = null;
+                    }
+
                     // 各状態から ViewModel を復元して追加
                     // 注意: FilterSettings や SortSettings が null の場合の考慮が必要かもしれない
                     var tabViewModel = new TabViewModel(state);
@@ -394,12 +401,14 @@ namespace Illustra.ViewModels
                 }
                 // 読み込み完了後にも通知
                 RaisePropertyChanged(nameof(ShowCloseButton));
-                // TODO: 最後にアクティブだったタブを選択するロジックを追加
-                // とりあえず最初のタブを選択
-                if (Tabs.Count > 0)
+                // 最後にアクティブだったタブを選択する
+                if (settings.LastActiveTabIndex >= 0 && settings.LastActiveTabIndex < Tabs.Count)
                 {
-                    // 最初のタブを選択する (セッター内でイベントが発行される)
-                    // 最初のタブを選択する (セッター内でイベントが発行されるが、Loaded イベントで別途発行する)
+                    SelectedTab = Tabs[settings.LastActiveTabIndex];
+                }
+                // 有効なインデックスがない場合は最初のタブを選択
+                else if (Tabs.Count > 0)
+                {
                     SelectedTab = Tabs[0];
                 }
             }
