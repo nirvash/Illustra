@@ -3811,11 +3811,7 @@ namespace Illustra.Views
             // 同じフォルダが既に開かれている場合はリロードしない
             // FilterChangedEventも発行してUIを更新
 
-            if (folderPath == _currentFolderPath)
-            {
-                Debug.WriteLine("[タブ変更] 同じフォルダのため、リロードをスキップします。");
-                return;
-            }
+            // タブごとに設定が異なるため同じパスでもスキップしない
 
             // --- フォルダ変更処理 ---
             ThumbnailItemsControl.Visibility = Visibility.Hidden; // ちらつき防止

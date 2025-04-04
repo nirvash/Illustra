@@ -27,6 +27,7 @@ namespace Illustra.ViewModels
         private bool _isDarkTheme;
         private readonly IEventAggregator _eventAggregator;
         private readonly ThumbnailListViewModel _thumbnailListViewModel; // Renamed from _mainViewModel
+        private readonly string CONTROL_ID = "MainWindowViewModel";
 
         // DialogCoordinator プロパティを追加
         public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
@@ -85,6 +86,13 @@ namespace Illustra.ViewModels
                     // EventAggregator を使用してイベントを発行
                     _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
                         new SelectedTabChangedEventArgs(_selectedTab?.State));
+                    _eventAggregator?.GetEvent<McpOpenFolderEvent>().Publish(
+                        new McpOpenFolderEventArgs()
+                        {
+                            FolderPath = _selectedTab?.State?.FolderPath,
+                            SelectedFilePath = _selectedTab?.State?.SelectedItemPath,
+                            SourceId = CONTROL_ID // 追加: ソースIDを指定
+                        });
                     // RaisePropertyChanged は SetProperty 内で呼ばれるため不要
                 }
             }
