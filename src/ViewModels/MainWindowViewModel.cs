@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using Illustra.Shared.Models.Tools; // Task を使うために追加
 using System.Linq; // Linq を使用するために追加
 using System.Diagnostics; // Debug を使用するために追加
+using System.IO; // Path クラスを使用するために追加
+
 
 namespace Illustra.ViewModels
 {
@@ -129,6 +131,10 @@ namespace Illustra.ViewModels
             _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolderReceived, ThreadOption.UIThread);
             // OpenInNewTabEvent を購読 (ステップ9の接続)
             _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => HandleOpenInNewTab(args.FolderPath));
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread);
+
+
+            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelectedInTab, ThreadOption.UIThread);
 
 
             OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
@@ -400,29 +406,17 @@ namespace Illustra.ViewModels
         {
             if (string.IsNullOrEmpty(path)) return; // パスが無効な場合は何もしない
 
-            // 既存のタブで同じパスが開かれているか確認
-            var existingTab = Tabs.FirstOrDefault(t => t.State?.FolderPath == path);
+            // アクティブなタブのパスを更新する (元の動作)
+            if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
 
-            if (existingTab != null)
-            {
-                // 既存のタブが見つかった場合は、それを選択状態にする
-                // SelectedTab のセッター内でイベントが発行される
-                SelectedTab = existingTab;
-            }
-            else
-            {
-                // 既存のタブがない場合は、現在アクティブなタブのパスを更新する (元の動作)
-                if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
+            // アクティブなタブの状態を更新
+            SelectedTab.State.FolderPath = path;
+            // SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する（オプション）
 
-                // アクティブなタブの状態を更新
-                SelectedTab.State.FolderPath = path;
-                // SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する（オプション）
-
-                // サムネイルリストに更新を通知
-                // EventAggregator を使用してイベントを発行
-                _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
-                    new SelectedTabChangedEventArgs(SelectedTab.State));
-            }
+            // サムネイルリストに更新を通知
+            // EventAggregator を使用してイベントを発行
+            _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
+                new SelectedTabChangedEventArgs(SelectedTab.State));
         }
 
         /// <summary>
@@ -476,6 +470,99 @@ namespace Illustra.ViewModels
             }
         }
 
+        /// <summary>
+        /// ThumbnailListControl から FileSelectedEvent を受信したときの処理。
+        /// 現在のタブの SelectedItemPath を更新します。
+        /// </summary>
+        private void OnFileSelectedInTab(SelectedFileModel args)
+        {
+            // ThumbnailListControl からのイベントで、現在のタブの状態が存在する場合のみ処理
+            if (args.SourceId == "ThumbnailList" && SelectedTab?.State != null)
+            {
+                // 選択されたファイルのパスが null または空でなく、
+                // かつ、そのファイルが現在のタブのフォルダパスに属しているか確認
+                if (!string.IsNullOrEmpty(args.FullPath) &&
+                    Path.GetDirectoryName(args.FullPath)?.Equals(SelectedTab.State.FolderPath, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    // Debug.WriteLine($"[OnFileSelectedInTab] Updating SelectedItemPath for Tab '{SelectedTab.State.FolderPath}' to: {args.FullPath}");
+                    SelectedTab.State.SelectedItemPath = args.FullPath;
+                }
+                // 選択が解除された場合 (FullPath が null または空) や、フォルダが異なる場合は SelectedItemPath を null にする
+                else if (string.IsNullOrEmpty(args.FullPath))
+                {
+                    // Debug.WriteLine($"[OnFileSelectedInTab] Clearing SelectedItemPath for Tab '{SelectedTab.State.FolderPath}' due to deselection.");
+                    SelectedTab.State.SelectedItemPath = null;
+                }
+                // SaveTabStates はアプリ終了時に呼ばれるので、ここでは不要
+            }
+        }
 
+        /// <summary>
+        /// UI (MainWindowなど) から FilterChangedEvent を受信したときの処理。
+        /// 現在のタブの FilterSettings を更新します。
+        /// </summary>
+        private void OnFilterChanged(FilterChangedEventArgs args)
+        {
+            // MainWindow からのイベントで、現在のタブの状態が存在する場合のみ処理
+            // SourceId は MainWindow.xaml.cs で定義されている CONTROL_ID ("MainWindow") を想定
+            // SourceId のチェックを削除し、どのソースからのイベントでも処理するように変更
+            if (SelectedTab?.State != null)
+            {
+                var filterSettings = SelectedTab.State.FilterSettings;
+
+                // クリア操作の場合
+                if (args.IsClearOperation)
+                {
+                    if (!filterSettings.IsDefault)
+                    {
+                        filterSettings.Clear();
+                        // Debug.WriteLine($"[OnFilterChanged-VM] Clearing Filters for Tab '{SelectedTab.State.FolderPath}'");
+                    }
+                    return; // クリアの場合は他の変更は無視
+                }
+
+                // 全更新操作の場合 (ViewModel側では特に何もしない、個別変更で対応)
+                // IsFullUpdate の場合の特別な処理は不要になったため削除
+                // FilterChangedEventArgsBuilder 側で ChangedTypes が適切に設定される
+
+                // 個別のフィルタ変更を適用 (ChangedTypes リストを確認)
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Rating))
+                {
+                    if (filterSettings.Rating != args.RatingFilter)
+                    {
+                        filterSettings.Rating = args.RatingFilter;
+                        // Debug.WriteLine($"[OnFilterChanged-VM] Updating Rating Filter for Tab '{SelectedTab.State.FolderPath}' to: {args.RatingFilter}");
+                    }
+                }
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Prompt))
+                {
+                    if (filterSettings.HasPrompt != args.IsPromptFilterEnabled)
+                    {
+                        filterSettings.HasPrompt = args.IsPromptFilterEnabled;
+                        // Debug.WriteLine($"[OnFilterChanged-VM] Updating Prompt Filter for Tab '{SelectedTab.State.FolderPath}' to: {args.IsPromptFilterEnabled}");
+                    }
+                }
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
+                {
+                    var currentTags = new HashSet<string>(filterSettings.Tags ?? new List<string>());
+                    var newTags = new HashSet<string>(args.TagFilters ?? new List<string>());
+                    if (!currentTags.SetEquals(newTags))
+                    {
+                        filterSettings.Tags = new List<string>(newTags);
+                        // Debug.WriteLine($"[OnFilterChanged-VM] Updating Tag Filter for Tab '{SelectedTab.State.FolderPath}'");
+                    }
+                }
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Extension))
+                {
+                    var currentExts = new HashSet<string>(filterSettings.Extensions ?? new List<string>());
+                    var newExts = new HashSet<string>(args.ExtensionFilters ?? new List<string>());
+                    if (!currentExts.SetEquals(newExts))
+                    {
+                        filterSettings.Extensions = new List<string>(newExts);
+                        // Debug.WriteLine($"[OnFilterChanged-VM] Updating Extension Filter for Tab '{SelectedTab.State.FolderPath}'");
+                    }
+                }
+            }
+        }
     }
 }

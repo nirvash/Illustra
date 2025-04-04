@@ -199,8 +199,8 @@ namespace Illustra.ViewModels
                 if (_currentRatingFilter != value)
                 {
                     _currentRatingFilter = value;
-                    OnPropertyChanged(nameof(CurrentRatingFilter));
                     OnPropertyChanged(nameof(IsRatingFilterActive));
+                    OnPropertyChanged(nameof(CurrentRatingFilter));
                 }
             }
         }

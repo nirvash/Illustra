@@ -456,13 +456,18 @@ namespace Illustra.Views
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
-            // タグフィルタが変更された場合、CurrentTagFilterを更新
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+            // クリア操作の場合
+            if (args.IsClearOperation)
+            {
+                _currentTagFilters.Clear();
+            }
+            // タグフィルタが変更された場合 (個別変更または全更新)
+            else if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
             {
                 if (args.IsTagFilterEnabled)
                 {
                     // 複数タグのフィルタリングをサポート
-                    _currentTagFilters = new List<string>(args.TagFilters);
+                    _currentTagFilters = new List<string>(args.TagFilters ?? new List<string>()); // Null許容
                 }
                 else
                 {

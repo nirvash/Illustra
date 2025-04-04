@@ -201,20 +201,21 @@ namespace Illustra.Views
 
         private void ClearAllFilters(object sender, RoutedEventArgs e)
         {
-            IsTagFilterEnabled = false;
-            _tagFilters.Clear();
-            _currentRatingFilter = 0;
-            IsPromptFilterEnabled = false;
-            _currentExtensionFilters.Clear(); // 追加
-            _isExtensionFilterEnabled = false; // 追加
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            // IsTagFilterEnabled = false;
+            // _tagFilters.Clear();
+            // _currentRatingFilter = 0;
+            // IsPromptFilterEnabled = false;
+            // _currentExtensionFilters.Clear();
+            // _isExtensionFilterEnabled = false;
 
-            // フィルタ変更イベントを発行（すべてのフィルタをクリア）
+            // フィルタ変更イベントを発行（クリア操作）
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
-                new FilterChangedEventArgsBuilder(CONTROL_ID).Clear().Build());
+                new FilterChangedEventArgsBuilder(CONTROL_ID).SetClear().Build()); // Clear() -> SetClear() に修正
 
-            // フィルタクリアメニューの有効/無効を更新
-            UpdateFilterMenu();
-            UpdateStatusBar();
+            // UI更新は OnFilterChanged 内で行われる
+            // UpdateFilterMenu();
+            // UpdateStatusBar();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -400,14 +401,16 @@ namespace Illustra.Views
 
         private void FilterPromptMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            IsPromptFilterEnabled = !IsPromptFilterEnabled;
-            UpdateFilterMenu();
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            bool newPromptFilterState = !IsPromptFilterEnabled; // 先に新しい状態を計算
+            // IsPromptFilterEnabled = newPromptFilterState;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithPromptFilter(IsPromptFilterEnabled).Build());
-            UpdateStatusBar();
+                .WithPromptFilter(newPromptFilterState).Build()); // 更新後の状態を渡す
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterTagMenuItem_Click(object sender, RoutedEventArgs e)
@@ -416,16 +419,19 @@ namespace Illustra.Views
             var dialog = new TagFilterDialog(new List<string>(_tagFilters));
             if (dialog.ShowDialog() == true)
             {
-                IsTagFilterEnabled = dialog.TagFilters.Count > 0;
-                _tagFilters = new List<string>(dialog.TagFilters);
-                UpdateFilterMenu();
+                // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+                bool newIsTagFilterEnabled = dialog.TagFilters.Count > 0;
+                var newTagFilters = new List<string>(dialog.TagFilters);
+                // IsTagFilterEnabled = newIsTagFilterEnabled;
+                // _tagFilters = newTagFilters;
+                // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
                 // フィルタ変更イベントを発行（新しいリストのインスタンスを作成）
                 _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                     new FilterChangedEventArgsBuilder(CONTROL_ID)
-                    .WithTagFilter(IsTagFilterEnabled, new List<string>(_tagFilters)).Build());
+                    .WithTagFilter(newIsTagFilterEnabled, newTagFilters).Build()); // 更新後の状態を渡す
             }
-            UpdateStatusBar();
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterRating1MenuItem_Click(object sender, RoutedEventArgs e)
@@ -459,14 +465,15 @@ namespace Illustra.Views
         private void ApplyRatingFilter(int rating)
         {
             // 同じレーティングが選択された場合はフィルタを解除
-            _currentRatingFilter = (rating == _currentRatingFilter && rating > 0) ? 0 : rating;
-            UpdateFilterMenu();
+            int newRatingFilter = (rating == _currentRatingFilter && rating > 0) ? 0 : rating;
+            // _currentRatingFilter = newRatingFilter;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithRatingFilter(_currentRatingFilter).Build());
-            UpdateStatusBar();
+                .WithRatingFilter(newRatingFilter).Build()); // 更新後の状態を渡す
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterExtensionSubMenuItem_Click(object sender, RoutedEventArgs e)
@@ -497,15 +504,18 @@ namespace Illustra.Views
                 }
             }
 
-            _isExtensionFilterEnabled = _currentExtensionFilters.Any();
-            UpdateFilterMenu(); // メニューの状態を更新
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            bool newIsExtensionFilterEnabled = _currentExtensionFilters.Any();
+            var newExtensionFilters = new List<string>(_currentExtensionFilters); // コピーを作成
+            // _isExtensionFilterEnabled = newIsExtensionFilterEnabled;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithExtensionFilter(_isExtensionFilterEnabled, new List<string>(_currentExtensionFilters)).Build());
+                .WithExtensionFilter(newIsExtensionFilterEnabled, newExtensionFilters).Build()); // 更新後の状態を渡す
 
-            UpdateStatusBar(); // ステータスバーを更新
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
 
@@ -714,28 +724,49 @@ namespace Illustra.Views
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
-            // タグフィルタの状態を更新（新しいリストのインスタンスを作成）
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+            // イベントソースが自分自身("MainWindow")の場合はUI更新のみ行う
+            // (購読時のフィルタで除外されているはずだが、念のためチェック)
+            if (args.SourceId == CONTROL_ID)
             {
-                _isTagFilterEnabled = args.IsTagFilterEnabled;
-                _tagFilters = new List<string>(args.TagFilters);
+                // Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from Self (MainWindow), updating UI only.");
+                // 自分の操作による変更は既に内部状態に反映されているはずなので、UI更新のみ行う
+                UpdateFilterMenu();
+                UpdateStatusBar();
+                return;
             }
 
-            // レーティングフィルタの状態を更新
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
-                _currentRatingFilter = args.RatingFilter;
+            Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from: {args.SourceId}, Clear: {args.IsClearOperation}, Changed: {string.Join(",", args.ChangedTypes)}"); // IsFullUpdate 削除
 
-            // プロンプトフィルタの状態を更新
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
-                _isPromptFilterEnabled = args.IsPromptFilterEnabled;
-
-            // 拡張子フィルタの状態を更新 (追加)
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged)
+            // クリア操作の場合
+            if (args.IsClearOperation)
             {
-                _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
-                _currentExtensionFilters = new List<string>(args.ExtensionFilters);
+                _currentRatingFilter = 0;
+                _isPromptFilterEnabled = false;
+                _isTagFilterEnabled = false;
+                _tagFilters.Clear();
+                _isExtensionFilterEnabled = false;
+                _currentExtensionFilters.Clear();
+            }
+            // 個別の変更操作の場合
+            else
+            {
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Rating))
+                    _currentRatingFilter = args.RatingFilter;
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Prompt))
+                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
+                {
+                    _isTagFilterEnabled = args.IsTagFilterEnabled;
+                    _tagFilters = new List<string>(args.TagFilters ?? new List<string>());
+                }
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Extension))
+                {
+                    _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                    _currentExtensionFilters = new List<string>(args.ExtensionFilters ?? new List<string>());
+                }
             }
 
+            // UIを更新
             UpdateFilterMenu();
             UpdateStatusBar();
         }
@@ -790,7 +821,7 @@ namespace Illustra.Views
 
             // フィルタクリアイベントを発行
             FilterChangedEventArgs filterArgs = new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .Clear().Build();
+                .SetClear().Build(); // Clear() -> SetClear() に修正
             OnFilterChanged(filterArgs);
 
             // ステータスバーを更新

@@ -189,7 +189,7 @@
                         Margin="0,0,5,0"
                         x:Name="ClearFilterButton"
                         Focusable="False"
-                        IsEnabled="{Binding IsRatingFilterActive}"/>
+                        IsEnabled="{Binding IsRatingFilterActive, Mode=OneWay}"/>
                 <!-- ソートボタン -->
                 <Button x:Name="SortToggleButton"
                         Click="SortToggle_Click"

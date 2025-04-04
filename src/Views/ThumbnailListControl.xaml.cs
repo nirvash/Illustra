@@ -636,94 +636,79 @@ namespace Illustra.Views
 
         private async void OnFilterChanged(FilterChangedEventArgs args)
         {
-            Debug.WriteLine($"[フィルタ変更] フィルタ変更イベントが発生しました: {args.Type}");
+            // 自分自身 ("ThumbnailList") が発行したイベントは無視 (UI操作の結果なのでViewModelは更新済みのはず)
+            if (args.SourceId == CONTROL_ID)
+            {
+                // Debug.WriteLine($"[ThumbnailListControl.OnFilterChanged] Ignored event from self.");
+                return;
+            }
+
+            // args.Type はもう存在しないので、新しいプロパティでログ出力
+            Debug.WriteLine($"[ThumbnailListControl.OnFilterChanged] Received from: {args.SourceId}, Clear: {args.IsClearOperation}, Changed: {string.Join(",", args.ChangedTypes)}"); // IsFullUpdate 参照を削除
+
             try
             {
-                if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
+                int ratingToApply = _viewModel.CurrentRatingFilter;
+                bool promptToApply = _isPromptFilterEnabled;
+                List<string> tagsToApply = _currentTagFilters;
+                bool isTagEnabledToApply = _isTagFilterEnabled;
+                List<string> extensionsToApply = _currentExtensionFilters;
+                bool isExtensionEnabledToApply = _isExtensionFilterEnabled;
+
+                // クリア操作の場合
+                if (args.IsClearOperation)
                 {
-                    // フィルタをクリア
-                    _viewModel.CurrentRatingFilter = 0;
-                    _currentTagFilters.Clear();
-                    _isTagFilterEnabled = false;
-                    _isPromptFilterEnabled = false;
+                    ratingToApply = 0;
+                    promptToApply = false;
+                    tagsToApply = new List<string>();
+                    isTagEnabledToApply = false;
+                    extensionsToApply = new List<string>();
+                    isExtensionEnabledToApply = false;
                 }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+                // 個別の変更操作の場合
+                else
                 {
-                    // タグフィルタの変更
-                    _currentTagFilters = new List<string>(args.TagFilters);
-                    _isTagFilterEnabled = args.IsTagFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
-                {
-                    // プロンプトフィルタの変更
-                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
-                {
-                    // レーティングフィルタの変更
-                    _viewModel.CurrentRatingFilter = args.RatingFilter;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged) // 追加
-                {
-                    // 拡張子フィルタの変更
-                    _currentExtensionFilters = new List<string>(args.ExtensionFilters);
-                    _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Rating))
+                        ratingToApply = args.RatingFilter;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Prompt))
+                        promptToApply = args.IsPromptFilterEnabled;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
+                    {
+                        tagsToApply = args.TagFilters ?? new List<string>();
+                        isTagEnabledToApply = args.IsTagFilterEnabled;
+                    }
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Extension))
+                    {
+                        extensionsToApply = args.ExtensionFilters ?? new List<string>();
+                        isExtensionEnabledToApply = args.IsExtensionFilterEnabled;
+                    }
                 }
 
-                // 各フィルタを適用 (拡張子フィルタも引数に追加)
-                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled, _currentExtensionFilters, _isExtensionFilterEnabled);
+                // 内部状態を更新 (UI表示用) - ViewModelのプロパティも更新
+                _viewModel.CurrentRatingFilter = ratingToApply;
+                _isPromptFilterEnabled = promptToApply;
+                _currentTagFilters = new List<string>(tagsToApply); // 新しいリストを作成
+                _isTagFilterEnabled = isTagEnabledToApply;
+                _currentExtensionFilters = new List<string>(extensionsToApply); // 新しいリストを作成
+                _isExtensionFilterEnabled = isExtensionEnabledToApply;
 
-                // フィルタリング後の選択位置を更新
-                _thumbnailLoader.UpdateSelectionAfterFilter();
+
+                // ViewModelにフィルタ適用を指示
+                await _viewModel.ApplyAllFilters(
+                    ratingToApply,
+                    promptToApply,
+                    tagsToApply, // 更新されたリストを渡す
+                    isTagEnabledToApply,
+                    extensionsToApply, // 更新されたリストを渡す
+                    isExtensionEnabledToApply
+                );
+
+                // フィルタリング後の選択位置を更新 (ApplyAllFilters内で実行されるように変更された可能性もあるため、必要に応じて調整)
+                // _thumbnailLoader.UpdateSelectionAfterFilter(); // ApplyAllFilters内で実行されるなら不要かも
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"フィルタ変更処理中にエラーが発生しました: {ex.Message}");
-            }
-        }
-        /// <summary>
-        /// フォルダを変更するときの共通処理
-        /// </summary>
-        /// <summary>
-        /// フォルダ選択時の共通処理
-        /// MCPのフォルダ選択とタブ切り替えの両方で使用
-        /// </summary>
-        private async Task HandleFolderChangeAsync(string folderPath, string? selectedFilePath = null)
-        {
-            if (folderPath == _currentFolderPath)
-                return;
-
-            Debug.WriteLine($"[フォルダ変更] フォルダパス: {folderPath}, 選択ファイル: {selectedFilePath ?? "なし"}");
-
-            try
-            {
-                // UI を非表示
-                ThumbnailItemsControl.Visibility = Visibility.Hidden;
-
-                // フィルターをクリア
-                _viewModel.CurrentRatingFilter = 0;
-                _currentTagFilters.Clear();
-                _isTagFilterEnabled = false;
-                _currentExtensionFilters.Clear();
-                _isExtensionFilterEnabled = false;
-                _viewModel.ClearAllFilters();
-
-                // フォルダ監視の更新
-                if (_fileSystemMonitor.IsMonitoring)
-                {
-                    _fileSystemMonitor.StopMonitoring();
-                }
-                _fileSystemMonitor.StartMonitoring(folderPath);
-
-        // サムネイルをクリア
-        _viewModel.ClearItems();
-
-                // ファイルノードをロード
-                await LoadFileNodesAsync(folderPath, selectedFilePath);
-            }
-            finally
-            {
-                ThumbnailItemsControl.Visibility = Visibility.Visible;
+                Debug.WriteLine($"フィルタ変更イベントの処理中にエラーが発生しました: {ex.Message}");
             }
         }
 
@@ -2767,8 +2752,8 @@ namespace Illustra.Views
                     }
                     if (sortSettings != null)
                     {
-                         _viewModel.SortByDate = sortSettings.SortByDate;
-                         _viewModel.SortAscending = sortSettings.SortAscending;
+                        _viewModel.SortByDate = sortSettings.SortByDate;
+                        _viewModel.SortAscending = sortSettings.SortAscending;
                         _viewModel.SortItems(_viewModel.SortByDate, _viewModel.SortAscending);
                     }
 
@@ -2927,8 +2912,6 @@ namespace Illustra.Views
                         }
                     });
                 }
-
-                ClearFilterButton.IsEnabled = rating != 0;
             }
             catch (Exception ex)
             {
@@ -3871,19 +3854,17 @@ namespace Illustra.Views
             await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings);
 
             // 6. UIを表示 (OnFileNodesLoaded で表示される想定)
-            // FilterChangedEventも発行してUIを更新
-            var filterArgsBuilder = new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithRatingFilter(filterSettings.Rating)
-                .WithPromptFilter(filterSettings.HasPrompt)
-                .WithTagFilter(filterSettings.Tags.Any(), filterSettings.Tags)
-                .WithExtensionFilter(filterSettings.Extensions.Any(), filterSettings.Extensions);
-            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(filterArgsBuilder.Build());
+            // FilterChangedEventも発行してUIを更新 (全更新として発行)
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID) // SourceId は "ThumbnailList"
+                .SetFullUpdate(filterSettings) // filterSettings オブジェクト全体を渡す
+                .Build());
 
             // ThumbnailItemsControl.Visibility = Visibility.Visible;
 
             // 7. ソート/フィルタ状態をUIに反映させるイベントを発行
-             _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
-                 new SortOrderChangedEventArgs(_viewModel.SortByDate, _viewModel.SortAscending, CONTROL_ID));
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_viewModel.SortByDate, _viewModel.SortAscending, CONTROL_ID));
         }
 
 
