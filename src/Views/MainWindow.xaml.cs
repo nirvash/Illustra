@@ -231,8 +231,6 @@ namespace Illustra.Views
 
             // ツールメニューの表示/非表示を設定
             UpdateToolsMenuVisibility();
-            // EventAggregator で OpenInNewTabEvent を購読
-            _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => _viewModel.HandleOpenInNewTab(args.FolderPath));
 
             // 非同期処理が必要な他の初期化はここで行う
             await Task.Run(() =>
@@ -279,7 +277,7 @@ namespace Illustra.Views
         /// <summary>
         /// タブアイテムが右クリックされたときにコンテキストメニューを表示する
         /// </summary>
-        private void TabItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) // メソッド名を変更
+        private void TabItem_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             DragablzItem? tabItem = null;
             // イベントソースがThumbかDragablzItemかを確認
@@ -336,7 +334,7 @@ namespace Illustra.Views
                 ContextMenuService.SetContextMenu(tabItem, contextMenu);
                 contextMenu.IsOpen = true;
 
-                e.Handled = true; // イベントの伝播を停止
+                e.Handled = true; // イベントの伝播を停止してデフォルトメニューを防ぐ
             }
         }
 

@@ -24,6 +24,12 @@
     <SolidColorBrush x:Key="MahApps.Brushes.WindowTitleNonActive" Color="{StaticResource GrayLightDarkColor}" />
     <SolidColorBrush x:Key="MahApps.Brushes.IdealForeground" Color="Black" />
 
+    <!-- タブ -->
+    <SolidColorBrush x:Key="MahApps.Brushes.TabActive" Color="White" />
+    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActive" Color="{StaticResource GrayLightDarkColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.TabActiveBorder" Color="#888888" />
+    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActiveBorder" Color="#888888" />
+
     <!-- サムネイルの通常枠 -->
     <SolidColorBrush x:Key="MahApps.Brushes.CustomBackground" Color="#EEEEEE" />
     <SolidColorBrush x:Key="MahApps.Brushes.CustomBorder" Color="#CCCCCC" />

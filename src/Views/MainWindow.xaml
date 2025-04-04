@@ -16,35 +16,6 @@
         mc:Ignorable="d"
         Height="600"
         Width="900">
-    <controls:MetroWindow.Resources>
-        <ResourceDictionary>
-            <!-- Style for MainWindow Tab Items, based on MahApps theme + EventSetter + Triggers -->
-            <Style x:Key="MainWindowDragablzItemStyle" TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}">
-                <EventSetter Event="PreviewMouseRightButtonDown" Handler="TabItem_PreviewMouseRightButtonDown"/>
-                <!-- Default Background (optional, can rely on BaseOn or False trigger) -->
-                <!-- <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Gray8}"/> -->
-                <Style.Triggers>
-                    <Trigger Property="IsSelected" Value="True">
-                        <!-- Use MahApps brushes for selected state -->
-                        <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Accent}"/>
-                        <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Selected.Foreground}"/>
-                        <Setter Property="BorderBrush" Value="{StaticResource MahApps.Brushes.Accent}"/>
-                    </Trigger>
-                    <Trigger Property="IsSelected" Value="False">
-                         <!-- Use MahApps brushes for non-selected state -->
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Text}"/>
-                        <Setter Property="BorderBrush" Value="Transparent"/>
-                    </Trigger>
-                     <!-- Optional: Add IsMouseOver trigger if needed -->
-                     <Trigger Property="IsMouseOver" Value="True">
-                          <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Highlight}"/>
-                     </Trigger>
-                </Style.Triggers>
-            </Style>
-        </ResourceDictionary>
-    </controls:MetroWindow.Resources>
-
 
     <controls:MetroWindow.TitleTemplate>
         <DataTemplate>
@@ -56,7 +27,7 @@
                            FontSize="14"
                            Margin="5,0,0,0"/>
                 <dragablz:TabablzControl x:Name="MainTabControl"
-                                     Margin="0"
+                                     Margin="10 0 0 0"
                                      ItemsSource="{Binding DataContext.Tabs, RelativeSource={RelativeSource AncestorType=Window}}"
                                      SelectedItem="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                      Height="30" VerticalAlignment="Bottom"
@@ -67,6 +38,8 @@
                                 CommandParameter="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Style="{StaticResource MahApps.Styles.Button.Chromeless}"
                                 ToolTip="{DynamicResource String_Tab_Add}"
+                                HorizontalAlignment="Left"
+                                Width="Auto"
                                 Margin="4,0,0,0" Padding="4,2">
                             <TextBlock Text="+" FontSize="16" VerticalAlignment="Center"/>
                         </Button>
@@ -81,25 +54,26 @@
                     <dragablz:TabablzControl.ItemContainerStyle>
                         <Style TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}">
                             <!-- Right-click event handler -->
-                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="TabItem_PreviewMouseRightButtonDown"/>
+                            <EventSetter Event="PreviewMouseRightButtonUp" Handler="TabItem_PreviewMouseRightButtonUp"/>
 
                             <!-- Removed direct Background setter -->
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
                                     <!-- Use MahApps brushes for selected state -->
-                                    <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Accent}"/>
-                                    <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Selected.Foreground}"/>
-                                    <Setter Property="BorderBrush" Value="{StaticResource MahApps.Brushes.Accent}"/>
+                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabActive}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabActiveBorder}"/>
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="False">
                                      <!-- Use MahApps brushes for non-selected state -->
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="{StaticResource MahApps.Brushes.Text}"/>
-                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}"/>
                                 </Trigger>
                                  <!-- Optional: Add IsMouseOver trigger if needed -->
                                  <Trigger Property="IsMouseOver" Value="True">
-                                      <Setter Property="Background" Value="{StaticResource MahApps.Brushes.Highlight}"/>
+                                      <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}"/>
+                                      <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Selected.Foreground}"/>
                                  </Trigger>
                             </Style.Triggers>
                         </Style>

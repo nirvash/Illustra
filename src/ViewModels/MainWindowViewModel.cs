@@ -17,6 +17,7 @@ using System.Linq; // Linq を使用するために追加
 using System.Diagnostics; // Debug を使用するために追加
 using System.IO; // Path クラスを使用するために追加
 
+using Dragablz; // TabablzControl.AddItem を使うために追加
 
 namespace Illustra.ViewModels
 {
@@ -332,16 +333,9 @@ namespace Illustra.ViewModels
             var newState = tabToDuplicate.State.Clone();
             var newTab = new TabViewModel(newState);
 
-            // 元のタブの隣に挿入
-            int originalIndex = Tabs.IndexOf(tabToDuplicate);
-            if (originalIndex >= 0)
-            {
-                Tabs.Insert(originalIndex + 1, newTab);
-            }
-            else
-            {
-                Tabs.Add(newTab); // 見つからない場合は末尾に追加
-            }
+            // Dragablz の静的メソッドを使ってアイテムを追加し、表示位置を指定する
+            // このメソッドは内部でソースコレクションへの追加と、DragablzItemsControl への配置指示を行う
+            Dragablz.TabablzControl.AddItem(newTab, tabToDuplicate, AddLocationHint.After);
 
             SelectedTab = newTab; // 新しいタブを選択
 
@@ -435,22 +429,10 @@ namespace Illustra.ViewModels
         {
             if (string.IsNullOrEmpty(path)) return; // パスが無効な場合は何もしない
 
-            // 既存のタブで同じパスが開かれているか確認
-            var existingTab = Tabs.FirstOrDefault(t => t.State?.FolderPath == path);
-
-            if (existingTab != null)
-            {
-                // 既存のタブが見つかった場合は、それを選択状態にする
-                SelectedTab = existingTab;
-            }
-            else
-            {
-                // 既存のタブがない場合は、新しいタブを追加して選択状態にする
-                AddNewTab(path);
-                // AddNewTab内でSelectedTabが設定され、そのセッターでイベントが発行されるため、
-                // ここで明示的にサムネイルリストを更新する必要はないはず。
-            }
+            // 既存のタブがない場合は、新しいタブを追加して選択状態にする
+            AddNewTab(path);
         }
+
         /// <summary>
         /// McpOpenFolderEvent を受信したときの処理
         /// </summary>
