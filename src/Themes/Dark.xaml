@@ -29,7 +29,7 @@
     <SolidColorBrush x:Key="MahApps.Brushes.WindowTitleNonActive" Color="{StaticResource GrayDarkColor}" />
 
     <!-- タブ -->
-    <SolidColorBrush x:Key="MahApps.Brushes.TabActive" Color="{StaticResource GrayDarkColor}" />
+    <SolidColorBrush x:Key="MahApps.Brushes.TabActive" Color="{StaticResource MahApps.Colors.ThemeBackground}" />
     <SolidColorBrush x:Key="MahApps.Brushes.TabNonActive" Color="#555555" />
     <SolidColorBrush x:Key="MahApps.Brushes.TabActiveBorder" Color="#888888" />
     <SolidColorBrush x:Key="MahApps.Brushes.TabNonActiveBorder" Color="#888888" />
