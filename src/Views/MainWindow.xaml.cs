@@ -118,6 +118,7 @@ namespace Illustra.Views
             {
                 shortcutMenuItem.Click += (s, e) => _viewModel.OpenShortcutSettingsCommand.Execute();
             }
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged; // SelectedTab の変更を監視
         }
 
         private void UpdateEditMenuShortcuts()
@@ -1051,6 +1052,17 @@ namespace Illustra.Views
             _appSettings.SortByDate = _sortByDate;
             _appSettings.SortAscending = _sortAscending;
             SettingsHelper.SaveSettings(_appSettings);
+        }
+
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainWindowViewModel.SelectedTab))
+            {
+                // 選択されたタブが変わったら現在のフォルダパスを更新
+                _currentFolderPath = _viewModel.SelectedTab?.State.FolderPath ?? string.Empty;
+                // ステータスバーを更新
+                UpdateStatusBar();
+            }
         }
     }
 }
