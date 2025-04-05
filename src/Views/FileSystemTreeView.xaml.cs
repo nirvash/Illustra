@@ -15,8 +15,12 @@ using System.Windows.Input;
 using Illustra.Events;
 using System; // IProgress を使うために追加
 
+using System.Linq;
+
 namespace Illustra.Views
 {
+    // TreeViewItemHelper は削除 (添付プロパティ不要)
+
     /// <summary>
     /// ファイルシステムツリービューのコントロールクラス
     /// MVCパターンにおけるViewの役割を果たす
@@ -28,6 +32,7 @@ namespace Illustra.Views
         private AppSettingsModel? _appSettings;
         private FileOperationHelper _fileOperationHelper;
         private const string FAVORITES_CONTROL_ID = "FavoriteFolders";
+
 
         public class CustomDropHandler : IDropTarget
         {
@@ -372,20 +377,92 @@ namespace Illustra.Views
         }
 
 
-        // 作成したすべてのAdornerを追跡
-        private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>();
-        private TreeViewItem _currentHighlightedItem = null;
+        // private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>(); // Adorner 不要
+        private TreeViewItem? _currentHighlightedItem = null; // 現在ハイライトされているアイテム
+        // private bool _isContextMenuOpen = false; // 未使用のため削除
+        // XAML から呼び出す必要があるイベントハンドラ
+        public void TreeViewItem_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            if (sender is TreeViewItem item)
+            {
+                if (item == _currentHighlightedItem)
+                {
+                    // ハイライト中のアイテムで右クリックされた場合、
+                    // MouseLeave でハイライトが消えないようにフラグを立てる
+                    // _isContextMenuOpen = true; // 削除済み
+                }
+                }
+                else
+                {
+                    // ハイライトされていないアイテムで右クリックされた場合、
+                    // 現在のハイライトをクリアする
+                    ClearHighlight(_currentHighlightedItem);
+                    _currentHighlightedItem = null; // ハイライト対象なし
+                    // _isContextMenuOpen = false; // 削除済み
+                }
+        }
+
+        // XAML から呼び出す必要があるイベントハンドラ
+        public void TreeViewItem_ContextMenuClosing(object sender, ContextMenuEventArgs e)
+        {
+            // _isContextMenuOpen = false; // 削除済み
+            if (sender is TreeViewItem item)
+            {
+                // メニューが閉じた時点でマウスがアイテムの外に出ていたらハイライトを解除
+                Point mousePos = Mouse.GetPosition(item);
+                bool isMouseTrulyOver = mousePos.X >= 0 && mousePos.Y >= 0 &&
+                                        mousePos.X < item.ActualWidth && mousePos.Y < item.ActualHeight;
+                if (!isMouseTrulyOver)
+                {
+                    // マウスが外に出ていて、かつ現在ハイライトされているアイテムなら解除
+                    if (item == _currentHighlightedItem)
+                    {
+                        ClearHighlight(item);
+                        _currentHighlightedItem = null;
+                    }
+                }
+                // マウスがまだ上にある場合は、ハイライトは維持される想定
+                // (ContextMenu表示中にMouseLeaveが発生しないため、ClearHighlightが呼ばれていないはず)
+            }
+        }
+
+        // ハイライトを設定するヘルパーメソッド
+        private void SetHighlight(TreeViewItem item)
+        {
+            if (item == null) return;
+            // MahApps のテーマブラシを使用 (DynamicResource として取得)
+            if (TryFindResource("MahApps.Brushes.Selected.Background") is Brush backgroundBrush)
+            {
+                item.Background = backgroundBrush;
+            }
+            if (TryFindResource("MahApps.Brushes.Selected.Foreground") is Brush foregroundBrush)
+            {
+                item.Foreground = foregroundBrush;
+            }
+            // Border はデフォルトの選択スタイルに影響を与える可能性があるため、一旦設定しない
+            // item.BorderBrush = SystemColors.ControlDarkBrush;
+            // item.BorderThickness = new Thickness(1);
+        }
+
+        // ハイライトを解除するヘルパーメソッド
+        private void ClearHighlight(TreeViewItem? item)
+        {
+            if (item == null) return;
+            item.ClearValue(Control.BackgroundProperty);
+            item.ClearValue(Control.ForegroundProperty); // 文字色も元に戻す
+            // Border は設定していないのでクリア不要
+            // item.ClearValue(Control.BorderBrushProperty);
+            // item.ClearValue(Control.BorderThicknessProperty);
+        }
 
         private void TreeViewItem_MouseEnter(object sender, MouseEventArgs e)
         {
             if (sender is TreeViewItem item)
             {
-                // ヘッダー部分を見つける
-                var header = item.Template.FindName("PART_Header", item) as FrameworkElement;
-
+                // マウスがヘッダー部分にあるか確認
+                var header = item.Template?.FindName("PART_Header", item) as FrameworkElement;
                 if (header != null)
                 {
-                    // マウス位置がヘッダー上にあるか確認
                     Point mousePos = e.GetPosition(header);
                     bool isOverHeader = mousePos.X >= 0 && mousePos.Y >= 0 &&
                                        mousePos.X < header.ActualWidth &&
@@ -393,44 +470,37 @@ namespace Illustra.Views
 
                     if (isOverHeader)
                     {
-                        // 先に全てのAdornerを削除
-                        RemoveAllAdorners();
-
-                        // 新しいAdornerを追加
-                        var adornerLayer = AdornerLayer.GetAdornerLayer(item);
-                        if (adornerLayer != null)
+                        // 以前のハイライトがあればクリア
+                        if (_currentHighlightedItem != null && _currentHighlightedItem != item)
                         {
-                            var adorner = new TreeViewItemHighlightAdorner(item);
-                            adornerLayer.Add(adorner);
-                            _allAdorners.Add(adorner);
-                            _currentHighlightedItem = item;
+                            ClearHighlight(_currentHighlightedItem);
                         }
 
-                        e.Handled = true;
+                        // 新しいアイテムをハイライト
+                        SetHighlight(item);
+                        _currentHighlightedItem = item;
+                        e.Handled = true; // イベントのバブリングを止める（親のハイライトを防ぐ）
                     }
+                    // else: ヘッダー外なら何もしない（親アイテムのMouseEnterに任せるか、ここでClearHighlightするか検討）
+                    //       今回は何もしないことで、子→親への移動時に親がハイライトされるのを許容する
                 }
             }
         }
-
-        private void RemoveAllAdorners()
-        {
-            // 全てのAdornerを削除
-            foreach (var adorner in _allAdorners)
-            {
-                var layer = AdornerLayer.GetAdornerLayer(adorner.AdornedElement);
-                if (layer != null)
-                {
-                    layer.Remove(adorner);
-                }
-            }
-
-            _allAdorners.Clear();
-            _currentHighlightedItem = null;
-        }
-
         private void TreeViewItem_MouseLeave(object sender, MouseEventArgs e)
         {
-            RemoveAllAdorners();
+            if (sender is TreeViewItem item && item == _currentHighlightedItem)
+            {
+                // マウスが本当にアイテムの境界から外れたか確認
+                // (子要素への移動では Leave が発生するが、ハイライトは維持したい場合がある)
+                // ここではシンプルに、Leave が発生したらハイライトを解除する
+                // より洗練させるなら、移動先の要素をチェックする必要がある
+                Point mousePos = e.GetPosition(item);
+                 if (mousePos.X < 0 || mousePos.Y < 0 || mousePos.X >= item.ActualWidth || mousePos.Y >= item.ActualHeight)
+                 {
+                    ClearHighlight(item);
+                    _currentHighlightedItem = null;
+                 }
+            }
         }
 
         /// <summary>

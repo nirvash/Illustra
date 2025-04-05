@@ -6,6 +6,7 @@
              xmlns:viewmodels="clr-namespace:Illustra.ViewModels"
              xmlns:models="clr-namespace:Illustra.Models"
              xmlns:helpers="clr-namespace:Illustra.Helpers"
+             xmlns:views="clr-namespace:Illustra.Views"
              xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              xmlns:dd="urn:gong-wpf-dragdrop"
@@ -105,7 +106,12 @@
             <!-- 標準の BringIntoView 動作をキャンセル -->
             <EventSetter Event="RequestBringIntoView"
                          Handler="TreeViewItem_RequestBringIntoView"/>
-        </Style>
+           <EventSetter Event="ContextMenuOpening"
+                        Handler="TreeViewItem_ContextMenuOpening"/>
+           <EventSetter Event="ContextMenuClosing"
+                        Handler="TreeViewItem_ContextMenuClosing"/>
+           <!-- Style.Triggers は削除 (ハイライトはコードビハインドで制御) -->
+       </Style>
     </UserControl.Resources>
 
     <Grid KeyboardNavigation.TabNavigation="Local">

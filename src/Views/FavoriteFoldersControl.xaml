@@ -33,24 +33,23 @@
                          Handler="TreeViewItem_MouseEnter"/>
             <EventSetter Event="MouseLeave"
                          Handler="TreeViewItem_MouseLeave"/>
-            <!-- デフォルトのContentAlignmentバインディング警告を抑制 -->
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+           <EventSetter Event="ContextMenuOpening"
+                        Handler="TreeViewItem_ContextMenuOpening"/>
+           <EventSetter Event="ContextMenuClosing"
+                        Handler="TreeViewItem_ContextMenuClosing"/>
+           <!-- デフォルトのContentAlignmentバインディング警告を抑制 -->
+           <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+           <Setter Property="VerticalContentAlignment" Value="Stretch"/>
 
-
-            <!-- SystemColorブラシをオーバーライド -->
-            <Style.Resources>
-                <!-- 選択時の背景色（フォーカスあり） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"
-                                 Color="LightBlue"/>
-                <!-- 選択時の背景色（フォーカスなし） -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
-                                 Color="LightBlue"/>
-                <!-- 選択時のテキスト色 -->
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"
-                                 Color="Black"/>
-            </Style.Resources>
-        </Style>
+           <!-- SystemColorブラシのオーバーライドは削除 (コードビハインドで制御) -->
+           <!--
+           <Style.Resources>
+               <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="LightBlue"/>
+               <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="LightBlue"/>
+               <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+           </Style.Resources>
+           -->
+       </Style>
     </UserControl.Resources>
 
     <Grid KeyboardNavigation.TabNavigation="Local">

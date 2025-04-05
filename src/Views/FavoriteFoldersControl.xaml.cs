@@ -358,20 +358,45 @@ namespace Illustra.Views
             }
         }
 
-        // 作成したすべてのAdornerを追跡
-        private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>();
-        private TreeViewItem _currentHighlightedItem = null;
+        // ハイライト関連のフィールド
+        private TreeViewItem? _currentHighlightedItem = null; // Adornerではなく、直接ハイライトするアイテムを追跡
+        // private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>(); // Adorner 不要
+        // private bool _isContextMenuOpen = false; // ContextMenuOpening/Closing で直接制御するため不要
+
+        // ハイライトを設定するヘルパーメソッド
+        private void SetHighlight(TreeViewItem item)
+        {
+            if (item == null) return;
+            // MahApps のテーマブラシを使用 (DynamicResource として取得)
+            if (TryFindResource("MahApps.Brushes.Selected.Background") is Brush backgroundBrush)
+            {
+                item.Background = backgroundBrush;
+            }
+            if (TryFindResource("MahApps.Brushes.Selected.Foreground") is Brush foregroundBrush)
+            {
+                item.Foreground = foregroundBrush;
+            }
+        }
+
+        // ハイライトを解除するヘルパーメソッド
+        private void ClearHighlight(TreeViewItem? item)
+        {
+            if (item == null) return;
+            item.ClearValue(Control.BackgroundProperty);
+            item.ClearValue(Control.ForegroundProperty);
+        }
+
 
         private void TreeViewItem_MouseEnter(object sender, MouseEventArgs e)
         {
+            // ContextMenu が開いている間は無視するロジックは不要 (Closing で解除されるため)
+
             if (sender is TreeViewItem item)
             {
-                // ヘッダー部分を見つける
-                var header = item.Template.FindName("PART_Header", item) as FrameworkElement;
-
+                // マウスがヘッダー部分にあるか確認 (FileSystemTreeView と同じロジック)
+                var header = item.Template?.FindName("PART_Header", item) as FrameworkElement;
                 if (header != null)
                 {
-                    // マウス位置がヘッダー上にあるか確認
                     Point mousePos = e.GetPosition(header);
                     bool isOverHeader = mousePos.X >= 0 && mousePos.Y >= 0 &&
                                        mousePos.X < header.ActualWidth &&
@@ -379,44 +404,75 @@ namespace Illustra.Views
 
                     if (isOverHeader)
                     {
-                        // 先に全てのAdornerを削除
-                        RemoveAllAdorners();
-
-                        // 新しいAdornerを追加
-                        var adornerLayer = AdornerLayer.GetAdornerLayer(item);
-                        if (adornerLayer != null)
+                        // 以前のハイライトがあればクリア
+                        if (_currentHighlightedItem != null && _currentHighlightedItem != item)
                         {
-                            var adorner = new TreeViewItemHighlightAdorner(item);
-                            adornerLayer.Add(adorner);
-                            _allAdorners.Add(adorner);
-                            _currentHighlightedItem = item;
+                            ClearHighlight(_currentHighlightedItem);
                         }
 
-                        e.Handled = true;
+                        // 新しいアイテムをハイライト
+                        SetHighlight(item);
+                        _currentHighlightedItem = item;
+                        e.Handled = true; // 親へのイベント伝播を止める
                     }
                 }
             }
         }
 
-        private void RemoveAllAdorners()
-        {
-            // 全てのAdornerを削除
-            foreach (var adorner in _allAdorners)
-            {
-                var layer = AdornerLayer.GetAdornerLayer(adorner.AdornedElement);
-                if (layer != null)
-                {
-                    layer.Remove(adorner);
-                }
-            }
-
-            _allAdorners.Clear();
-            _currentHighlightedItem = null;
-        }
+        // RemoveAllAdorners は不要
 
         private void TreeViewItem_MouseLeave(object sender, MouseEventArgs e)
         {
-            RemoveAllAdorners();
+            // ContextMenu が開いている間は無視するロジックは不要
+
+            if (sender is TreeViewItem item && item == _currentHighlightedItem)
+            {
+                // マウスが本当にアイテムの境界から外れたか確認
+                Point mousePos = e.GetPosition(item);
+                 if (mousePos.X < 0 || mousePos.Y < 0 || mousePos.X >= item.ActualWidth || mousePos.Y >= item.ActualHeight)
+                 {
+                    ClearHighlight(item);
+                    _currentHighlightedItem = null;
+                 }
+            }
+        }
+
+        // ContextMenuOpening イベントハンドラ (XAML から呼び出す)
+        public void TreeViewItem_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            if (sender is TreeViewItem item)
+            {
+                // 右クリックされたアイテムがハイライトされていなければ、既存のハイライトを消す
+                if (item != _currentHighlightedItem)
+                {
+                    ClearHighlight(_currentHighlightedItem);
+                    _currentHighlightedItem = null;
+                }
+                // 右クリックされたアイテムがハイライト対象である場合、
+                // MouseLeave で解除されないようにする処理は不要になった
+                // (ContextMenuClosing でマウス位置を見て解除するため)
+            }
+        }
+
+        // ContextMenuClosing イベントハンドラ (XAML から呼び出す)
+        public void TreeViewItem_ContextMenuClosing(object sender, ContextMenuEventArgs e)
+        {
+            if (sender is TreeViewItem item)
+            {
+                // メニューが閉じた時点でマウスがアイテムの外に出ていたらハイライトを解除
+                Point mousePos = Mouse.GetPosition(item);
+                bool isMouseTrulyOver = mousePos.X >= 0 && mousePos.Y >= 0 &&
+                                        mousePos.X < item.ActualWidth && mousePos.Y < item.ActualHeight;
+                if (!isMouseTrulyOver)
+                {
+                    if (item == _currentHighlightedItem) // 念のため確認
+                    {
+                        ClearHighlight(item);
+                        _currentHighlightedItem = null;
+                    }
+                }
+                // マウスがまだ上にある場合はハイライトは維持される
+            }
         }
 
         private void FavoriteFoldersTreeView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
