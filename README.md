@@ -178,7 +178,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 
 ### Screenshot
 
-![Screenshot](docs/screenshot.jpg)
+![Screenshot](docs/screenshot2.jpg)
 
 ### Key Features
 
