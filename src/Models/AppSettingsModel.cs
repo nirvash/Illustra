@@ -94,7 +94,7 @@ namespace Illustra.Models
         public bool SelectLastFileOnStartup { get; set; } = false;
 
         // テーマ設定
-        public string Theme { get; set; } = "Light";
+        public string Theme { get; set; } = "Dark";
 
         // 新規ファイル追加時に自動選択するかどうか
         public bool AutoSelectNewFile { get; set; } = false;
