@@ -74,6 +74,12 @@
                   ContextMenuOpening="FavoriteFoldersTreeView_ContextMenuOpening">
             <TreeView.ContextMenu>
                 <ContextMenu>
+                    <!-- 新しいタブで開く -->
+                    <MenuItem x:Name="OpenInNewTabMenuItem"
+                              Header="{DynamicResource String_Tab_OpenInNewTab}"
+                              Click="OpenInNewTab_Click"/>
+                    <Separator/>
+                    <!-- 表示名の変更 -->
                     <MenuItem x:Name="SetDisplayNameMenuItem"
                               Header="{DynamicResource String_FavoriteFolders_SetDisplayName}"
                               Click="SetDisplayName_Click"/>
@@ -81,11 +87,7 @@
                               Header="{DynamicResource String_FavoriteFolders_RemoveDisplayName}"
                               Click="RemoveDisplayName_Click"/>
                     <Separator/>
-                    <!-- タブで開くメニュー項目を追加 -->
-                    <MenuItem x:Name="OpenInNewTabMenuItem"
-                              Header="{DynamicResource String_Tab_OpenInNewTab}"
-                              Click="OpenInNewTab_Click"/>
-                    <Separator/>
+                    <!-- お気に入りフォルダの解除 -->
                     <MenuItem x:Name="RemoveFromFavoritesMenuItem"
                               Header="{DynamicResource String_FavoriteFolders_RemoveFromFavorites}"
                               Click="RemoveFromFavorites_Click"/>

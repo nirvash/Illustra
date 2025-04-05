@@ -34,11 +34,18 @@
             <Setter Property="ContextMenu">
                 <Setter.Value>
                     <ContextMenu>
+                        <!-- 新しいタブでフォルダを開く -->
+                        <MenuItem x:Name="OpenInNewTabMenuItem"
+                                  Header="{DynamicResource String_Tab_OpenInNewTab}"
+                                  Command="{Binding Path=PlacementTarget.Tag.OpenInNewTabCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <!-- お気に入りに追加 -->
                         <MenuItem x:Name="AddToFavoritesMenuItem"
                             Header="{DynamicResource String_FileSystemTreeView_AddToFavorites}"
                             Command="{Binding Path=PlacementTarget.Tag.AddToFavoritesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                             IsEnabled="{Binding Path=PlacementTarget.Tag.IsFavorite, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BooleanInverseConverter}}"/>
                         <Separator/>
+                        <!-- ソート設定 -->
                         <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">
                             <MenuItem x:Name="SortByNameMenuItem"
                                     Header="{DynamicResource String_Menu_View_SortByName}"
@@ -71,6 +78,7 @@
                                                 Converter={StaticResource BooleanInverseConverter}}"/>
                         </MenuItem>
                         <Separator/>
+                        <!-- フォルダ作成 -->
                         <MenuItem x:Name="CreateFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_CreateFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.CreateFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -80,10 +88,6 @@
                         <MenuItem x:Name="DeleteFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_DeleteFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                        <Separator/>
-                        <MenuItem x:Name="OpenInNewTabMenuItem"
-                                  Header="{DynamicResource String_Tab_OpenInNewTab}"
-                                  Command="{Binding Path=PlacementTarget.Tag.OpenInNewTabCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                     </ContextMenu>
                 </Setter.Value>
             </Setter>

@@ -346,6 +346,15 @@ namespace Illustra.Views
             if (tabItem != null && tabItem.DataContext is TabViewModel tabViewModel && DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 var contextMenu = new ContextMenu();
+                // 複製
+                var duplicateItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_Duplicate"), // リソースから取得
+                    Command = mainWindowViewModel.DuplicateTabCommand,
+                    CommandParameter = tabViewModel
+                };
+                duplicateItem.IsEnabled = mainWindowViewModel.DuplicateTabCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(duplicateItem);
 
                 // 閉じる
                 var closeItem = new MenuItem
@@ -366,16 +375,6 @@ namespace Illustra.Views
                 };
                 closeOthersItem.IsEnabled = mainWindowViewModel.CloseOtherTabsCommand.CanExecute(tabViewModel);
                 contextMenu.Items.Add(closeOthersItem);
-
-                // 複製
-                var duplicateItem = new MenuItem
-                {
-                    Header = FindResource("String_Tab_Duplicate"), // リソースから取得
-                    Command = mainWindowViewModel.DuplicateTabCommand,
-                    CommandParameter = tabViewModel
-                };
-                duplicateItem.IsEnabled = mainWindowViewModel.DuplicateTabCommand.CanExecute(tabViewModel);
-                contextMenu.Items.Add(duplicateItem);
 
                 // ContextMenuService を使って表示
                 ContextMenuService.SetContextMenu(tabItem, contextMenu);
