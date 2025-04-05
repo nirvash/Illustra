@@ -984,6 +984,8 @@ namespace Illustra.Views
             {
                 try
                 {
+                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
+
                     // 既存のファイルノードをチェック
                     if (_viewModel.Items.Any(x => x.FullPath == path))
                     {
@@ -991,7 +993,6 @@ namespace Illustra.Views
                         return;
                     }
 
-                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(path);
                     if (fileNode != null)
                     {
                         // ソート順に従って適切な位置に挿入
@@ -2062,6 +2063,7 @@ namespace Illustra.Views
                                 _ = Application.Current.Dispatcher.InvokeAsync(async () =>
                                 {
                                     if (!FileHelper.IsImageFile(processedPath)) return;
+                                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(processedPath);
 
                                     // 既存のファイルノードをチェック
                                     if (_viewModel.Items.Any(x => x.FullPath == processedPath))
@@ -2070,7 +2072,6 @@ namespace Illustra.Views
                                         return;
                                     }
 
-                                    var fileNode = await _thumbnailLoader.CreateFileNodeAsync(processedPath);
                                     if (fileNode != null)
                                     {
                                         // ソート順に従って適切な位置に挿入

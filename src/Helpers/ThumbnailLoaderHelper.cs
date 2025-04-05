@@ -577,7 +577,11 @@ public class ThumbnailLoaderHelper
 
             // DBからFileNodeModelを取得（バックグラウンドで実行）
             // 注意: DBアクセスは時間がかかる操作なのでバックグラウンドスレッドで実行
-            var fileNode = _db.CreateFileNode(path); // CS1061 Fix: Use renamed synchronous method
+            var fileNode = await _db.GetFileNodeAsync(path);
+            if (fileNode == null)
+            {
+                fileNode = _db.CreateFileNode(path); // CS1061 Fix: Use renamed synchronous method
+            }
 
             if (fileNode == null)
             {
