@@ -62,26 +62,76 @@
                             <!-- Right-click event handler -->
                             <EventSetter Event="PreviewMouseRightButtonUp" Handler="TabItem_PreviewMouseRightButtonUp"/>
 
-                            <!-- Removed direct Background setter -->
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <!-- Use MahApps brushes for selected state -->
-                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabActive}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabActiveBorder}"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="False">
-                                     <!-- Use MahApps brushes for non-selected state -->
-                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}"/>
-                                </Trigger>
-                                 <!-- Optional: Add IsMouseOver trigger if needed -->
-                                 <Trigger Property="IsMouseOver" Value="True">
-                                      <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}"/>
-                                      <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Selected.Foreground}"/>
-                                 </Trigger>
-                            </Style.Triggers>
+                            <!-- Override the ControlTemplate to customize triggers -->
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type dragablz:DragablzItem}">
+                                        <Grid x:Name="templateRoot" SnapsToDevicePixels="true" Margin="0 1 0 -1">
+                                            <!-- Set default background/border directly or via Style Setter outside Template -->
+                                            <dragablz:Trapezoid x:Name="Trapezoid"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                Background="{TemplateBinding Background}"
+                                                                LongBasePenBrush="{TemplateBinding Background}"
+                                                                PenThickness="1"
+                                                                Margin="0 0 0 0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ContentPresenter Content="{TemplateBinding ContentControl.Content}" ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}" ContentStringFormat="{TemplateBinding ContentControl.ContentStringFormat}" HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding Control.VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
+                                                                      Margin="{TemplateBinding Control.Padding }"
+                                                                      x:Name="contentPresenter" />
+                                                    <Thumb Grid.Column="0" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                                           x:Name="PART_Thumb"
+                                                           Style="{StaticResource MahAppsInvisibleThumbStyle}" />
+                                                    <Button Grid.Column="1"
+                                                            Style="{StaticResource MahAppsCloseItemCommandButtonStyle}"
+                                                            Command="{x:Static dragablz:TabablzControl.CloseItemCommand}"
+                                                            CommandParameter="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                                                        <Button.Visibility>
+                                                            <MultiBinding Converter="{StaticResource ShowDefaultCloseButtonConverter}">
+                                                                <Binding RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type dragablz:TabablzControl}}" Path="ShowDefaultCloseButton" />
+                                                                <Binding RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type dragablz:TabablzControl}}" Path="FixedHeaderCount" />
+                                                                <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="LogicalIndex" />
+                                                            </MultiBinding>
+                                                        </Button.Visibility>
+                                                    </Button>
+                                                </Grid>
+                                            </dragablz:Trapezoid>
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="dragablz:TabablzControl.IsWrappingTabItem" Value="True">
+                                                <Setter TargetName="contentPresenter" Property="Content" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=DataContext.Header}" />
+                                            </Trigger>
+                                            <!-- Use MahApps brushes for IsMouseOver state -->
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" TargetName="Trapezoid"/>
+                                                <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.Accent}" TargetName="Trapezoid"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Selected.Foreground}"/>
+                                            </Trigger>
+                                            <!-- Use MahApps brushes for IsSelected state -->
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabActive}" TargetName="Trapezoid"/>
+                                                <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.TabActive}" TargetName="Trapezoid"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabActiveBorder}" TargetName="Trapezoid"/>
+                                            </Trigger>
+                                            <!-- Trigger for non-selected state (overrides default setters below if needed) -->
+                                            <Trigger Property="IsSelected" Value="False">
+                                                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
+                                                 <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
+                                                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                                                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}" TargetName="Trapezoid"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <!-- Default Setters (Applied when no triggers in the template are active) -->
+                             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}"/>
+                             <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                             <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}"/>
                         </Style>
                     </dragablz:TabablzControl.ItemContainerStyle>
                 </dragablz:TabablzControl>
