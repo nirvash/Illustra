@@ -214,40 +214,40 @@
         </Grid>
 
         <ListView x:Name="ThumbnailItemsControl"
-                           Grid.Row="1"
-                           ItemsSource="{Binding FilteredItems}"
-                           SelectionMode="Extended"
-                           IsSynchronizedWithCurrentItem="True"
-                           Loaded="ThumbnailItemsControl_Loaded"
-                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                           ScrollViewer.CanContentScroll="True"
-                           ScrollViewer.PanningMode="VerticalOnly"
-                           ScrollViewer.IsDeferredScrollingEnabled="False"
-                           VirtualizingPanel.IsVirtualizing="True"
-                           VirtualizingPanel.VirtualizationMode="Recycling"
-                           VirtualizingPanel.ScrollUnit="Pixel"
-                           BorderThickness="0"
-                           AllowDrop="True"
-                           dd:DragDrop.IsDragSource="True"
-                           dd:DragDrop.IsDropTarget="True"
-                           KeyboardNavigation.TabNavigation="None"
-                           IsTabStop="True"
-                           TabIndex="3"
-                           FocusVisualStyle="{x:Null}"
-                           dd:DragDrop.DragPreviewMaxItemsCount="9999"
-                           PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
+                            Grid.Row="1"
+                            ItemsSource="{Binding FilteredItems}"
+                            SelectionMode="Extended"
+                            IsSynchronizedWithCurrentItem="True"
+                            Loaded="ThumbnailItemsControl_Loaded"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.CanContentScroll="True"
+                            ScrollViewer.PanningMode="VerticalOnly"
+                            ScrollViewer.IsDeferredScrollingEnabled="False"
+                            VirtualizingPanel.IsVirtualizing="True"
+                            VirtualizingPanel.VirtualizationMode="Recycling"
+                            VirtualizingPanel.ScrollUnit="Pixel"
+                            BorderThickness="0"
+                            AllowDrop="True"
+                            dd:DragDrop.IsDragSource="True"
+                            dd:DragDrop.IsDropTarget="True"
+                            KeyboardNavigation.TabNavigation="None"
+                            IsTabStop="True"
+                            TabIndex="3"
+                            FocusVisualStyle="{x:Null}"
+                            dd:DragDrop.DragPreviewMaxItemsCount="9999"
+                            PreviewMouseWheel="ThumbnailItemsControl_PreviewMouseWheel">
                     <ListView.Template>
                         <ControlTemplate TargetType="ListView">
                             <Border BorderThickness="{TemplateBinding BorderThickness}"
                                     BorderBrush="{TemplateBinding BorderBrush}">
-                                <ScrollViewer x:Name="ScrollViewer"
-                                            Focusable="False">
-                                    <ItemsPresenter />
-                                </ScrollViewer>
-                            </Border>
-                        </ControlTemplate>
-                    </ListView.Template>
+                            <ScrollViewer x:Name="ScrollViewer"
+                                        Focusable="False">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </ListView.Template>
             <dd:DragDrop.DragAdornerTemplate>
                 <DataTemplate>
                     <!-- Item全体の枠 (サイズは維持) --><!-- 全体の枠は見えないように -->
@@ -264,9 +264,9 @@
                                 MaxWidth="118"
                                 MaxHeight="118"> <!-- 全体の枠サイズからBorderThicknessを引いた値 -->
                                 <Image Source="{Binding ThumbnailInfo.Image}"
-                                       Stretch="Uniform"
-                                       HorizontalAlignment="Left"
-                                       VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
+                                    Stretch="Uniform"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
                         </Border>
                     </Border>
                 </DataTemplate>
@@ -275,7 +275,7 @@
             <dd:DragDrop.DragAdornerMultiItemTemplate>
                 <DataTemplate>
                     <ItemsControl ItemsSource="{Binding Items}"
-                                  AlternationCount="100">
+                                AlternationCount="100">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <Canvas Width="130"
@@ -299,9 +299,9 @@
                                             MaxWidth="98"
                                             MaxHeight="98"><!-- 全体の枠サイズからBorderThicknessを引いた値 -->
                                         <Image Source="{Binding ThumbnailInfo.Image}"
-                                               Stretch="Uniform"
-                                               HorizontalAlignment="Left"
-                                               VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
+                                            Stretch="Uniform"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"/> <!-- 画像を左下に配置 -->
                                     </Border>
                                 </Border>
                             </DataTemplate>
@@ -313,7 +313,7 @@
                                     <Setter.Value>
                                         <MultiBinding Converter="{StaticResource IndexToXMultiConverter}">
                                             <Binding Path="(ItemsControl.AlternationIndex)"
-                                                     RelativeSource="{RelativeSource Self}"/>
+                                                    RelativeSource="{RelativeSource Self}"/>
                                             <Binding Source="0"/>
                                             <!-- X方向のオフセット値 -->
                                             <Binding Source="5"/>
@@ -326,7 +326,7 @@
                                     <Setter.Value>
                                         <MultiBinding Converter="{StaticResource IndexToYMultiConverter}">
                                             <Binding Path="(ItemsControl.AlternationIndex)"
-                                                     RelativeSource="{RelativeSource Self}"/>
+                                                    RelativeSource="{RelativeSource Self}"/>
                                             <Binding Source="0"/>
                                             <!-- Y方向のオフセット値 -->
                                             <Binding Source="5"/>
@@ -339,8 +339,8 @@
                                 <Setter Property="Panel.ZIndex">
                                     <Setter.Value>
                                         <Binding Path="(ItemsControl.AlternationIndex)"
-                                                 RelativeSource="{RelativeSource Self}"
-                                                 Converter="{StaticResource IndexToZIndexConverter}"/>
+                                                RelativeSource="{RelativeSource Self}"
+                                                Converter="{StaticResource IndexToZIndexConverter}"/>
                                     </Setter.Value>
                                 </Setter>
 
@@ -388,7 +388,7 @@
                     <Setter Property="HorizontalContentAlignment"
                             Value="Center"/>
                     <EventSetter Event="MouseDoubleClick"
-                                 Handler="Thumbnail_MouseDoubleClick"/>
+                                Handler="Thumbnail_MouseDoubleClick"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListViewItem">
@@ -401,7 +401,7 @@
                                             CornerRadius="5"
                                             SnapsToDevicePixels="True">
                                         <ContentPresenter HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"/>
+                                                        VerticalAlignment="Center"/>
                                     </Border>
                                     <!-- 選択時のハイライト境界線（オーバーレイ） -->
                                     <Border x:Name="SelectionBorder"
@@ -420,19 +420,19 @@
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected"
-                                             Value="True">
+                                            Value="True">
                                         <Setter TargetName="SelectionBorder"
                                                 Property="Opacity"
                                                 Value="1"/>
                                     </Trigger>
                                     <DataTrigger Binding="{Binding IsLastSelected}"
-                                                 Value="True">
+                                                Value="True">
                                         <Setter TargetName="LastSelectedBorder"
                                                 Property="Opacity"
                                                 Value="1"/>
                                     </DataTrigger>
                                     <Trigger Property="IsMouseOver"
-                                             Value="True">
+                                            Value="True">
                                         <Setter Property="Background"
                                                 Value="#0F000000"/>
                                     </Trigger>
@@ -449,10 +449,10 @@
                             BorderThickness="0">
                         <Grid>
                             <Image Source="{Binding ThumbnailInfo.Image}"
-                                   Stretch="Uniform"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Margin="2"/>
+                                Stretch="Uniform"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="2"/>
                             <TextBlock Text="{Binding FileName}"
                                         VerticalAlignment="Bottom"
                                         HorizontalAlignment="Center"
@@ -464,12 +464,12 @@
                                         TextTrimming="CharacterEllipsis"/>
                             <!-- 動画アイコン -->
                             <TextBlock Text="🎞️"
-                                     FontSize="14"
-                                     HorizontalAlignment="Right"
-                                     VerticalAlignment="Top"
-                                     Margin="0,2,2,0"
-                                     Foreground="White"
-                                     Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    FontSize="14"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,2,2,0"
+                                    Foreground="White"
+                                    Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock.Effect>
                                     <DropShadowEffect Color="Black"
                                                     Direction="315"
@@ -480,8 +480,8 @@
                             </TextBlock>
                             <!-- レーティング表示部分のみを更新 -->
                             <Grid HorizontalAlignment="Left"
-                                  VerticalAlignment="Top"
-                                  Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
+                                VerticalAlignment="Top"
+                                Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                                 <!-- SVG星マーク -->
                                 <local:RatingStarControl
                                     x:Name="RatingStarMark"
@@ -493,10 +493,10 @@
                                     Margin="2">
                                     <local:RatingStarControl.Effect>
                                         <DropShadowEffect Color="Black"
-                                                          Direction="315"
-                                                          ShadowDepth="1"
-                                                          BlurRadius="2"
-                                                          Opacity="0.7"/>
+                                                        Direction="315"
+                                                        ShadowDepth="1"
+                                                        BlurRadius="2"
+                                                        Opacity="0.7"/>
                                     </local:RatingStarControl.Effect>
                                 </local:RatingStarControl>
                             </Grid>
@@ -505,6 +505,16 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <!-- フィルタ結果/アイテム0件メッセージ -->
+        <TextBlock Text="{Binding EmptyResultMessage}"
+                   Grid.Row="1"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="16"
+                   Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
+                   Visibility="{Binding IsFilterResultEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"
+                   IsHitTestVisible="False"/>
 
         <!-- 状態通知オーバーレイ -->
         <Border x:Name="Notification"

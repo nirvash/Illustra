@@ -86,6 +86,9 @@ namespace Illustra.ViewModels
             PasteCommand = new RelayCommand(ExecutePaste, CanExecutePaste);
             SelectAllCommand = new RelayCommand(ExecuteSelectAll, CanExecuteSelectAll);
             _sourceId = ViewModelSourceId; // SourceId を初期化
+
+            // Itemsコレクションの変更を監視して、フィルタ結果空メッセージを更新
+            Items.CollectionChanged += Items_CollectionChanged;
         }
 
         // レーティングをデータベースに永続化する
@@ -187,6 +190,7 @@ namespace Illustra.ViewModels
         private bool _isTagFilterEnabled;
         private List<string> _extensionFilters = []; // 追加
         private bool _isExtensionFilterEnabled; // 追加
+        private bool _isFilterResultEmpty; // フィルタ結果が空かどうか
 
         /// <summary>
         /// 現在適用されているレーティングフィルタの値を取得します
@@ -256,6 +260,45 @@ namespace Illustra.ViewModels
                     _isExtensionFilterEnabled = value;
                     OnPropertyChanged(nameof(IsExtensionFilterEnabled));
                 }
+            }
+        }
+
+        /// <summary>
+        /// フィルタを適用した結果、表示するアイテムがないかどうかを示す値を取得または設定します。
+        /// </summary>
+        public bool IsFilterResultEmpty
+        {
+            get => _isFilterResultEmpty;
+            set
+            {
+                if (SetProperty(ref _isFilterResultEmpty, value))
+                {
+                    OnPropertyChanged(nameof(EmptyResultMessage)); // メッセージプロパティの変更通知
+                }
+            }
+        }
+
+        /// <summary>
+        /// いずれかのフィルタが有効かどうかを示す値を取得します。
+        /// </summary>
+        public bool IsAnyFilterActive
+        {
+            get => CurrentRatingFilter > 0 || IsPromptFilterEnabled || IsTagFilterEnabled || IsExtensionFilterEnabled;
+            // セッターは不要だが、依存プロパティの変更通知のために OnPropertyChanged を呼び出す必要がある
+        }
+
+        /// <summary>
+        /// フィルタ結果が0件の場合に表示するメッセージを取得します。
+        /// </summary>
+        public string EmptyResultMessage
+        {
+            get
+            {
+                if (!IsFilterResultEmpty) return string.Empty; // アイテムがある場合は空
+
+                return IsAnyFilterActive
+                    ? (string)Application.Current.FindResource("String_Thumbnail_NoItemsFoundAfterFilter") // フィルタ適用時
+                    : (string)Application.Current.FindResource("String_Thumbnail_NoItems"); // フィルタ未適用時
             }
         }
 
@@ -336,6 +379,9 @@ namespace Illustra.ViewModels
             _filteredItems.Refresh();
             OnPropertyChanged(nameof(FilteredItems));
 
+            // フィルタ結果が空かどうかを更新
+            IsFilterResultEmpty = !_filteredItems.Cast<object>().Any();
+
             UpdateSelectionAfterFilter(previousSelected);
         }
 
@@ -403,6 +449,8 @@ namespace Illustra.ViewModels
             // 拡張子フィルタの設定 (追加)
             _extensionFilters = new List<string>(extensionFilters);
             IsExtensionFilterEnabled = isExtensionFilterEnabled;
+            OnPropertyChanged(nameof(IsAnyFilterActive)); // フィルタ状態変更を通知
+            OnPropertyChanged(nameof(EmptyResultMessage)); // メッセージプロパティの変更通知
 
             // キャッシュの差分更新は未実装
             // 別スレッドでタグキャッシュを更新
@@ -440,6 +488,10 @@ namespace Illustra.ViewModels
             IsPromptFilterEnabled = false;
             IsTagFilterEnabled = false;
             _tagFilters.Clear();
+            IsExtensionFilterEnabled = false; // 拡張子フィルタもクリア
+            _extensionFilters.Clear();
+            OnPropertyChanged(nameof(IsAnyFilterActive)); // フィルタ状態変更を通知
+            OnPropertyChanged(nameof(EmptyResultMessage)); // メッセージプロパティの変更通知
         }
 
 
@@ -554,6 +606,15 @@ namespace Illustra.ViewModels
             {
                 RaiseCommandCanExecuteChanged();
             }
+            // フィルタ関連プロパティが変更されたら IsAnyFilterActive と EmptyResultMessage も更新通知
+            if (propertyName == nameof(CurrentRatingFilter) ||
+                propertyName == nameof(IsPromptFilterEnabled) ||
+                propertyName == nameof(IsTagFilterEnabled) ||
+                propertyName == nameof(IsExtensionFilterEnabled))
+            {
+                OnPropertyChanged(nameof(IsAnyFilterActive));
+                OnPropertyChanged(nameof(EmptyResultMessage));
+            }
         }
 
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -562,6 +623,15 @@ namespace Illustra.ViewModels
             field = value;
             OnPropertyChanged(propertyName);
             return true;
+        }
+
+        private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            // FilteredItems の件数に基づいて IsFilterResultEmpty を更新
+            // FilteredItems.IsEmpty は ICollectionView のプロパティだが、
+            // ここでは LINQ を使って件数を確認する方が確実
+            IsFilterResultEmpty = !_filteredItems.Cast<object>().Any();
+            // EmptyResultMessage は IsFilterResultEmpty の変更通知で自動的に更新される
         }
 
     }

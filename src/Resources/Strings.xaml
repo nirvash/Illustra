@@ -229,6 +229,7 @@
 
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">No items to display</system:String> <!-- Added -->
+    <system:String x:Key="String_Thumbnail_NoItemsFoundAfterFilter">No items found matching the filter criteria.</system:String>
     <system:String x:Key="String_Thumbnail_Loading">Loading...</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">Open</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">Open with</system:String>

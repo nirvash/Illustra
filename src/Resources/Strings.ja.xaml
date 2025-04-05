@@ -229,6 +229,7 @@
 
     <!-- Thumbnail List -->
     <system:String x:Key="String_Thumbnail_NoItems">表示する項目がありません</system:String>
+    <system:String x:Key="String_Thumbnail_NoItemsFoundAfterFilter">フィルター条件に一致するアイテムが見つかりませんでした。</system:String>
     <system:String x:Key="String_Thumbnail_Loading">読み込み中...</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">開く</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">プログラムから開く</system:String>
