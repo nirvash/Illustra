@@ -65,7 +65,8 @@ namespace Illustra.ViewModels
                 // お気に入りでない、または表示名が未設定の場合はフォルダ名を返す
                 try
                 {
-                    return Path.GetFileName(State.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? State.FolderPath;
+                    string folderName = Path.GetFileName(State.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    return string.IsNullOrEmpty(folderName) ? State.FolderPath : folderName;
                 }
                 catch
                 {

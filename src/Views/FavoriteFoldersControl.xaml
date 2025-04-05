@@ -93,7 +93,7 @@
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
                                    FontFamily="Segoe UI Emoji"

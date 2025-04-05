@@ -121,7 +121,7 @@
                   dd:DragDrop.IsDropTarget="True">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
                                    FontFamily="Segoe UI Emoji"
