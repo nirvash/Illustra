@@ -37,6 +37,7 @@ namespace Illustra.Views
 #pragma warning restore 0067 // 警告の無視を終了
         #endregion
 
+        // OpenInNewTabRequested イベント定義を削除 (EventAggregator を使用するため)
         public class FavoriteFolderDragHandler : DefaultDragHandler
         {
             public override void StartDrag(IDragInfo dragInfo)
@@ -430,6 +431,7 @@ namespace Illustra.Views
             // メニュー項目を取得
             var setDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "SetDisplayNameMenuItem");
             var removeDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveDisplayNameMenuItem");
+            var openInNewTabMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "OpenInNewTabMenuItem"); // 追加
             var removeFavoriteMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
 
             // 選択されたアイテムがない場合、すべてのカスタムメニューを無効化
@@ -437,6 +439,7 @@ namespace Illustra.Views
             {
                 if (setDisplayNameMenuItem != null) setDisplayNameMenuItem.IsEnabled = false;
                 if (removeDisplayNameMenuItem != null) removeDisplayNameMenuItem.IsEnabled = false;
+                if (openInNewTabMenuItem != null) openInNewTabMenuItem.IsEnabled = false; // 追加
                 if (removeFavoriteMenuItem != null) removeFavoriteMenuItem.IsEnabled = false;
                 return;
             }
@@ -452,6 +455,11 @@ namespace Illustra.Views
                 removeDisplayNameMenuItem.CommandParameter = selectedFolder;
                 // DisplayName が設定されている場合のみ有効
                 removeDisplayNameMenuItem.IsEnabled = selectedFolder.HasDisplayName;
+            }
+            if (openInNewTabMenuItem != null) // 追加
+            {
+                openInNewTabMenuItem.CommandParameter = selectedFolder;
+                openInNewTabMenuItem.IsEnabled = true;
             }
             if (removeFavoriteMenuItem != null)
             {
@@ -477,6 +485,17 @@ namespace Illustra.Views
                     SetCurrentSettings();
                     SettingsHelper.SaveSettings(_appSettings);
                 }
+            }
+        }
+
+        // 「タブで開く」メニューのクリックイベントハンドラ
+        private void OpenInNewTab_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder && !string.IsNullOrEmpty(folder.Path))
+            {
+                // EventAggregator を使用してイベントを発行
+                _eventAggregator?.GetEvent<OpenInNewTabEvent>().Publish(
+                    new OpenInNewTabEventArgs(folder.Path, CONTROL_ID)); // SourceId を追加
             }
         }
 

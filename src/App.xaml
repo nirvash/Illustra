@@ -4,10 +4,13 @@
                         xmlns:local="clr-namespace:Illustra"
                         xmlns:helpers="clr-namespace:Illustra.Helpers"
                         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
-                        xmlns:prism="http://prismlibrary.com/">
+                        xmlns:prism="http://prismlibrary.com/"
+                        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Dragablz テーマ -->
+                <ResourceDictionary Source="pack://application:,,,/Dragablz;component/Themes/MahApps.xaml" />
                 <!-- MahApps.Metro のデフォルトテーマ -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
@@ -81,6 +84,16 @@
                     </Trigger>
                 </Style.Triggers>
             </Style>
+
+            <!-- Style from Dragablz MahApps Sample -->
+            <Style TargetType="{x:Type dragablz:TabablzControl}" x:Key="MahAppsTabablzControlStyle">
+                <!-- Adjust offset to reduce spacing between tabs -->
+                <Setter Property="AdjacentHeaderItemOffset" Value="-18" />
+                <Setter Property="ItemContainerStyle" Value="{StaticResource MahAppsTrapezoidDragableTabItemStyle}" />
+            </Style>
+            <!-- Apply MahAppsTabablzControlStyle as the default for TabablzControl -->
+            <Style TargetType="{x:Type dragablz:TabablzControl}" BasedOn="{StaticResource MahAppsTabablzControlStyle}" />
+
         </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>

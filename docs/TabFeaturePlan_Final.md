@@ -110,7 +110,7 @@ classDiagram
     FavoriteFoldersControl --> MainWindowViewModel : Raises events
 ```
 
-## 4. 実装ステップ (チェックリスト・動作確認・ユニットテスト付き)
+## 4. 実装ステップ (チェックリスト・動作確認付き)
 
 以下の順序で実装を進め、各ステップ完了後にチェックを入れ、指定されたポイントで動作確認を行います。
 
@@ -158,21 +158,18 @@ classDiagram
         *   [ ] 10.1.2. `CloseOtherTabsCommand`: 指定されたタブ以外を `Tabs` から削除します。指定されたタブを `SelectedTab` に設定します。
         *   [ ] 10.1.3. `DuplicateTabCommand`: 指定されたタブの `TabState` をコピーして新しい `TabViewModel` を作成し、`Tabs` に追加します。新しいタブを `SelectedTab` に設定します。
     *   **動作確認ポイント 5:** タブの右クリックメニューから「閉じる」「他のタブを閉じる」「複製」がそれぞれ正しく動作することを確認します。タブを閉じた後に適切なタブが選択され、表示が更新されることも確認します。
-11. [ ] **ユニットテスト作成:**
-    *   [ ] 11.1. `tests/ViewModels/ThumbnailListViewModelTests.cs` (仮) に `ApplyTabState_Should_Update_Correctly` のようなテストメソッドを追加し、状態適用ロジックを検証します。依存性はモックします。
-    *   [ ] 11.2. `tests/ViewModels/MainWindowViewModelTests.cs` (仮) にタブ操作 (Add, Close, CloseOthers, Duplicate, SelectionChange) に関するテストメソッドを追加し、ロジックを検証します。依存性はモックします。
-12. [ ] **UI変更 (詳細):** タブヘッダーの表示内容（フォルダ名など）、右クリックメニューのUIを実装します。
-    *   [ ] 12.1. `src/Views/MainWindow.xaml` (続き):
-        *   [ ] 12.1.1. `dragablz:TabablzControl` の `HeaderItemTemplate` を調整し、`TabViewModel.DisplayName` (フォルダ名など) を適切に表示します。
-        *   [ ] 12.1.2. タブの右クリックメニュー (`ContextMenu`) の `MenuItem` に `Header` を設定し、リソースを参照するようにします。
-13. [ ] **永続化:** `AppSettings` と `SettingsHelper` を変更し、タブ状態の保存・復元ロジックを実装します。
-    *   [ ] 13.1. `src/Models/AppSettings.cs` に `public List<TabState> TabStates { get; set; } = new();` プロパティを追加します。
-    *   [ ] 13.2. `MainWindowViewModel` に `SaveTabStates()` メソッドを追加し、アプリケーション終了処理 (例: `App.xaml.cs` の `OnExit`) から呼び出されるようにします。このメソッド内で `Tabs` コレクションから `List<TabState>` を作成し、`SettingsHelper.SaveSettings` を呼び出します。タブの順序も反映されるように `Tabs` の順序で `TabState` をリストに追加します。
-    *   [ ] 13.3. `MainWindowViewModel` に `LoadTabStates()` メソッドを追加し、コンストラクタまたは初期化処理で呼び出します。`SettingsHelper.GetSettings` で `TabStates` を読み込み、`TabViewModel` を復元して `Tabs` コレクションに追加します。最後にアクティブだったタブ (必要ならこれも `AppSettings` に保存) を `SelectedTab` に設定し、`_thumbnailListViewModel.ApplyTabState` を呼び出します。
+11. [ ] **UI変更 (詳細):** タブヘッダーの表示内容（フォルダ名など）、右クリックメニューのUIを実装します。
+    *   [ ] 11.1. `src/Views/MainWindow.xaml` (続き):
+        *   [ ] 11.1.1. `dragablz:TabablzControl` の `HeaderItemTemplate` を調整し、`TabViewModel.DisplayName` (フォルダ名など) を適切に表示します。
+        *   [ ] 11.1.2. タブの右クリックメニュー (`ContextMenu`) の `MenuItem` に `Header` を設定し、リソースを参照するようにします。
+12. [ ] **永続化:** `AppSettings` と `SettingsHelper` を変更し、タブ状態の保存・復元ロジックを実装します。
+    *   [ ] 12.1. `src/Models/AppSettings.cs` に `public List<TabState> TabStates { get; set; } = new();` プロパティを追加します。
+    *   [ ] 12.2. `MainWindowViewModel` に `SaveTabStates()` メソッドを追加し、アプリケーション終了処理 (例: `App.xaml.cs` の `OnExit`) から呼び出されるようにします。このメソッド内で `Tabs` コレクションから `List<TabState>` を作成し、`SettingsHelper.SaveSettings` を呼び出します。タブの順序も反映されるように `Tabs` の順序で `TabState` をリストに追加します。
+    *   [ ] 12.3. `MainWindowViewModel` に `LoadTabStates()` メソッドを追加し、コンストラクタまたは初期化処理で呼び出します。`SettingsHelper.GetSettings` で `TabStates` を読み込み、`TabViewModel` を復元して `Tabs` コレクションに追加します。最後にアクティブだったタブ (必要ならこれも `AppSettings` に保存) を `SelectedTab` に設定し、`_thumbnailListViewModel.ApplyTabState` を呼び出します。
     *   **動作確認ポイント 6:** 複数のタブを開き、フィルタやソート、選択状態を変更してからアプリケーションを終了し、再起動します。タブ構成、各タブのフォルダ、フィルタ、ソート、選択状態が復元されることを確認します。
-14. [ ] **リソース更新:** 必要な文言リソースを追加します。
-    *   [ ] 14.1. `src/Resources/Strings.xaml` と `src/Resources/Strings.ja.xaml` に、タブの右クリックメニュー項目や「タブで開く」などの新しい文言リソースを追加します。規約に従い `String_Tab_Close`, `String_Tab_CloseOthers`, `String_Tab_Duplicate`, `String_Tab_OpenInNewTab` のようなキーを使用します。
-15. [ ] **最終確認とビルド:** 全体の動作確認、ユニットテストの実行、最終ビルド (`dotnet build`) を行います。
-    *   [ ] 15.1. ユニットテストがすべてパスすることを確認します。
-    *   [ ] 15.2. 全体の動作（特にエッジケースや複数操作の組み合わせ）を再度確認します。
-    *   [ ] 15.3. `dotnet build` を実行し、エラーや警告がないことを確認します。
+13. [ ] **リソース更新:** 必要な文言リソースを追加します。
+    *   [ ] 13.1. `src/Resources/Strings.xaml` と `src/Resources/Strings.ja.xaml` に、タブの右クリックメニュー項目や「タブで開く」などの新しい文言リソースを追加します。規約に従い `String_Tab_Close`, `String_Tab_CloseOthers`, `String_Tab_Duplicate`, `String_Tab_OpenInNewTab` のようなキーを使用します。
+14. [ ] **最終確認とビルド:** 全体の動作確認、最終ビルド (`dotnet build`) を行います。
+    *   [ ] 14.1. 全体の動作（特にエッジケースや複数操作の組み合わせ）を再度確認します。
+    *   [ ] 14.2. `docs/Implementation.md` を更新し、タブ機能に関連する新しいコンポーネント (`TabViewModel`, `TabState` など) や変更点 (`MainWindowViewModel`, `ThumbnailListViewModel`, `MainWindow.xaml` など) を反映します。
+    *   [ ] 14.3. `dotnet build` を実行し、エラーや警告がないことを確認します。

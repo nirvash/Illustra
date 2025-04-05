@@ -49,6 +49,7 @@
     <Compile Remove="Shared\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Dragablz" Version="0.0.3.234" />
     <PackageReference Include="Extended.Wpf.Toolkit" Version="4.7.25104.5739" />
     <PackageReference Include="GitVersionTask" Version="5.5.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

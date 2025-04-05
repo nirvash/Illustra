@@ -80,6 +80,10 @@
                         <MenuItem x:Name="DeleteFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_DeleteFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem x:Name="OpenInNewTabMenuItem"
+                                  Header="{DynamicResource String_Tab_OpenInNewTab}"
+                                  Command="{Binding Path=PlacementTarget.Tag.OpenInNewTabCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                     </ContextMenu>
                 </Setter.Value>
             </Setter>
@@ -117,7 +121,7 @@
                   dd:DragDrop.IsDropTarget="True">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
                                    FontFamily="Segoe UI Emoji"

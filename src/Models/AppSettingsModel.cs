@@ -98,5 +98,12 @@ namespace Illustra.Models
 
         // 新規ファイル追加時に自動選択するかどうか
         public bool AutoSelectNewFile { get; set; } = false;
+
+        // タブの状態リスト
+        public List<TabState> TabStates { get; set; } = new List<TabState>();
+
+        // 最後にアクティブだったタブのインデックス
+        public int LastActiveTabIndex { get; set; } = -1; // デフォルトは -1 (タブなし or 不明)
+
     }
 }

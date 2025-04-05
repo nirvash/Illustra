@@ -25,6 +25,8 @@ namespace Illustra.ViewModels
         private DatabaseManager _db = null!;
 
         private string _currentFolderPath = string.Empty;
+        private const string ViewModelSourceId = "ThumbnailListViewModel"; // イベント発行元ID
+        private string _sourceId = string.Empty;
 
         public bool SortByDate
         {
@@ -83,7 +85,7 @@ namespace Illustra.ViewModels
             CopyCommand = new RelayCommand(ExecuteCopy, CanExecuteCopy);
             PasteCommand = new RelayCommand(ExecutePaste, CanExecutePaste);
             SelectAllCommand = new RelayCommand(ExecuteSelectAll, CanExecuteSelectAll);
-
+            _sourceId = ViewModelSourceId; // SourceId を初期化
         }
 
         // レーティングをデータベースに永続化する
@@ -197,8 +199,8 @@ namespace Illustra.ViewModels
                 if (_currentRatingFilter != value)
                 {
                     _currentRatingFilter = value;
-                    OnPropertyChanged(nameof(CurrentRatingFilter));
                     OnPropertyChanged(nameof(IsRatingFilterActive));
+                    OnPropertyChanged(nameof(CurrentRatingFilter));
                 }
             }
         }
@@ -439,6 +441,7 @@ namespace Illustra.ViewModels
             IsTagFilterEnabled = false;
             _tagFilters.Clear();
         }
+
 
 
         public string CurrentFolderPath

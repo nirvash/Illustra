@@ -81,6 +81,11 @@
                               Header="{DynamicResource String_FavoriteFolders_RemoveDisplayName}"
                               Click="RemoveDisplayName_Click"/>
                     <Separator/>
+                    <!-- タブで開くメニュー項目を追加 -->
+                    <MenuItem x:Name="OpenInNewTabMenuItem"
+                              Header="{DynamicResource String_Tab_OpenInNewTab}"
+                              Click="OpenInNewTab_Click"/>
+                    <Separator/>
                     <MenuItem x:Name="RemoveFromFavoritesMenuItem"
                               Header="{DynamicResource String_FavoriteFolders_RemoveFromFavorites}"
                               Click="RemoveFromFavorites_Click"/>
@@ -88,7 +93,7 @@
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- フォルダアイコン (テキストで表現) -->
                         <TextBlock Text="📁"
                                    FontFamily="Segoe UI Emoji"

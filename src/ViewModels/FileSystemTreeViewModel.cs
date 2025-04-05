@@ -24,6 +24,7 @@ namespace Illustra.ViewModels
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
         private bool _isExpandingPath = false;
+        private bool _ignoreSelectedChangedOnce = false; // フォルダ選択イベントを無視するフラグ
 
         public FileSystemTreeViewModel(IEventAggregator eventAggregator, string? initialPath = null)
         {
@@ -76,7 +77,8 @@ namespace Illustra.ViewModels
             // イベント購読
             // _eventAggregator.GetEvent<FolderSelectedEvent>().Subscribe(OnFolderSelected, ThreadOption.UIThread, false,
             //     filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolder, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolder, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
 
             // 初期化
@@ -124,6 +126,12 @@ namespace Illustra.ViewModels
                     // コマンドの有効状態を更新
                     ((DelegateCommand<FileSystemItemModel>)AddToFavoritesCommand).RaiseCanExecuteChanged();
                     ((DelegateCommand<FileSystemItemModel>)RemoveFromFavoritesCommand).RaiseCanExecuteChanged();
+
+                    if (_ignoreSelectedChangedOnce)
+                    {
+                        _ignoreSelectedChangedOnce = false; // フラグをリセット
+                        return; // McpOpenFolderEventからの選択変更を無視
+                    }
 
                     if (_selectedItem != null && _selectedItem.IsFolder && !_isExpandingPath)
                     {
@@ -207,6 +215,7 @@ namespace Illustra.ViewModels
             {
                 if (!string.IsNullOrEmpty(args.FolderPath) && Directory.Exists(args.FolderPath))
                 {
+                    _ignoreSelectedChangedOnce = true;
                     Expand(args.FolderPath);
                     // フォルダを展開した後、そのノードを画面内に表示
                     _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.FolderPath);

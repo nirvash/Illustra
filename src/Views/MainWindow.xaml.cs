@@ -2,6 +2,7 @@ using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.IO;
 using System.Windows;
 using System.Windows.Controls; // Add this for MenuItem
+using System.Windows.Controls.Primitives; // Add this for Thumb
 using System.Windows.Input;   // Add this for KeyEventArgs
 using Illustra.Helpers;
 using Illustra.Functions;     // Add this for FuncId
@@ -10,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using Illustra.Events;
 using System.Threading.Tasks;
+using Dragablz; // DragablzItem を使用するために追加
 using System;
 using Illustra.ViewModels;
 using System.Collections.Generic;
@@ -67,14 +69,14 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // イベント購読
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected); // Renamed
+            // McpOpenFolderEvent の購読は ViewModel で行うため削除
+            // FilterChangedEvent, SortOrderChangedEvent, ShortcutSettingsChangedEvent, SelectionCountChangedEvent の購読はそのまま
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
             _eventAggregator.GetEvent<SelectionCountChangedEvent>().Subscribe(OnSelectionCountChanged, ThreadOption.UIThread);
-
             // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             _favoriteFoldersControl = FavoriteFolders;
@@ -199,20 +201,21 @@ namespace Illustra.Views
 
         private void ClearAllFilters(object sender, RoutedEventArgs e)
         {
-            IsTagFilterEnabled = false;
-            _tagFilters.Clear();
-            _currentRatingFilter = 0;
-            IsPromptFilterEnabled = false;
-            _currentExtensionFilters.Clear(); // 追加
-            _isExtensionFilterEnabled = false; // 追加
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            // IsTagFilterEnabled = false;
+            // _tagFilters.Clear();
+            // _currentRatingFilter = 0;
+            // IsPromptFilterEnabled = false;
+            // _currentExtensionFilters.Clear();
+            // _isExtensionFilterEnabled = false;
 
-            // フィルタ変更イベントを発行（すべてのフィルタをクリア）
+            // フィルタ変更イベントを発行（クリア操作）
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
-                new FilterChangedEventArgsBuilder(CONTROL_ID).Clear().Build());
+                new FilterChangedEventArgsBuilder(CONTROL_ID).SetClear().Build()); // Clear() -> SetClear() に修正
 
-            // フィルタクリアメニューの有効/無効を更新
-            UpdateFilterMenu();
-            UpdateStatusBar();
+            // UI更新は OnFilterChanged 内で行われる
+            // UpdateFilterMenu();
+            // UpdateStatusBar();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -234,6 +237,152 @@ namespace Illustra.Views
             {
                 // UIに関係ない非同期処理をここに書く
             });
+
+            // ViewModel に初期タブ状態のイベント発行を指示 (これは ThumbnailList など他のコントロールが初期状態を知るために必要)
+            _viewModel.PublishInitialTabState();
+
+            // 起動時のタブ選択処理を実行
+            SelectInitialTab();
+        }
+
+        /// <summary>
+        /// 起動時に復元されたタブの中から、設定に基づいて初期選択タブを設定します。
+        /// </summary>
+        private void SelectInitialTab()
+        {
+            var settings = SettingsHelper.GetSettings();
+            TabViewModel? tabToSelect = null;
+
+            // 最後に開いていたタブを復元する場合
+            if (settings.StartupMode == AppSettingsModel.StartupFolderMode.LastOpened && _viewModel.Tabs.Count > 0)
+            {
+                if (settings.LastActiveTabIndex >= 0 && settings.LastActiveTabIndex < _viewModel.Tabs.Count)
+                {
+                    // タブの選択をUIスレッドで行う
+                    tabToSelect = _viewModel.Tabs[settings.LastActiveTabIndex];
+                }
+            }
+
+            // 選択すべきタブが見つからない、または他のモードの場合は最初のタブを選択 (タブが存在する場合)
+            if (tabToSelect == null && _viewModel.Tabs.Count > 0)
+            {
+                tabToSelect = _viewModel.Tabs[0];
+            }
+
+            // 実際にタブを選択 (View側で実行)
+            if (tabToSelect != null)
+            {
+                // 初回の Tabs 設定時は SelectedTab に関係なく最初のタブが選択されるため、ここで上書きする
+                _viewModel.SelectedTab = tabToSelect;
+
+                // 復元したアクティブパスが開かれたことを通知
+                _eventAggregator.GetEvent<McpOpenFolderEvent>().Publish(
+                    new McpOpenFolderEventArgs()
+                    {
+                        FolderPath = tabToSelect.State.FolderPath,
+                        SourceId = CONTROL_ID // 自分のIDを設定
+                    });
+            }
+            else
+            {
+                Debug.WriteLine("[SelectInitialTab] No tab to select.");
+            }
+        }
+
+        // Removed methods related to MainTabControl.Loaded and ItemContainerGenerator.StatusChanged
+        // Using ItemContainerStyle.Loaded event instead.
+
+        /// <summary>
+        /// 指定された型の最初のビジュアル子要素を検索します。(TabItem_MouseRightButtonUpで使用)
+        /// </summary>
+        public static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child != null && child is T t)
+                {
+                    return t;
+                }
+                else
+                {
+                    T? childOfChild = FindVisualChild<T>(child);
+                    if (childOfChild != null)
+                    {
+                        return childOfChild;
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        // DragablzItem_Loaded メソッドは ItemContainerStyle で EventSetter を使うため不要になりました。
+
+        /// <summary>
+        /// タブアイテムが右クリックされたときにコンテキストメニューを表示する
+        /// </summary>
+        private void TabItem_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            DragablzItem? tabItem = null;
+            // イベントソースがThumbかDragablzItemかを確認
+            if (sender is Thumb thumb)
+            {
+                // Thumbから親のDragablzItemを探す
+                DependencyObject parent = VisualTreeHelper.GetParent(thumb);
+                while (parent != null && !(parent is DragablzItem))
+                {
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+                tabItem = parent as DragablzItem;
+            }
+            else if (sender is DragablzItem item) // TextBlockからのイベントは削除したので、これは不要かもしれないが念のため残す
+            {
+                tabItem = item;
+            }
+
+            if (tabItem != null && tabItem.DataContext is TabViewModel tabViewModel && DataContext is MainWindowViewModel mainWindowViewModel)
+            {
+                var contextMenu = new ContextMenu();
+
+                // 閉じる
+                var closeItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_Close"), // リソースから取得
+                    Command = mainWindowViewModel.CloseTabCommand,
+                    CommandParameter = tabViewModel
+                };
+                closeItem.IsEnabled = mainWindowViewModel.CloseTabCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(closeItem);
+
+                // 他のタブを閉じる
+                var closeOthersItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_CloseOthers"), // リソースから取得
+                    Command = mainWindowViewModel.CloseOtherTabsCommand,
+                    CommandParameter = tabViewModel
+                };
+                closeOthersItem.IsEnabled = mainWindowViewModel.CloseOtherTabsCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(closeOthersItem);
+
+                // 複製
+                var duplicateItem = new MenuItem
+                {
+                    Header = FindResource("String_Tab_Duplicate"), // リソースから取得
+                    Command = mainWindowViewModel.DuplicateTabCommand,
+                    CommandParameter = tabViewModel
+                };
+                duplicateItem.IsEnabled = mainWindowViewModel.DuplicateTabCommand.CanExecute(tabViewModel);
+                contextMenu.Items.Add(duplicateItem);
+
+                // ContextMenuService を使って表示
+                ContextMenuService.SetContextMenu(tabItem, contextMenu);
+                contextMenu.IsOpen = true;
+
+                e.Handled = true; // イベントの伝播を停止してデフォルトメニューを防ぐ
+            }
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -297,14 +446,16 @@ namespace Illustra.Views
 
         private void FilterPromptMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            IsPromptFilterEnabled = !IsPromptFilterEnabled;
-            UpdateFilterMenu();
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            bool newPromptFilterState = !IsPromptFilterEnabled; // 先に新しい状態を計算
+            // IsPromptFilterEnabled = newPromptFilterState;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithPromptFilter(IsPromptFilterEnabled).Build());
-            UpdateStatusBar();
+                .WithPromptFilter(newPromptFilterState).Build()); // 更新後の状態を渡す
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterTagMenuItem_Click(object sender, RoutedEventArgs e)
@@ -313,16 +464,19 @@ namespace Illustra.Views
             var dialog = new TagFilterDialog(new List<string>(_tagFilters));
             if (dialog.ShowDialog() == true)
             {
-                IsTagFilterEnabled = dialog.TagFilters.Count > 0;
-                _tagFilters = new List<string>(dialog.TagFilters);
-                UpdateFilterMenu();
+                // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+                bool newIsTagFilterEnabled = dialog.TagFilters.Count > 0;
+                var newTagFilters = new List<string>(dialog.TagFilters);
+                // IsTagFilterEnabled = newIsTagFilterEnabled;
+                // _tagFilters = newTagFilters;
+                // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
                 // フィルタ変更イベントを発行（新しいリストのインスタンスを作成）
                 _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                     new FilterChangedEventArgsBuilder(CONTROL_ID)
-                    .WithTagFilter(IsTagFilterEnabled, new List<string>(_tagFilters)).Build());
+                    .WithTagFilter(newIsTagFilterEnabled, newTagFilters).Build()); // 更新後の状態を渡す
             }
-            UpdateStatusBar();
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterRating1MenuItem_Click(object sender, RoutedEventArgs e)
@@ -356,14 +510,15 @@ namespace Illustra.Views
         private void ApplyRatingFilter(int rating)
         {
             // 同じレーティングが選択された場合はフィルタを解除
-            _currentRatingFilter = (rating == _currentRatingFilter && rating > 0) ? 0 : rating;
-            UpdateFilterMenu();
+            int newRatingFilter = (rating == _currentRatingFilter && rating > 0) ? 0 : rating;
+            // _currentRatingFilter = newRatingFilter;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithRatingFilter(_currentRatingFilter).Build());
-            UpdateStatusBar();
+                .WithRatingFilter(newRatingFilter).Build()); // 更新後の状態を渡す
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
         private void FilterExtensionSubMenuItem_Click(object sender, RoutedEventArgs e)
@@ -394,15 +549,18 @@ namespace Illustra.Views
                 }
             }
 
-            _isExtensionFilterEnabled = _currentExtensionFilters.Any();
-            UpdateFilterMenu(); // メニューの状態を更新
+            // 内部状態は OnFilterChanged で更新されるので、ここではイベント発行のみ
+            bool newIsExtensionFilterEnabled = _currentExtensionFilters.Any();
+            var newExtensionFilters = new List<string>(_currentExtensionFilters); // コピーを作成
+            // _isExtensionFilterEnabled = newIsExtensionFilterEnabled;
+            // UpdateFilterMenu(); // OnFilterChanged で呼ばれる
 
             // フィルタ変更イベントを発行
             _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
                 new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .WithExtensionFilter(_isExtensionFilterEnabled, new List<string>(_currentExtensionFilters)).Build());
+                .WithExtensionFilter(newIsExtensionFilterEnabled, newExtensionFilters).Build()); // 更新後の状態を渡す
 
-            UpdateStatusBar(); // ステータスバーを更新
+            // UpdateStatusBar(); // OnFilterChanged で呼ばれる
         }
 
 
@@ -611,28 +769,49 @@ namespace Illustra.Views
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
-            // タグフィルタの状態を更新（新しいリストのインスタンスを作成）
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+            // イベントソースが自分自身("MainWindow")の場合はUI更新のみ行う
+            // (購読時のフィルタで除外されているはずだが、念のためチェック)
+            if (args.SourceId == CONTROL_ID)
             {
-                _isTagFilterEnabled = args.IsTagFilterEnabled;
-                _tagFilters = new List<string>(args.TagFilters);
+                // Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from Self (MainWindow), updating UI only.");
+                // 自分の操作による変更は既に内部状態に反映されているはずなので、UI更新のみ行う
+                UpdateFilterMenu();
+                UpdateStatusBar();
+                return;
             }
 
-            // レーティングフィルタの状態を更新
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
-                _currentRatingFilter = args.RatingFilter;
+            Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from: {args.SourceId}, Clear: {args.IsClearOperation}, Changed: {string.Join(",", args.ChangedTypes)}"); // IsFullUpdate 削除
 
-            // プロンプトフィルタの状態を更新
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
-                _isPromptFilterEnabled = args.IsPromptFilterEnabled;
-
-            // 拡張子フィルタの状態を更新 (追加)
-            if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged)
+            // クリア操作の場合
+            if (args.IsClearOperation)
             {
-                _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
-                _currentExtensionFilters = new List<string>(args.ExtensionFilters);
+                _currentRatingFilter = 0;
+                _isPromptFilterEnabled = false;
+                _isTagFilterEnabled = false;
+                _tagFilters.Clear();
+                _isExtensionFilterEnabled = false;
+                _currentExtensionFilters.Clear();
+            }
+            // 個別の変更操作の場合
+            else
+            {
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Rating))
+                    _currentRatingFilter = args.RatingFilter;
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Prompt))
+                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
+                {
+                    _isTagFilterEnabled = args.IsTagFilterEnabled;
+                    _tagFilters = new List<string>(args.TagFilters ?? new List<string>());
+                }
+                if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Extension))
+                {
+                    _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                    _currentExtensionFilters = new List<string>(args.ExtensionFilters ?? new List<string>());
+                }
             }
 
+            // UIを更新
             UpdateFilterMenu();
             UpdateStatusBar();
         }
@@ -687,7 +866,7 @@ namespace Illustra.Views
 
             // フィルタクリアイベントを発行
             FilterChangedEventArgs filterArgs = new FilterChangedEventArgsBuilder(CONTROL_ID)
-                .Clear().Build();
+                .SetClear().Build(); // Clear() -> SetClear() に修正
             OnFilterChanged(filterArgs);
 
             // ステータスバーを更新

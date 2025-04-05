@@ -24,6 +24,7 @@
         <helpers:IndexToYMultiConverter  x:Key="IndexToYMultiConverter"/>
         <helpers:IndexToZIndexConverter  x:Key="IndexToZIndexConverter"/>
         <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- レーティングスターボタンスタイル -->
         <Style x:Key="RatingStarButton"
@@ -66,7 +67,8 @@
         <!-- サムネイルサイズ調整用のスライダー -->
         <Grid Grid.Row="0"
               Margin="5"
-              KeyboardNavigation.TabNavigation="None">
+              KeyboardNavigation.TabNavigation="None"
+              Visibility="{Binding IsToolbarVisible, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <!-- サムネイルサイズ -->
@@ -189,7 +191,7 @@
                         Margin="0,0,5,0"
                         x:Name="ClearFilterButton"
                         Focusable="False"
-                        IsEnabled="{Binding IsRatingFilterActive}"/>
+                        IsEnabled="{Binding IsRatingFilterActive, Mode=OneWay}"/>
                 <!-- ソートボタン -->
                 <Button x:Name="SortToggleButton"
                         Click="SortToggle_Click"

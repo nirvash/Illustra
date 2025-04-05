@@ -7,6 +7,8 @@ using Illustra.Helpers;
 using System.IO;
 using Illustra.Events;
 using Illustra.Models;
+using System.Collections.Specialized; // INotifyCollectionChanged を使うために追加
+using System.Runtime.CompilerServices; // CallerMemberName を使うために追加
 using Illustra.ViewModels;
 using System.Diagnostics;
 using System.Windows.Threading;
@@ -33,11 +35,12 @@ using Illustra.Shared.Models; // Added for MCP events
 namespace Illustra.Views
 {
     [System.Windows.Markup.ContentProperty("Content")]
-    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler
+    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler, INotifyPropertyChanged // INotifyPropertyChanged を追加
     {
         private IEventAggregator _eventAggregator = null!;
         private ThumbnailListViewModel _viewModel;
         private IllustraAppContext _appContext;
+        private MainWindowViewModel _mainWindowViewModel = null!; // MainWindowViewModel のフィールドを追加
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
         private string? _currentFolderPath;
@@ -63,13 +66,31 @@ namespace Illustra.Views
 
         private CancellationTokenSource? _thumbnailLoadCts;
 
-        // フォルダ読み込み完了イベント処理中フラグ（OnFileNodesLoaded処理中のみtrue）
-        private bool _isProcessingOnFileNodesLoaded = false;
-        // 現在処理中のフォルダパス（OnFileNodesLoaded処理中のみ有効）
-        private string? _processingFolderPath = null;
 
         private bool _isLoadingFileNodes = false; // ファイルノード読み込み中フラグ
         private string? _initialSelectedFilePath;
+
+        // ツールバーの表示状態を管理するプロパティを追加
+        private bool _isToolbarVisible = true;
+        public bool IsToolbarVisible
+        {
+            get => _isToolbarVisible;
+            set => SetProperty(ref _isToolbarVisible, value);
+        }
+
+        // INotifyPropertyChanged の実装
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = "")
+        {
+            if (EqualityComparer<T>.Default.Equals(storage, value)) return false;
+            storage = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
 
         /// <summary>
         /// ViewModelの選択状態をUIに反映します
@@ -238,6 +259,8 @@ namespace Illustra.Views
             _appSettings = SettingsHelper.GetSettings();
 
             // ViewModelをDIコンテナから取得
+            // MainWindowViewModel を DI コンテナから取得
+            _mainWindowViewModel = ContainerLocator.Container.Resolve<MainWindowViewModel>();
             _viewModel = ContainerLocator.Container.Resolve<ThumbnailListViewModel>();
             DataContext = _viewModel;
 
@@ -267,8 +290,8 @@ namespace Illustra.Views
                 db,
                 new DefaultThumbnailProcessor(this) // IThumbnailProcessorServiceの実装を追加
             );
-            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
             _thumbnailLoader.ScrollToItemRequested += OnScrollToItemRequested;
+            // FileNodesLoaded イベント購読は削除
 
             // スライダーのドラッグイベントを購読
             ThumbnailSizeSlider.PreviewMouseLeftButtonDown += (s, e) =>
@@ -276,7 +299,6 @@ namespace Illustra.Views
                 // スライダーのつまみを掴んだ場合のみドラッグモードにする
                 _isDragging = !(e.OriginalSource is System.Windows.Shapes.Rectangle);
             };
-            _thumbnailLoader.FileNodesLoaded += OnFileNodesLoaded;
 
             // ファイルシステム監視の初期化
             _fileSystemMonitor = new FileSystemMonitor(this);
@@ -310,6 +332,24 @@ namespace Illustra.Views
                 Interval = TimeSpan.FromMilliseconds(300)
             };
             _scrollStopTimer.Tick += ScrollStopTimer_Tick;
+
+            // 初期ツールバー状態を設定
+            UpdateToolbarState();
+
+            // Tabs コレクションの変更を監視
+            if (_mainWindowViewModel.Tabs is INotifyCollectionChanged tabsCollection)
+            {
+                tabsCollection.CollectionChanged += Tabs_CollectionChanged;
+            }
+
+            // ViewModel が破棄されるときにイベントハンドラを解除する処理も必要 (例: Unloaded イベント)
+            Unloaded += (s, e) =>
+            {
+                if (_mainWindowViewModel?.Tabs is INotifyCollectionChanged collection) // Nullチェック追加
+                {
+                    collection.CollectionChanged -= Tabs_CollectionChanged;
+                }
+            };
         }
 
         private void OnFileSelected(SelectedFileModel args)
@@ -471,6 +511,8 @@ namespace Illustra.Views
 
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+            _eventAggregator.GetEvent<SelectedTabChangedEvent>().Subscribe(OnSelectedTabChanged, ThreadOption.UIThread);
+
 
             // ThumbnailItemsControlの右クリックイベントを設定 (async void に変更)
             ThumbnailItemsControl.PreviewMouseRightButtonDown += async (s, e) =>
@@ -523,13 +565,12 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<ShortcutKeyEvent>().Subscribe(OnShortcutKeyReceived, ThreadOption.UIThread);
 
             // 自分が発信したイベントは無視
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderSelected, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
-            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
@@ -636,89 +677,80 @@ namespace Illustra.Views
 
         private async void OnFilterChanged(FilterChangedEventArgs args)
         {
-            Debug.WriteLine($"[フィルタ変更] フィルタ変更イベントが発生しました: {args.Type}");
+            // 自分自身 ("ThumbnailList") が発行したイベントは無視 (UI操作の結果なのでViewModelは更新済みのはず)
+            if (args.SourceId == CONTROL_ID)
+            {
+                // Debug.WriteLine($"[ThumbnailListControl.OnFilterChanged] Ignored event from self.");
+                return;
+            }
+
+            // args.Type はもう存在しないので、新しいプロパティでログ出力
+            Debug.WriteLine($"[ThumbnailListControl.OnFilterChanged] Received from: {args.SourceId}, Clear: {args.IsClearOperation}, Changed: {string.Join(",", args.ChangedTypes)}"); // IsFullUpdate 参照を削除
+
             try
             {
-                if (args.Type == FilterChangedEventArgs.FilterChangedType.Clear)
+                int ratingToApply = _viewModel.CurrentRatingFilter;
+                bool promptToApply = _isPromptFilterEnabled;
+                List<string> tagsToApply = _currentTagFilters;
+                bool isTagEnabledToApply = _isTagFilterEnabled;
+                List<string> extensionsToApply = _currentExtensionFilters;
+                bool isExtensionEnabledToApply = _isExtensionFilterEnabled;
+
+                // クリア操作の場合
+                if (args.IsClearOperation)
                 {
-                    // フィルタをクリア
-                    _viewModel.CurrentRatingFilter = 0;
-                    _currentTagFilters.Clear();
-                    _isTagFilterEnabled = false;
-                    _isPromptFilterEnabled = false;
+                    ratingToApply = 0;
+                    promptToApply = false;
+                    tagsToApply = new List<string>();
+                    isTagEnabledToApply = false;
+                    extensionsToApply = new List<string>();
+                    isExtensionEnabledToApply = false;
                 }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.TagFilterChanged)
+                // 個別の変更操作の場合
+                else
                 {
-                    // タグフィルタの変更
-                    _currentTagFilters = new List<string>(args.TagFilters);
-                    _isTagFilterEnabled = args.IsTagFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.PromptFilterChanged)
-                {
-                    // プロンプトフィルタの変更
-                    _isPromptFilterEnabled = args.IsPromptFilterEnabled;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.RatingFilterChanged)
-                {
-                    // レーティングフィルタの変更
-                    _viewModel.CurrentRatingFilter = args.RatingFilter;
-                }
-                else if (args.Type == FilterChangedEventArgs.FilterChangedType.ExtensionFilterChanged) // 追加
-                {
-                    // 拡張子フィルタの変更
-                    _currentExtensionFilters = new List<string>(args.ExtensionFilters);
-                    _isExtensionFilterEnabled = args.IsExtensionFilterEnabled;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Rating))
+                        ratingToApply = args.RatingFilter;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Prompt))
+                        promptToApply = args.IsPromptFilterEnabled;
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Tag))
+                    {
+                        tagsToApply = args.TagFilters ?? new List<string>();
+                        isTagEnabledToApply = args.IsTagFilterEnabled;
+                    }
+                    if (args.ChangedTypes.Contains(FilterChangedEventArgs.FilterChangedType.Extension))
+                    {
+                        extensionsToApply = args.ExtensionFilters ?? new List<string>();
+                        isExtensionEnabledToApply = args.IsExtensionFilterEnabled;
+                    }
                 }
 
-                // 各フィルタを適用 (拡張子フィルタも引数に追加)
-                await _viewModel.ApplyAllFilters(_viewModel.CurrentRatingFilter, _isPromptFilterEnabled, _currentTagFilters, _isTagFilterEnabled, _currentExtensionFilters, _isExtensionFilterEnabled);
+                // 内部状態を更新 (UI表示用) - ViewModelのプロパティも更新
+                _viewModel.CurrentRatingFilter = ratingToApply;
+                _isPromptFilterEnabled = promptToApply;
+                _currentTagFilters = new List<string>(tagsToApply); // 新しいリストを作成
+                _isTagFilterEnabled = isTagEnabledToApply;
+                _currentExtensionFilters = new List<string>(extensionsToApply); // 新しいリストを作成
+                _isExtensionFilterEnabled = isExtensionEnabledToApply;
 
-                // フィルタリング後の選択位置を更新
-                _thumbnailLoader.UpdateSelectionAfterFilter();
+
+                // ViewModelにフィルタ適用を指示
+                await _viewModel.ApplyAllFilters(
+                    ratingToApply,
+                    promptToApply,
+                    tagsToApply, // 更新されたリストを渡す
+                    isTagEnabledToApply,
+                    extensionsToApply, // 更新されたリストを渡す
+                    isExtensionEnabledToApply
+                );
+
+                // フィルタリング後の選択位置を更新 (ApplyAllFilters内で実行されるように変更された可能性もあるため、必要に応じて調整)
+                // _thumbnailLoader.UpdateSelectionAfterFilter(); // ApplyAllFilters内で実行されるなら不要かも
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"フィルタ変更処理中にエラーが発生しました: {ex.Message}");
+                Debug.WriteLine($"フィルタ変更イベントの処理中にエラーが発生しました: {ex.Message}");
             }
-        }
-
-        private async void OnMcpFolderSelected(McpOpenFolderEventArgs args) // Renamed and changed args type
-        {
-            Debug.WriteLine($"[フォルダ選択] フォルダパス: {args.FolderPath}"); // Changed property name
-            string folderPath = args.FolderPath; // Changed property name
-            if (folderPath == _currentFolderPath)
-                return;
-
-            // フォルダが変わったらすべてのフィルタを自動的に解除
-            ThumbnailItemsControl.Visibility = Visibility.Hidden;
-            _viewModel.CurrentRatingFilter = 0;
-            _currentTagFilters.Clear();
-            _isTagFilterEnabled = false;
-            _currentExtensionFilters.Clear(); // 追加
-            _isExtensionFilterEnabled = false; // 追加
-            _viewModel.ClearAllFilters(); // ViewModel側のフィルタもクリア
-
-            // フィルタ変更イベントは投げない
-            // それぞれ onFolderChanged で処理する
-            // フォルダ読み込み時にフィルタは反映される
-
-            // 以前のフォルダの監視を停止
-            if (_fileSystemMonitor.IsMonitoring)
-            {
-                _fileSystemMonitor.StopMonitoring();
-            }
-
-            // 前のフォルダのサムネイルをクリア
-            // クリアしないとロード中に前のノードにサムネイルを設定してしまう
-            _viewModel.ClearItems();
-
-            // 新しいフォルダの監視を開始
-            _fileSystemMonitor.StartMonitoring(folderPath);
-
-            // ファイルノードをロード（これによりOnFileNodesLoadedが呼ばれる）
-            await LoadFileNodesAsync(folderPath, args.SelectedFilePath); // Changed property name
-
-            //            ThumbnailItemsControl.Visibility = Visibility.Visible;
         }
 
         public void SetCurrentSettings()
@@ -1071,153 +1103,7 @@ namespace Illustra.Views
         }
         #endregion
 
-        private async void OnFileNodesLoaded(object? sender, EventArgs e)
-        {
-            try
-            {
-                LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 処理開始 フォルダ: " + _currentFolderPath, LogHelper.Categories.ThumbnailLoader);
-
-                // 既に処理中の場合はスキップ
-                if (_isProcessingOnFileNodesLoaded)
-                {
-                    LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 既に処理中のため、スキップします", LogHelper.Categories.ThumbnailLoader);
-                    return;
-                }
-
-                _isProcessingOnFileNodesLoaded = true;
-
-                try
-                {
-                    // 既存のキャンセルトークンをキャンセル
-                    if (_thumbnailLoadCts != null)
-                    {
-                        _thumbnailLoadCts.Cancel();
-                        _thumbnailLoadCts.Dispose();
-                    }
-
-                    // 新しいキャンセルトークンを作成
-                    _thumbnailLoadCts = new CancellationTokenSource();
-                    var cancellationToken = _thumbnailLoadCts.Token;
-
-                    // UIの更新を待機
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                    // アイテムが読み込まれたことを確認
-                    if (ThumbnailItemsControl.Items.Count == 0)
-                    {
-                        LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: アイテムが読み込まれていません", LogHelper.Categories.ThumbnailLoader);
-
-                        // ViewModelにアイテムがある場合は、UIの更新を強制
-                        if (_viewModel.FilteredItems.Cast<FileNodeModel>().ToList().Count > 0)
-                        {
-                            LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: ViewModelにはアイテムがありますが、UIに反映されていません。更新を強制します", LogHelper.Categories.ThumbnailLoader);
-                            // コレクションビューの更新を強制
-                            CollectionViewSource.GetDefaultView(_viewModel.FilteredItems).Refresh();
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                            // 再度確認
-                            if (ThumbnailItemsControl.Items.Count == 0)
-                            {
-                                LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 更新を強制しましたが、アイテムが読み込まれませんでした", LogHelper.Categories.ThumbnailLoader);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: ViewModelにもアイテムがありません", LogHelper.Categories.ThumbnailLoader);
-                            return;
-                        }
-                    }
-
-                    // 初期サムネイルの読み込み
-                    LogHelper.LogWithTimestamp("[ThumbnailLoader] 開始", LogHelper.Categories.ThumbnailLoader);
-
-                    // 最初の数件のみ読み込む（画面に表示される可能性が高いもの）
-                    int endIndex = Math.Min(7, ThumbnailItemsControl.Items.Count - 1);
-                    LogHelper.LogWithTimestamp($"[ThumbnailLoader] 読み込み範囲: 0～{endIndex} (全{ThumbnailItemsControl.Items.Count}件)", LogHelper.Categories.ThumbnailLoader);
-
-                    try
-                    {
-                        // キューを使用してサムネイルを読み込む
-                        await _thumbnailLoader.LoadThumbnailsWithQueueAsync(0, endIndex, cancellationToken);
-                        LogHelper.LogWithTimestamp("[ThumbnailLoader] 完了", LogHelper.Categories.ThumbnailLoader);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        // サムネイル読み込みがキャンセルされても選択処理は続行
-                        LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailLoader] サムネイル読み込みがキャンセルされましたが、選択処理は続行します", LogHelper.Categories.ThumbnailLoader);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // サムネイル読み込みがキャンセルされても選択処理は続行
-                        LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailLoader] サムネイル読み込み操作がキャンセルされましたが、選択処理は続行します", LogHelper.Categories.ThumbnailLoader);
-                    }
-
-                    var args = e as FileNodesLoadedEventArgs;
-                    if (args?.SelectedFilePath != null
-                        && args.SelectedFilePath != string.Empty
-                        && File.Exists(args.SelectedFilePath))
-                    {
-                        // 選択するファイルが指定されているとき
-                        var filePath = args.SelectedFilePath;
-                        LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 指定されたファイルを選択します: {filePath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(filePath, _isFirstLoad);
-                    }
-                    else if (!string.IsNullOrEmpty(_initialSelectedFilePath)
-                             && _viewModel.Items.Any(x => x.FullPath == _initialSelectedFilePath))
-                    {
-                        // 初期選択ファイルが指定されている場合はそれを選択
-                        LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 初期選択ファイルを選択します: {_initialSelectedFilePath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(_initialSelectedFilePath, _isFirstLoad);
-                        _initialSelectedFilePath = null;
-                    }
-                    else if (_viewModel.SelectedItems.Count > 0 && _viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
-                    {
-                        // 選択されたアイテムがある場合はそれを選択
-                        LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 選択されたアイテムを選択します: {selectedItem.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(selectedItem.FullPath, _isFirstLoad);
-                    }
-                    else if (ThumbnailItemsControl.Items.Count > 0)
-                    {
-                        // 初期選択ファイルが指定されていない場合は最初のアイテムを選択
-                        LogHelper.LogWithTimestamp("OnFileNodesLoaded: 最初のアイテムを選択します", "ThumbnailListControl");
-                        ThumbnailItemsControl.SelectedIndex = 0;
-
-                        // 選択したアイテムのイベントを発行
-                        if (ThumbnailItemsControl.SelectedItem is FileNodeModel selectedFileNode)
-                        {
-                            _viewModel.SelectedItems.Clear();
-                            _viewModel.SelectedItems.Add(selectedFileNode);
-                            if (_isFirstLoad)
-                            {
-                                ThumbnailItemsControl.Focus();
-                            }
-                            LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 最初のアイテムを選択しました: {selectedFileNode.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                            var selectedFileModel = new SelectedFileModel(CONTROL_ID, selectedFileNode.FullPath);
-                            _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
-                        }
-                    }
-                    LogHelper.LogWithTimestamp("[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 処理完了", LogHelper.Categories.ThumbnailLoader);
-                }
-                finally
-                {
-                    _isFirstLoad = false;
-                    _isProcessingOnFileNodesLoaded = false;
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
-
-                    // Global Command として強制再評価させる
-                    _ = Application.Current.Dispatcher.BeginInvoke((Action)(() => // CS4014 Fix: Discard the result as we don't need to wait for completion
-                    {
-                        CommandManager.InvalidateRequerySuggested();
-                    }));
-                }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: エラーが発生しました: {ex.Message}", ex);
-                _isProcessingOnFileNodesLoaded = false;
-            }
-        }
+        // OnFileNodesLoaded イベントハンドラは不要になったため削除
 
         public async Task SortThumbnailAsync(bool sortByDate, bool sortAscending, bool selectItem = false)
         {
@@ -1284,22 +1170,16 @@ namespace Illustra.Views
                         int selectedIndex = filteredItems.IndexOf(matchingItem);
                         LogHelper.LogWithTimestamp($"[選択] インデックス: {selectedIndex}, ファイル: {matchingItem.FullPath}", LogHelper.Categories.ThumbnailQueue);
 
-                        if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
-                        {
-                            ThumbnailItemsControl.SelectedItems.Add(matchingItem);
-                        }
                         _viewModel.SelectedItems.Clear();
-                        _viewModel.SelectedItems.Add(matchingItem);
+                        // _viewModel.SelectedItems.Add(matchingItem);
+                        ThumbnailItemsControl.SelectedItems.Add(matchingItem);
                         ThumbnailItemsControl.ScrollIntoView(matchingItem);
                         if (requestFocus)
                         {
                             ThumbnailItemsControl.Focus();
                         }
 
-                        // FileSelectedEvent を発行 - 同期メソッドを使用
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
-                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
-
+                        // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
                     }
                     else
@@ -1330,9 +1210,7 @@ namespace Illustra.Views
                                 _viewModel.SelectedItems.Add(matchingItem);
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
-                                // FileSelectedEvent を発行 - 同期メソッドを使用
-                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
-                                _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
+                                // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                                 var index = _viewModel.Items.IndexOf(matchingItem);
                                 System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
                             }
@@ -1557,7 +1435,8 @@ namespace Illustra.Views
             }
             catch (OperationCanceledException)
             {
-                throw;
+                LogHelper.LogWarning("LoadVisibleThumbnailsAsync がキャンセルされました", "ThumbnailList");
+                // キャンセルされた場合は何もしない
             }
             catch (Exception ex)
             {
@@ -2698,7 +2577,7 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたフォルダのファイルノードを読み込みます
         /// </summary>
-        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null)
+        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null, bool requestFocus = false)
         {
             try
             {
@@ -2731,9 +2610,6 @@ namespace Illustra.Views
                 _currentFolderPath = path;
                 _viewModel.CurrentFolderPath = path; // ViewModelにフォルダパスを設定
 
-                // 処理中フラグを設定
-                _processingFolderPath = path;
-
                 // 重要: UIの更新を待機
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
@@ -2744,13 +2620,35 @@ namespace Illustra.Views
                 try
                 {
                     // ファイル一覧を読み込む - サムネイルトークンは渡さない
-                    await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath);
+                    // ファイル一覧を読み込む
+                    // ThumbnailLoaderHelper を使ってファイルノードを読み込む (イベント削除に伴いパラメータ削除)
+                    await _thumbnailLoader.LoadFileNodesAsync(path);
+                    _isLoadingFileNodes = false; // 読み込み完了
 
-                    // 重要: ファイル一覧の読み込み完了後、UIの更新を待機
+                    // フィルタとソート設定を適用 (読み込み後)
+                    if (filterSettings != null)
+                    {
+                        await _viewModel.ApplyAllFilters(
+                            filterSettings.Rating,
+                            filterSettings.HasPrompt,
+                            filterSettings.Tags,
+                            filterSettings.Tags.Any(),
+                            filterSettings.Extensions,
+                            filterSettings.Extensions.Any()
+                        );
+                    }
+                    if (sortSettings != null)
+                    {
+                        _viewModel.SortByDate = sortSettings.SortByDate;
+                        _viewModel.SortAscending = sortSettings.SortAscending;
+                        _viewModel.SortItems(_viewModel.SortByDate, _viewModel.SortAscending);
+                    }
+
+                    // 重要: ファイル一覧の読み込みとフィルタ/ソート適用後、UIの更新を待機
                     await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                    // アイテムが読み込まれたことを確認
-                    if (ThumbnailItemsControl.Items.Count > 0)
+                    // アイテムが読み込まれたことを確認 (フィルタ適用後なのでFilteredItemsで確認)
+                    if (_viewModel.FilteredItems.Cast<object>().Any())
                     {
                         LogHelper.LogWithTimestamp($"[フォルダ切替] {ThumbnailItemsControl.Items.Count}件のアイテムが読み込まれました", LogHelper.Categories.ThumbnailLoader);
                     }
@@ -2769,17 +2667,60 @@ namespace Illustra.Views
                         {
                             LogHelper.LogError($"[フォルダ切替] FilteredItemsの取得中にエラーが発生しました: {ex.Message}", ex);
                         }
-
-                        // 以下、既存の処理...
                     }
+
+                    requestFocus |= _isFirstLoad; // 初回読み込み時はフォーカスを要求
+
+                    // --- OnFileNodesLoaded で行っていた処理をここに移動 ---
+                    // 初期選択ファイルパスがある場合は選択
+                    if (!string.IsNullOrEmpty(initialSelectedFilePath))
+                    {
+                        LogHelper.LogWithTimestamp($"[LoadFileNodesAsync] 初期選択を実行: {initialSelectedFilePath}", LogHelper.Categories.ThumbnailLoader);
+                        SelectThumbnail(initialSelectedFilePath, requestFocus);
+                    }
+                    else
+                    {
+                        // 初期選択がない場合は、最初のアイテムを選択（フィルタ適用後）
+                        var firstItem = _viewModel.FilteredItems.Cast<FileNodeModel>().FirstOrDefault();
+                        if (firstItem != null)
+                        {
+                            LogHelper.LogWithTimestamp($"[LoadFileNodesAsync] 最初のアイテムを選択: {firstItem.FullPath}", LogHelper.Categories.ThumbnailLoader);
+                            SelectThumbnail(firstItem.FullPath, requestFocus);
+                        }
+                        else
+                        {
+                            LogHelper.LogWithTimestamp("[LoadFileNodesAsync] 選択可能なアイテムなし", LogHelper.Categories.ThumbnailLoader);
+                            // 選択可能なアイテムがない場合、選択をクリア
+                            _viewModel.SelectedItems.Clear();
+                            UpdateUISelection(); // UIにも反映
+                        }
+                    }
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+
+                    // フォーカス要求がある場合はフォーカスを設定
+                    if (requestFocus)
+                    {
+                        LogHelper.LogWithTimestamp("[LoadFileNodesAsync] フォーカスを設定", LogHelper.Categories.ThumbnailLoader);
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            ThumbnailItemsControl.Focus();
+                            // 選択されているアイテムがあれば、それを表示範囲に入れる
+                            if (ThumbnailItemsControl.SelectedItem != null)
+                            {
+                                ThumbnailItemsControl.ScrollIntoView(ThumbnailItemsControl.SelectedItem);
+                            }
+                        }, DispatcherPriority.Render);
+                    }
+                    // --- ここまで移動 ---
+
                 }
                 finally
                 {
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
                     // スクロールイベントを元の状態に戻す
                     _isScrolling = originalScrollingState;
+                    _isFirstLoad = false; // 初回読み込みフラグをリセット
                 }
-
-                // 以下、既存の処理...
             }
             catch (Exception ex)
             {
@@ -2787,8 +2728,8 @@ namespace Illustra.Views
             }
             finally
             {
-                _isLoadingFileNodes = false; // ファイルノード読み込み完了
-                _processingFolderPath = null;
+                _isLoadingFileNodes = false; // 読み込み完了または例外発生時にフラグをリセット
+                // _processingFolderPath = null; // OnFileNodesLoaded 削除により不要
             }
         }
 
@@ -2901,8 +2842,6 @@ namespace Illustra.Views
                         }
                     });
                 }
-
-                ClearFilterButton.IsEnabled = rating != 0;
             }
             catch (Exception ex)
             {
@@ -3076,6 +3015,10 @@ namespace Illustra.Views
             {
                 await LoadVisibleThumbnailsAsync(scrollViewer);
             }
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_isSortByDate, _isSortAscending, CONTROL_ID));
         }
 
         private async void SortTypeToggle_Click(object sender, RoutedEventArgs e)
@@ -3098,6 +3041,10 @@ namespace Illustra.Views
             {
                 await LoadVisibleThumbnailsAsync(scrollViewer);
             }
+
+            // ソート順変更イベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_isSortByDate, _isSortAscending, CONTROL_ID));
         }
 
         /// <summary>
@@ -3273,258 +3220,6 @@ namespace Illustra.Views
             catch (Exception ex)
             {
                 LogHelper.LogError($"[ERROR] LogVisibleRange エラー: {ex.Message}");
-            }
-        }
-
-        private async Task LoadVisibleThumbnailsByAccessDetectionAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
-                // アクセス検出用のディクショナリを作成
-                var accessedItems = new Dictionary<int, bool>();
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-                {
-                    accessedItems[i] = false;
-                }
-
-                // レイアウト更新を強制して ListView にアイテムを描画させる
-                ThumbnailItemsControl.UpdateLayout();
-
-                // 少し待機して ListView がアイテムにアクセスする時間を与える
-                await Task.Delay(50);
-
-                // 表示されているアイテムを検出
-                var visibleIndices = new List<int>();
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-                {
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                    if (container != null && container.IsVisible)
-                    {
-                        visibleIndices.Add(i);
-                    }
-                }
-
-                // 表示されているアイテムがない場合は従来の方法にフォールバック
-                if (visibleIndices.Count == 0)
-                {
-                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                    if (scrollViewer != null)
-                    {
-                        await LoadVisibleThumbnailsAsync(scrollViewer, true, cancellationToken);
-                    }
-                    return;
-                }
-
-                // 表示されているアイテムの範囲を特定
-                int firstIndex = visibleIndices.Min();
-                int lastIndex = visibleIndices.Max();
-
-                // 先読みバッファを追加
-                int bufferSize = 30;
-                int firstIndexWithBuffer = Math.Max(0, firstIndex - bufferSize);
-                int lastIndexWithBuffer = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndex + bufferSize);
-
-                Debug.WriteLine($"[アクセス検出] 表示範囲: {firstIndex}～{lastIndex} (表示アイテム: {visibleIndices.Count}件)");
-                Debug.WriteLine($"[アクセス検出] 読み込み範囲: {firstIndexWithBuffer}～{lastIndexWithBuffer} (先読みバッファ: {bufferSize})");
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // サムネイルを読み込む
-                await _thumbnailLoader.LoadMoreThumbnailsAsync(firstIndexWithBuffer, lastIndexWithBuffer, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"LoadVisibleThumbnailsByAccessDetectionAsync エラー: {ex.Message}");
-            }
-        }
-
-        private async Task LoadVisibleThumbnailsByPanelDetectionAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
-                var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-
-                if (panel == null || scrollViewer == null)
-                {
-                    Debug.WriteLine("[検出] パネルまたはスクロールビューアが見つかりませんでした");
-                    return;
-                }
-
-                // スクロールビューアの表示範囲を取得
-                double viewportTop = scrollViewer.VerticalOffset;
-                double viewportBottom = viewportTop + scrollViewer.ViewportHeight;
-                double viewportWidth = scrollViewer.ViewportWidth;
-
-                // アイテムの高さとアイテム数/行を推定
-                // ? 演算子を使用して ItemHeight プロパティが存在しない問題を回避
-                double estimatedItemHeight = _appSettings.ThumbnailSize + 20; // マージンを考慮
-                int itemsPerRow = GetItemsPerRow(panel);
-                if (itemsPerRow <= 0) itemsPerRow = 1;
-
-                // 表示範囲内の行を計算
-                int firstVisibleRow = Math.Max(0, (int)(viewportTop / estimatedItemHeight));
-                int lastVisibleRow = Math.Min((int)(ThumbnailItemsControl.Items.Count / itemsPerRow),
-                                    (int)(viewportBottom / estimatedItemHeight) + 1);
-
-                // 行からアイテムのインデックスを計算
-                int firstVisibleIndex = firstVisibleRow * itemsPerRow;
-                int lastVisibleIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1,
-                                        (lastVisibleRow + 1) * itemsPerRow - 1);
-
-                // 最下部に近いかどうかを判定
-                bool isNearBottom = scrollViewer.VerticalOffset > scrollViewer.ScrollableHeight - scrollViewer.ViewportHeight * 1.2;
-                if (isNearBottom)
-                {
-                    // 最下部に近い場合は、最後のアイテムまで確実に含める
-                    lastVisibleIndex = ThumbnailItemsControl.Items.Count - 1;
-                    Debug.WriteLine("[検出] 最下部に近いため、最後のアイテムまで読み込みます");
-                }
-
-                int panelBufferSize = 30;
-                int panelFirstIndex = Math.Max(0, firstVisibleIndex - panelBufferSize);
-                int panelLastIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastVisibleIndex + panelBufferSize);
-
-                Debug.WriteLine($"[パネル検出] 表示範囲: {firstVisibleIndex}～{lastVisibleIndex} (全{ThumbnailItemsControl.Items.Count}件)");
-                Debug.WriteLine($"[パネル検出] 読み込み範囲: {panelFirstIndex}～{panelLastIndex} (先読みバッファ: {panelBufferSize})");
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // サムネイルを読み込む
-                await _thumbnailLoader.LoadMoreThumbnailsAsync(panelFirstIndex, panelLastIndex, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"LoadVisibleThumbnailsByPanelDetectionAsync エラー: {ex.Message}");
-            }
-        }
-        private async Task LoadVisibleThumbnailsByVisibilityDetectionAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (ThumbnailItemsControl == null || ThumbnailItemsControl.Items.Count == 0)
-                    return;
-
-                // 表示されているアイテムを検出
-                var visibleIndices = new List<int>();
-                for (int i = 0; i < ThumbnailItemsControl.Items.Count; i++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var container = ThumbnailItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
-                    if (container != null && container.IsVisible)
-                    {
-                        visibleIndices.Add(i);
-                    }
-                }
-
-                // 表示アイテムが見つからない場合はフォールバック
-                if (visibleIndices.Count == 0)
-                {
-                    LogHelper.LogVisibilityDetection("[可視性検出] 表示アイテムが見つかりませんでした。計算方式にフォールバックします。");
-
-                    var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                    if (scrollViewer != null)
-                    {
-                        // スクロール位置から推定する方法を使用
-                        double viewportTop = scrollViewer.VerticalOffset;
-                        double viewportBottom = scrollViewer.VerticalOffset + scrollViewer.ViewportHeight;
-                        double fallbackItemHeight = 150; // 推定アイテム高さ
-
-                        // パネルからアイテム数/行を取得
-                        var panel = UIHelper.FindVisualChild<VirtualizingWrapPanel>(ThumbnailItemsControl);
-                        int fallbackItemsPerRow = GetItemsPerRow(panel);
-                        if (fallbackItemsPerRow <= 0) fallbackItemsPerRow = 1;
-
-                        // 表示範囲内の行を計算
-                        int fallbackFirstRow = Math.Max(0, (int)(viewportTop / fallbackItemHeight));
-                        int fallbackLastRow = Math.Min((int)(ThumbnailItemsControl.Items.Count / fallbackItemsPerRow),
-                                                 (int)(viewportBottom / fallbackItemHeight) + 1);
-
-                        // 行からアイテムのインデックスを計算
-                        int fallbackFirstIndex = fallbackFirstRow * fallbackItemsPerRow;
-                        int fallbackLastIndex = Math.Min(ThumbnailItemsControl.Items.Count - 1,
-                                                 (fallbackLastRow + 1) * fallbackItemsPerRow - 1);
-
-                        // 最下部に近いかどうかを判定
-                        bool isNearBottom = scrollViewer.VerticalOffset > scrollViewer.ScrollableHeight - scrollViewer.ViewportHeight * 1.2;
-                        if (isNearBottom)
-                        {
-                            // 最下部に近い場合は、最後のアイテムまで確実に含める
-                            fallbackLastIndex = ThumbnailItemsControl.Items.Count - 1;
-                            Debug.WriteLine("[計算検出] 最下部に近いため、最後のアイテムまで読み込みます");
-                        }
-
-                        // バッファを追加
-                        int fallbackBufferSize = 30;
-                        int fallbackFirstWithBuffer = Math.Max(0, fallbackFirstIndex - fallbackBufferSize);
-                        int fallbackLastWithBuffer = Math.Min(ThumbnailItemsControl.Items.Count - 1, fallbackLastIndex + fallbackBufferSize);
-
-                        Debug.WriteLine($"[計算検出] 表示範囲: {fallbackFirstIndex}～{fallbackLastIndex} (全{ThumbnailItemsControl.Items.Count}件)");
-                        Debug.WriteLine($"[計算検出] 読み込み範囲: {fallbackFirstWithBuffer}～{fallbackLastWithBuffer} (先読みバッファ: {fallbackBufferSize})");
-
-                        // サムネイルを読み込む
-                        await _thumbnailLoader.LoadThumbnailsWithQueueAsync(fallbackFirstWithBuffer, fallbackLastWithBuffer, cancellationToken);
-                        return;
-                    }
-                }
-
-                // 表示アイテムが見つかった場合
-                int firstIndex = visibleIndices.Count > 0 ? visibleIndices.Min() : 0;
-                int lastIndex = visibleIndices.Count > 0 ? visibleIndices.Max() : 0;
-
-                // 最下部に近いかどうかを判定
-                var scrollViewer2 = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                if (scrollViewer2 != null)
-                {
-                    bool isNearBottom = scrollViewer2.VerticalOffset > scrollViewer2.ScrollableHeight - scrollViewer2.ViewportHeight * 1.2;
-                    if (isNearBottom)
-                    {
-                        // 最下部に近い場合は、最後のアイテムまで確実に含める
-                        lastIndex = ThumbnailItemsControl.Items.Count - 1;
-                        LogHelper.LogVisibilityDetection("[可視性検出] 最下部に近いため、最後のアイテムまで読み込みます");
-                    }
-                }
-
-                // バッファを追加
-                int visibilityBufferSize = 30;
-                int firstIndexWithBuffer = Math.Max(0, firstIndex - visibilityBufferSize);
-                int lastIndexWithBuffer = Math.Min(ThumbnailItemsControl.Items.Count - 1, lastIndex + visibilityBufferSize);
-
-                LogHelper.LogVisibilityDetection($"[可視性検出] 表示範囲: {firstIndex}～{lastIndex} (表示アイテム: {visibleIndices.Count}件)");
-                LogHelper.LogVisibilityDetection($"[可視性検出] 読み込み範囲: {firstIndexWithBuffer}～{lastIndexWithBuffer} (先読みバッファ: {visibilityBufferSize})");
-
-                // キューを使用してサムネイルを読み込む
-                await _thumbnailLoader.LoadThumbnailsWithQueueAsync(firstIndexWithBuffer, lastIndexWithBuffer, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                LogHelper.LogVisibilityDetection("[可視性検出] 処理がキャンセルされました");
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"[可視性検出] エラーが発生しました: {ex.Message}", ex);
             }
         }
 
@@ -3770,6 +3465,94 @@ namespace Illustra.Views
                     }
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
+        }
+
+        /// <summary>
+        /// SelectedTabChangedEvent を受信したときの処理 (Control側)
+        /// OnMcpFolderSelected と同様のロジックでフォルダを読み込む。
+        /// </summary>
+        private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
+        {
+            var newState = args?.NewTabState;
+            if (newState == null || string.IsNullOrEmpty(newState.FolderPath))
+            {
+                // 選択されたタブがない、またはフォルダパスがない場合
+                _viewModel.ClearItems(); // ViewModelのアイテムをクリア
+                _currentFolderPath = null;
+                if (_fileSystemMonitor.IsMonitoring)
+                {
+                    _fileSystemMonitor.StopMonitoring();
+                }
+                Debug.WriteLine("[タブ変更] 新しいタブの状態が無効です。クリアします。");
+                return;
+            }
+
+            string folderPath = newState.FolderPath;
+            string? selectedFilePath = newState.SelectedItemPath;
+            var sortSettings = newState.SortSettings;
+            var filterSettings = newState.FilterSettings;
+
+            Debug.WriteLine($"[タブ変更] フォルダ: {folderPath}, 選択: {selectedFilePath ?? "なし"}, ソート: {sortSettings.SortByDate}/{sortSettings.SortAscending}, フィルタ: R{filterSettings.Rating}/P{filterSettings.HasPrompt}/T{filterSettings.Tags.Count}/E{filterSettings.Extensions.Count}");
+
+            // 同じフォルダが既に開かれている場合はリロードしない
+            // FilterChangedEventも発行してUIを更新
+
+            // タブごとに設定が異なるため同じパスでもスキップしない
+
+            // --- フォルダ変更処理 ---
+            ThumbnailItemsControl.Visibility = Visibility.Hidden; // ちらつき防止
+
+            // 1. ViewModelの状態をクリア（フィルタ、アイテム、選択）
+            _viewModel.ClearAllFilters();
+            _viewModel.ClearItems();
+            _currentTagFilters.Clear(); // Control側のフィルタ状態もクリア
+            _isTagFilterEnabled = false;
+            _isPromptFilterEnabled = false;
+            _currentExtensionFilters.Clear();
+            _isExtensionFilterEnabled = false;
+
+            // 2. ファイルシステム監視を更新
+            if (_fileSystemMonitor.IsMonitoring)
+            {
+                _fileSystemMonitor.StopMonitoring();
+            }
+            _fileSystemMonitor.StartMonitoring(folderPath);
+
+            // 3. ViewModelに新しい状態を適用 (フィルタとソート)
+            _viewModel.SortByDate = sortSettings.SortByDate;
+            _viewModel.SortAscending = sortSettings.SortAscending;
+
+            // 4. ファイルノードとサムネイルをロード (選択ファイルパスとフィルタ/ソート設定を渡す)
+            // LoadFileNodesAsync の引数を変更する必要がある
+            await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings, requestFocus: true);
+
+            // 6. UIを表示 (OnFileNodesLoaded で表示される想定)
+            // FilterChangedEventも発行してUIを更新 (全更新として発行)
+            _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                new FilterChangedEventArgsBuilder(CONTROL_ID) // SourceId は "ThumbnailList"
+                .SetFullUpdate(filterSettings) // filterSettings オブジェクト全体を渡す
+                .Build());
+
+            // 7. ソート/フィルタ状態をUIに反映させるイベントを発行
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Publish(
+                new SortOrderChangedEventArgs(_viewModel.SortByDate, _viewModel.SortAscending, CONTROL_ID));
+        }
+
+        // Tabs コレクション変更時のイベントハンドラ
+        private void Tabs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            // UI スレッドで実行
+            Dispatcher.Invoke(() =>
+            {
+                UpdateToolbarState();
+            });
+        }
+
+        // ツールバーの表示状態を更新するメソッド
+        private void UpdateToolbarState()
+        {
+            IsToolbarVisible = _mainWindowViewModel.Tabs.Count > 0;
+            // Debug.WriteLine($"Toolbar Enabled: {IsToolbarEnabled} (Tab Count: {_mainWindowViewModel.Tabs.Count})");
         }
 
     }
