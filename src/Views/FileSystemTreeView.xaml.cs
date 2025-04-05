@@ -378,7 +378,8 @@ namespace Illustra.Views
 
 
         // private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>(); // Adorner 不要
-        private TreeViewItem? _currentHighlightedItem = null; // 現在ハイライトされているアイテム
+        private TreeViewItem? _currentHighlightedItem = null; // 通常のマウスオーバーでハイライトされているアイテム
+        private TreeViewItem? _dragOverHighlightedItem = null; // ドラッグオーバーでハイライトされているアイテム
         // private bool _isContextMenuOpen = false; // 未使用のため削除
         // XAML から呼び出す必要があるイベントハンドラ
         public void TreeViewItem_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -508,39 +509,45 @@ namespace Illustra.Views
         /// </summary>
         private void TreeView_DragOver(IDropInfo dropInfo)
         {
-            var files = DragDropHelper.GetDroppedFiles(dropInfo);
-            if (files.Count == 0)
-            {
-                dropInfo.Effects = DragDropEffects.None;
-                return;
-            }
-
-            // ドロップ先を取得
+            // TargetItem (データモデル) から TreeViewItem を検索
             var targetModel = dropInfo.TargetItem as FileSystemItemModel;
-            if (targetModel == null || !targetModel.IsFolder)
-            {
-                dropInfo.Effects = DragDropEffects.None;
-                return;
-            }
+            var targetItem = (targetModel != null) ? GetTreeViewItemForItem(FolderTreeView, targetModel) : null;
+            var files = DragDropHelper.GetDroppedFiles(dropInfo);
+            bool canDrop = false;
 
-            if (DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
-            {
-                dropInfo.Effects = DragDropEffects.None;
-                return;
-            }
-            else
+            if (files.Count > 0 && targetModel != null && targetModel.IsFolder && !DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
             {
                 dropInfo.Effects = (dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
                     ? DragDropEffects.Copy
                     : DragDropEffects.Move;
-                dropInfo.DropTargetAdorner = DropTargetAdorners.Highlight;
+                canDrop = true;
             }
+            else
+            {
+                dropInfo.Effects = DragDropEffects.None;
+            }
+
+            // ハイライト処理
+            TreeViewItem? newHighlightTarget = null;
+            if (canDrop && targetItem != null)
+            {
+                newHighlightTarget = targetItem;
+            }
+
+            // ハイライト状態の更新
+            if (_dragOverHighlightedItem != newHighlightTarget)
+            {
+                ClearHighlight(_dragOverHighlightedItem); // 以前のハイライトを解除
+                SetHighlight(newHighlightTarget);         // 新しいターゲットをハイライト (null なら解除される)
+                _dragOverHighlightedItem = newHighlightTarget;
+            }
+
+            // デフォルトの Adorner は使用しない
+            dropInfo.DropTargetAdorner = null;
         }
 
         private async void TreeView_Drop(IDropInfo dropInfo)
         {
-            TreeViewItem targetItem = null;
-
             try
             {
                 var files = DragDropHelper.GetDroppedFiles(dropInfo);
@@ -615,21 +622,26 @@ namespace Illustra.Views
             }
             finally
             {
-                // ドロップ先のアイテムの表示を更新
-                if (targetItem != null)
+                // ドラッグオーバーのハイライトを解除
+                ClearHighlight(_dragOverHighlightedItem);
+                _dragOverHighlightedItem = null;
+
+                // ドロップ先のアイテムの表示を更新 (元のコードから移動)
+                var droppedOnItem = dropInfo.VisualTarget as TreeViewItem; // ドロップ時のターゲットを取得
+                if (droppedOnItem != null)
                 {
                     await Dispatcher.InvokeAsync(async () =>
                     {
-                        var model = targetItem.DataContext as FileSystemItemModel;
+                        var model = droppedOnItem.DataContext as FileSystemItemModel; // ドロップ先のモデル
                         if (model?.IsExpanded == true)
                         {
                             // フォルダの内容のみを更新
                             model.IsExpanded = false;
-                            await Task.Delay(50);
+                            await Task.Delay(50); // 展開状態の変更をUIに反映させるための待機
                             model.IsExpanded = true;
                         }
-                        return Task.CompletedTask;
-                    }, DispatcherPriority.Normal);
+                        // return Task.CompletedTask; // async void または Task を返すメソッドでは不要
+                    }, DispatcherPriority.Background); // 優先度を調整
                 }
             }
         }

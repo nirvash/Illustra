@@ -86,18 +86,18 @@ namespace Illustra.Views
 
             public override void DragOver(IDropInfo e)
             {
-                base.DragOver(e);
+                // base.DragOver(e); // DefaultDropHandler の DragOver は不要な場合があるためコメントアウトまたは削除検討
                 try
                 {
-                    // お気に入りリスト並び替え
-                    if (e.Data is FavoriteFolderModel) // お気に入りフォルダの並び替え
+                    // --- お気に入りフォルダの並び替え処理 ---
+                    if (e.Data is FavoriteFolderModel)
                     {
                         // ドロップ先がアイテム自体の上か、アイテムの間かを判定
                         bool isOverItem = e.InsertPosition.HasFlag(RelativeInsertPosition.TargetItemCenter);
 
                         if (isOverItem)
                         {
-                            // アイテム上へのドロップは許可しない
+                            // アイテム上へのドロップは許可しない (移動のみ)
                             e.Effects = DragDropEffects.Move;
                             e.DropTargetAdorner = null; // アドーナーも表示しない
                         }
@@ -107,35 +107,63 @@ namespace Illustra.Views
                             e.Effects = DragDropEffects.Move;
                             e.DropTargetAdorner = DropTargetAdorners.Insert; // 挿入アドーナーを表示
                         }
-                        return; // お気に入りフォルダ並び替えの場合は以降の処理は不要
+                        // 並び替え中は通常のドラッグオーバーハイライトを解除
+                        if (_parent._dragOverHighlightedItem != null)
+                        {
+                             _parent.ClearHighlight(_parent._dragOverHighlightedItem);
+                             _parent._dragOverHighlightedItem = null;
+                        }
+                        return; // 並び替えの場合は以降の処理は不要
                     }
 
+                    // --- ファイル/フォルダのドロップ処理 ---
                     var files = DragDropHelper.GetDroppedFiles(e);
-                    if (files.Count == 0) return;
-
-                    // ドロップ先を取得
                     var targetModel = e.TargetItem as FavoriteFolderModel;
-                    if (targetModel?.Path == null || !Directory.Exists(targetModel.Path))
+                    bool canDrop = false;
+                    TreeViewItem? targetItem = null; // ハイライト対象の TreeViewItem
+
+                    if (files.Count > 0 && targetModel?.Path != null && Directory.Exists(targetModel.Path) && !DragDropHelper.IsSameDirectory(files, targetModel.Path))
+                    {
+                        e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
+                            ? DragDropEffects.Copy
+                            : DragDropEffects.Move;
+                        canDrop = true;
+                        // TargetItem から TreeViewItem を取得
+                        targetItem = _parent.GetTreeViewItemForItem(_parent.FavoriteFoldersTreeView, targetModel);
+                    }
+                    else
                     {
                         e.Effects = DragDropEffects.None;
-                        return;
                     }
 
-                    // 同じフォルダへのドロップは禁止
-                    if (DragDropHelper.IsSameDirectory(files, targetModel.Path))
+                    // ハイライト処理 (FileSystemTreeView と同様)
+                    TreeViewItem? newHighlightTarget = null;
+                    if (canDrop && targetItem != null)
                     {
-                        e.Effects = DragDropEffects.None;
-                        return;
+                        newHighlightTarget = targetItem;
                     }
 
-                    e.Effects = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
-                        ? DragDropEffects.Copy
-                        : DragDropEffects.Move;
-                    e.DropTargetAdorner = DropTargetAdorners.Highlight;
+                    // ハイライト状態の更新
+                    if (_parent._dragOverHighlightedItem != newHighlightTarget)
+                    {
+                        _parent.ClearHighlight(_parent._dragOverHighlightedItem); // 以前のハイライトを解除
+                        _parent.SetHighlight(newHighlightTarget);         // 新しいターゲットをハイライト (null なら解除される)
+                        _parent._dragOverHighlightedItem = newHighlightTarget;
+                    }
+
+                    // デフォルトの Adorner は使用しない
+                    e.DropTargetAdorner = null;
                 }
-                catch (Exception)
+                catch (Exception ex) // エラーハンドリングを改善
                 {
+                    Debug.WriteLine($"DragOver処理中にエラーが発生しました: {ex.Message}");
                     e.Effects = DragDropEffects.None;
+                    // ハイライトも解除
+                    if (_parent._dragOverHighlightedItem != null)
+                    {
+                         _parent.ClearHighlight(_parent._dragOverHighlightedItem);
+                         _parent._dragOverHighlightedItem = null;
+                    }
                 }
             }
 
@@ -217,6 +245,15 @@ namespace Illustra.Views
                 {
                     Debug.WriteLine($"Drop処理中にエラーが発生しました: {ex.Message}");
                     MessageBox.Show($"ファイル操作中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally // finally ブロックを追加
+                {
+                    // ドラッグオーバーのハイライトを解除
+                    if (_parent._dragOverHighlightedItem != null)
+                    {
+                        _parent.ClearHighlight(_parent._dragOverHighlightedItem);
+                        _parent._dragOverHighlightedItem = null;
+                    }
                 }
             }
         }
@@ -359,7 +396,8 @@ namespace Illustra.Views
         }
 
         // ハイライト関連のフィールド
-        private TreeViewItem? _currentHighlightedItem = null; // Adornerではなく、直接ハイライトするアイテムを追跡
+        private TreeViewItem? _currentHighlightedItem = null; // 通常のマウスオーバーでハイライトされているアイテム
+        private TreeViewItem? _dragOverHighlightedItem = null; // ドラッグオーバーでハイライトされているアイテム
         // private List<TreeViewItemHighlightAdorner> _allAdorners = new List<TreeViewItemHighlightAdorner>(); // Adorner 不要
         // private bool _isContextMenuOpen = false; // ContextMenuOpening/Closing で直接制御するため不要
 
@@ -574,6 +612,39 @@ namespace Illustra.Views
                 RemoveFavoriteFolder(folder); // 修正されたメソッドを呼び出す
             }
         }
+
+        // FileSystemTreeView.xaml.cs からコピーしたヘルパーメソッド
+        private TreeViewItem GetTreeViewItemForItem(ItemsControl parent, object item)
+        {
+            if (parent == null || item == null)
+                return null;
+
+            if (parent.ItemContainerGenerator.Status != System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
+                return null;
+
+            var container = parent.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+            if (container != null)
+                return container;
+
+            // 子アイテムを再帰的に検索 (お気に入りフォルダは通常フラットだが念のため)
+            for (int i = 0; i < parent.Items.Count; i++)
+            {
+                var childContainer = parent.ItemContainerGenerator.ContainerFromIndex(i) as TreeViewItem;
+                if (childContainer == null)
+                    continue;
+
+                // TreeViewItem が展開されている場合のみ子を検索 (お気に入りでは不要かもしれない)
+                // if (childContainer.IsExpanded)
+                // {
+                    var result = GetTreeViewItemForItem(childContainer, item);
+                    if (result != null)
+                        return result;
+                // }
+            }
+
+            return null;
+        }
+
 
         private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
