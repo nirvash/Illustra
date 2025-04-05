@@ -8,7 +8,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 
 ### スクリーンショット
 
-![Screenshot](docs/screenshot.jpg)
+![Screenshot](docs/screenshot2.jpg)
 
 ### 主な機能
 
@@ -26,6 +26,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - 🌓 ライト/ダークテーマの切り替え機能
 - 🎬 MP4 動画ファイルの再生
 - 🎞️ アニメーション WebP ファイルの再生
+- 📑 複数フォルダのタブ表示
 
 ### 開発チーム
 
@@ -59,6 +60,8 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 8. ソート順を変更するには画面上部のソートボタンをクリック
 9. F11 キーでフルスクリーン切り替え
 10. Esc キーで画像ビューを閉じる
+11. フォルダツリーでフォルダを右クリックし、「新しいタブで開く」を選択する
+12. タブヘッダーをクリックしてタブを切り替える（ドラッグで順序変更も可能）
 
 ### タグフィルタの使い方
 
@@ -193,6 +196,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - 🌓 Light/Dark theme switching
 - 🎬 MP4 video file playback
 - 🎞️ Animated WebP file playback
+- 📑 Multi-folder tab view
 
 ### System Requirements
 
@@ -218,6 +222,8 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 8. Change sort order using the sort buttons at the top
 9. Press F11 to toggle fullscreen
 10. Press Esc to close image view
+11. Right-click a folder in the folder tree and select 'Open in New Tab'
+12. Click tab headers to switch between tabs (drag to reorder)
 
 ### Using Tag Filters
 
