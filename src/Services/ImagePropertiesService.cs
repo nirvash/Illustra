@@ -135,15 +135,6 @@ namespace Illustra.Services
             {
                 LogHelper.LogWithTimestamp($"ファイル選択: {model.FullPath}", LogHelper.Categories.UI);
 
-                var properties = await ImagePropertiesModel.LoadFromFileAsync(model.FullPath);
-                // MainViewModelから対応するFileNodeModelのレーティングを設定
-                var fileNode = _appContext.MainViewModel?.Items?.FirstOrDefault(n => n.FullPath == model.FullPath);
-                if (fileNode != null)
-                {
-                    properties.Rating = fileNode.Rating;
-                    LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
-                }
-                // _appContext.CurrentProperties = properties; // 直接代入は不可
                 // UpdateCurrentPropertiesAsync を呼び出して更新を依頼する
                 // 注意: これによりプロパティが再度読み込まれる
                 await _appContext.UpdateCurrentPropertiesAsync(model.FullPath);

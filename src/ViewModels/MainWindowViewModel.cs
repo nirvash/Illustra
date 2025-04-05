@@ -119,6 +119,8 @@ namespace Illustra.ViewModels
         public DelegateCommand<TabViewModel> CloseOtherTabsCommand { get; private set; }
         public DelegateCommand<TabViewModel> DuplicateTabCommand { get; private set; }
 
+        public DelegateCommand AddNewTabCommand { get; private set; }
+
         // MainViewModel からコマンドを公開
         public ICommand CopyCommand => _thumbnailListViewModel.CopyCommand;
         public ICommand PasteCommand => _thumbnailListViewModel.PasteCommand;
@@ -142,7 +144,8 @@ namespace Illustra.ViewModels
             // IEventAggregator を解決してフィールドに設定
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             // McpOpenFolderEvent を購読 (ステップ8の接続)
-            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolderReceived, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolderReceived, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID && filter.SourceId != "MainWindow"); // 自分以外からのイベントを受信するように変更
             // OpenInNewTabEvent を購読 (ステップ9の接続)
             _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => HandleOpenInNewTab(args.FolderPath));
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread);
@@ -164,6 +167,8 @@ namespace Illustra.ViewModels
             CloseTabCommand = new DelegateCommand<TabViewModel>(ExecuteCloseTab, CanExecuteCloseTab);
             CloseOtherTabsCommand = new DelegateCommand<TabViewModel>(ExecuteCloseOtherTabs, CanExecuteCloseOtherTabs);
             DuplicateTabCommand = new DelegateCommand<TabViewModel>(ExecuteDuplicateTab, CanExecuteDuplicateTab);
+            AddNewTabCommand = new DelegateCommand(ExecuteAddNewTab);
+
 
             // 現在のテーマを反映
             var settings = SettingsHelper.GetSettings();
@@ -345,6 +350,15 @@ namespace Illustra.ViewModels
         }
         private bool CanExecuteDuplicateTab(TabViewModel tabToDuplicate) => tabToDuplicate != null;
 
+
+        // --- 新規タブ追加コマンド ---
+        private void ExecuteAddNewTab()
+        {
+            // デフォルトのパスとしてマイピクチャを使用
+            string defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            AddNewTab(defaultPath);
+        }
+
         // --- タブ追加ヘルパーメソッド ---
         private void AddNewTab(string folderPath)
         {
@@ -433,7 +447,7 @@ namespace Illustra.ViewModels
 
             // アクティブなタブの状態を更新
             SelectedTab.State.FolderPath = path;
-            // SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する（オプション）
+            SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する
 
             // サムネイルリストに更新を通知
             // EventAggregator を使用してイベントを発行

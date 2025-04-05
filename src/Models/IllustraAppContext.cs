@@ -57,8 +57,8 @@ namespace Illustra.Models
                 return;
             }
 
-            // 既に同じファイルのプロパティが読み込まれていれば更新しない (任意)
-            // if (CurrentProperties?.FilePath == filePath) return;
+            // 既に同じファイルのプロパティが読み込まれていれば更新しない
+            if (CurrentProperties?.FilePath == filePath) return;
 
             try
             {

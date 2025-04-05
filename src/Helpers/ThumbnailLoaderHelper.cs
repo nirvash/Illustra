@@ -27,10 +27,13 @@ public class FileNodesLoadedEventArgs : EventArgs
     public string FolderPath { get; }
     public string SelectedFilePath { get; }
 
-    public FileNodesLoadedEventArgs(string folderPath, string selectedFilePath)
+    public bool RequestFocus { get; }
+
+    public FileNodesLoadedEventArgs(string folderPath, string selectedFilePath, bool requestFocus)
     {
         FolderPath = folderPath;
         SelectedFilePath = selectedFilePath;
+        RequestFocus = requestFocus;
     }
 }
 
@@ -186,7 +189,7 @@ public class ThumbnailLoaderHelper
     /// </summary>
     /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
     /// <param name="initialSelectedFilePath">初期選択するファイルパス</param>
-    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null)
+    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null, bool requestFocus = false)
     {
         try
         {
@@ -261,7 +264,7 @@ public class ThumbnailLoaderHelper
                 _isFileNodesLoadedEventFiring = true;
                 try
                 {
-                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath, initialSelectedFilePath));
+                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath, initialSelectedFilePath, requestFocus));
                 }
                 finally
                 {

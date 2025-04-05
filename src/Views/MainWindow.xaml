@@ -40,8 +40,7 @@
                                      Visibility="{Binding DataContext.HasTabs, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <!-- カスタム追加ボタン -->
                     <dragablz:TabablzControl.HeaderSuffixContent>
-                        <Button Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding DataContext.SelectedTab, RelativeSource={RelativeSource AncestorType=Window}}"
+                        <Button Command="{Binding DataContext.AddNewTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Style="{StaticResource MahApps.Styles.Button.Chromeless}"
                                 ToolTip="{DynamicResource String_Tab_Add}"
                                 HorizontalAlignment="Left"

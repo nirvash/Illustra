@@ -574,7 +574,8 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<RatingChangedEvent>().Subscribe(OnRatingChanged, ThreadOption.UIThread, false);
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(OnLanguageChanged);
-            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
 
@@ -1190,6 +1191,7 @@ namespace Illustra.Views
                     }
 
                     var args = e as FileNodesLoadedEventArgs;
+                    bool requestFocus = args.RequestFocus || _isFirstLoad;
                     if (args?.SelectedFilePath != null
                         && args.SelectedFilePath != string.Empty
                         && File.Exists(args.SelectedFilePath))
@@ -1197,21 +1199,15 @@ namespace Illustra.Views
                         // 選択するファイルが指定されているとき
                         var filePath = args.SelectedFilePath;
                         LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 指定されたファイルを選択します: {filePath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(filePath, _isFirstLoad);
+                        SelectThumbnail(filePath, requestFocus);
                     }
                     else if (!string.IsNullOrEmpty(_initialSelectedFilePath)
                              && _viewModel.Items.Any(x => x.FullPath == _initialSelectedFilePath))
                     {
                         // 初期選択ファイルが指定されている場合はそれを選択
                         LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 初期選択ファイルを選択します: {_initialSelectedFilePath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(_initialSelectedFilePath, _isFirstLoad);
+                        SelectThumbnail(_initialSelectedFilePath, requestFocus);
                         _initialSelectedFilePath = null;
-                    }
-                    else if (_viewModel.SelectedItems.Count > 0 && _viewModel.SelectedItems.LastOrDefault() is FileNodeModel selectedItem)
-                    {
-                        // 選択されたアイテムがある場合はそれを選択
-                        LogHelper.LogWithTimestamp($"[ThumbnailLoader] [ThumbnailListControl] OnFileNodesLoaded: 選択されたアイテムを選択します: {selectedItem.FullPath}", LogHelper.Categories.ThumbnailLoader);
-                        SelectThumbnail(selectedItem.FullPath, _isFirstLoad);
                     }
                     else if (ThumbnailItemsControl.Items.Count > 0)
                     {
@@ -1224,7 +1220,7 @@ namespace Illustra.Views
                         {
                             _viewModel.SelectedItems.Clear();
                             _viewModel.SelectedItems.Add(selectedFileNode);
-                            if (_isFirstLoad)
+                            if (requestFocus)
                             {
                                 ThumbnailItemsControl.Focus();
                             }
@@ -1320,22 +1316,16 @@ namespace Illustra.Views
                         int selectedIndex = filteredItems.IndexOf(matchingItem);
                         LogHelper.LogWithTimestamp($"[選択] インデックス: {selectedIndex}, ファイル: {matchingItem.FullPath}", LogHelper.Categories.ThumbnailQueue);
 
-                        if (!ThumbnailItemsControl.SelectedItems.Contains(matchingItem))
-                        {
-                            ThumbnailItemsControl.SelectedItems.Add(matchingItem);
-                        }
                         _viewModel.SelectedItems.Clear();
-                        _viewModel.SelectedItems.Add(matchingItem);
+                        // _viewModel.SelectedItems.Add(matchingItem);
+                        ThumbnailItemsControl.SelectedItems.Add(matchingItem);
                         ThumbnailItemsControl.ScrollIntoView(matchingItem);
                         if (requestFocus)
                         {
                             ThumbnailItemsControl.Focus();
                         }
 
-                        // FileSelectedEvent を発行 - 同期メソッドを使用
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
-                        _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
-
+                        // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
                     }
                     else
@@ -1366,9 +1356,7 @@ namespace Illustra.Views
                                 _viewModel.SelectedItems.Add(matchingItem);
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
 
-                                // FileSelectedEvent を発行 - 同期メソッドを使用
-                                var selectedFileModel = new SelectedFileModel(CONTROL_ID, filePath);
-                                _eventAggregator.GetEvent<FileSelectedEvent>().Publish(selectedFileModel);
+                                // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                                 var index = _viewModel.Items.IndexOf(matchingItem);
                                 System.Diagnostics.Debug.WriteLine($"[選択更新] フィルタリング解除後にアイテムを選択: [{index}] {filePath}");
                             }
@@ -2734,7 +2722,7 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたフォルダのファイルノードを読み込みます
         /// </summary>
-        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null)
+        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null, bool requestFocus = false)
         {
             try
             {
@@ -2781,7 +2769,7 @@ namespace Illustra.Views
                 {
                     // ファイル一覧を読み込む - サムネイルトークンは渡さない
                     // ファイル一覧を読み込む
-                    await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath);
+                    await _thumbnailLoader.LoadFileNodesAsync(path, initialSelectedFilePath, requestFocus);
 
                     // フィルタとソート設定を適用 (読み込み後)
                     if (filterSettings != null)
@@ -2825,8 +2813,6 @@ namespace Illustra.Views
                         {
                             LogHelper.LogError($"[フォルダ切替] FilteredItemsの取得中にエラーが発生しました: {ex.Message}", ex);
                         }
-
-                        // 以下、既存の処理...
                     }
                 }
                 finally
@@ -3900,7 +3886,7 @@ namespace Illustra.Views
 
             // 4. ファイルノードとサムネイルをロード (選択ファイルパスとフィルタ/ソート設定を渡す)
             // LoadFileNodesAsync の引数を変更する必要がある
-            await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings);
+            await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings, requestFocus: true);
 
             // 6. UIを表示 (OnFileNodesLoaded で表示される想定)
             // FilterChangedEventも発行してUIを更新 (全更新として発行)
