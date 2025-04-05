@@ -206,11 +206,9 @@
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    BorderThickness="1,0,0,0">
-                <StackPanel Margin="10"
-                            Width="Auto">
-                    <local:PropertyPanelControl x:Name="PropertyPanelControl"/>
-                </StackPanel>
+                    BorderThickness="1,0,0,0"
+                    Padding="10"> <!-- StackPanelのMarginをPaddingに置き換え -->
+                    <local:PropertyPanelControl x:Name="PropertyPanelControl"/> <!-- StackPanelを削除し、Marginも削除 -->
             </Border>
 
 
