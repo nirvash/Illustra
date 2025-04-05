@@ -1,3 +1,5 @@
+using Illustra.Functions; // Added for KeyboardShortcutHandler and FuncId
+
 using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System;
 using System.ComponentModel;
@@ -89,45 +91,48 @@ namespace Illustra.Views
                 return;
             }
 
-            // Ctrlキーが押されているかチェック
-            if (Keyboard.Modifiers == ModifierKeys.Control)
+            // ショートカットキーハンドラを取得
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+
+            // コピー (Ctrl+C)
+            if (shortcutHandler.IsShortcutMatch(FuncId.Copy, e.Key))
             {
-                bool handled = false;
-
-                // Ctrl+C (コピー)
-                if (e.Key == Key.C)
-                {
-                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.C, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
-                    handled = true;
-                }
-                // Ctrl+V (貼り付け)
-                else if (e.Key == Key.V)
-                {
-                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.V, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
-                    handled = true;
-                }
-                // Ctrl+X (切り取り)
-                else if (e.Key == Key.X)
-                {
-                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.X, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
-                    handled = true;
-                }
-                // Ctrl+A (すべて選択)
-                else if (e.Key == Key.A)
-                {
-                    _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.A, Modifiers = ModifierKeys.Control, SourceId = CONTROL_ID });
-                    handled = true;
-                }
-
-                if (handled)
-                {
-                    e.Handled = true;
-                }
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+                e.Handled = true;
             }
-            // Deleteキー
-            else if (e.Key == Key.Delete)
+            // 貼り付け (Ctrl+V)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.Paste, e.Key))
             {
-                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = Key.Delete, SourceId = CONTROL_ID });
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+                e.Handled = true;
+            }
+            // 切り取り (Ctrl+X) - Note: FuncIdにCutがない場合は追加が必要
+            // else if (shortcutHandler.IsShortcutMatch(FuncId.Cut, e.Key)) // FuncId.Cut が存在する場合
+            // {
+            //     _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+            //     e.Handled = true;
+            // }
+            // すべて選択 (Ctrl+A)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.SelectAll, e.Key))
+            {
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+                e.Handled = true;
+            }
+            // 削除 (Delete)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.Delete, e.Key))
+            {
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+                e.Handled = true;
+            }
+            // 追加: リストの先頭/末尾への移動ショートカット
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToStart, e.Key))
+            {
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
+                e.Handled = true;
+            }
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToEnd, e.Key))
+            {
+                _eventAggregator?.GetEvent<ShortcutKeyEvent>().Publish(new ShortcutKeyEventArgs { Key = e.Key, Modifiers = Keyboard.Modifiers, SourceId = CONTROL_ID });
                 e.Handled = true;
             }
         }

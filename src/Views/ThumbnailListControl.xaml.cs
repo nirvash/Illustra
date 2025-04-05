@@ -647,31 +647,50 @@ namespace Illustra.Views
             if (args.SourceId == CONTROL_ID)
                 return;
 
-            // Ctrl+C (コピー)
-            if (args.Key == Key.C && args.Modifiers == ModifierKeys.Control)
+            var shortcutHandler = KeyboardShortcutHandler.Instance;
+
+            // コピー (Ctrl+C)
+            if (shortcutHandler.IsShortcutMatch(FuncId.Copy, args.Key)) // Modifiers 引数を削除
             {
                 CopySelectedImagesToClipboard();
             }
-            // Ctrl+V (貼り付け)
-            else if (args.Key == Key.V && args.Modifiers == ModifierKeys.Control)
+            // 貼り付け (Ctrl+V)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.Paste, args.Key)) // Modifiers 引数を削除
             {
                 PasteFilesFromClipboard();
             }
-            // Ctrl+X (切り取り)
-            else if (args.Key == Key.X && args.Modifiers == ModifierKeys.Control)
-            {
-                // 切り取り処理を実装（必要に応じて）
-                // 現在は未実装
-            }
-            // Ctrl+A (すべて選択)
-            else if (args.Key == Key.A && args.Modifiers == ModifierKeys.Control)
+            // 切り取り (Ctrl+X) - Note: FuncIdにCutがない場合は追加が必要
+            // else if (shortcutHandler.IsShortcutMatch(FuncId.Cut, args.Key)) // Modifiers 引数を削除
+            // {
+            //     // 切り取り処理を実装
+            // }
+            // すべて選択 (Ctrl+A)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.SelectAll, args.Key)) // Modifiers 引数を削除
             {
                 ThumbnailItemsControl.SelectAll();
             }
-            // Delete (削除)
-            else if (args.Key == Key.Delete && args.Modifiers == ModifierKeys.None)
+            // 削除 (Delete)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.Delete, args.Key)) // Modifiers 引数を削除
             {
                 DeleteSelectedItems();
+            }
+            // リストの先頭に移動 (Home)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToStart, args.Key)) // Modifiers 引数を削除
+            {
+                if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    ThumbnailItemsControl.SelectedIndex = 0;
+                    ThumbnailItemsControl.ScrollIntoView(ThumbnailItemsControl.SelectedItem);
+                }
+            }
+            // リストの末尾に移動 (End)
+            else if (shortcutHandler.IsShortcutMatch(FuncId.MoveToEnd, args.Key)) // Modifiers 引数を削除
+            {
+                if (ThumbnailItemsControl.Items.Count > 0)
+                {
+                    ThumbnailItemsControl.SelectedIndex = ThumbnailItemsControl.Items.Count - 1;
+                    ThumbnailItemsControl.ScrollIntoView(ThumbnailItemsControl.SelectedItem);
+                }
             }
         }
 
