@@ -75,14 +75,40 @@ public class ThumbnailLoaderHelper
         LogHelper.LogWithTimestamp(
             $"フルスクリーンモード {(isFullscreen ? "開始" : "終了")} - サムネイル生成を{(isFullscreen ? "抑制" : "再開")}します",
             LogHelper.Categories.ThumbnailLoader);
-
-        if (!isFullscreen)
-        {
-            // 全画面モード解除時は見えている範囲のサムネイルを再生成
-            LogHelper.LogWithTimestamp("フルスクリーン解除によりサムネイル再生成を開始します", LogHelper.Categories.ThumbnailLoader);
-            _ = LoadInitialThumbnailsAsync();
-        }
     }
+
+    /// <summary>
+    /// フルスクリーンモードかつウィンドウが覆われている場合にサムネイル読み込みを抑制すべきかどうかを判定します。
+    /// </summary>
+    /// <returns>抑制すべき場合は true、そうでない場合は false。</returns>
+    private async Task<bool> ShouldSuppressThumbnailLoadingAsync()
+    {
+        if (!_isFullscreenMode)
+        {
+            return false; // フルスクリーンモードでなければ抑制しない
+        }
+
+        // UI スレッドでウィンドウの状態を確認
+        bool isCovered = await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var parentWindow = Window.GetWindow(_control);
+            // parentWindow が null でないこと、かつ覆われていることを確認
+            return parentWindow != null && WindowVisibilityChecker.IsWindowCovered(parentWindow);
+        });
+
+        // ログ出力はUIスレッドでなくても良い場合が多いが、念のためDispatcher外で行う
+        if (isCovered)
+        {
+            LogHelper.LogWithTimestamp("フルスクリーンモードでウィンドウが覆われているため、サムネイル処理を抑制します", LogHelper.Categories.ThumbnailLoader);
+        }
+        else
+        {
+            LogHelper.LogWithTimestamp("フルスクリーンモードですがウィンドウが表示されているため、サムネイル処理を続行します", LogHelper.Categories.ThumbnailLoader);
+        }
+
+        return isCovered;
+    }
+
 
     /// <summary>
     /// スクロールタイプを設定します
@@ -727,10 +753,10 @@ public class ThumbnailLoaderHelper
             return;
         }
 
-        // フルスクリーンモード時はサムネイル作成を抑制
-        if (_isFullscreenMode)
+        // フルスクリーンモードでウィンドウが覆われている場合は処理をスキップ
+        if (await ShouldSuppressThumbnailLoadingAsync())
         {
-            LogHelper.LogWithTimestamp($"フルスクリーンモードのためサムネイル作成を抑制: [{index}]{Path.GetFileName(fileNode.FullPath)}", LogHelper.Categories.ThumbnailLoader);
+            // ログは ShouldSuppressThumbnailLoadingAsync 内で出力される
             return;
         }
 
@@ -1110,10 +1136,18 @@ public class ThumbnailLoaderHelper
     }
 
     /// <summary>
-    /// 処理キューを使用してサムネイルを読み込みます
+    /// 処理キューを使用してサムネイルを読み込みます。
+    /// フルスクリーンモードでウィンドウが完全に覆われている場合は読み込みをスキップします。
     /// </summary>
-    public Task LoadThumbnailsWithQueueAsync(int startIndex, int endIndex, CancellationToken cancellationToken, bool isHighPriority = false)
+    public async Task LoadThumbnailsWithQueueAsync(int startIndex, int endIndex, CancellationToken cancellationToken, bool isHighPriority = false)
     {
+        // フルスクリーンモードでウィンドウが覆われている場合は処理をスキップ
+        if (await ShouldSuppressThumbnailLoadingAsync())
+        {
+            // ログは ShouldSuppressThumbnailLoading 内で出力される
+            return;
+        }
+
         var tcs = new TaskCompletionSource<bool>();
 
         // 新しいリクエストを作成
@@ -1152,7 +1186,7 @@ public class ThumbnailLoaderHelper
         // リクエストをキューに追加
         _requestQueue.EnqueueRequest(request);
 
-        return tcs.Task;
+        await tcs.Task;
     }
 
     /// <summary>

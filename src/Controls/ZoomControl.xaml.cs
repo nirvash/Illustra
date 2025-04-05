@@ -455,6 +455,8 @@ namespace Illustra.Controls
                 _isDragging = false;
                 _isDragChecking = true; // ドラッグチェック開始
                 _dragStartMouse = e.GetPosition(HitBox);
+                Mouse.OverrideCursor = null; // ウィンドウレベルのカーソル強制設定を解除
+
                 HitBox.Cursor = Cursors.Hand;
 
                 // パン開始位置を記録

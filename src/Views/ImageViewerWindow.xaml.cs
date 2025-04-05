@@ -139,7 +139,13 @@ namespace Illustra.Views
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             hideCursorTimer.Tick += (s, args) =>
             {
-                if (!IsFullScreen) return; // フルスクリーン時のみカーソルを隠す
+                // フルスクリーンかつアクティブなウィンドウの場合のみカーソルを隠す
+                if (!IsFullScreen || !this.IsActive)
+                {
+                    // カーソルが表示されているかもしれないので、タイマーは停止する
+                    hideCursorTimer.Stop();
+                    return;
+                }
 
                 // VideoPlayerControl が表示されていて、かつそのコントロール上にマウスがある場合は隠さない
                 if (VideoPlayerControl.Visibility == Visibility.Visible && VideoPlayerControl.IsMouseOverControls)
@@ -150,7 +156,11 @@ namespace Illustra.Views
                 }
 
                 // 上記以外の場合で、カーソルが表示されているなら隠す
-                if (Mouse.OverrideCursor == Cursors.Arrow || Mouse.OverrideCursor == null)
+                // マウスボタンが押されておらず、コンテキストメニューも表示されておらず、カーソルが現在表示されている場合のみ隠す
+                if (Mouse.LeftButton == MouseButtonState.Released &&
+                    Mouse.RightButton == MouseButtonState.Released &&
+                    !(ImageZoomControl.ContextMenu?.IsOpen ?? false) &&
+                    Mouse.OverrideCursor != Cursors.None)
                 {
                     Mouse.OverrideCursor = Cursors.None;
                 }
@@ -183,6 +193,9 @@ namespace Illustra.Views
                 MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
                 MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
             }
+            Activated += ImageViewerWindow_Activated;
+            Deactivated += ImageViewerWindow_Deactivated;
+
 
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
@@ -254,6 +267,7 @@ namespace Illustra.Views
 
             // メニューを表示
             menu.PlacementTarget = ImageZoomControl;
+            ImageZoomControl.ContextMenu = menu; // ContextMenu プロパティに設定
             menu.IsOpen = true;
         }
 
@@ -1090,7 +1104,8 @@ namespace Illustra.Views
                 return;
             }
 
-            if (!_isFullScreen) return;
+            // フルスクリーンかつアクティブなウィンドウの場合のみ処理
+            if (!IsFullScreen || !this.IsActive) return;
 
             var currentPosition = e.GetPosition(this);
 
@@ -1263,9 +1278,28 @@ namespace Illustra.Views
         {
             // VideoPlayerControlの背景がダブルクリックされたらウィンドウを閉じる
             Close();
-            // イベントが親に伝播しないようにする場合は Handled = true を設定
-            // e.Handled = true;
+
+        } // End of VideoPlayerControl_BackgroundDoubleClick
+
+        private void ImageViewerWindow_Activated(object? sender, EventArgs e)
+        {
+            // ウィンドウがアクティブになった時
+            if (IsFullScreen)
+            {
+                // フルスクリーンモードであれば、カーソル非表示タイマーを開始（または再開）
+                hideCursorTimer.Start();
+            }
         }
+
+        private void ImageViewerWindow_Deactivated(object? sender, EventArgs e)
+        {
+            // ウィンドウが非アクティブになった時
+            // マウスカーソルを強制的に表示状態に戻す
+            Mouse.OverrideCursor = Cursors.Arrow;
+            // カーソル非表示タイマーを停止
+            hideCursorTimer.Stop();
+        }
+
 
 
         private void OnFileSelected(SelectedFileModel args)

@@ -1017,23 +1017,14 @@ namespace Illustra.Views
                         // ソート順に従って適切な位置に挿入
                         _viewModel.AddItem(fileNode);
 
-                        // TreeViewやその子孫がフォーカス中ならフォーカスしない
-                        var focused = Keyboard.FocusedElement;
-                        var requestFocus = (UIHelper.IsParentWindowActive(this) && focused is DependencyObject d && !IsInsideTreeView(d));
-
                         // 新規ファイル自動選択の処理
                         if (_appSettings.AutoSelectNewFile)
                         {
                             // UIスレッドで選択処理とフォーカスを実行
                             await Dispatcher.InvokeAsync(() =>
                             {
-                                SelectThumbnail(fileNode.FullPath, requestFocus); // requestFocusをtrueにして選択とフォーカスを行う
+                                SelectThumbnail(fileNode.FullPath);
                             });
-                        }
-                        else if (requestFocus)
-                        {
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-                            ThumbnailItemsControl.Focus();
                         }
 
                         _ = Task.Run(async () =>
@@ -2420,22 +2411,39 @@ namespace Illustra.Views
                         Parent = this
                     };
 
-                    // イベントハンドラを設定
-                    _imageViewerWindow.IsFullscreenChanged += (s, e) =>
+                    // イベントハンドラを設定 (async追加)
+                    _imageViewerWindow.IsFullscreenChanged += async (s, e) => // async追加
                     {
-                        _thumbnailLoader?.SetFullscreenMode(_imageViewerWindow?.IsFullScreen ?? false);
+                        bool isFullScreen = _imageViewerWindow?.IsFullScreen ?? false; // _imageViewerWindow のプロパティを参照
+                        _thumbnailLoader?.SetFullscreenMode(isFullScreen);
+
+                        // 全画面モードが解除された場合にサムネイルを再生成
+                        if (!isFullScreen)
+                        {
+                            // UIスレッドで実行し、レイアウト更新を待つ
+                            await Dispatcher.InvokeAsync(async () =>
+                            {
+                                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                                if (scrollViewer != null)
+                                {
+                                    // レイアウト更新を待つ (念のため)
+                                    await Task.Delay(100); // 少し待機
+                                    await LoadVisibleThumbnailsAsync(scrollViewer, includePreload: true); // includePreload: true で広範囲を読み込む
+                                }
+                            }, DispatcherPriority.Background); // Background優先度で実行
+                        }
                     };
 
                     _imageViewerWindow.Closed += (s, e) =>
                     {
                         _thumbnailLoader?.SetFullscreenMode(false);
 
-                        // サムネイルの再生成
-                        var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                        if (scrollViewer != null)
-                        {
-                            _ = LoadVisibleThumbnailsAsync(scrollViewer);
-                        }
+                        // サムネイルの再生成 ← IsFullscreenChanged で行うため不要
+                        // var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                        // if (scrollViewer != null)
+                        // {
+                        //     _ = LoadVisibleThumbnailsAsync(scrollViewer);
+                        // }
 
                         // インスタンスをクリア
                         _imageViewerWindow = null;
