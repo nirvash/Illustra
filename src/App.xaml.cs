@@ -79,7 +79,8 @@ namespace Illustra
             containerRegistry.RegisterSingleton<LanguageService>();
             containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
             containerRegistry.RegisterSingleton<DatabaseManager>();
-
+            // FileOperationHelper をシングルトンで登録 (DatabaseManager に依存)
+            containerRegistry.RegisterSingleton<FileOperationHelper>();
             // IllustraAppContextとImagePropertiesServiceの登録
             // アプリケーションライフサイクルと同じライフタイムを保証するためシングルトンとして登録
             // IllustraAppContext の登録時に DatabaseManager を注入
@@ -95,8 +96,13 @@ namespace Illustra
             containerRegistry.Register<LanguageSettingsViewModel>();
             containerRegistry.Register<KeyboardShortcutSettingsViewModel>();
 
-            // MainWindowViewModelの登録（IRegionManagerの依存関係を削除）
-            containerRegistry.RegisterSingleton<ViewModels.MainWindowViewModel>();
+            // MainWindowViewModelの登録を修正し、依存関係を注入
+            containerRegistry.RegisterSingleton<MainWindowViewModel>(resolver =>
+                new MainWindowViewModel(
+                    resolver.Resolve<IEventAggregator>(),
+                    resolver.Resolve<ThumbnailListViewModel>(),
+                    resolver.Resolve<FileOperationHelper>()
+                ));
         }
 
         protected override void OnInitialized()

@@ -16,6 +16,9 @@ using Illustra.Shared.Models.Tools; // Task を使うために追加
 using System.Linq; // Linq を使用するために追加
 using System.Diagnostics; // Debug を使用するために追加
 using System.IO; // Path クラスを使用するために追加
+using System.Collections.Generic; // List を使うために追加
+using System.Threading; // CancellationTokenSource を使うために追加
+using MahApps.Metro.Controls; // MetroWindow を使うために追加 (DialogHelper用)
 
 using Dragablz; // TabablzControl.AddItem を使うために追加
 
@@ -29,6 +32,7 @@ namespace Illustra.ViewModels
         private readonly IEventAggregator _eventAggregator;
         private readonly ThumbnailListViewModel _thumbnailListViewModel; // Renamed from _mainViewModel
         private readonly string CONTROL_ID = "MainWindowViewModel";
+        private readonly FileOperationHelper _fileOperationHelper; // FileOperationHelper のフィールドを追加
 
         // DialogCoordinator プロパティを追加
         public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
@@ -135,6 +139,69 @@ namespace Illustra.ViewModels
         public DelegateCommand SetLightThemeCommand { get; }
         public DelegateCommand SetDarkThemeCommand { get; }
 
+        public MainWindowViewModel(IEventAggregator eventAggregator, ThumbnailListViewModel thumbnailListViewModel, FileOperationHelper fileOperationHelper) // 引数に FileOperationHelper, ThumbnailListViewModel を追加
+        {
+            // IllustraAppContext から MainViewModel を取得 (既存のコード)
+            // var appContext = ContainerLocator.Container.Resolve<IllustraAppContext>(); // AppContextからの取得は不要に
+            _thumbnailListViewModel = thumbnailListViewModel ?? throw new ArgumentNullException(nameof(thumbnailListViewModel)); // 引数から受け取るように変更
+
+            // FileOperationHelper をフィールドに代入
+            _fileOperationHelper = fileOperationHelper ?? throw new ArgumentNullException(nameof(fileOperationHelper));
+
+            // IEventAggregator を解決してフィールドに設定 (既存のコード)
+            _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator)); // 引数から受け取るように変更
+            // McpOpenFolderEvent を購読 (ステップ8の接続)
+            _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolderReceived, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID && filter.SourceId != "MainWindow"); // 自分以外からのイベントを受信するように変更
+            // OpenInNewTabEvent を購読 (ステップ9の接続)
+            _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => HandleOpenInNewTab(args.FolderPath));
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID); // ソート順変更イベントを購読 (自分以外から)
+
+
+            _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelectedInTab, ThreadOption.UIThread);
+
+
+            OpenLanguageSettingsCommand = new DelegateCommand(ExecuteOpenLanguageSettings);
+            OpenShortcutSettingsCommand = new DelegateCommand(ExecuteOpenShortcutSettings);
+            OpenAdvancedSettingsCommand = new DelegateCommand(ExecuteOpenAdvancedSettings);
+            OpenImageGenerationWindowCommand = new DelegateCommand(ExecuteOpenImageGenerationWindow);
+            SetLightThemeCommand = new DelegateCommand(ExecuteSetLightTheme);
+            SetDarkThemeCommand = new DelegateCommand(ExecuteSetDarkTheme);
+
+            // タブ操作コマンドの初期化
+            CloseTabCommand = new DelegateCommand<TabViewModel>(ExecuteCloseTab, CanExecuteCloseTab);
+            CloseOtherTabsCommand = new DelegateCommand<TabViewModel>(ExecuteCloseOtherTabs, CanExecuteCloseOtherTabs);
+            DuplicateTabCommand = new DelegateCommand<TabViewModel>(ExecuteDuplicateTab, CanExecuteDuplicateTab);
+            AddNewTabCommand = new DelegateCommand(ExecuteAddNewTab);
+
+
+            // 現在のテーマを反映
+            var settings = SettingsHelper.GetSettings();
+            IsLightTheme = settings.Theme == "Light";
+            IsDarkTheme = settings.Theme == "Dark";
+
+            // ステータスメッセージの初期化
+            StatusMessage = (string)Application.Current.Resources["String_Status_Ready"];
+            // アプリケーション起動時に保存されたタブ状態を読み込む
+            LoadTabStates();
+            // 初期タブがない場合はデフォルトタブを追加
+
+            // LoadTabStates でタブが復元された場合、最初のタブを選択して状態を適用
+            if (SelectedTab == null && Tabs.Count > 0)
+            {
+                SelectedTab = Tabs[0]; // 最初のタブを選択
+                                       // SelectedTab のセッター内でイベントが発行される
+            }
+            // タブコレクションの変更を監視して ShowCloseButton の変更通知を発行
+            Tabs.CollectionChanged += (s, e) =>
+            {
+                RaisePropertyChanged(nameof(ShowCloseButton));
+                RaisePropertyChanged(nameof(HasTabs)); // HasTabs の変更通知を追加
+            };
+        }
+        // コンストラクタを削除 (新しいコンストラクタで置き換え)
         public MainWindowViewModel()
         {
             // IllustraAppContext から MainViewModel を取得
@@ -616,5 +683,112 @@ namespace Illustra.ViewModels
             }
         }
 
+
+
+        /// <summary>
+        /// Processes files dropped onto a tab.
+        /// </summary>
+        /// <param name="files">List of dropped file paths.</param>
+        /// <param name="targetFolderPath">The target folder path of the tab.</param>
+        /// <param name="isCopy">True for copy operation, false for move.</param>
+        public async Task ProcessDroppedFilesAsync(string[] files, string targetFolderPath, bool isCopy)
+        {
+            if (files == null || files.Length == 0 || string.IsNullOrEmpty(targetFolderPath))
+            {
+                return;
+            }
+
+            string dialogTitle = isCopy ?
+                (string)Application.Current.FindResource("String_Dialog_FileCopyTitle") :
+                (string)Application.Current.FindResource("String_Dialog_FileMoveTitle");
+
+            var owner = Application.Current.MainWindow as MetroWindow;
+            if (owner == null)
+            {
+                // Handle error: Owner window not found or not a MetroWindow
+                Debug.WriteLine("Error: Owner window is not a MetroWindow.");
+                // Optionally show a message box or log the error
+                MessageBox.Show("Cannot perform file operation: Application window not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+
+            var cts = new CancellationTokenSource();
+            (IProgress<FileOperationProgressInfo> progress, Action closeDialog) = (null, null);
+
+            try
+            {
+                // Show progress dialog
+                (progress, closeDialog) = await DialogHelper.ShowProgressDialogAsync(owner, dialogTitle, cts);
+
+                // Execute file operation in background
+                var processedFiles = await Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Define post-processing action (executed on UI thread after each file)
+                        Action<string> postProcessAction = (processedPath) =>
+                        {
+                            // This action is called by FileOperationHelper after a file is successfully processed.
+                            // We might not need to do anything specific here for the tab drop scenario,
+                            // as ThumbnailListControl handles file system changes.
+                            // However, you could add logging or specific UI updates if needed.
+                            Debug.WriteLine($"[TabDrop] File processed: {processedPath}");
+                        };
+
+                        // Call FileOperationHelper to perform the copy/move
+                        return await _fileOperationHelper.ExecuteFileOperation(
+                            files.ToList(), // Convert array to List
+                            targetFolderPath,
+                            isCopy,
+                            progress,
+                            postProcessAction, // Pass the post-processing action
+                            cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.WriteLine("[TabDrop] File operation cancelled.");
+                        return new List<string>(); // Return empty list on cancellation
+                    }
+                    catch (Exception ex)
+                    {
+                         Debug.WriteLine($"[TabDrop] Error during file operation: {ex.Message}");
+                         // Handle other exceptions during the background task if necessary
+                         // Consider reporting the error back to the user via the UI thread
+                         Application.Current.Dispatcher.Invoke(() =>
+                         {
+                              MessageBox.Show($"Error during file operation: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                         });
+                         return new List<string>();
+                    }
+                });
+
+                // Show notification after completion (if not cancelled)
+                if (!cts.IsCancellationRequested && processedFiles.Any())
+                {
+                     string notificationMessage = isCopy ?
+                         (string)Application.Current.FindResource("String_Thumbnail_FilesCopied") :
+                         (string)Application.Current.FindResource("String_Thumbnail_FilesMoved");
+                     // Consider showing a toast notification or updating status bar
+                     StatusMessage = $"{processedFiles.Count} {notificationMessage}"; // Example status update
+                     // ToastNotificationHelper.ShowRelativeTo(owner, notificationMessage); // If you have a toast helper
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions during dialog display or overall process
+                Debug.WriteLine($"[TabDrop] Error processing dropped files: {ex.Message}");
+                 MessageBox.Show($"Error processing dropped files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Close dialog if it was shown and not cancelled
+                if (closeDialog != null && cts != null && !cts.IsCancellationRequested)
+                {
+                    closeDialog();
+                }
+                cts?.Dispose();
+            }
+        }
     }
 }

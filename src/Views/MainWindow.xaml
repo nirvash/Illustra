@@ -61,7 +61,10 @@
                         <Style TargetType="{x:Type dragablz:DragablzItem}" BasedOn="{StaticResource MahAppsTrapezoidDragableTabItemStyle}">
                             <!-- Right-click event handler -->
                             <EventSetter Event="PreviewMouseRightButtonUp" Handler="TabItem_PreviewMouseRightButtonUp"/>
-
+                            <!-- Add AllowDrop and Drop/DragOver handlers -->
+                            <Setter Property="AllowDrop" Value="True"/>
+                            <EventSetter Event="Drop" Handler="TabItem_Drop"/>
+                            <EventSetter Event="DragOver" Handler="TabItem_DragOver"/>
                             <!-- Override the ControlTemplate to customize triggers -->
                             <Setter Property="Template">
                                 <Setter.Value>

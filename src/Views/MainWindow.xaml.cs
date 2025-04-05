@@ -21,6 +21,8 @@ using MahApps.Metro.Controls;
 using System.Windows.Media;
 using Illustra.Shared.Models; // Added for MCP events
 
+using System.Linq;
+using System.Collections.Generic; // For List<string> if needed later
 namespace Illustra.Views
 {
     /// <summary>
@@ -1062,6 +1064,68 @@ namespace Illustra.Views
                 _currentFolderPath = _viewModel.SelectedTab?.State.FolderPath ?? string.Empty;
                 // ステータスバーを更新
                 UpdateStatusBar();
+            }
+        }
+
+        /// <summary>
+        /// Handles the DragOver event for a TabItem.
+        /// Determines the allowed drop effect based on the dragged data and target tab.
+        /// </summary>
+        private void TabItem_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.None; // Default to no drop
+
+            if (sender is DragablzItem tabItem && tabItem.DataContext is TabViewModel tabViewModel)
+            {
+                // Check if the tab represents a valid folder
+                if (!string.IsNullOrEmpty(tabViewModel.State?.FolderPath) && Directory.Exists(tabViewModel.State.FolderPath))
+                {
+                    // Check if the dragged data contains files
+                    if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                    {
+                        // Check if Ctrl key is pressed for copy operation
+                        bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+                        e.Effects = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
+                    }
+                }
+            }
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Handles the Drop event for a TabItem.
+        /// Processes the dropped files by delegating to the MainWindowViewModel.
+        /// </summary>
+        private async void TabItem_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is DragablzItem tabItem && tabItem.DataContext is TabViewModel tabViewModel)
+            {
+                // Get the target folder path from the TabViewModel
+                string? targetFolderPath = tabViewModel.State?.FolderPath;
+
+                if (!string.IsNullOrEmpty(targetFolderPath) && Directory.Exists(targetFolderPath) && e.Data.GetDataPresent(DataFormats.FileDrop))
+                {
+                    // Get the list of dropped files
+                    if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+                    {
+                        // Determine if it's a copy or move operation
+                        bool isCopy = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+
+                        // Activate the target tab before processing // Removed this line: _viewModel.SelectedTab = tabViewModel;
+
+                        // Delegate the file processing to the ViewModel
+                        // We'll add this method to MainWindowViewModel next
+                        await _viewModel.ProcessDroppedFilesAsync(files, targetFolderPath, isCopy);
+
+                        e.Handled = true;
+                    }
+                }
+            }
+
+            // If not handled, reset effects
+            if (!e.Handled)
+            {
+                e.Effects = DragDropEffects.None;
             }
         }
     }
