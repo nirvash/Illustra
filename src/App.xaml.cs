@@ -245,6 +245,11 @@ namespace Illustra
                     {
                         folderToOpen = settings.StartupFolderPath;
                     }
+                    if (settings.SelectLastFileOnStartup &&
+                        File.Exists(settings.LastSelectedFilePath))
+                    {
+                        fileToSelect = settings.LastSelectedFilePath;
+                    }
                     break;
             }
 

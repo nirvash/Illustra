@@ -20,24 +20,6 @@ using System.Collections.Concurrent;
 namespace Illustra.Helpers;
 
 /// <summary>
-/// FileNodesLoadedEventArgsクラスを追加
-/// </summary>
-public class FileNodesLoadedEventArgs : EventArgs
-{
-    public string FolderPath { get; }
-    public string SelectedFilePath { get; }
-
-    public bool RequestFocus { get; }
-
-    public FileNodesLoadedEventArgs(string folderPath, string selectedFilePath, bool requestFocus)
-    {
-        FolderPath = folderPath;
-        SelectedFilePath = selectedFilePath;
-        RequestFocus = requestFocus;
-    }
-}
-
-/// <summary>
 /// サムネイルの読み込みと管理を行うヘルパークラス
 /// </summary>
 public class ThumbnailLoaderHelper
@@ -56,12 +38,10 @@ public class ThumbnailLoaderHelper
     private readonly ThumbnailListViewModel _viewModel;
     private readonly Action<string, bool> _selectCallback;
     private readonly DatabaseManager _db;
-    private bool _isFileNodesLoadedEventFiring = false;
     private CancellationTokenSource? _folderLoadingCTS;
     private CancellationTokenSource? _thumbnailLoadCts;
     private readonly ThumbnailRequestQueue _requestQueue;
     private readonly IThumbnailProcessorService _thumbnailProcessor;
-    public event EventHandler<FileNodesLoadedEventArgs>? FileNodesLoaded;
     public event EventHandler<ScrollToItemRequestEventArgs>? ScrollToItemRequested;
     public event EventHandler<ThumbnailLoadEventArgs>? ThumbnailsLoaded;
 
@@ -188,8 +168,7 @@ public class ThumbnailLoaderHelper
     /// 指定されたフォルダの画像のノードを読み込みます
     /// </summary>
     /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
-    /// <param name="initialSelectedFilePath">初期選択するファイルパス</param>
-    public async Task LoadFileNodesAsync(string folderPath, string? initialSelectedFilePath = null, bool requestFocus = false)
+    public async Task LoadFileNodesAsync(string folderPath)
     {
         try
         {
@@ -258,19 +237,7 @@ public class ThumbnailLoaderHelper
             // 現在のフォルダパスを更新
             _currentFolderPath = folderPath;
 
-            // FileNodesLoadedイベントを発火
-            if (!_isFileNodesLoadedEventFiring)
-            {
-                _isFileNodesLoadedEventFiring = true;
-                try
-                {
-                    FileNodesLoaded?.Invoke(this, new FileNodesLoadedEventArgs(folderPath, initialSelectedFilePath, requestFocus));
-                }
-                finally
-                {
-                    _isFileNodesLoadedEventFiring = false;
-                }
-            }
+            // FileNodesLoaded イベントは不要になったため削除
 
             LogHelper.LogWithTimestamp("完了", LogHelper.Categories.ThumbnailLoader);
         }

@@ -360,16 +360,16 @@ namespace Illustra.ViewModels
         }
 
         // --- タブ追加ヘルパーメソッド ---
-        private void AddNewTab(string folderPath)
+        private void AddNewTab(string folderPath, string filePath = null)
         {
-            var newState = new TabState { FolderPath = folderPath };
+            var newState = new TabState { FolderPath = folderPath, SelectedItemPath = filePath };
             // FilterSettings と SortSettings はデフォルト値を使用
             newState.FilterSettings = new FilterSettings();
             newState.SortSettings = new SortSettings();
             var newTab = new TabViewModel(newState);
             Tabs.Add(newTab);
             SelectedTab = newTab; // 新しいタブを選択状態にする
-            // AddNewTab は DuplicateTab からも呼ばれるため、ここで通知
+                                  // AddNewTab は DuplicateTab からも呼ばれるため、ここで通知
             RaisePropertyChanged(nameof(ShowCloseButton));
         }
 
@@ -431,14 +431,14 @@ namespace Illustra.ViewModels
         /// フォルダツリーまたはお気に入りからフォルダが選択されたときの処理 (ステップ8)
         /// </summary>
         /// <param name="path">選択されたフォルダのパス</param>
-        public void HandleFolderSelected(string path)
+        public void HandleFolderSelected(string path, string filePath)
         {
             if (string.IsNullOrEmpty(path)) return; // パスが無効な場合は何もしない
 
             // タブが0個の場合は新しいタブを作成して開く
             if (Tabs.Count == 0)
             {
-                AddNewTab(path);
+                AddNewTab(path, filePath);
                 return; // 新しいタブを作成したので以降の処理は不要
             }
 
@@ -447,7 +447,7 @@ namespace Illustra.ViewModels
 
             // アクティブなタブの状態を更新
             SelectedTab.State.FolderPath = path;
-            SelectedTab.State.SelectedItemPath = null; // フォルダが変わったら選択は解除する
+            SelectedTab.State.SelectedItemPath = filePath;
 
             // サムネイルリストに更新を通知
             // EventAggregator を使用してイベントを発行
@@ -472,7 +472,7 @@ namespace Illustra.ViewModels
         /// </summary>
         private void OnMcpOpenFolderReceived(McpOpenFolderEventArgs args)
         {
-            HandleFolderSelected(args.FolderPath);
+            HandleFolderSelected(args.FolderPath, args.SelectedFilePath);
         }
 
         /// <summary>
