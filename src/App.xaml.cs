@@ -235,7 +235,11 @@ namespace Illustra
             switch (settings.StartupMode)
             {
                 case AppSettingsModel.StartupFolderMode.LastOpened:
-                    // folderToOpen = settings.LastFolderPath; タブで復元するので指定しない
+                    // タブ対応前の設定で開かれたときに最後に開いていたフォルダを指定
+                    if (settings.TabStates == null || settings.TabStates.Count == 0)
+                    {
+                        folderToOpen = settings.LastFolderPath;
+                    }
                     fileToSelect = settings.LastSelectedFilePath;
                     break;
 

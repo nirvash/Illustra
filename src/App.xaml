@@ -9,14 +9,14 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Dragablz テーマ -->
-                <ResourceDictionary Source="pack://application:,,,/Dragablz;component/Themes/MahApps.xaml" />
                 <!-- MahApps.Metro のデフォルトテーマ -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml"/>
                 <ResourceDictionary Source="Themes/Dark.xaml" />
                 <ResourceDictionary Source="Themes/SliderStyles.xaml"/>
+                <!-- Dragablz テーマ (順番を間違えるとタブ表示時に例外) -->
+                <ResourceDictionary Source="pack://application:,,,/Dragablz;component/Themes/MahApps.xaml" />
                 <!-- アプリケーションのスタイルリソース -->
                 <ResourceDictionary Source="Resources/Strings.xaml"/>
                 <!-- 言語リソースは動的に読み込まれます -->
