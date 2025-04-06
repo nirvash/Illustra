@@ -293,24 +293,23 @@ namespace Illustra
             // 既存の辞書を削除せずに、新しいテーマを追加して入れ替える
             var oldTheme = Resources.MergedDictionaries
                 .FirstOrDefault(d => d.Source != null && (d.Source.OriginalString.EndsWith("Themes/Dark.xaml") || d.Source.OriginalString.EndsWith("Themes/Light.xaml")));
+            Resources.MergedDictionaries.Add(newTheme);
             if (oldTheme != null)
             {
                 Resources.MergedDictionaries.Remove(oldTheme);
             }
-            Resources.MergedDictionaries.Add(newTheme);
 
             // Sliderスタイルリソースを常に最後に追加して上書き
             var sliderStyleUri = new Uri("Themes/SliderStyles.xaml", UriKind.Relative);
             var existingSliderStyle = Resources.MergedDictionaries
                 .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("SliderStyles.xaml"));
-
+            var sliderStyleDict = new ResourceDictionary { Source = sliderStyleUri };
+            Resources.MergedDictionaries.Add(sliderStyleDict);
             if (existingSliderStyle != null)
             {
                 Resources.MergedDictionaries.Remove(existingSliderStyle);
             }
 
-            var sliderStyleDict = new ResourceDictionary { Source = sliderStyleUri };
-            Resources.MergedDictionaries.Add(sliderStyleDict);
         }
 
         public void UpdateResourceDictionaries()

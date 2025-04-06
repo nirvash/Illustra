@@ -78,17 +78,6 @@
                         <Setter Property="SelectionBrush"
                                 Value="#E4B5B9"/>
                 </Style>
-                <Style x:Key="RatingStarButton"
-                       TargetType="Button">
-                        <Setter Property="Margin"
-                                Value="2,0"/>
-                        <Setter Property="Background"
-                                Value="Transparent"/>
-                        <Setter Property="BorderThickness"
-                                Value="0"/>
-                        <Setter Property="Padding"
-                                Value="0"/>
-                </Style>
 
                 <!-- 読み取り専用のテキストボックススタイル -->
                 <Style x:Key="ReadOnlyTextBoxStyle"
@@ -143,8 +132,9 @@
                                            FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                            Margin="0,0,35,0"/>
                                 <Button x:Name="RatingStar1"
-                                        Style="{StaticResource RatingStarButton}"
+                                        Style="{DynamicResource Illustra.Styles.RatingStarButton}"
                                         Tag="1"
+                                        Focusable="False"
                                         Command="{Binding RatingCommand, ElementName=PropertyPanel}"
                                         CommandParameter="1">
                                         <controls:RatingStarControl RatingValue="1"
@@ -154,8 +144,9 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                                 <Button x:Name="RatingStar2"
-                                        Style="{StaticResource RatingStarButton}"
+                                        Style="{DynamicResource Illustra.Styles.RatingStarButton}"
                                         Tag="2"
+                                        Focusable="False"
                                         Command="{Binding RatingCommand, ElementName=PropertyPanel}"
                                         CommandParameter="2">
                                         <controls:RatingStarControl RatingValue="2"
@@ -165,8 +156,9 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                                 <Button x:Name="RatingStar3"
-                                        Style="{StaticResource RatingStarButton}"
+                                        Style="{DynamicResource Illustra.Styles.RatingStarButton}"
                                         Tag="3"
+                                        Focusable="False"
                                         Command="{Binding RatingCommand, ElementName=PropertyPanel}"
                                         CommandParameter="3">
                                         <controls:RatingStarControl RatingValue="3"
@@ -176,8 +168,9 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                                 <Button x:Name="RatingStar4"
-                                        Style="{StaticResource RatingStarButton}"
+                                        Style="{DynamicResource Illustra.Styles.RatingStarButton}"
                                         Tag="4"
+                                        Focusable="False"
                                         Command="{Binding RatingCommand, ElementName=PropertyPanel}"
                                         CommandParameter="4">
                                         <controls:RatingStarControl RatingValue="4"
@@ -187,8 +180,9 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                                 <Button x:Name="RatingStar5"
-                                        Style="{StaticResource RatingStarButton}"
+                                        Style="{DynamicResource Illustra.Styles.RatingStarButton}"
                                         Tag="5"
+                                        Focusable="False"
                                         Command="{Binding RatingCommand, ElementName=PropertyPanel}"
                                         CommandParameter="5">
                                         <controls:RatingStarControl RatingValue="5"
@@ -517,18 +511,22 @@
                                             <Button Content="{DynamicResource String_Thumbnail_CopyPrompt}"
                                                     Margin="0,0,10,0"
                                                     Padding="10,5"
+                                                    Focusable="False"
                                                     Click="CopyPromptContent_Click"/>
                                             <Button Content="{DynamicResource String_Thumbnail_CopyNegativePrompt}"
                                                     Margin="0,0,10,0"
                                                     Padding="10,5"
+                                                    Focusable="False"
                                                     Click="CopyNegativePrompt_Click"
                                                     Visibility="{Binding StableDiffusionResult.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>
                                             <Button Content="{DynamicResource String_Thumbnail_CopyAllPrompt}"
                                                     Margin="0,0,10,0"
                                                     Padding="10,5"
+                                                    Focusable="False"
                                                     Click="CopyOriginalText_Click"/>
                                             <Button Content="{DynamicResource String_Property_EditOriginalPrompt}"
                                                     Padding="10,5"
+                                                    Focusable="False"
                                                     Click="EditOriginalPrompt_Click"
                                                     Visibility="{Binding CanEditExif, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </StackPanel>
