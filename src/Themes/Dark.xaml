@@ -1,72 +1,224 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:System="clr-namespace:System;assembly=PresentationFramework"
-                    xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls">
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:options="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+                    mc:Ignorable="options">
+
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Taupe.xaml"/>
+        <!-- Base resources -->
+        <ResourceDictionary Source="pack://application:,,,/Themes/Base.xaml"/>
+        <!-- MahApps Light theme (if needed, but likely overridden) -->
+        <!-- <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.xaml" /> -->
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- 基本カラー -->
-    <Color x:Key="GrayPrimaryColor">#333333</Color>  <!-- メインの灰色 -->
-    <Color x:Key="GrayDarkColor">#222222</Color>  <!-- ダークな灰色 -->
-    <Color x:Key="GrayLightColor">#AAAAAA</Color>  <!-- 明るい灰色 -->
-    <Color x:Key="GrayHighlightColor">#CCCCCC</Color>  <!-- ハイライト -->
+    <!-- Theme Metadata -->
+    <system:String x:Key="Theme.Name">Illustra.Dark</system:String>
+    <system:String x:Key="Theme.Origin">Illustra</system:String>
+    <system:String x:Key="Theme.DisplayName">Illustra Dark</system:String>
+    <system:String x:Key="Theme.BaseColorScheme">Dark</system:String>
+    <system:String x:Key="Theme.ColorScheme">Illustra.Dark</system:String>
+    <Color x:Key="Theme.PrimaryAccentColor">#FF6B90B8</Color>
+    <!-- TODO: Verify/Adjust color value -->
 
-    <!-- アクセントカラーの設定 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="{StaticResource GrayHighlightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.AccentBrush" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="{StaticResource GrayLightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="{StaticResource GrayLightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Accent4" Color="{StaticResource GrayHighlightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Highlight" Color="{StaticResource GrayHighlightColor}" />
+    <!-- MahApps Base Colors (Light Theme Specific) -->
+    <!-- ACCENT COLORS -->
+    <Color x:Key="MahApps.Colors.Highlight">#FF6B90B8</Color>
+    <Color x:Key="MahApps.Colors.Highlight.Custom">#FF6B90B8</Color>
+    <!-- TODO: Verify/Adjust color value -->
+    <Color x:Key="MahApps.Colors.AccentBase">#FF6B90B8</Color>
+    <!-- TODO: Verify/Adjust color value -->
+    <Color x:Key="MahApps.Colors.Accent">#CC6B90B8</Color>
+    <!-- 80% -->
+    <!-- TODO: Verify/Adjust color value -->
+    <Color x:Key="MahApps.Colors.Accent2">#996B90B8</Color>
+    <!-- 60% -->
+    <!-- TODO: Verify/Adjust color value -->
+    <Color x:Key="MahApps.Colors.Accent3">#666B90B8</Color>
+    <!-- 40% -->
+    <!-- TODO: Verify/Adjust color value -->
+    <Color x:Key="MahApps.Colors.Accent4">#336B90B8</Color>
+    <!-- 20% -->
+    <!-- TODO: Verify/Adjust color value -->
 
-    <!-- コントロールの無効状態  -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Control.Disabled" Color="{StaticResource GrayDarkColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.CheckmarkFill" Color="{StaticResource GrayHighlightColor}" />
+    <!-- BASE COLORS -->
+    <Color x:Key="MahApps.Colors.ThemeForeground">#FFCCCCCC</Color>
+    <!-- Light Gray -->
+    <Color x:Key="MahApps.Colors.ThemeBackground">#FF222222</Color>
+    <!-- Dark Gray -->
+    <Color x:Key="MahApps.Colors.IdealForeground">#FFCCCCCC</Color>
+    <!-- Light Gray -->
+    <Color x:Key="MahApps.Colors.Gray1">#FF1F1F1F</Color>
+    <!-- Darkest Gray -->
+    <Color x:Key="MahApps.Colors.Gray2">#FF222222</Color>
+    <!-- Dark Gray (ThemeBackground) -->
+    <Color x:Key="MahApps.Colors.Gray3">#FF333333</Color>
+    <!-- Dark Gray -->
+    <Color x:Key="MahApps.Colors.Gray4">#FF444444</Color>
+    <!-- Dark Gray -->
+    <Color x:Key="MahApps.Colors.Gray5">#FF555555</Color>
+    <!-- Mid-Dark Gray -->
+    <Color x:Key="MahApps.Colors.Gray6">#FF666666</Color>
+    <!-- Mid-Dark Gray -->
+    <Color x:Key="MahApps.Colors.Gray7">#FF777777</Color>
+    <!-- Mid-Light Gray -->
+    <Color x:Key="MahApps.Colors.Gray8">#FFAAAAAA</Color>
+    <!-- Light Gray -->
+    <Color x:Key="MahApps.Colors.Gray9">#FF555555</Color>
+    <!-- combo box selected background (w/a) - Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.Gray10">#FFCCCCCC</Color>
+    <!-- for menu check - Adjusted Light -->
+    <Color x:Key="MahApps.Colors.Gray">#FF666666</Color>
+    <!-- Mid-Dark Gray (New Gray6) -->
+    <Color x:Key="MahApps.Colors.Gray.MouseOver">#FF888888</Color>
+    <!-- Mid-Light Gray (New Gray7) -->
+    <Color x:Key="MahApps.Colors.Flyout">#FF222222</Color>
+    <!-- Dark Gray (ThemeBackground) -->
+    <Color x:Key="MahApps.Colors.Thumb">#FF666666</Color>
 
-    <!-- ウィンドウタイトルバー -->
-    <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.WindowTitleNonActive" Color="{StaticResource GrayDarkColor}" />
+    <!-- CORE CONTROL COLORS -->
+    <Color x:Key="MahApps.Colors.ProgressIndeterminate1">#33787878</Color>
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.ProgressIndeterminate2">#336A6A6A</Color>
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.ProgressIndeterminate3">#4C787878</Color>
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.ProgressIndeterminate4">#4C6A6A6A</Color>
+    <!-- Adjusted Dark -->
 
-    <!-- タブ -->
-    <SolidColorBrush x:Key="MahApps.Brushes.TabActive" Color="{StaticResource MahApps.Colors.ThemeBackground}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActive" Color="#555555" />
-    <SolidColorBrush x:Key="MahApps.Brushes.TabActiveBorder" Color="#888888" />
-    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActiveBorder" Color="#888888" />
+    <!-- Slider Colors -->
+    <Color x:Key="MahApps.Colors.SliderValue.Disabled">#FF4C4C4C</Color>
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.SliderTrack.Disabled">#FF333333</Color>
+    <!-- Adjusted Dark (New Gray3) -->
+    <Color x:Key="MahApps.Colors.SliderThumb.Disabled">#FF555555</Color>
+    <!-- Adjusted Dark (New Gray5) -->
+    <Color x:Key="MahApps.Colors.SliderTrack.Hover">#FF888888</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.SliderTrack.Normal">#FF555555</Color>
+    <!-- Adjusted Dark (New Gray5) -->
+    <SolidColorBrush x:Key="controls:SliderHelper.ThumbFillBrush"
+            Color="{DynamicResource MahApps.Colors.Gray3}"/>
+    <SolidColorBrush x:Key="controls:SliderHelper.ThumbBorderBrush"
+            Color="{DynamicResource MahApps.Colors.Gray6}"/>
 
 
-    <!-- サムネイルの通常枠 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.CustomBackground" Color="#333333" />
-    <SolidColorBrush x:Key="MahApps.Brushes.CustomBorder" Color="#555555" />
 
-    <!-- 主張を弱めるテキスト用 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.TextForegroundMuted" Color="#AAAAAA" />
+    <!-- Window Colors -->
+    <Color x:Key="MahApps.Colors.Window.Background.Backdrop.Acrylic">#B21E1E1E</Color>
 
-    <!-- ダークテーマ用のステータスバー設定 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBackground" Color="#444444" />
-    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarForeground" Color="White" />
-    <SolidColorBrush x:Key="MahApps.Brushes.StatusBarBorder" Color="#666666" />
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.Window.Background.Backdrop.Auto">#FF222222</Color>
+    <!-- Adjusted Dark (ThemeBackground) -->
 
-    <!-- カスタムスライダーサイズ -->
-    <System:Double x:Key="IllustraDefaultThumbSize">20</System:Double>
+    <!-- Button Colors -->
+    <Color x:Key="MahApps.Colors.Button.Flat.Background.Pressed">#FF888888</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.Button.Flat.Foreground.Pressed">#FFCCCCCC</Color>
+    <!-- Adjusted Dark (ThemeForeground) -->
 
-    <!-- ボーダー（枠）や GlowBrush -->
-    <SolidColorBrush x:Key="MahApps.Brushes.BorderBrush" Color="{StaticResource GrayDarkColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.GlowBrush" Color="{StaticResource GrayLightColor}" />
+    <!-- Menu Colors -->
+    <Color x:Key="MahApps.Colors.ContextMenu.Border">#FF666666</Color>
+    <!-- Adjusted Dark (New Gray6) -->
+    <Color x:Key="MahApps.Colors.SubMenu.Border">#FF666666</Color>
+    <!-- Adjusted Dark (New Gray6) -->
+    <Color x:Key="MahApps.Colors.MenuItem.SelectionFill">#FF444444</Color>
+    <!-- Adjusted Dark (New Gray4) -->
+    <Color x:Key="MahApps.Colors.MenuItem.SelectionStroke">#FF666666</Color>
+    <!-- Adjusted Dark (New Gray6) -->
+    <Color x:Key="MahApps.Colors.TopMenuItem.PressedFill">#FF555555</Color>
+    <!-- Adjusted Dark (New Gray5) -->
+    <Color x:Key="MahApps.Colors.TopMenuItem.PressedStroke">#FF888888</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.TopMenuItem.SelectionStroke">#FF6B90B8</Color> <!-- Accent: Keep as is -->
+    <Color x:Key="MahApps.Colors.MenuItem.DisabledForeground">#FF888888</Color>
+    <!-- Adjusted Dark (New Gray7) -->
 
-    <!-- コントロールの背景 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Control.Background" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Control.Foreground" Color="White" />
+    <!-- Badge Colors -->
+    <Color x:Key="MahApps.Colors.Badged.Background.Disabled">#FF888888</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.Badged.Foreground.Disabled">#FFCCCCCC</Color>
+    <!-- Adjusted Dark (ThemeForeground) -->
 
-    <!-- ボタンのスタイル -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Button.Background" Color="{StaticResource GrayPrimaryColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Button.Foreground" Color="White" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Button.BorderBrush" Color="{StaticResource GrayDarkColor}" />
+    <!-- Custom Tab Brushes -->
+    <SolidColorBrush x:Key="MahApps.Brushes.TabActive"
+                     Color="{StaticResource MahApps.Colors.ThemeBackground}"
+                     options:Freeze="True"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabActiveBorder"
+                     Color="{StaticResource MahApps.Colors.Gray6}"
+                     options:Freeze="True"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActive"
+                     Color="{StaticResource MahApps.Colors.Gray3}"
+                     options:Freeze="True"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabNonActiveBorder"
+                     Color="{StaticResource MahApps.Colors.Gray6}"
+                     options:Freeze="True"/>
+    <SolidColorBrush x:Key=" SystemColors.ControlBrush"
+                     Color="{StaticResource MahApps.Colors.ThemeBackground}"
+                     options:Freeze="True"/>
 
-    <!-- ラジオボタンなどのチェック -->
-    <SolidColorBrush x:Key="MahApps.Brushes.CheckBox.ForegroundChecked" Color="{StaticResource GrayHighlightColor}" />
+    <!-- Custom Thumbnail Item Border -->
+    <SolidColorBrush x:Key="MahApps.Brushes.ListItem.MouseOver.Background.Custom"
+                     Color="#282828"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.ListItem.MouseOver.BorderBrush.Custom"
+                     Color="#777777"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.CustomBorder"
+                     Color="#555555"/>
 
-    <!-- フォルダツリーの選択時のハイライト色 -->
-    <SolidColorBrush x:Key="MahApps.Brushes.Selected.Background" Color="{StaticResource GrayLightColor}" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Selected.Foreground" Color="{StaticResource GrayDarkColor}" />
+    <!-- WinUI Style Colors -->
+    <Color x:Key="MahApps.Colors.SystemAccent">#FF6B90B8</Color>
+    <Color x:Key="MahApps.Colors.SystemAltHigh">#FF000000</Color>
+    <!-- Pure Black -->
+    <Color x:Key="MahApps.Colors.SystemAltLow">#33000000</Color>
+    <!-- Transparent Black -->
+    <Color x:Key="MahApps.Colors.SystemAltMedium">#99000000</Color>
+    <!-- Semi-Transparent Black -->
+    <Color x:Key="MahApps.Colors.SystemAltMediumHigh">#CC000000</Color>
+    <!-- More Opaque Black -->
+    <Color x:Key="MahApps.Colors.SystemAltMediumLow">#66000000</Color>
+    <!-- Less Transparent Black -->
+    <Color x:Key="MahApps.Colors.SystemBaseHigh">#FFAAAAAA</Color>
+    <!-- Adjusted Dark (New Gray8) -->
+    <Color x:Key="MahApps.Colors.SystemBaseLow">#FF777777</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.SystemBaseMedium">#FF999999</Color>
+    <!-- Adjusted Dark (New Gray6) -->
+    <Color x:Key="MahApps.Colors.SystemBaseMediumHigh">#FF8F8F8F</Color>
+    <!-- Adjusted Dark -->
+    <Color x:Key="MahApps.Colors.SystemBaseMediumLow">#FF555555</Color>
+    <!-- Adjusted Dark (New Gray5) -->
+    <Color x:Key="MahApps.Colors.SystemChromeAltLow">#FFCCCCCC</Color>
+    <!-- Adjusted Dark (ThemeForeground) -->
+    <Color x:Key="MahApps.Colors.SystemChromeBlackHigh">#FFFFFFFF</Color>
+    <!-- Pure White -->
+    <Color x:Key="MahApps.Colors.SystemChromeBlackLow">#33FFFFFF</Color>
+    <!-- Transparent White -->
+    <Color x:Key="MahApps.Colors.SystemChromeBlackMediumLow">#66FFFFFF</Color>
+    <!-- Semi-Transparent White -->
+    <Color x:Key="MahApps.Colors.SystemChromeBlackMedium">#CCFFFFFF</Color>
+    <!-- More Opaque White -->
+    <Color x:Key="MahApps.Colors.SystemChromeDisabledHigh">#FF555555</Color>
+    <!-- Adjusted Dark (New Gray5) -->
+    <Color x:Key="MahApps.Colors.SystemChromeDisabledLow">#FF333333</Color>
+    <!-- Adjusted Dark (New Gray3) -->
+    <Color x:Key="MahApps.Colors.SystemChromeHigh">#FF666666</Color>
+    <!-- Adjusted Dark (New Gray6) -->
+    <Color x:Key="MahApps.Colors.SystemChromeLow">#FF222222</Color>
+    <!-- Adjusted Dark (ThemeBackground) -->
+    <Color x:Key="MahApps.Colors.SystemChromeMedium">#FF222222</Color>
+    <!-- Adjusted Dark (New Gray2) -->
+    <Color x:Key="MahApps.Colors.SystemChromeMediumLow">#FF111111</Color>
+    <!-- Adjusted Dark (New Gray1) -->
+    <Color x:Key="MahApps.Colors.SystemChromeWhite">#FF000000</Color>
+    <!-- Pure Black -->
+    <Color x:Key="MahApps.Colors.SystemChromeGray">#FF777777</Color>
+    <!-- Adjusted Dark (New Gray7) -->
+    <Color x:Key="MahApps.Colors.SystemListLow">#1AFFFFFF</Color>
+    <!-- Very Transparent White -->
+    <Color x:Key="MahApps.Colors.SystemListMedium">#33FFFFFF</Color>
+    <!-- Transparent White -->
+    <Color x:Key="MahApps.Colors.SystemErrorText">#FFFF5252</Color>
+    <!-- Adjusted Light Red -->
+
 </ResourceDictionary>

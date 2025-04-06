@@ -19,6 +19,7 @@
   },
   "cSpell.words": [
     "Bgra",
+    "Checkmark",
     "Exif",
     "fnumber",
     "Illustra",
@@ -28,5 +29,8 @@
     "Virtualizable"
   ],
   "terminal.explorerKind": "external",
-  "dotnet.codeLens.enableReferencesCodeLens": true
+  "dotnet.codeLens.enableReferencesCodeLens": true,
+  "[xaml]": {
+    "editor.formatOnSave": false
+  }
 }

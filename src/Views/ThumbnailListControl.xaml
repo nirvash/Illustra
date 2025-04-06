@@ -87,7 +87,8 @@
                         Focusable="False">
                     <iconpack:PackIconMaterialDesign
                         Kind="Refresh"
-                        Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
+                        Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                        Background="Transparent"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Center"/>
                 </Button>
@@ -107,7 +108,7 @@
                         IsSnapToTickEnabled="True"
                         VerticalAlignment="Center"
                         Focusable="False"
-                        Style="{DynamicResource FlatSlider}"
+                        Style="{DynamicResource CustomSliderStyle}"
                         ValueChanged="ThumbnailSizeSlider_ValueChanged"
                         Thumb.DragCompleted="ThumbnailSizeSlider_DragCompleted"/>
             </StackPanel>
@@ -124,12 +125,13 @@
                             Click="RatingFilter_Click"
                             x:Name="Filter1"
                             ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
-                            Style="{StaticResource RatingStarButton}"
-                            Focusable="False"
-                            Padding="1">
+                            Style="{DynamicResource Illustra.Styles.RatingStarButton}"
+                            Focusable="False">
                         <local:RatingStarControl RatingValue="1"
                                                  Height="18"
                                                  Width="18"
+                                                 Margin="0"
+                                                 Padding="0"
                                                  DisplayMode="Multiple"
                                                  CurrentRating="{Binding CurrentRatingFilter}"/>
                     </Button>
@@ -137,9 +139,8 @@
                             Click="RatingFilter_Click"
                             x:Name="Filter2"
                             ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
-                            Style="{StaticResource RatingStarButton}"
-                            Focusable="False"
-                            Padding="1">
+                            Style="{DynamicResource Illustra.Styles.RatingStarButton}"
+                            Focusable="False">
                         <local:RatingStarControl RatingValue="2"
                                                  Height="18"
                                                  Width="18"
@@ -150,9 +151,8 @@
                             Click="RatingFilter_Click"
                             x:Name="Filter3"
                             ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
-                            Style="{StaticResource RatingStarButton}"
-                            Focusable="False"
-                            Padding="1">
+                            Style="{DynamicResource Illustra.Styles.RatingStarButton}"
+                            Focusable="False">
                         <local:RatingStarControl RatingValue="3"
                                                  Height="18"
                                                  Width="18"
@@ -163,9 +163,8 @@
                             Click="RatingFilter_Click"
                             x:Name="Filter4"
                             ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
-                            Style="{StaticResource RatingStarButton}"
-                            Focusable="False"
-                            Padding="1">
+                            Style="{DynamicResource Illustra.Styles.RatingStarButton}"
+                            Focusable="False">
                         <local:RatingStarControl RatingValue="4"
                                                  Height="18"
                                                  Width="18"
@@ -176,9 +175,8 @@
                             Click="RatingFilter_Click"
                             x:Name="Filter5"
                             ToolTip="{DynamicResource String_Thumbnail_RatingFilter}"
-                            Style="{StaticResource RatingStarButton}"
-                            Focusable="False"
-                            Padding="1">
+                            Style="{DynamicResource Illustra.Styles.RatingStarButton}"
+                            Focusable="False">
                         <local:RatingStarControl RatingValue="5"
                                                  Height="18"
                                                  Width="18"
@@ -405,14 +403,14 @@
                                     </Border>
                                     <!-- 選択時のハイライト境界線（オーバーレイ） -->
                                     <Border x:Name="SelectionBorder"
-                                            BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                                            BorderBrush="{DynamicResource  MahApps.Brushes.Highlight}"
                                             BorderThickness="2"
                                             CornerRadius="5"
                                             Opacity="0">
                                     </Border>
                                     <!-- 最後に選択されたアイテムの追加ハイライト -->
                                     <Border x:Name="LastSelectedBorder"
-                                            BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                                            BorderBrush="{DynamicResource MahApps.Brushes.Highlight}"
                                             BorderThickness="3"
                                             CornerRadius="5"
                                             Opacity="0">
@@ -434,7 +432,10 @@
                                     <Trigger Property="IsMouseOver"
                                             Value="True">
                                         <Setter Property="Background"
-                                                Value="#0F000000"/>
+                                                Value="{DynamicResource MahApps.Brushes.ListItem.MouseOver.Background.Custom}"/>
+                                        <Setter TargetName="NormalBorder"
+                                                Property="BorderBrush"
+                                                Value="{DynamicResource MahApps.Brushes.ListItem.MouseOver.BorderBrush.Custom}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -458,7 +459,7 @@
                                         HorizontalAlignment="Center"
                                         Margin="2,0,2,-20"
                                         Padding="2"
-                                        Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
+                                        Foreground="{DynamicResource MahApps.Brushes.Text}"
                                         Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
                                         TextAlignment="Center"
                                         TextTrimming="CharacterEllipsis"/>
@@ -468,7 +469,7 @@
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
                                     Margin="0,2,2,0"
-                                    Foreground="White"
+                                    Foreground="{DynamicResource MahApps.Brushes.Text}"
                                     Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock.Effect>
                                     <DropShadowEffect Color="Black"
@@ -512,7 +513,6 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    FontSize="16"
-                   Foreground="{DynamicResource MahApps.Brushes.TextForegroundMuted}"
                    Visibility="{Binding IsFilterResultEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"
                    IsHitTestVisible="False"/>
 
