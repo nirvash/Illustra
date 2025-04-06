@@ -73,8 +73,7 @@ namespace Illustra.Views
             // イベント購読
             // McpOpenFolderEvent の購読は ViewModel で行うため削除
             // FilterChangedEvent, SortOrderChangedEvent, ShortcutSettingsChangedEvent, SelectionCountChangedEvent の購読はそのまま
-            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread); // このイベントは自分自身のイベントも拾う設計
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
@@ -771,17 +770,6 @@ namespace Illustra.Views
 
         private void OnFilterChanged(FilterChangedEventArgs args)
         {
-            // イベントソースが自分自身("MainWindow")の場合はUI更新のみ行う
-            // (購読時のフィルタで除外されているはずだが、念のためチェック)
-            if (args.SourceId == CONTROL_ID)
-            {
-                // Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from Self (MainWindow), updating UI only.");
-                // 自分の操作による変更は既に内部状態に反映されているはずなので、UI更新のみ行う
-                UpdateFilterMenu();
-                UpdateStatusBar();
-                return;
-            }
-
             Debug.WriteLine($"[MainWindow.OnFilterChanged] Received from: {args.SourceId}, Clear: {args.IsClearOperation}, Changed: {string.Join(",", args.ChangedTypes)}"); // IsFullUpdate 削除
 
             // クリア操作の場合
