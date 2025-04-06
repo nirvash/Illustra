@@ -89,7 +89,7 @@
                         VerticalAlignment="Center" Margin="10,0"
                         ValueChanged="SeekBar_ValueChanged"
                         IsMoveToPointEnabled="True"
-                        Style="{DynamicResource FlatSlider}"
+                        Style="{DynamicResource CustomSliderStyle}"
                         Thumb.DragStarted="SeekBar_DragStarted"
                         Thumb.DragCompleted="SeekBar_DragCompleted">
                 </Slider>
@@ -109,7 +109,7 @@
                             VerticalAlignment="Center"
                             IsMoveToPointEnabled="True"
                             Thumb.DragCompleted="VolumeSlider_DragCompleted"
-                            Style="{DynamicResource FlatSlider}"
+                            Style="{DynamicResource CustomSliderStyle}"
                             ValueChanged="VolumeSlider_ValueChanged"/>
                 </Border>
                 <TextBlock x:Name="TimeLabel" VerticalAlignment="Center" Margin="10,0,0,0" Text="00:00 / 00:00"/>

@@ -36,6 +36,7 @@
 
                 <CheckBox Content="{DynamicResource String_Settings_Startup_SelectLastFile}"
                          IsChecked="{Binding SelectLastFileOnStartup}"
+                         x:Name="CheckBox"
                          Margin="0,10,0,0"/>
             </StackPanel>
         </GroupBox>

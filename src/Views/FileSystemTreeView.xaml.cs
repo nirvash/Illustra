@@ -432,7 +432,7 @@ namespace Illustra.Views
         {
             if (item == null) return;
             // MahApps のテーマブラシを使用 (DynamicResource として取得)
-            if (TryFindResource("MahApps.Brushes.Selected.Background") is Brush backgroundBrush)
+            if (TryFindResource("MahApps.Brushes.Accent3") is Brush backgroundBrush)
             {
                 item.Background = backgroundBrush;
             }

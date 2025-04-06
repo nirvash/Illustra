@@ -292,7 +292,7 @@ namespace Illustra
 
             // 既存の辞書を削除せずに、新しいテーマを追加して入れ替える
             var oldTheme = Resources.MergedDictionaries
-                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Themes/"));
+                .FirstOrDefault(d => d.Source != null && (d.Source.OriginalString.EndsWith("Themes/Dark.xaml") || d.Source.OriginalString.EndsWith("Themes/Light.xaml")));
             if (oldTheme != null)
             {
                 Resources.MergedDictionaries.Remove(oldTheme);
@@ -318,10 +318,6 @@ namespace Illustra
             var currentCulture = Thread.CurrentThread.CurrentUICulture;
             System.Diagnostics.Debug.WriteLine($"現在の言語: {currentCulture.Name}, TwoLetterISOLanguageName: {currentCulture.TwoLetterISOLanguageName}");
 
-            // `MahApps.Metro` のテーマを削除しないようにする
-            var existingThemeDictionaries = Resources.MergedDictionaries
-                .Where(d => d.Source != null && d.Source.OriginalString.Contains("MahApps.Metro"))
-                .ToList();
 
             // 言語リソースのみ削除
             var oldLangDictionaries = Resources.MergedDictionaries
@@ -360,14 +356,6 @@ namespace Illustra
                 // 言語リソースを追加（テーマリソースは維持）
                 Resources.MergedDictionaries.Add(resourceDictionary);
 
-                // `MahApps.Metro` のテーマを再適用（念のため）
-                foreach (var dict in existingThemeDictionaries)
-                {
-                    if (!Resources.MergedDictionaries.Contains(dict))
-                    {
-                        Resources.MergedDictionaries.Add(dict);
-                    }
-                }
             }
             catch (Exception ex)
             {

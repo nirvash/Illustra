@@ -12,8 +12,7 @@
                 <!-- MahApps.Metro のデフォルトテーマ -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml"/>
-                <ResourceDictionary Source="Themes/Dark.xaml" />
+                <ResourceDictionary Source="Themes/Light.xaml" />
                 <ResourceDictionary Source="Themes/SliderStyles.xaml"/>
                 <!-- Dragablz テーマ (順番を間違えるとタブ表示時に例外) -->
                 <ResourceDictionary Source="pack://application:,,,/Dragablz;component/Themes/MahApps.xaml" />
@@ -71,7 +70,6 @@
                 <Setter Property="VerticalContentAlignment"
                         Value="Center"/>
             </Style>
-
             <!-- DoubleUpDown のスタイル定義 -->
             <Style TargetType="xctk:DoubleUpDown">
                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
@@ -93,7 +91,8 @@
             </Style>
             <!-- Apply MahAppsTabablzControlStyle as the default for TabablzControl -->
             <Style TargetType="{x:Type dragablz:TabablzControl}" BasedOn="{StaticResource MahAppsTabablzControlStyle}" />
-
+            <Style TargetType="Button"
+                   BasedOn="{StaticResource Illustra.Styles.Button}" />
         </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>
