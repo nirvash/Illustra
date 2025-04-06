@@ -156,6 +156,16 @@
     <system:String x:Key="String_Settings_SavedMessage">設定が保存されました。一部の変更は、アプリケーションの再起動が必要な場合があります。</system:String>
     <system:String x:Key="String_Settings_LanguageDescription">言語設定を変更すると、アプリケーションの表示言語が変更されます。</system:String>
 
+
+    <!-- ダイアログタイトル -->
+    <system:String x:Key="String_Dialog_SelectStartupFolderTitle">起動時のフォルダを選択</system:String>
+    <system:String x:Key="String_Dialog_SelectNewTabFolderTitle">新規タブで開くフォルダを選択</system:String>
+
+    <!-- 新規タブのフォルダ設定 -->
+    <system:String x:Key="String_Settings_NewTabFolder_Section">新規タブのフォルダ</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_MyPictures">マイピクチャ (デフォルト)</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_Specified">指定したフォルダ:</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_Browse">参照...</system:String>
     <!-- Property Panel -->
     <system:String x:Key="String_Property_Title">プロパティ</system:String>
     <system:String x:Key="String_Property_Filename">ファイル名</system:String>

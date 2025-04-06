@@ -156,6 +156,16 @@
     <system:String x:Key="String_Settings_SavedMessage">Settings have been saved. Some changes may require restarting the application.</system:String>
     <system:String x:Key="String_Settings_LanguageDescription">Changing the language setting will change the display language of the application.</system:String>
 
+
+    <!-- Dialog Titles -->
+    <system:String x:Key="String_Dialog_SelectStartupFolderTitle">Select Startup Folder</system:String>
+    <system:String x:Key="String_Dialog_SelectNewTabFolderTitle">Select Folder for New Tab</system:String>
+
+    <!-- New Tab Folder Settings -->
+    <system:String x:Key="String_Settings_NewTabFolder_Section">New Tab Folder</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_MyPictures">My Pictures (Default)</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_Specified">Specified Folder:</system:String>
+    <system:String x:Key="String_Settings_NewTabFolder_Browse">Browse...</system:String>
     <!-- Property Panel -->
     <system:String x:Key="String_Property_Title">Properties</system:String>
     <system:String x:Key="String_Property_Filename">Filename</system:String>

@@ -421,9 +421,35 @@ namespace Illustra.ViewModels
         // --- 新規タブ追加コマンド ---
         private void ExecuteAddNewTab()
         {
-            // デフォルトのパスとしてマイピクチャを使用
-            string defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            AddNewTab(defaultPath);
+            var settings = SettingsHelper.GetSettings();
+            string pathToAdd;
+
+            if (settings.NewTabFolderModeSetting == AppSettingsModel.NewTabFolderMode.Specified &&
+                !string.IsNullOrEmpty(settings.NewTabFolderPath) &&
+                Directory.Exists(settings.NewTabFolderPath)) // フォルダが存在するか確認
+            {
+                pathToAdd = settings.NewTabFolderPath;
+            }
+            else
+            {
+                // 指定フォルダが無効、またはマイピクチャが選択されている場合はマイピクチャを使用
+                pathToAdd = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                // マイピクチャが存在しない場合のフォールバック（レアケースだが念のため）
+                if (!Directory.Exists(pathToAdd))
+                {
+                    Debug.WriteLine($"Warning: Default folder path '{pathToAdd}' not found. Falling back to MyDocuments.");
+                    pathToAdd = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    // MyDocumentsも存在しない場合はさらにフォールバックが必要かもしれない
+                    if (!Directory.Exists(pathToAdd))
+                    {
+                        Debug.WriteLine($"Warning: Fallback folder path '{pathToAdd}' also not found.");
+                        // ここでエラー表示や、タブを開かないなどの処理も検討できる
+                        // 今回はそのまま（存在しないかもしれない）パスを渡す
+                    }
+                }
+            }
+
+            AddNewTab(pathToAdd);
         }
 
         // --- タブ追加ヘルパーメソッド ---
@@ -752,33 +778,33 @@ namespace Illustra.ViewModels
                     }
                     catch (Exception ex)
                     {
-                         Debug.WriteLine($"[TabDrop] Error during file operation: {ex.Message}");
-                         // Handle other exceptions during the background task if necessary
-                         // Consider reporting the error back to the user via the UI thread
-                         Application.Current.Dispatcher.Invoke(() =>
-                         {
-                              MessageBox.Show($"Error during file operation: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                         });
-                         return new List<string>();
+                        Debug.WriteLine($"[TabDrop] Error during file operation: {ex.Message}");
+                        // Handle other exceptions during the background task if necessary
+                        // Consider reporting the error back to the user via the UI thread
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show($"Error during file operation: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                        return new List<string>();
                     }
                 });
 
                 // Show notification after completion (if not cancelled)
                 if (!cts.IsCancellationRequested && processedFiles.Any())
                 {
-                     string notificationMessage = isCopy ?
-                         (string)Application.Current.FindResource("String_Thumbnail_FilesCopied") :
-                         (string)Application.Current.FindResource("String_Thumbnail_FilesMoved");
-                     // Consider showing a toast notification or updating status bar
-                     StatusMessage = $"{processedFiles.Count} {notificationMessage}"; // Example status update
-                     // ToastNotificationHelper.ShowRelativeTo(owner, notificationMessage); // If you have a toast helper
+                    string notificationMessage = isCopy ?
+                        (string)Application.Current.FindResource("String_Thumbnail_FilesCopied") :
+                        (string)Application.Current.FindResource("String_Thumbnail_FilesMoved");
+                    // Consider showing a toast notification or updating status bar
+                    StatusMessage = $"{processedFiles.Count} {notificationMessage}"; // Example status update
+                                                                                     // ToastNotificationHelper.ShowRelativeTo(owner, notificationMessage); // If you have a toast helper
                 }
             }
             catch (Exception ex)
             {
                 // Handle exceptions during dialog display or overall process
                 Debug.WriteLine($"[TabDrop] Error processing dropped files: {ex.Message}");
-                 MessageBox.Show($"Error processing dropped files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error processing dropped files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {

@@ -41,6 +41,37 @@
             </StackPanel>
         </GroupBox>
 
+        <!-- 新規タブのフォルダ設定 -->
+        <GroupBox Header="{DynamicResource String_Settings_NewTabFolder_Section}"
+                  Margin="0,10,0,0">
+            <StackPanel Margin="5">
+                <RadioButton Content="{DynamicResource String_Settings_NewTabFolder_MyPictures}"
+                             IsChecked="{Binding NewTabFolderModeMyPictures}"
+                             Margin="0,0,0,5"/>
+                <RadioButton Content="{DynamicResource String_Settings_NewTabFolder_Specified}"
+                             IsChecked="{Binding NewTabFolderModeSpecified}"
+                             Margin="0,0,0,5"/>
+
+                <Grid Margin="20,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0"
+                             Text="{Binding NewTabFolderPath, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding NewTabFolderModeSpecified}"/>
+
+                    <Button Grid.Column="1"
+                            Content="{DynamicResource String_Settings_NewTabFolder_Browse}"
+                            Command="{Binding BrowseNewTabFolderCommand}"
+                            Margin="5,0,0,0"
+                            Padding="10,0"
+                            IsEnabled="{Binding NewTabFolderModeSpecified}"/>
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+
         <!-- ファイル削除設定 -->
         <GroupBox Header="{DynamicResource String_Settings_FileOperation_Section}"
                  Margin="0,10,0,0">

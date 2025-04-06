@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
 using Illustra.Helpers;
@@ -87,6 +88,54 @@ namespace Illustra.ViewModels.Settings
 
         public ICommand BrowseStartupFolderCommand { get; }
 
+
+        // 新規タブのフォルダ設定
+        private bool _newTabFolderModeMyPictures;
+        public bool NewTabFolderModeMyPictures
+        {
+            get => _newTabFolderModeMyPictures;
+            set
+            {
+                if (_newTabFolderModeMyPictures != value)
+                {
+                    _newTabFolderModeMyPictures = value;
+                    if (value) UpdateNewTabFolderMode(AppSettingsModel.NewTabFolderMode.MyPictures);
+                    OnPropertyChanged(nameof(NewTabFolderModeMyPictures));
+                }
+            }
+        }
+
+        private bool _newTabFolderModeSpecified;
+        public bool NewTabFolderModeSpecified
+        {
+            get => _newTabFolderModeSpecified;
+            set
+            {
+                if (_newTabFolderModeSpecified != value)
+                {
+                    _newTabFolderModeSpecified = value;
+                    if (value) UpdateNewTabFolderMode(AppSettingsModel.NewTabFolderMode.Specified);
+                    OnPropertyChanged(nameof(NewTabFolderModeSpecified));
+                }
+            }
+        }
+
+        private string _newTabFolderPath = string.Empty;
+        public string NewTabFolderPath
+        {
+            get => _newTabFolderPath;
+            set
+            {
+                if (_newTabFolderPath != value)
+                {
+                    _newTabFolderPath = value;
+                    OnPropertyChanged(nameof(NewTabFolderPath));
+                }
+            }
+        }
+
+        public ICommand BrowseNewTabFolderCommand { get; }
+
         public bool DeleteModePermanent
         {
             get => _deleteModePermanent;
@@ -128,6 +177,7 @@ namespace Illustra.ViewModels.Settings
             _settings = settings;
             _viewerSettings = viewerSettings;
             BrowseStartupFolderCommand = new RelayCommand(BrowseStartupFolder);
+            BrowseNewTabFolderCommand = new RelayCommand(BrowseNewTabFolder);
         }
 
         private void UpdateStartupMode(AppSettingsModel.StartupFolderMode mode)
@@ -137,11 +187,31 @@ namespace Illustra.ViewModels.Settings
             StartupModeSpecified = mode == AppSettingsModel.StartupFolderMode.Specified;
         }
 
+
+
+        private void UpdateNewTabFolderMode(AppSettingsModel.NewTabFolderMode mode)
+        {
+            NewTabFolderModeMyPictures = mode == AppSettingsModel.NewTabFolderMode.MyPictures;
+            NewTabFolderModeSpecified = mode == AppSettingsModel.NewTabFolderMode.Specified;
+        }
+
+        private void BrowseNewTabFolder()
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = Application.Current.FindResource("String_Dialog_SelectNewTabFolderTitle") as string ?? "Select Folder for New Tab"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                NewTabFolderPath = dialog.FolderName;
+            }
+        }
         private void BrowseStartupFolder()
         {
             var dialog = new OpenFolderDialog
             {
-                Title = "起動時のフォルダを選択"
+                Title = Application.Current.FindResource("String_Dialog_SelectStartupFolderTitle") as string ?? "Select Startup Folder"
             };
 
             if (dialog.ShowDialog() == true)
@@ -160,6 +230,10 @@ namespace Illustra.ViewModels.Settings
             // ViewerSettingsの読み込み
             DeleteModePermanent = _viewerSettings.DeleteMode == FileDeleteMode.Permanent;
             DeleteModeRecycleBin = _viewerSettings.DeleteMode == FileDeleteMode.RecycleBin;
+
+            // 新規タブフォルダ設定の読み込み
+            UpdateNewTabFolderMode(_settings.NewTabFolderModeSetting);
+            NewTabFolderPath = _settings.NewTabFolderPath;
         }
 
         public override void SaveSettings()
@@ -173,11 +247,20 @@ namespace Illustra.ViewModels.Settings
 
             // ViewerSettingsの保存
             _viewerSettings.DeleteMode = DeleteModeRecycleBin ? FileDeleteMode.RecycleBin : FileDeleteMode.Permanent;
+
+            // 新規タブフォルダ設定の保存
+            _settings.NewTabFolderModeSetting = NewTabFolderModeMyPictures ? AppSettingsModel.NewTabFolderMode.MyPictures :
+                                           AppSettingsModel.NewTabFolderMode.Specified;
+            _settings.NewTabFolderPath = NewTabFolderPath;
         }
 
         public override bool ValidateSettings()
         {
             if (StartupModeSpecified && string.IsNullOrWhiteSpace(StartupFolderPath))
+            {
+                return false;
+            }
+            if (NewTabFolderModeSpecified && string.IsNullOrWhiteSpace(NewTabFolderPath))
             {
                 return false;
             }

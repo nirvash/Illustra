@@ -85,6 +85,16 @@ namespace Illustra.Models
         public StartupFolderMode StartupMode { get; set; } = StartupFolderMode.LastOpened;
         public string StartupFolderPath { get; set; } = string.Empty;
 
+
+        // 新規タブを開く際のフォルダ設定
+        public enum NewTabFolderMode
+        {
+            MyPictures,    // マイピクチャ (デフォルト)
+            Specified      // 指定したフォルダ
+        }
+        public NewTabFolderMode NewTabFolderModeSetting { get; set; } = NewTabFolderMode.MyPictures;
+        public string NewTabFolderPath { get; set; } = string.Empty;
+
         /// <summary>
         /// ログカテゴリの有効/無効設定
         /// </summary>
