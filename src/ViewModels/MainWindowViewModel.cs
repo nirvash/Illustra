@@ -19,7 +19,6 @@ using System.IO; // Path クラスを使用するために追加
 using System.Collections.Generic; // List を使うために追加
 using System.Threading; // CancellationTokenSource を使うために追加
 using MahApps.Metro.Controls; // MetroWindow を使うために追加 (DialogHelper用)
-
 using Dragablz; // TabablzControl.AddItem を使うために追加
 
 namespace Illustra.ViewModels
@@ -34,6 +33,9 @@ namespace Illustra.ViewModels
         private readonly string CONTROL_ID = "MainWindowViewModel";
         private readonly FileOperationHelper _fileOperationHelper; // FileOperationHelper のフィールドを追加
 
+
+        // TabablzControl のインスタンスを保持するためのプロパティ (Viewから設定される)
+        public TabablzControl? TabControl { get; set; } // Nullable に変更
         // DialogCoordinator プロパティを追加
         public IDialogCoordinator MahAppsDialogCoordinator { get; set; }
 
@@ -472,10 +474,46 @@ namespace Illustra.ViewModels
         public void SaveTabStates()
         {
             var settings = SettingsHelper.GetSettings();
-            // 現在のタブの状態をリストに変換して保存
-            settings.TabStates = Tabs.Select(vm => vm.State).ToList();
-            // 最後にアクティブだったタブのインデックスを保存
-            settings.LastActiveTabIndex = SelectedTab != null ? Tabs.IndexOf(SelectedTab) : -1;
+
+            // TabControl が View から設定されていれば、表示順序で TabState を取得
+            if (TabControl != null)
+            {
+                try
+                {
+                    // GetOrderedHeaders は DragablzItem の IEnumerable を返す可能性が高い
+                    var orderedItems = TabControl.GetOrderedHeaders()
+                                                 .OfType<DragablzItem>() // DragablzItem 型でフィルター
+                                                 .ToList();
+
+                    // DragablzItem から TabViewModel を取得し、その State を保存
+                    var orderedViewModels = orderedItems
+                        .Select(item => item.Content as TabViewModel ?? item.DataContext as TabViewModel) // Content または DataContext から ViewModel を取得
+                        .Where(vm => vm != null) // null チェック
+                        .ToList();
+
+                    settings.TabStates = orderedViewModels.Select(vm => vm.State).ToList();
+                    // 最後にアクティブだったタブのインデックスも更新された順序に基づいて再計算
+                    // orderedViewModels リスト内で SelectedTab のインデックスを探す
+                    settings.LastActiveTabIndex = SelectedTab != null ? orderedViewModels.IndexOf(SelectedTab) : -1;
+                    Debug.WriteLine($"[SaveTabStates] Saving tabs based on TabControl.GetOrderedHeaders ({orderedViewModels.Count} tabs). Last active index: {settings.LastActiveTabIndex}"); // 変数名を orderedViewModels に修正
+                }
+                catch (Exception ex)
+                {
+                     Debug.WriteLine($"[SaveTabStates] Error getting ordered headers: {ex.Message}. Falling back to collection order.");
+                     // エラー発生時はフォールバック
+                     settings.TabStates = Tabs.Select(vm => vm.State).ToList();
+                     settings.LastActiveTabIndex = SelectedTab != null ? Tabs.IndexOf(SelectedTab) : -1;
+                }
+            }
+            else
+            {
+                // TabControl が未設定の場合 (フォールバック) は現在のコレクション順で保存
+                Debug.WriteLine("[SaveTabStates] Warning: TabControl instance not set in ViewModel. Saving tabs in current collection order.");
+                settings.TabStates = Tabs.Select(vm => vm.State).ToList();
+                // 最後にアクティブだったタブのインデックスを保存 (元のロジック)
+                settings.LastActiveTabIndex = SelectedTab != null ? Tabs.IndexOf(SelectedTab) : -1;
+            }
+
             SettingsHelper.SaveSettings(settings);
         }
 
@@ -708,8 +746,6 @@ namespace Illustra.ViewModels
                 // 必要であれば、ここで明示的に設定保存をトリガーすることも可能
             }
         }
-
-
 
         /// <summary>
         /// Processes files dropped onto a tab.

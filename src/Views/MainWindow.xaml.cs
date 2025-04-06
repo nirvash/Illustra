@@ -245,6 +245,18 @@ namespace Illustra.Views
 
             // 起動時のタブ選択処理を実行
             SelectInitialTab();
+
+            // TabablzControl のインスタンスを取得して ViewModel に設定
+            var tabControl = TabablzControl.GetLoadedInstances().FirstOrDefault();
+            if (_viewModel != null && tabControl != null)
+            {
+                 _viewModel.TabControl = tabControl;
+                 Debug.WriteLine("[MainWindow_Loaded] TabControl instance set in ViewModel.");
+            }
+            else
+            {
+                Debug.WriteLine("[MainWindow_Loaded] Error: Could not find TabablzControl instance or ViewModel is null.");
+            }
         }
 
         /// <summary>
