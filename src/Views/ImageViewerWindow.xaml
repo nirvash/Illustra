@@ -147,13 +147,10 @@
             <!-- メイン表示領域とレーティング表示をまとめたGrid -->
             <!-- メイン表示領域 -->
             <!-- アニメーション用 WebView2 -->
-            <wv2:WebView2 x:Name="WebView"
+            <controls:WebpPlayerControl x:Name="WebpPlayer"
                 Grid.Column="0"
-                PreviewMouseWheel="MainImage_PreviewMouseWheel"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                IsHitTestVisible="True"
-                DefaultBackgroundColor="Transparent"
                 Visibility="Collapsed"/>
            <controls:ZoomControl x:Name="ImageZoomControl"
                Focusable="False"
