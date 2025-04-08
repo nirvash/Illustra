@@ -35,6 +35,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - Claude 3.7 Sonnet
 - Gemini 2.5
 - Deepseek V3
+- Quasar Alpha
 
 ### 動作環境
 
@@ -326,6 +327,7 @@ Language can be changed from the settings menu.
 - Claude 3.7 Sonnet
 - Gemini 2.5
 - Deepseek V3
+- Quasar Alpha
 
 ### Requirements
 

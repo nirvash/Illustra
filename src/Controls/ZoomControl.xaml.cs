@@ -229,58 +229,42 @@ namespace Illustra.Controls
             Viewport.VisibleArea.X = newCenterX - Viewport.VisibleArea.Width / 2;
             Viewport.VisibleArea.Y = newCenterY - Viewport.VisibleArea.Height / 2;
 
-            // ConstraintViewport();
+            ConstraintViewport();
             UniformTransform();
         }
 
         // パンオフセットの制約適用
         private void ConstraintViewport()
         {
-            // 最低表示割合
-            var minVisiblePortion = 0.2;
+            var img = Viewport.ImageBounds;
+            var view = Viewport.VisibleArea;
 
-            // 最小表示幅・高さ
-            var minWidth = Viewport.ImageBounds.Width * minVisiblePortion;
-            var minHeight = Viewport.ImageBounds.Height * minVisiblePortion;
+            double leftLimitX = view.X + view.Width * 0.8;   // 左端は80%ラインより右に行かない
+            double rightLimitX = view.X + view.Width * 0.2;  // 右端は20%ラインより左に行かない
+            double topLimitY = view.Y + view.Height * 0.8;
+            double bottomLimitY = view.Y + view.Height * 0.2;
 
-            // 表示領域が大きすぎる場合
-            if (Viewport.VisibleArea.Width > Viewport.ImageBounds.Width / minVisiblePortion)
+            // X方向のパン制約
+            if (img.X > leftLimitX)
             {
-                Viewport.VisibleArea.Width = Viewport.ImageBounds.Width / minVisiblePortion;
-                Scale = ControlWidth / Viewport.VisibleArea.Width;
-                Viewport.VisibleArea.Height = ControlHeight / Scale;
+                view.X = img.X - view.Width * 0.8;
+            }
+            else if (img.X + img.Width < rightLimitX)
+            {
+                view.X = img.X + img.Width - view.Width * 0.2;
             }
 
-            if (Viewport.VisibleArea.Height > Viewport.ImageBounds.Height / minVisiblePortion)
+            // Y方向のパン制約
+            if (img.Y > topLimitY)
             {
-                Viewport.VisibleArea.Height = Viewport.ImageBounds.Height / minVisiblePortion;
-                Scale = ControlHeight / Viewport.VisibleArea.Height;
-                Viewport.VisibleArea.Width = ControlWidth / Scale;
+                view.Y = img.Y - view.Height * 0.8;
+            }
+            else if (img.Y + img.Height < bottomLimitY)
+            {
+                view.Y = img.Y + img.Height - view.Height * 0.2;
             }
 
-            // 表示左端が画像右端をこえないように制約
-            if (Viewport.VisibleArea.X > Viewport.ImageBounds.Width * (1 - minVisiblePortion))
-            {
-                Viewport.VisibleArea.X = Viewport.ImageBounds.Width * (1 - minVisiblePortion);
-            }
-
-            // 表示右端が画像左端をこえないように制約
-            if (Viewport.VisibleArea.X + Viewport.VisibleArea.Width < Viewport.ImageBounds.Width * minVisiblePortion)
-            {
-                Viewport.VisibleArea.X = Viewport.ImageBounds.Width * minVisiblePortion - Viewport.VisibleArea.Width;
-            }
-
-            // 表示上端が画像下端をこえないように制約
-            if (Viewport.VisibleArea.Y > Viewport.ImageBounds.Height * (1 - minVisiblePortion))
-            {
-                Viewport.VisibleArea.Y = Viewport.ImageBounds.Height * (1 - minVisiblePortion);
-            }
-
-            // 表示下端が画像上端をこえないように制約
-            if (Viewport.VisibleArea.Y + Viewport.VisibleArea.Height < Viewport.ImageBounds.Height * minVisiblePortion)
-            {
-                Viewport.VisibleArea.Y = Viewport.ImageBounds.Height * minVisiblePortion - Viewport.VisibleArea.Height;
-            }
+            Viewport.VisibleArea = view;
         }
     }
 
