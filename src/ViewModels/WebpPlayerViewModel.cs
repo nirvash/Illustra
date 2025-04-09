@@ -37,14 +37,13 @@ namespace Illustra.ViewModels
         private ConcurrentDictionary<int, bool> _prefetchErrors;
         private bool _isSeekBarDragging;
         private bool _wasPlayingBeforeSeek; // シーク操作開始前の再生状態を保持
+        private bool _isRepeatEnabled;
         private List<TimeSpan> _frameDelays;
         private DispatcherTimer _playbackTimer;
         private CancellationTokenSource _decodingCts; // LoadAsyncキャンセル用
         private CancellationTokenSource _prefetchCts; // 先読みタスクキャンセル用
         private int _currentFrameIndex;
         private AsyncManualResetEvent _frameAdvancedEvent = new AsyncManualResetEvent(false);
-        private int _currentLoop;
-        private int _totalLoops;
         private PlayState _currentState;
         private bool _isLoading;
         private bool _isFullScreen;
@@ -84,28 +83,7 @@ namespace Illustra.ViewModels
 
         public TimeSpan TotalDuration { get; private set; } // TODO: 正確な値を取得する方法が必要
 
-        public int CurrentLoop
-        {
-            get => _currentLoop;
-            private set { _currentLoop = value; OnPropertyChanged(nameof(CurrentLoop)); OnPropertyChanged(nameof(LoopCountText)); }
-        }
-
-        public int TotalLoops
-        {
-            get => _totalLoops;
-            private set { _totalLoops = value; OnPropertyChanged(nameof(TotalLoops)); OnPropertyChanged(nameof(LoopCountText)); } // TODO: 正確な値を取得する方法が必要
-        }
-
-        public string LoopCountText
-        {
-            get
-            {
-                if (TotalLoops == 0)
-                    return $"(ループ中 / ∞)";
-                else
-                    return $"({_currentLoop} / {TotalLoops})";
-            }
-        }
+        // LoopCountText, CurrentLoop, TotalLoops は不要になったため削除
 
         public PlayState CurrentState
         {
@@ -131,12 +109,13 @@ namespace Illustra.ViewModels
             private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); }
         }
 
-        public ICommand PlayCommand { get; private set; }
-        public ICommand PauseCommand { get; private set; }
+        public ICommand PlayPauseCommand { get; private set; }
         // public ICommand SeekCommand { get; private set; } // TODO: シーク実装後に有効化
         public ICommand PreviousFrameCommand { get; private set; }
         public ICommand NextFrameCommand { get; private set; }
         public ICommand ToggleFullScreenCommand { get; private set; }
+        public ICommand ToggleRepeatCommand { get; private set; }
+        public ICommand RewindCommand { get; private set; }
         public WebpPlayerViewModel(IWebpAnimationService animationService)
         {
             _animationService = animationService ?? throw new ArgumentNullException(nameof(animationService));
@@ -148,11 +127,15 @@ namespace Illustra.ViewModels
             _playbackTimer = new DispatcherTimer();
             _playbackTimer.Tick += PlaybackTimer_Tick;
 
-            PlayCommand = new RelayCommand(Play, CanPlay);
-            PauseCommand = new RelayCommand(Pause, CanPause);
+            PlayPauseCommand = new RelayCommand(PlayPause, () => true);
+            // 設定からリピート状態を読み込む
+            var settings = ViewerSettingsHelper.LoadSettings();
+            IsRepeatEnabled = settings.VideoRepeatEnabled; // WebP用設定がないためVideo用を流用
             PreviousFrameCommand = new RelayCommand(PreviousFrame, CanSeek);
             NextFrameCommand = new RelayCommand(NextFrame, CanSeek);
             ToggleFullScreenCommand = new RelayCommand(ToggleFullScreen);
+            ToggleRepeatCommand = new RelayCommand(ToggleRepeat);
+            RewindCommand = new RelayCommand(Rewind, CanSeek);
         }
 
         private async void PlaybackTimer_Tick(object? sender, EventArgs e) // async void は UIイベントハンドラのため許容
@@ -187,7 +170,29 @@ namespace Illustra.ViewModels
                 }
 
                 // 次のフレームへ
-                _currentFrameIndex = (_currentFrameIndex + 1) % TotalFrames;
+                int nextFrameIndex = (_currentFrameIndex + 1);
+                if (nextFrameIndex >= TotalFrames)
+                {
+                    // 終端に達した場合
+                    if (IsRepeatEnabled)
+                    {
+                        _currentFrameIndex = 0; // リピートONなら最初に戻る
+                    }
+                    else
+                    {
+                        // リピートOFFなら停止
+                        PlayPause(); // Pause() -> PlayPause()
+                        _currentFrameIndex = TotalFrames - 1; // 最終フレームに留まる
+                        OnPropertyChanged(nameof(CurrentFrameIndex)); // UI更新
+                        OnPropertyChanged(nameof(CurrentTime));
+                        // シークバーの位置も最終フレームに設定する (UIスレッドで)
+                        return; // タイマー更新は不要
+                    }
+                }
+                else
+                {
+                    _currentFrameIndex = nextFrameIndex;
+                }
                 OnPropertyChanged(nameof(CurrentFrameIndex));
                 OnPropertyChanged(nameof(CurrentTime));
 
@@ -205,7 +210,26 @@ namespace Illustra.ViewModels
                 {
                     LogHelper.LogWarning($"PlaybackTick: Frame {indexToDisplay} failed to prefetch. Skipping.");
                     // エラーフレームはスキップして次のフレームへ
-                    _currentFrameIndex = (_currentFrameIndex + 1) % TotalFrames;
+                    int nextErrorFrameIndex = (_currentFrameIndex + 1);
+                    if (nextErrorFrameIndex >= TotalFrames)
+                    {
+                        if (IsRepeatEnabled)
+                        {
+                            _currentFrameIndex = 0;
+                        }
+                        else
+                        {
+                            PlayPause(); // Pause() -> PlayPause()
+                            _currentFrameIndex = TotalFrames - 1;
+                            OnPropertyChanged(nameof(CurrentFrameIndex)); // UI更新 (これによりSeekBarも更新されるはず)
+                            OnPropertyChanged(nameof(CurrentTime));
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        _currentFrameIndex = nextErrorFrameIndex;
+                    }
                     OnPropertyChanged(nameof(CurrentFrameIndex));
                     OnPropertyChanged(nameof(CurrentTime));
                     // 次のTickのインターバルを設定 (次のフレームの遅延時間)
@@ -241,7 +265,6 @@ namespace Illustra.ViewModels
             _prefetchErrors.Clear(); // エラー記録もクリア
             _frameDelays.Clear();
             _currentFrameIndex = -1;
-            CurrentLoop = 1; // ループカウントもリセット
 
             try
             {
@@ -260,9 +283,6 @@ namespace Illustra.ViewModels
                     OnPropertyChanged(nameof(TotalFrames));
                     TotalDuration = TimeSpan.Zero;
                     OnPropertyChanged(nameof(TotalDuration));
-                    TotalLoops = 1;
-                    OnPropertyChanged(nameof(TotalLoops));
-                    CurrentLoop = 1;
                     _currentFrameIndex = 0;
                     OnPropertyChanged(nameof(CurrentFrameIndex));
                     OnPropertyChanged(nameof(CurrentTime));
@@ -277,9 +297,6 @@ namespace Illustra.ViewModels
                 OnPropertyChanged(nameof(TotalFrames));
                 TotalDuration = TimeSpan.Zero;
                 OnPropertyChanged(nameof(TotalDuration));
-                TotalLoops = 0;
-                OnPropertyChanged(nameof(TotalLoops));
-                CurrentLoop = 1;
                 _currentFrameIndex = -1;
                 LogHelper.LogWithTimestamp("ViewModel.LoadAsync - Before GetFrameDelaysAsync", LogHelper.Categories.Performance);
                 LogHelper.LogWithTimestamp("ViewModel.LoadAsync - After DecodeAllFramesAsync call", LogHelper.Categories.Performance);
@@ -342,28 +359,25 @@ namespace Illustra.ViewModels
             }
         }
 
-
-
-        public void Play()
+        public void PlayPause()
         {
-            if (CurrentState == PlayState.Paused && _frameDelays.Count > 0)
-            {
-                CurrentState = PlayState.Playing;
-                _playbackTimer.Start();
-                LogHelper.LogWithTimestamp("Play: Playback resumed.", LogHelper.Categories.Performance);
-                StartPrefetchLoop(); // 先読みループ開始
-            }
-        }
+            if (_frameDelays.Count == 0) return;
 
-        public void Pause()
-        {
             if (CurrentState == PlayState.Playing)
             {
-                // filePath removed from DecodeFrameAtAsync call
+                // 再生中なら一時停止
                 CurrentState = PlayState.Paused;
                 _playbackTimer.Stop();
-                LogHelper.LogWithTimestamp("Pause: Playback paused.", LogHelper.Categories.Performance);
-                StopPrefetchLoop(); // 先読みループ停止
+                LogHelper.LogWithTimestamp("Playback paused.", LogHelper.Categories.Performance);
+                StopPrefetchLoop();
+            }
+            else if (CurrentState == PlayState.Paused)
+            {
+                // 一時停止中なら再生
+                CurrentState = PlayState.Playing;
+                _playbackTimer.Start();
+                LogHelper.LogWithTimestamp("Playback resumed.", LogHelper.Categories.Performance);
+                StartPrefetchLoop();
             }
         }
 
@@ -437,8 +451,34 @@ namespace Illustra.ViewModels
             IsFullScreen = !IsFullScreen;
         }
 
-        private bool CanPlay() => CurrentState == PlayState.Paused; // 再生可能条件変更
-        private bool CanPause() => CurrentState == PlayState.Playing; // 一時停止可能条件変更
+        public bool IsRepeatEnabled
+        {
+            get => _isRepeatEnabled;
+            set
+            {
+                if (_isRepeatEnabled != value)
+                {
+                    _isRepeatEnabled = value;
+                    OnPropertyChanged(nameof(IsRepeatEnabled));
+                    // 設定を保存
+                    var settings = ViewerSettingsHelper.LoadSettings();
+                    settings.VideoRepeatEnabled = _isRepeatEnabled; // WebP用設定がないためVideo用を流用
+                    ViewerSettingsHelper.SaveSettings(settings);
+                }
+            }
+        }
+
+        public void ToggleRepeat()
+        {
+            IsRepeatEnabled = !IsRepeatEnabled;
+        }
+
+        public void Rewind()
+        {
+            // 最初のフレームに戻る
+            Seek(0);
+        }
+
         private bool CanSeek() => CurrentState != PlayState.Loading && TotalFrames > 1; // TODO: シーク実装後に条件見直し
 
         private TimeSpan CalculateCurrentTime()
@@ -647,7 +687,7 @@ namespace Illustra.ViewModels
                             var decoded = await _animationService.DecodeFrameAsync(currentIndex);
                             if (decoded == null) throw new InvalidOperationException($"フレーム {currentIndex} のデコードに失敗。");
                             framesToCompose.Insert(0, decoded); // リストの先頭に追加
-                            // baseFrameIndex と baseCanvas は更新せず、さらに古いベースを探す
+                                                                // baseFrameIndex と baseCanvas は更新せず、さらに古いベースを探す
                         }
                     }
                     else

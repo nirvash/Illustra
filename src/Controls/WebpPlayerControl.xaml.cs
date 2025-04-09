@@ -34,8 +34,11 @@ namespace Illustra.Controls
             {
                 InitializeComponent();
                 _viewModel = new WebpPlayerViewModel(new WebpAnimationService());
+                _viewModel.PropertyChanged += ViewModel_PropertyChanged;
                 DataContext = _viewModel;
                 Unloaded += WebpPlayerControl_Unloaded;
+                UpdatePlayPauseButtonVisibility(_viewModel.CurrentState); // 初期状態を設定
+                UpdateRepeatButtonVisualState(_viewModel.IsRepeatEnabled); // リピートボタンの初期状態を設定
                 LogHelper.LogWithTimestamp("WebPプレイヤーコントロールを初期化しました。", LogHelper.Categories.Performance);
             }
             catch (Exception ex)
@@ -62,6 +65,17 @@ namespace Illustra.Controls
             {
                 LogHelper.LogError($"WebPファイルの読み込みに失敗しました: {filePath}", ex);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// WebPアニメーションの再生を停止します
+        /// </summary>
+        public void Stop()
+        {
+            if (_viewModel.CurrentState == PlayState.Playing)
+            {
+                _viewModel.PlayPause();
             }
         }
 
@@ -114,6 +128,7 @@ namespace Illustra.Controls
             }
 
             // Handle clicks on the track part
+            // (ViewModel_PropertyChanged と UpdatePlayPauseButtonVisibility はクラスレベルに移動済み)
             if (sender is Border container && SeekBar.IsEnabled)
             {
                 _viewModel?.SeekBarStarted();
@@ -178,12 +193,50 @@ namespace Illustra.Controls
             _viewModel?.SeekBarCompleted();
         }
 
+        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(WebpPlayerViewModel.CurrentState))
+            {
+                UpdatePlayPauseButtonVisibility(_viewModel.CurrentState);
+            }
+            else if (e.PropertyName == nameof(WebpPlayerViewModel.IsRepeatEnabled))
+            {
+                UpdateRepeatButtonVisualState(_viewModel.IsRepeatEnabled);
+            }
+        }
+
+        private void UpdatePlayPauseButtonVisibility(PlayState state)
+        {
+            if (state == PlayState.Playing)
+            {
+                PlayButton.Visibility = Visibility.Collapsed;
+                PauseButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                PlayButton.Visibility = Visibility.Visible;
+                PauseButton.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateRepeatButtonVisualState(bool isRepeatEnabled)
+        {
+            // リピート状態に応じてボタンの背景色などを変更
+            // XAMLでRepeatButtonにx:Name="RepeatButton"が設定されている前提
+            var repeatButton = FindName("RepeatButton") as Button;
+            if (repeatButton != null)
+            {
+                repeatButton.Background = isRepeatEnabled ? Brushes.RoyalBlue : Brushes.Transparent;
+            }
+        }
+
         private void WebpPlayerControl_Unloaded(object sender, RoutedEventArgs e)
         {
             try
             {
                 if (_viewModel != null)
                 {
+                    _viewModel.PropertyChanged -= ViewModel_PropertyChanged; // イベントハンドラ解除
                     _viewModel.Dispose();
                     LogHelper.LogWithTimestamp("ViewModelのリソースを解放しました。", LogHelper.Categories.Performance);
                 }

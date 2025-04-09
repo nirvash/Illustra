@@ -725,10 +725,17 @@ namespace Illustra.Views
                     return;
                 }
 
-                // Stop video if playing before switching content
+                // Stop video and webp animation if playing before switching content
                 if (VideoPlayerControl.Visibility == Visibility.Visible)
                 {
                     VideoPlayerControl.StopVideo();
+                }
+
+                // Stop WebP animation if visible
+                if (WebpPlayer.Visibility == Visibility.Visible)
+                {
+                    WebpPlayer.Stop();
+                    WebpPlayer.Visibility = Visibility.Collapsed;
                 }
 
                 hideCursorTimer.Start();

@@ -11,6 +11,14 @@
              d:DesignHeight="450" d:DesignWidth="800"
              Background="Transparent"
              MouseDoubleClick="WebpPlayerRoot_MouseDoubleClick">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 他のリソースディクショナリがあればここに追加 -->
+            </ResourceDictionary.MergedDictionaries>
+            <localConverters:SubtractOneConverter x:Key="SubtractOneConverter" xmlns:localConverters="clr-namespace:Illustra.Converters"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" /> <!-- 表示領域 -->
@@ -18,7 +26,7 @@
         </Grid.RowDefinitions>
 
         <!-- WebP表示とローディング表示 -->
-        <Grid Grid.Row="0" Background="Black">
+        <Grid Grid.Row="0" Background="Transparent">
             <Image x:Name="WebpImage"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
@@ -41,7 +49,7 @@
         <Grid x:Name="ControlsPanel"
               Grid.Row="1"
               MinHeight="50"
-              Background="#A0000000"
+              Background="Transparent"
               VerticalAlignment="Stretch">
             <Grid.Style>
                 <Style TargetType="Grid">
@@ -66,17 +74,28 @@
 
             <!-- 左側ボタン -->
             <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="10,0">
-                <Button Command="{Binding PreviousFrameCommand}" Width="30" Height="30" Margin="5" ToolTip="前のフレーム">
-                    <iconPacks:PackIconMaterialDesign Kind="SkipPrevious" />
+                <!-- Rewind Button Added -->
+                <Button x:Name="RewindButton" Command="{Binding RewindCommand}" Width="30" Height="30" Margin="5" ToolTip="巻き戻し" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="SkipPrevious" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
-                <Button Command="{Binding PlayCommand}" Width="30" Height="30" Margin="5" ToolTip="再生">
-                    <iconPacks:PackIconMaterialDesign Kind="PlayArrow" />
+                <Button Command="{Binding PreviousFrameCommand}"
+                        Width="30"
+                        Height="30"
+                        Margin="5"
+                        ToolTip="前のフレーム">
+                    <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowLeft"/>
                 </Button>
-                <Button Command="{Binding PauseCommand}" Width="30" Height="30" Margin="5" ToolTip="一時停止">
-                    <iconPacks:PackIconMaterialDesign Kind="Pause" />
+                <Button x:Name="PlayButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" ToolTip="再生" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="PlayArrow" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Button x:Name="PauseButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" Visibility="Collapsed" ToolTip="一時停止" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="Pause" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding NextFrameCommand}" Width="30" Height="30" Margin="5" ToolTip="次のフレーム">
-                    <iconPacks:PackIconMaterialDesign Kind="SkipNext" />
+                    <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowRight" />
+                </Button>
+                <Button x:Name="RepeatButton" Command="{Binding ToggleRepeatCommand}" Width="30" Height="30" Margin="5" ToolTip="リピート切替" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="Repeat" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
             </StackPanel>
 
@@ -89,8 +108,9 @@
                 <Slider x:Name="SeekBar"
                         VerticalAlignment="Center" Margin="10,0"
                         Minimum="0"
-                        Maximum="{Binding TotalFrames}"
+                        Maximum="{Binding TotalFrames, Converter={StaticResource SubtractOneConverter}}"
                         Value="{Binding CurrentFrameIndex, Mode=TwoWay}"
+                        Style="{DynamicResource CustomSliderStyle}"
                         IsMoveToPointEnabled="True"
                         Thumb.DragStarted="SeekBar_DragStarted"
                         Thumb.DragCompleted="SeekBar_DragCompleted"/>
@@ -103,7 +123,6 @@
                     <Run Text=" / "/>
                     <Run Text="{Binding TotalDuration, Mode=OneWay, StringFormat={}{0:mm\\:ss}}"/>
                 </TextBlock>
-                <TextBlock VerticalAlignment="Center" Margin="5,0" Text="{Binding LoopCountText}"/>
             </StackPanel>
         </Grid>
     </Grid>
