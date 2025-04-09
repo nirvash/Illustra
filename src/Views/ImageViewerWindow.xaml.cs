@@ -781,8 +781,8 @@ namespace Illustra.Views
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // VideoPlayerが表示されている場合は、VideoPlayerControl側のイベントで処理するため何もしない
-            if (VideoPlayerControl.Visibility == Visibility.Visible)
+            // VideoPlayerまたはWebpPlayerが表示されている場合は、各コントロール側のイベントで処理するため何もしない
+            if (VideoPlayerControl.Visibility == Visibility.Visible || WebpPlayer.Visibility == Visibility.Visible)
             {
                 return;
             }
@@ -1197,6 +1197,13 @@ namespace Illustra.Views
             Close();
 
         } // End of VideoPlayerControl_BackgroundDoubleClick
+
+        private void WebpPlayer_BackgroundDoubleClick(object sender, RoutedEventArgs e)
+        {
+            // WebpPlayerControlの背景がダブルクリックされたらウィンドウを閉じる
+            Close();
+        }
+
 
         private void ImageViewerWindow_Activated(object? sender, EventArgs e)
         {

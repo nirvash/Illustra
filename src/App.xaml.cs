@@ -32,6 +32,9 @@ namespace Illustra
     /// </summary>
     public partial class App : PrismApplication
     {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetDllDirectory(string lpPathName);
+
         private readonly DatabaseManager _db = new();
         public bool EnableCyclicNavigation { get; set; }
 
@@ -127,6 +130,11 @@ namespace Illustra
 
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // カレントディレクトリをexeの場所に固定
+            System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
+            // dllフォルダをDLL検索パスに追加
+
             base.OnStartup(e);
 
             // データベースのデバッグログを設定

@@ -1,42 +1,40 @@
 using System;
 using System.Threading.Tasks;
-using ImageMagick;
 using System.Windows.Media.Imaging;
+using Illustra.Helpers; // LibWebPのため
 
 namespace Illustra.Services
 {
     public interface IWebpAnimationService : IDisposable
     {
         /// <summary>
-        /// WebPファイルを非同期で読み込み、MagickImageCollectionを返す
+        /// 指定されたWebPファイルを読み込み、サービスを初期化します。
         /// </summary>
-        /// <param name="filePath">WebPファイルのパス</param>
-        /// <returns>MagickImageCollection</returns>
-        Task<MagickImageCollection> LoadAsync(string filePath);
+        /// <param name="filePath">ファイルパス</param>
+        Task InitializeAsync(string filePath);
 
         /// <summary>
-        /// 指定インデックスのフレームをBitmapSourceに変換して返す
+        /// 初期化されたWebPファイルの情報を非同期で取得します。
         /// </summary>
-        BitmapSource GetFrameAsBitmapSource(MagickImageCollection collection, int index);
+        /// <returns>フレーム情報 (幅, 高さ, アニメーション有無)</returns>
+        LibWebP.WebPBitstreamFeatures GetFeatures(); // Now synchronous
+
+        // StartDecodingAsync might be obsolete now, consider removing or redesigning
+        // Task StartDecodingAsync(...)
+        // DecodeAllFramesAsync and DecodeFirstFrameAsync are likely obsolete
+        // Task<List<(BitmapSource Frame, TimeSpan Delay)>> DecodeAllFramesAsync(string filePath);
+        // Task<BitmapSource> DecodeFirstFrameAsync(string filePath);
 
         /// <summary>
-        /// 総フレーム数を取得
+        /// WebPファイルの各フレームの遅延時間情報のみを取得します。
         /// </summary>
-        int GetTotalFrames(MagickImageCollection collection);
-
+        /// <returns>各フレームの遅延時間のリスト (初期化後に取得)</returns>
+        List<TimeSpan> GetFrameDelays(); // Now synchronous
         /// <summary>
-        /// 指定フレームの遅延時間を取得
+        /// 指定されたインデックスのフレームをデコードします。
         /// </summary>
-        TimeSpan GetFrameDelay(MagickImageCollection collection, int index);
-
-        /// <summary>
-        /// 全フレームの遅延時間合計を取得
-        /// </summary>
-        TimeSpan GetTotalDuration(MagickImageCollection collection);
-
-        /// <summary>
-        /// ループ回数を取得 (0は無限ループ)
-        /// </summary>
-        int GetLoopCount(MagickImageCollection collection);
+        /// <param name="index">0ベースのフレームインデックス</param>
+        /// <returns>デコードされたフレーム</returns>
+        Task<WebpAnimationService.WebPDecodedFrame> DecodeFrameAsync(int index);
     }
 }

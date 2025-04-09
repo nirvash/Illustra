@@ -16,6 +16,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>  <!-- デバッグビルド設定 -->
+  <PropertyGroup>
+    <NoWarn>VSTHRD001;VSTHRD100;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>
@@ -33,6 +36,24 @@
   <PropertyGroup>    <!-- GitVersion.yml の場所指定 -->
     <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\src\GitVersion.yml"</GitVersion_ToolArguments>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="dll\libwebp.dll">
+      <Link>libwebp.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="dll\libsharpyuv.dll">
+      <Link>libsharpyuv.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="dll\libwebpdemux.dll">
+      <Link>libwebpdemux.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="dll\libwebpdecoder.dll">
+      <Link>libwebpdecoder.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <None Update="Microsoft.Web.WebView2.Core.xml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
@@ -64,6 +85,7 @@
     <PackageReference Include="MahApps.Metro.IconPacks.MaterialDesign" Version="5.1.0" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
     <PackageReference Include="Microsoft.WindowsAPICodePack-Shell" Version="1.1.0" />
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
