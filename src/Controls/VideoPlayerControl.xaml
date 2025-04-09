@@ -61,25 +61,25 @@
             <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="10,0">
                 <!-- Rewind Button Added -->
                 <Button x:Name="RewindButton" Click="RewindButton_Click" Width="30" Height="30" Margin="5" Focusable="False"
-                        ToolTip="Rewind Video">
+                        ToolTip="{DynamicResource String_Tooltip_RewindVideo}">
                     <iconPacks:PackIconMaterialDesign Kind="SkipPrevious" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <Button x:Name="PlayButton" Click="PlayButton_Click" Width="30" Height="30" Margin="5" Focusable="False"
-                        ToolTip="Play Video">
+                        ToolTip="{DynamicResource String_Tooltip_PlayVideo}">
                     <iconPacks:PackIconMaterialDesign  Kind="PlayArrow" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <Button x:Name="PauseButton" Click="PauseButton_Click" Width="30" Height="30" Margin="5" Visibility="Collapsed" Focusable="False"
-                        ToolTip="Pause Video">
+                        ToolTip="{DynamicResource String_Tooltip_PauseVideo}">
                     <iconPacks:PackIconMaterialDesign  Kind="Pause" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <!-- Stop Button Removed -->
                 <Button x:Name="RepeatButton" Click="RepeatButton_Click" Width="30" Height="30" Margin="5" Focusable="False"
-                        ToolTip="Toggle Repeat Mode (On/Off)">
+                        ToolTip="{DynamicResource String_Tooltip_RepeatMode}">
                     <iconPacks:PackIconMaterialDesign Kind="Repeat" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <!-- Stretch Mode Button Added -->
                 <Button x:Name="StretchModeButton" Click="StretchModeButton_Click" Width="30" Height="30" Margin="5" Focusable="False"
-                        ToolTip="Toggle Stretch Mode (Fit/Original Size)">
+                        ToolTip="{DynamicResource String_Tooltip_StretchMode}">
                     <iconPacks:PackIconMaterialDesign x:Name="StretchModeIcon" Kind="AspectRatio" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
 
@@ -100,7 +100,7 @@
             </Border>
             <!-- Volume Controls and Time Label -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
-                <Button x:Name="MuteButton" Click="MuteButton_Click" Width="30" Height="30" Margin="0,0,5,0" ToolTip="Mute/Unmute" Focusable="False">
+                <Button x:Name="MuteButton" Click="MuteButton_Click" Width="30" Height="30" Margin="0,0,5,0" ToolTip="{DynamicResource String_Tooltip_MuteUnmute}" Focusable="False">
                     <iconPacks:PackIconMaterialDesign x:Name="VolumeIcon" Kind="VolumeUp" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <!-- Wrap VolumeSlider in Border for Preview events -->

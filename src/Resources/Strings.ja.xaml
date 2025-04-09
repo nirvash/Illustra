@@ -378,4 +378,19 @@
     <system:String x:Key="String_FileSystemTreeView_DeleteConfirmMessage">フォルダ '{0}' とその内容すべてを完全に削除しますか？</system:String>
     <system:String x:Key="String_FileSystemTreeView_MoveToRecycleBinConfirmMessage">フォルダ '{0}' とその内容すべてをごみ箱に移動しますか？</system:String>
     <system:String x:Key="String_FileSystemTreeView_DeleteError">フォルダの削除に失敗しました: {0}</system:String>
+    <!-- WebpPlayerControl / VideoPlayerControl Tooltips -->
+    <system:String x:Key="String_Tooltip_Loading">読み込み中...</system:String>
+    <system:String x:Key="String_Tooltip_Rewind">巻き戻し</system:String>
+    <system:String x:Key="String_Tooltip_PreviousFrame">前のフレーム</system:String>
+    <system:String x:Key="String_Tooltip_Play">再生</system:String>
+    <system:String x:Key="String_Tooltip_Pause">一時停止</system:String>
+    <system:String x:Key="String_Tooltip_NextFrame">次のフレーム</system:String>
+    <system:String x:Key="String_Tooltip_RepeatToggle">リピート切替</system:String>
+    <system:String x:Key="String_Tooltip_StretchToggle">表示切替</system:String>
+    <system:String x:Key="String_Tooltip_RewindVideo">巻き戻し</system:String>
+    <system:String x:Key="String_Tooltip_PlayVideo">再生</system:String>
+    <system:String x:Key="String_Tooltip_PauseVideo">一時停止</system:String>
+    <system:String x:Key="String_Tooltip_RepeatMode">リピート切替</system:String>
+    <system:String x:Key="String_Tooltip_StretchMode">表示切替</system:String>
+    <system:String x:Key="String_Tooltip_MuteUnmute">ミュート/ミュート解除</system:String>
 </ResourceDictionary>

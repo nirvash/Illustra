@@ -378,4 +378,19 @@
     <system:String x:Key="String_FileSystemTreeView_DeleteConfirmMessage">Are you sure you want to permanently delete the folder '{0}' and all its contents?</system:String>
     <system:String x:Key="String_FileSystemTreeView_MoveToRecycleBinConfirmMessage">Are you sure you want to move the folder '{0}' and all its contents to the Recycle Bin?</system:String>
     <system:String x:Key="String_FileSystemTreeView_DeleteError">Failed to delete the folder: {0}</system:String>
+    <!-- WebpPlayerControl / VideoPlayerControl Tooltips -->
+    <system:String x:Key="String_Tooltip_Loading">Loading...</system:String>
+    <system:String x:Key="String_Tooltip_Rewind">Rewind</system:String>
+    <system:String x:Key="String_Tooltip_PreviousFrame">Previous Frame</system:String>
+    <system:String x:Key="String_Tooltip_Play">Play</system:String>
+    <system:String x:Key="String_Tooltip_Pause">Pause</system:String>
+    <system:String x:Key="String_Tooltip_NextFrame">Next Frame</system:String>
+    <system:String x:Key="String_Tooltip_RepeatToggle">Toggle Repeat</system:String>
+    <system:String x:Key="String_Tooltip_StretchToggle">Toggle Stretch</system:String>
+    <system:String x:Key="String_Tooltip_RewindVideo">Rewind</system:String>
+    <system:String x:Key="String_Tooltip_PlayVideo">Play</system:String>
+    <system:String x:Key="String_Tooltip_PauseVideo">Pause</system:String>
+    <system:String x:Key="String_Tooltip_RepeatMode">Toggle Repeat</system:String>
+    <system:String x:Key="String_Tooltip_StretchMode">Toggle Stretch</system:String>
+    <system:String x:Key="String_Tooltip_MuteUnmute">Mute/Unmute</system:String>
 </ResourceDictionary>

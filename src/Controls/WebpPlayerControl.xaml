@@ -41,7 +41,7 @@
                   VerticalAlignment="Stretch">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <mahcontrols:ProgressRing IsActive="True" Foreground="White" Width="50" Height="50"/>
-                    <TextBlock Text="読み込み中..." Foreground="White" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource String_Tooltip_Loading}" Foreground="White" Margin="0,10,0,0" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Grid>
@@ -76,29 +76,29 @@
             <!-- 左側ボタン -->
             <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="10,0">
                 <!-- Rewind Button Added -->
-                <Button x:Name="RewindButton" Command="{Binding RewindCommand}" Width="30" Height="30" Margin="5" ToolTip="巻き戻し" Focusable="False">
+                <Button x:Name="RewindButton" Command="{Binding RewindCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_Rewind}" Focusable="False">
                     <iconPacks:PackIconMaterialDesign Kind="SkipPrevious" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding PreviousFrameCommand}"
                         Width="30"
                         Height="30"
                         Margin="5"
-                        ToolTip="前のフレーム">
+                        ToolTip="{DynamicResource String_Tooltip_PreviousFrame}">
                     <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowLeft"/>
                 </Button>
-                <Button x:Name="PlayButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" ToolTip="再生" Focusable="False">
+                <Button x:Name="PlayButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_Play}" Focusable="False">
                     <iconPacks:PackIconMaterialDesign Kind="PlayArrow" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
-                <Button x:Name="PauseButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" Visibility="Collapsed" ToolTip="一時停止" Focusable="False">
+                <Button x:Name="PauseButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" Visibility="Collapsed" ToolTip="{DynamicResource String_Tooltip_Pause}" Focusable="False">
                     <iconPacks:PackIconMaterialDesign Kind="Pause" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
-                <Button Command="{Binding NextFrameCommand}" Width="30" Height="30" Margin="5" ToolTip="次のフレーム">
+                <Button Command="{Binding NextFrameCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_NextFrame}">
                     <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowRight" />
                 </Button>
-                <Button x:Name="RepeatButton" Command="{Binding ToggleRepeatCommand}" Width="30" Height="30" Margin="5" ToolTip="リピート切替" Focusable="False">
+                <Button x:Name="RepeatButton" Command="{Binding ToggleRepeatCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_RepeatToggle}" Focusable="False">
                     <iconPacks:PackIconMaterialDesign Kind="Repeat" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
-                <Button x:Name="StretchModeButton" Width="30" Height="30" Margin="5" ToolTip="表示切替" Click="StretchModeButton_Click">
+                <Button x:Name="StretchModeButton" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_StretchToggle}" Click="StretchModeButton_Click">
                     <iconPacks:PackIconMaterialDesign x:Name="StretchModeIcon" Kind="ImageAspectRatio" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
             </StackPanel>
