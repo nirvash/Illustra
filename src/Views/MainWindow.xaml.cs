@@ -1067,6 +1067,31 @@ namespace Illustra.Views
             }
         }
 
+
+        private void TabItem_DragEnter(object sender, DragEventArgs e)
+        {
+            var dragablzItem = sender as DragablzItem;
+            if (dragablzItem != null)
+            {
+                DragDropHelper.SetIsDragHover(dragablzItem, true);
+                var effect = (e.KeyStates & DragDropKeyStates.ControlKey) != 0 ?
+                    DragDropEffects.Copy : DragDropEffects.Move;
+                e.Effects = effect;
+                e.Handled = true;
+            }
+        }
+
+        private void TabItem_DragLeave(object sender, DragEventArgs e)
+        {
+            var dragablzItem = sender as DragablzItem;
+            if (dragablzItem != null)
+            {
+                DragDropHelper.SetIsDragHover(dragablzItem, false);
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+            }
+        }
+
         /// <summary>
         /// Handles the DragOver event for a TabItem.
         /// Determines the allowed drop effect based on the dragged data and target tab.

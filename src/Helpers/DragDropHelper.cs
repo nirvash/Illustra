@@ -222,5 +222,22 @@ namespace Illustra.Helpers
             // デフォルトは移動
             return DragDropEffects.Move;
         }
+
+        public static readonly DependencyProperty IsDragHoverProperty =
+            DependencyProperty.RegisterAttached(
+                "IsDragHover",
+                typeof(bool),
+                typeof(DragDropHelper),
+                new PropertyMetadata(false));
+
+        public static bool GetIsDragHover(DependencyObject obj)
+        {
+            return (bool)obj.GetValue(IsDragHoverProperty);
+        }
+
+        public static void SetIsDragHover(DependencyObject obj, bool value)
+        {
+            obj.SetValue(IsDragHoverProperty, value);
+        }
     }
 }
