@@ -27,6 +27,7 @@ namespace Illustra.Controls
         }
 
         private readonly WebpPlayerViewModel _viewModel;
+        private bool _isStretchMode = false;
 
         public WebpPlayerControl()
         {
@@ -46,6 +47,7 @@ namespace Illustra.Controls
                 LogHelper.LogError("WebPプレイヤーコントロールの初期化に失敗しました。", ex);
                 throw;
             }
+            ApplyInitialStretchMode();
         }
 
         public async Task LoadWebpAsync(string filePath)
@@ -60,6 +62,7 @@ namespace Illustra.Controls
                 LogHelper.LogWithTimestamp($"WebPファイルの読み込みを開始: {filePath}", LogHelper.Categories.Performance);
                 await _viewModel.LoadAsync(filePath);
                 LogHelper.LogWithTimestamp($"WebPファイルの読み込みが完了しました: {filePath}", LogHelper.Categories.Performance);
+                ApplyInitialStretchMode();
             }
             catch (Exception ex)
             {
@@ -251,5 +254,54 @@ namespace Illustra.Controls
             }
         }
 
+        private void StretchModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isStretchMode = !_isStretchMode;
+            UpdateStretchMode();
+        }
+
+        private void ApplyInitialStretchMode()
+        {
+            var settings = ViewerSettingsHelper.LoadSettings();
+            _isStretchMode = !settings.FitSmallAnimationToScreen;
+            UpdateStretchMode();
+        }
+
+        private void UpdateStretchMode()
+        {
+            if (WebpImage.Source == null)
+            {
+                WebpImage.Stretch = Stretch.Uniform;
+                StretchModeIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialDesignKind.ImageAspectRatio;
+                StretchModeButton.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            double imageWidth = WebpImage.Source.Width;
+            double imageHeight = WebpImage.Source.Height;
+            double containerWidth = ActualWidth;
+            double containerHeight = ActualHeight;
+
+            bool canDisplayNone = imageWidth <= containerWidth && imageHeight <= containerHeight;
+            bool isStretch = canDisplayNone ? _isStretchMode : true;
+
+            StretchModeButton.Visibility = canDisplayNone ? Visibility.Visible : Visibility.Collapsed;
+
+            if (isStretch)
+            {
+                WebpImage.Stretch = Stretch.Uniform;
+                StretchModeIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialDesignKind._1xMobiledata;
+            }
+            else
+            {
+                WebpImage.Stretch = Stretch.None;
+                StretchModeIcon.Kind = MahApps.Metro.IconPacks.PackIconMaterialDesignKind.ZoomOutMap;
+            }
+        }
+
+        private void WebpPlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateStretchMode();
+        }
     }
 }

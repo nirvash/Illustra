@@ -10,6 +10,7 @@
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800"
              Background="Transparent"
+             SizeChanged="WebpPlayerRoot_SizeChanged"
              MouseDoubleClick="WebpPlayerRoot_MouseDoubleClick">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -97,6 +98,9 @@
                 <Button x:Name="RepeatButton" Command="{Binding ToggleRepeatCommand}" Width="30" Height="30" Margin="5" ToolTip="リピート切替" Focusable="False">
                     <iconPacks:PackIconMaterialDesign Kind="Repeat" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
+                <Button x:Name="StretchModeButton" Width="30" Height="30" Margin="5" ToolTip="表示切替" Click="StretchModeButton_Click">
+                    <iconPacks:PackIconMaterialDesign x:Name="StretchModeIcon" Kind="ImageAspectRatio" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
             </StackPanel>
 
             <!-- シークバー: SliderをBorderでラップしてPreviewイベントを捕捉 -->
@@ -107,6 +111,7 @@
                     PreviewMouseLeftButtonUp="SeekBarContainer_PreviewMouseLeftButtonUp">
                 <Slider x:Name="SeekBar"
                         VerticalAlignment="Center" Margin="10,0"
+                        Focusable="False"
                         Minimum="0"
                         Maximum="{Binding TotalFrames, Converter={StaticResource SubtractOneConverter}}"
                         Value="{Binding CurrentFrameIndex, Mode=TwoWay}"
