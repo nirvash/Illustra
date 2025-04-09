@@ -2461,19 +2461,31 @@ namespace Illustra.Views
                         }
                     };
 
-                    _imageViewerWindow.Closed += (s, e) =>
+                    _imageViewerWindow.Closed += async (s, e) => // async を追加
                     {
                         _thumbnailLoader?.SetFullscreenMode(false);
 
-                        // サムネイルの再生成 ← IsFullscreenChanged で行うため不要
-                        // var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
-                        // if (scrollViewer != null)
-                        // {
-                        //     _ = LoadVisibleThumbnailsAsync(scrollViewer);
-                        // }
+                        // Closed イベントハンドラ内でフルスクリーン状態を確認
+                        bool wasFullScreen = _imageViewerWindow?.IsFullScreen ?? false; // Closed時点のIsFullScreenを参照
 
                         // インスタンスをクリア
-                        _imageViewerWindow = null;
+                        _imageViewerWindow = null; // 先にクリアしておく
+
+                        // フルスクリーンで閉じた場合にサムネイルを再生成
+                        if (wasFullScreen)
+                        {
+                            // UIスレッドで実行し、レイアウト更新を待つ
+                            await Dispatcher.InvokeAsync(async () =>
+                            {
+                                var scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                                if (scrollViewer != null)
+                                {
+                                    // レイアウト更新を待つ (念のため)
+                                    await Task.Delay(100); // 少し待機
+                                    await LoadVisibleThumbnailsAsync(scrollViewer, includePreload: true); // includePreload: true で広範囲を読み込む
+                                }
+                            }, DispatcherPriority.Background); // Background優先度で実行
+                        }
                     };
 
                     // 画像を読み込んでウィンドウを表示・フォーカス
