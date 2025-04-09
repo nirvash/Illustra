@@ -80,13 +80,21 @@
                 </Button>
             </StackPanel>
 
-            <!-- シークバー -->
-            <Slider Grid.Column="1"
-                    VerticalAlignment="Center" Margin="10,0"
-                    Minimum="0"
-                    Maximum="{Binding TotalFrames}"
-                    Value="{Binding CurrentFrameIndex, Mode=TwoWay}"
-                    IsMoveToPointEnabled="True"/>
+            <!-- シークバー: SliderをBorderでラップしてPreviewイベントを捕捉 -->
+            <Border Grid.Column="1"
+                    x:Name="SeekBarContainer"
+                    Background="Transparent"
+                    PreviewMouseLeftButtonDown="SeekBarContainer_PreviewMouseLeftButtonDown"
+                    PreviewMouseLeftButtonUp="SeekBarContainer_PreviewMouseLeftButtonUp">
+                <Slider x:Name="SeekBar"
+                        VerticalAlignment="Center" Margin="10,0"
+                        Minimum="0"
+                        Maximum="{Binding TotalFrames}"
+                        Value="{Binding CurrentFrameIndex, Mode=TwoWay}"
+                        IsMoveToPointEnabled="True"
+                        Thumb.DragStarted="SeekBar_DragStarted"
+                        Thumb.DragCompleted="SeekBar_DragCompleted"/>
+            </Border>
 
             <!-- 右側情報 -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">

@@ -1,6 +1,10 @@
 using Illustra.Helpers;
+using System;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Threading;
 using Illustra.ViewModels;
 using Illustra.Services;
 
@@ -99,6 +103,79 @@ namespace Illustra.Controls
                 // Handle the event (prevent bubbling) if it was on the controls
                 e.Handled = true;
             }
+        }
+
+        private void SeekBarContainer_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Ignore clicks directly on the Thumb (handled by Slider's built-in drag)
+            if (e.OriginalSource is Thumb)
+            {
+                return;
+            }
+
+            // Handle clicks on the track part
+            if (sender is Border container && SeekBar.IsEnabled)
+            {
+                _viewModel?.SeekBarStarted();
+
+                // Find the Thumb and simulate a MouseLeftButtonDown event on it
+                var thumb = FindVisualChild<Thumb>(SeekBar);
+                if (thumb != null)
+                {
+                    // Use Dispatcher to ensure the UI thread handles the event simulation
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        thumb.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
+                        {
+                            RoutedEvent = UIElement.MouseLeftButtonDownEvent,
+                            Source = thumb
+                        });
+                        Mouse.Capture(thumb);
+                    }, DispatcherPriority.Input);
+                }
+            }
+        }
+
+        private void SeekBarContainer_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // マウスキャプチャを解放
+            if (Mouse.Captured is Thumb capturedThumb && capturedThumb == FindVisualChild<Thumb>(SeekBar))
+            {
+                Mouse.Capture(null);
+            }
+
+            _viewModel?.SeekBarCompleted();
+        }
+
+        // Helper to find visual child
+        private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child != null && child is T t)
+                {
+                    return t;
+                }
+                else
+                {
+                    T? childOfChild = FindVisualChild<T>(child);
+                    if (childOfChild != null)
+                        return childOfChild;
+                }
+            }
+            return null;
+        }
+
+        private void SeekBar_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+        {
+            _viewModel?.SeekBarStarted();
+        }
+
+        private void SeekBar_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            _viewModel?.SeekBarCompleted();
         }
 
         private void WebpPlayerControl_Unloaded(object sender, RoutedEventArgs e)

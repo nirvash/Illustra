@@ -35,6 +35,8 @@ namespace Illustra.ViewModels
         }
         private ConcurrentDictionary<int, CachedFrame> _frameCache;
         private ConcurrentDictionary<int, bool> _prefetchErrors;
+        private bool _isSeekBarDragging;
+        private bool _wasPlayingBeforeSeek; // シーク操作開始前の再生状態を保持
         private List<TimeSpan> _frameDelays;
         private DispatcherTimer _playbackTimer;
         private CancellationTokenSource _decodingCts; // LoadAsyncキャンセル用
@@ -54,7 +56,6 @@ namespace Illustra.ViewModels
         public string FilePath { get; private set; }
 
         public BitmapSource CurrentFrame { get; private set; } // 合成後のフレームを表示
-
         public int CurrentFrameIndex
         {
             get => _currentFrameIndex;
@@ -62,7 +63,17 @@ namespace Illustra.ViewModels
             {
                 if (_currentFrameIndex != value)
                 {
-                    Seek(value); // Sliderからの変更時にSeekを呼び出す
+                    if (!_isSeekBarDragging)
+                    {
+                        Seek(value); // スライダーのドラッグ中でない場合のみSeekを呼び出す
+                    }
+                    else
+                    {
+                        // ドラッグ中は位置のみを更新
+                        _currentFrameIndex = value;
+                        OnPropertyChanged(nameof(CurrentFrameIndex));
+                        OnPropertyChanged(nameof(CurrentTime));
+                    }
                 }
             }
         }
@@ -359,79 +370,51 @@ namespace Illustra.ViewModels
         // --- シーク関連 (libwebpストリーミングでは再実装が必要) ---
         private async void Seek(int frameIndex)
         {
-            if (_frameDelays.Count == 0) return;
+            if (_frameDelays.Count == 0 || frameIndex < 0 || frameIndex >= _frameDelays.Count) return;
 
-            if (frameIndex >= 0 && frameIndex < _frameDelays.Count)
+            // インデックスの更新はどの場合も行う
+            _currentFrameIndex = frameIndex;
+            OnPropertyChanged(nameof(CurrentFrameIndex));
+            OnPropertyChanged(nameof(CurrentTime));
+
+            // ドラッグ中は表示を更新しない
+            if (_isSeekBarDragging)
             {
-                var wasPlaying = CurrentState == PlayState.Playing;
-                if (wasPlaying)
+                return;
+            }
+
+            try
+            {
+                await UpdateFrameDisplay(frameIndex);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"フレーム {frameIndex} へのシークに失敗しました: {ex.Message}", ex);
+                _prefetchErrors[frameIndex] = true;
+            }
+        }
+
+        private async Task UpdateFrameDisplay(int frameIndex)
+        {
+            var composedFrame = await GetComposedFrameAsync(frameIndex);
+            if (composedFrame != null)
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    CurrentFrame = composedFrame;
+                    OnPropertyChanged(nameof(CurrentFrame));
+                });
+
+                _frameAdvancedEvent.Set();
+                StartPrefetchLoop();
+
+                // タイマー制御は再生中の場合のみ
+                if (CurrentState == PlayState.Playing)
                 {
                     _playbackTimer.Stop();
+                    _playbackTimer.Interval = _frameDelays[frameIndex];
+                    _playbackTimer.Start();
                 }
-
-                try
-                {
-                    // 既存のキャッシュを活用 (Demuxerはランダムアクセス可能)
-                    // _prefetchErrors.Clear();
-                    _currentFrameIndex = frameIndex;
-
-                    // 目的のフレームの合成結果を取得（キャッシュ優先）
-                    var targetComposedFrame = await GetComposedFrameAsync(frameIndex);
-
-                    // 前のフレームが合成済みかチェック（エラー処理のため）
-                    if (frameIndex > 0 && !_frameCache.ContainsKey(frameIndex - 1))
-                    {
-                        // 前のフレームが未合成の場合は事前に合成を試みる
-                        await GetComposedFrameAsync(frameIndex - 1);
-                    }
-                    else
-                    {
-                        // 最初のフレームの場合は特に何もしない
-                    }
-
-                    // 目的のフレームの合成結果は targetComposedFrame に入っている
-                    var composedFrame = targetComposedFrame;
-
-                    // UIスレッドでシーク後のフレームを表示
-                    Application.Current?.Dispatcher.Invoke(() =>
-                    {
-                        CurrentFrame = composedFrame;
-                        OnPropertyChanged(nameof(CurrentFrame));
-                    });
-
-                    // タイマーの間隔を設定
-                    if (frameIndex >= 0 && frameIndex < _frameDelays.Count)
-                    {
-                        _playbackTimer.Interval = _frameDelays[frameIndex];
-                    }
-                    else
-                    {
-                        _playbackTimer.Interval = TimeSpan.FromMilliseconds(10);
-                        LogHelper.LogWarning($"シーク: フレームインデックス {frameIndex} が無効です。デフォルトの間隔を使用します。");
-                    }
-
-                    if (wasPlaying)
-                    {
-                        _playbackTimer.Start();
-                        LogHelper.LogWithTimestamp($"シーク: インデックス {frameIndex} で再生を再開しました。", LogHelper.Categories.Performance);
-                        _frameAdvancedEvent.Set();
-                        StartPrefetchLoop();
-                    }
-                    else
-                    {
-                        LogHelper.LogWithTimestamp($"シーク: 一時停止中にインデックス {frameIndex} に移動しました。", LogHelper.Categories.Performance);
-                        _frameAdvancedEvent.Set();
-                        StartPrefetchLoop();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogHelper.LogError($"フレーム {frameIndex} へのシークに失敗しました: {ex.Message}", ex);
-                    _prefetchErrors[frameIndex] = true; // シーク失敗をエラーとして記録
-                }
-
-                OnPropertyChanged(nameof(CurrentFrameIndex));
-                OnPropertyChanged(nameof(CurrentTime));
             }
         }
 
@@ -841,6 +824,41 @@ namespace Illustra.ViewModels
             _prefetchCts?.Dispose();
             _prefetchCts = null;
             LogHelper.LogWithTimestamp("Prefetch loop stopped.", LogHelper.Categories.Performance);
+        }
+
+        public void SeekBarStarted()
+        {
+            if (TotalFrames > 0 && !_isSeekBarDragging)
+            {
+                _isSeekBarDragging = true;
+                _wasPlayingBeforeSeek = CurrentState == PlayState.Playing;
+                if (_wasPlayingBeforeSeek)
+                {
+                    CurrentState = PlayState.Paused;
+                    _playbackTimer.Stop();
+                }
+                _frameAdvancedEvent?.Set(); // プリフェッチサイクルのため
+                StartPrefetchLoop();
+            }
+        }
+
+        public async void SeekBarCompleted()
+        {
+            if (_isSeekBarDragging)
+            {
+                _isSeekBarDragging = false;
+
+                // ドラッグ完了時に現在のフレームを表示
+                await UpdateFrameDisplay(_currentFrameIndex);
+
+                // 元の再生状態を復元
+                if (_wasPlayingBeforeSeek)
+                {
+                    CurrentState = PlayState.Playing;
+                    _playbackTimer.Start();
+                }
+            }
+            _frameAdvancedEvent?.Set();
         }
 
         protected void OnPropertyChanged(string name)
