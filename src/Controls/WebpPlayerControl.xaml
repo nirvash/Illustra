@@ -51,7 +51,9 @@
               Grid.Row="1"
               MinHeight="50"
               Background="Transparent"
-              VerticalAlignment="Stretch">
+              VerticalAlignment="Stretch"
+              MouseEnter="ControlsPanel_MouseEnter"
+              MouseLeave="ControlsPanel_MouseLeave">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Grid.Row" Value="1"/>

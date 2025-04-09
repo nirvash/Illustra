@@ -162,6 +162,13 @@ namespace Illustra.Views
                     return;
                 }
 
+                if (WebpPlayer.Visibility == Visibility.Visible && WebpPlayer.IsMouseOverControls)
+                {
+                    // WebpPlayerControl が表示されていて、かつそのコントロール上にマウスがある場合は隠さない
+                    hideCursorTimer.Stop();
+                    return;
+                }
+
                 // 上記以外の場合で、カーソルが表示されているなら隠す
                 // マウスボタンが押されておらず、コンテキストメニューも表示されておらず、カーソルが現在表示されている場合のみ隠す
                 if (Mouse.LeftButton == MouseButtonState.Released &&

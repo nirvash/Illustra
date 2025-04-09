@@ -29,6 +29,19 @@ namespace Illustra.Controls
         private readonly WebpPlayerViewModel _viewModel;
         private bool _isStretchMode = false;
 
+        // Read-only dependency property to indicate if the mouse is over the controls
+        private static readonly DependencyPropertyKey IsMouseOverControlsPropertyKey =
+            DependencyProperty.RegisterReadOnly("IsMouseOverControls", typeof(bool), typeof(WebpPlayerControl), new PropertyMetadata(false));
+
+        public static readonly DependencyProperty IsMouseOverControlsProperty =
+            IsMouseOverControlsPropertyKey.DependencyProperty;
+
+        public bool IsMouseOverControls
+        {
+            get { return (bool)GetValue(IsMouseOverControlsProperty); }
+            private set { SetValue(IsMouseOverControlsPropertyKey, value); }
+        }
+
         public WebpPlayerControl()
         {
             try
@@ -302,6 +315,15 @@ namespace Illustra.Controls
         private void WebpPlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateStretchMode();
+        }
+        private void ControlsPanel_MouseEnter(object sender, MouseEventArgs e)
+        {
+            IsMouseOverControls = true;
+        }
+
+        private void ControlsPanel_MouseLeave(object sender, MouseEventArgs e)
+        {
+            IsMouseOverControls = false;
         }
     }
 }
