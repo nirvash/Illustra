@@ -83,6 +83,17 @@ namespace Illustra.ViewModels
 
             // 初期化
             Initialize(initialPath);
+
+            OpenInExplorerCommand = new DelegateCommand<FileSystemItemModel>(
+                item =>
+                {
+                    if (item != null && item.IsFolder && Directory.Exists(item.FullPath))
+                    {
+                        Process.Start("explorer.exe", $"\"{item.FullPath}\"");
+                    }
+                },
+                item => item != null && item.IsFolder && Directory.Exists(item.FullPath)
+            );
         }
 
         public void OnFileCreated(string path)
@@ -165,6 +176,7 @@ namespace Illustra.ViewModels
         public ICommand AddToFavoritesCommand { get; }
         public ICommand RemoveFromFavoritesCommand { get; }
         public ICommand ExpandItemCommand { get; }
+        public ICommand OpenInExplorerCommand { get; }
 
         // 指定したパスを展開する
         public void Expand(string targetPath)

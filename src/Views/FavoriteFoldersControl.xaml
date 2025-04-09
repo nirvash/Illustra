@@ -90,6 +90,10 @@
                     <MenuItem x:Name="RemoveFromFavoritesMenuItem"
                               Header="{DynamicResource String_FavoriteFolders_RemoveFromFavorites}"
                               Click="RemoveFromFavorites_Click"/>
+                    <Separator/>
+                    <MenuItem x:Name="OpenInExplorerMenuItem"
+                              Header="{DynamicResource String_Thumbnail_OpenInExplorer}"
+                              Click="OpenInExplorer_Click"/>
                 </ContextMenu>
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>

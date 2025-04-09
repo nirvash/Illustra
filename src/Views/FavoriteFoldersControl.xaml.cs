@@ -525,16 +525,18 @@ namespace Illustra.Views
             // メニュー項目を取得
             var setDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "SetDisplayNameMenuItem");
             var removeDisplayNameMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveDisplayNameMenuItem");
-            var openInNewTabMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "OpenInNewTabMenuItem"); // 追加
+            var openInNewTabMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "OpenInNewTabMenuItem");
             var removeFavoriteMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "RemoveFromFavoritesMenuItem");
+            var openInExplorerMenuItem = treeView.ContextMenu.Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == "OpenInExplorerMenuItem");
 
             // 選択されたアイテムがない場合、すべてのカスタムメニューを無効化
             if (selectedFolder == null || string.IsNullOrEmpty(selectedFolder.Path))
             {
                 if (setDisplayNameMenuItem != null) setDisplayNameMenuItem.IsEnabled = false;
                 if (removeDisplayNameMenuItem != null) removeDisplayNameMenuItem.IsEnabled = false;
-                if (openInNewTabMenuItem != null) openInNewTabMenuItem.IsEnabled = false; // 追加
+                if (openInNewTabMenuItem != null) openInNewTabMenuItem.IsEnabled = false;
                 if (removeFavoriteMenuItem != null) removeFavoriteMenuItem.IsEnabled = false;
+                if (openInExplorerMenuItem != null) openInExplorerMenuItem.IsEnabled = false;
                 return;
             }
 
@@ -557,8 +559,13 @@ namespace Illustra.Views
             }
             if (removeFavoriteMenuItem != null)
             {
-                removeFavoriteMenuItem.CommandParameter = selectedFolder; // CommandParameter を FavoriteFolderModel に変更
+                removeFavoriteMenuItem.CommandParameter = selectedFolder;
                 removeFavoriteMenuItem.IsEnabled = true;
+            }
+            if (openInExplorerMenuItem != null)
+            {
+                openInExplorerMenuItem.CommandParameter = selectedFolder;
+                openInExplorerMenuItem.IsEnabled = true;
             }
         }
 
@@ -652,6 +659,14 @@ namespace Illustra.Views
             if (parentObject == null) return null;
             if (parentObject is T parent) return parent;
             return FindVisualParent<T>(parentObject);
+        }
+
+        private void OpenInExplorer_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder && !string.IsNullOrEmpty(folder.Path) && Directory.Exists(folder.Path))
+            {
+                Process.Start("explorer.exe", $"\"{folder.Path}\"");
+            }
         }
     }
 }

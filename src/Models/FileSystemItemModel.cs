@@ -38,6 +38,7 @@ namespace Illustra.Models
         private ICommand? _renameFolderCommand;
         private ICommand? _deleteFolderCommand;
         private ICommand? _openInNewTabCommand; // 追加
+        private ICommand? _openInExplorerCommand;
         public ICommand RenameFolderCommand
         {
             get => _renameFolderCommand ??= new DelegateCommand(ExecuteRenameFolder, CanExecuteRenameFolder);
@@ -259,6 +260,25 @@ namespace Illustra.Models
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<OpenInNewTabEvent>().Publish(
                     new OpenInNewTabEventArgs(FullPath, "FileSystemTree")); // SourceId を設定
+            }
+        }
+
+        public ICommand OpenInExplorerCommand
+        {
+            get => _openInExplorerCommand ??= new DelegateCommand(ExecuteOpenInExplorer, CanExecuteOpenInExplorer);
+        }
+
+        private bool CanExecuteOpenInExplorer()
+        {
+            // フォルダの場合のみ有効
+            return IsFolder && Directory.Exists(FullPath);
+        }
+
+        private void ExecuteOpenInExplorer()
+        {
+            if (CanExecuteOpenInExplorer())
+            {
+                Process.Start("explorer.exe", $"\"{FullPath}\"");
             }
         }
 

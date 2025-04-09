@@ -89,6 +89,9 @@
                         <MenuItem x:Name="DeleteFolderMenuItem"
                                   Header="{DynamicResource String_FileSystemTreeView_DeleteFolder}"
                                   Command="{Binding Path=PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem Header="{DynamicResource String_Thumbnail_OpenInExplorer}"
+                                  Command="{Binding Path=PlacementTarget.Tag.OpenInExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                     </ContextMenu>
                 </Setter.Value>
             </Setter>

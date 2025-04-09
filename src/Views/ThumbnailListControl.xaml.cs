@@ -457,6 +457,33 @@ namespace Illustra.Views
             // DoRenameAsyncには右クリックされたアイテムを渡す
             renameItem.Click += async (s, e) => await DoRenameAsync(clickedItem);
             menu.Items.Add(renameItem);
+            // ファイルパスコピーを名前変更の下に追加
+            var copyPathItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyFilePath")
+            };
+            copyPathItem.Click += (s, e) =>
+            {
+                if (clickedItem != null)
+                {
+                    Clipboard.SetText(clickedItem.FullPath);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
+                }
+            };
+            menu.Items.Add(copyPathItem);
+
+            var explorerItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_OpenInExplorer")
+            };
+            explorerItem.Click += (s, e) =>
+            {
+                if (clickedItem != null && File.Exists(clickedItem.FullPath))
+                {
+                    Process.Start("explorer.exe", $"/select,\"{clickedItem.FullPath}\"");
+                }
+            };
+            menu.Items.Add(explorerItem);
 
             // TODO: 他の右クリックアイテムに対する操作メニュー項目をここに追加
             // 例: 削除、パスをコピーなど
