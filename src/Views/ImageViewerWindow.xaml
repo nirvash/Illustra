@@ -146,6 +146,7 @@
             <!-- メイン表示領域とレーティング表示をまとめたGrid -->
             <!-- メイン表示領域 -->
             <controls:WebpPlayerControl x:Name="WebpPlayer"
+                PreviewMouseWheel="MainImage_PreviewMouseWheel"
                 Grid.Column="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
