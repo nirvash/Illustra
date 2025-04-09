@@ -188,12 +188,12 @@ namespace Illustra.Controls
             _viewModel?.SeekBarStarted();
         }
 
-        private void SeekBar_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        private void SeekBar_DragCompleted(object? sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
         {
             _viewModel?.SeekBarCompleted();
         }
 
-        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(WebpPlayerViewModel.CurrentState))
             {
@@ -230,7 +230,7 @@ namespace Illustra.Controls
             }
         }
 
-        private void WebpPlayerControl_Unloaded(object sender, RoutedEventArgs e)
+        private void WebpPlayerControl_Unloaded(object? sender, RoutedEventArgs e)
         {
             try
             {

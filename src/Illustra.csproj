@@ -12,13 +12,10 @@
     <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>    <!-- インメモリビルドログを有効化 -->
     <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>    <!-- ビルド時のログ出力を詳細に -->
     <BuildLogVerbosity>detailed</BuildLogVerbosity>    <!-- Null参照警告を無効化 -->
-    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1903;NU1701;NETSDK1138</NoWarn>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1903;NU1701;NETSDK1138;VSTHRD001;VSTHRD002;VSTHRD103;VSTHRD100;VSTHRD105;VSTHRD110;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>  <!-- デバッグビルド設定 -->
-  <PropertyGroup>
-    <NoWarn>VSTHRD001;VSTHRD100;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>portable</DebugType>

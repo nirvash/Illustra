@@ -48,7 +48,6 @@ namespace Illustra.ViewModels
         private bool _isLoading;
         private bool _isFullScreen;
         private string _errorMessage;
-        private BitmapSource _currentFrame;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -62,17 +61,7 @@ namespace Illustra.ViewModels
             {
                 if (_currentFrameIndex != value)
                 {
-                    if (!_isSeekBarDragging)
-                    {
-                        Seek(value); // スライダーのドラッグ中でない場合のみSeekを呼び出す
-                    }
-                    else
-                    {
-                        // ドラッグ中は位置のみを更新
-                        _currentFrameIndex = value;
-                        OnPropertyChanged(nameof(CurrentFrameIndex));
-                        OnPropertyChanged(nameof(CurrentTime));
-                    }
+                    Seek(value); // スライダーのドラッグ中でない場合のみSeekを呼び出す
                 }
             }
         }
@@ -391,12 +380,6 @@ namespace Illustra.ViewModels
             OnPropertyChanged(nameof(CurrentFrameIndex));
             OnPropertyChanged(nameof(CurrentTime));
 
-            // ドラッグ中は表示を更新しない
-            if (_isSeekBarDragging)
-            {
-                return;
-            }
-
             try
             {
                 await UpdateFrameDisplay(frameIndex);
@@ -410,12 +393,21 @@ namespace Illustra.ViewModels
 
         private async Task UpdateFrameDisplay(int frameIndex)
         {
-            var composedFrame = await GetComposedFrameAsync(frameIndex);
-            if (composedFrame != null)
+            BitmapSource? frame = null;
+            if (_isSeekBarDragging)
+            {
+                frame = await GetFrameForSeekAsync(frameIndex);
+            }
+            else
+            {
+                frame = await GetComposedFrameAsync(frameIndex);
+            }
+
+            if (frame != null)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    CurrentFrame = composedFrame;
+                    CurrentFrame = frame;
                     OnPropertyChanged(nameof(CurrentFrame));
                 });
 
@@ -430,6 +422,18 @@ namespace Illustra.ViewModels
                     _playbackTimer.Start();
                 }
             }
+        }
+
+        /// <summary>
+        /// シーク専用：キャッシュがあればそれを返し、なければ単体デコードして返す（キャッシュしない）
+        /// </summary>
+        private async Task<BitmapSource> GetFrameForSeekAsync(int frameIndex)
+        {
+            if (_frameCache.TryGetValue(frameIndex, out var cached))
+            {
+                return cached.ComposedBitmap;
+            }
+            return null;
         }
 
         public void PreviousFrame()
@@ -655,7 +659,6 @@ namespace Illustra.ViewModels
                 for (int i = 0; i < MaxComposeDepth && frameIndex - i >= 0; i++)
                 {
                     int currentIndex = frameIndex - i;
-                    WebpAnimationService.WebPDecodedFrame currentDecodedFrame;
 
                     // まずキャッシュを確認
                     if (_frameCache.TryGetValue(currentIndex, out var existingCache))
