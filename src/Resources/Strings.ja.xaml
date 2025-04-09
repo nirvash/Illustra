@@ -200,13 +200,6 @@
     <system:String x:Key="String_Property_Comment">コメント</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">プロンプトの編集</system:String>
 
-    <!-- WebView2関連 -->
-    <system:String x:Key="String_WebView2_Status_Installed">✓ インストール済み</system:String>
-    <system:String x:Key="String_WebView2_Status_NotInstalled">✗ 未インストール</system:String>
-    <system:String x:Key="String_WebView2_Status_Description">アニメーション WebP の表示に必要なランタイム</system:String>
-    <system:String x:Key="String_WebView2_DownloadLink">ダウンロードページへ</system:String>
-
-
     <!-- メディア表示設定 (アニメーションと動画に適用) -->
     <system:String x:Key="String_Settings_Media_Section">メディア表示</system:String>
     <system:String x:Key="String_Settings_Media_FitToScreen">動画を画面に合わせて拡大</system:String>

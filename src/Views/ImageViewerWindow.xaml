@@ -7,7 +7,6 @@
                          xmlns:helpers="clr-namespace:Illustra.Helpers"
                          xmlns:controls="clr-namespace:Illustra.Controls"
                          xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
-                         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
                          xmlns:localControls="clr-namespace:Illustra.Controls"
                          xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                          mc:Ignorable="d"
@@ -146,7 +145,6 @@
 
             <!-- メイン表示領域とレーティング表示をまとめたGrid -->
             <!-- メイン表示領域 -->
-            <!-- アニメーション用 WebView2 -->
             <controls:WebpPlayerControl x:Name="WebpPlayer"
                 Grid.Column="0"
                 HorizontalAlignment="Stretch"
