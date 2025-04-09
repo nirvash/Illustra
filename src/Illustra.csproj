@@ -12,7 +12,7 @@
     <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>    <!-- インメモリビルドログを有効化 -->
     <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>    <!-- ビルド時のログ出力を詳細に -->
     <BuildLogVerbosity>detailed</BuildLogVerbosity>    <!-- Null参照警告を無効化 -->
-    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1903;NU1701;NETSDK1138</NoWarn>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1903;NU1701;NETSDK1138;VSTHRD001;VSTHRD002;VSTHRD103;VSTHRD100;VSTHRD105;VSTHRD110;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>  <!-- デバッグビルド設定 -->
@@ -34,14 +34,21 @@
     <GitVersion_ToolArguments>-config "$(MSBuildProjectDirectory)\src\GitVersion.yml"</GitVersion_ToolArguments>
   </PropertyGroup>
   <ItemGroup>
-    <None Update="Microsoft.Web.WebView2.Core.xml">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    <None Include="dll\libwebp.dll">
+      <Link>libwebp.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Microsoft.Web.WebView2.WinForms.xml">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    <None Include="dll\libsharpyuv.dll">
+      <Link>libsharpyuv.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Microsoft.Web.WebView2.Wpf.xml">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    <None Include="dll\libwebpdemux.dll">
+      <Link>libwebpdemux.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="dll\libwebpdecoder.dll">
+      <Link>libwebpdecoder.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -64,7 +71,7 @@
     <PackageReference Include="MahApps.Metro.IconPacks.MaterialDesign" Version="5.1.0" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
     <PackageReference Include="Microsoft.WindowsAPICodePack-Shell" Version="1.1.0" />
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />

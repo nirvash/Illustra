@@ -1,14 +1,10 @@
 using Illustra.Helpers;
-using Microsoft.Web.WebView2.Core;
 
 namespace Illustra.ViewModels.Settings
 {
     public class ViewerSettingsViewModel : SettingsViewModelBase
     {
         private readonly ViewerSettings _settings;
-        private readonly bool _isWebView2Available;
-
-        public bool IsWebView2Available => _isWebView2Available;
 
         private double _slideshowInterval;
         public double SlideshowInterval
@@ -111,15 +107,6 @@ namespace Illustra.ViewModels.Settings
         public ViewerSettingsViewModel(ViewerSettings settings)
         {
             _settings = settings;
-
-            try
-            {
-                _isWebView2Available = WebPHelper.IsWebView2Installed();
-            }
-            catch
-            {
-                _isWebView2Available = false;
-            }
         }
 
         public override void LoadSettings()

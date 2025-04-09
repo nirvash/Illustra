@@ -242,7 +242,7 @@ namespace Illustra.Controls
             ToggleRepeat();
             // リピート状態に応じてボタンの背景色を変更
             // RepeatButton は XAML で x:Name が指定されていればアクセス可能
-            RepeatButton.Background = _isRepeatEnabled ? Brushes.LightSkyBlue : Brushes.Transparent;
+            RepeatButton.Background = _isRepeatEnabled ? Brushes.RoyalBlue : Brushes.Transparent;
         }
 
         private void StretchModeButton_Click(object sender, RoutedEventArgs e)
@@ -501,7 +501,7 @@ namespace Illustra.Controls
         private void UpdateRepeatButtonVisualState()
         {
             // リピート状態に応じてボタンの背景色などを変更
-            RepeatButton.Background = _isRepeatEnabled ? Brushes.LightSkyBlue : Brushes.Transparent;
+            RepeatButton.Background = _isRepeatEnabled ? Brushes.RoyalBlue : Brushes.Transparent;
             // 必要に応じてアイコンの変更などもここで行う
         }
 

@@ -1,0 +1,136 @@
+<UserControl x:Class="Illustra.Controls.WebpPlayerControl"
+             x:Name="WebpPlayerRoot"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Illustra.Controls"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="Transparent"
+             SizeChanged="WebpPlayerRoot_SizeChanged"
+             MouseDoubleClick="WebpPlayerRoot_MouseDoubleClick">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 他のリソースディクショナリがあればここに追加 -->
+            </ResourceDictionary.MergedDictionaries>
+            <localConverters:SubtractOneConverter x:Key="SubtractOneConverter" xmlns:localConverters="clr-namespace:Illustra.Converters"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" /> <!-- 表示領域 -->
+            <RowDefinition Height="Auto" /> <!-- コントロール領域 -->
+        </Grid.RowDefinitions>
+
+        <!-- WebP表示とローディング表示 -->
+        <Grid Grid.Row="0" Background="Transparent">
+            <Image x:Name="WebpImage"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Stretch="Uniform"
+                   Source="{Binding CurrentFrame}" />
+
+            <!-- ローディング表示 -->
+            <Grid Background="#80000000"
+                  Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <mahcontrols:ProgressRing IsActive="True" Foreground="White" Width="50" Height="50"/>
+                    <TextBlock Text="{DynamicResource String_Tooltip_Loading}" Foreground="White" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- コントロール -->
+        <Grid x:Name="ControlsPanel"
+              Grid.Row="1"
+              MinHeight="50"
+              Background="Transparent"
+              VerticalAlignment="Stretch"
+              MouseEnter="ControlsPanel_MouseEnter"
+              MouseLeave="ControlsPanel_MouseLeave">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Grid.Row" Value="1"/>
+                    <Setter Property="Background" Value="#A0000000"/>
+                    <Setter Property="VerticalAlignment" Value="Stretch"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsFullScreen}" Value="True">
+                            <Setter Property="Grid.Row" Value="0"/>
+                            <Setter Property="VerticalAlignment" Value="Bottom"/>
+                            <Setter Property="Background" Value="#A0000000"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左側ボタン -->
+            <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="10,0">
+                <!-- Rewind Button Added -->
+                <Button x:Name="RewindButton" Command="{Binding RewindCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_Rewind}" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="SkipPrevious" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding PreviousFrameCommand}"
+                        Width="30"
+                        Height="30"
+                        Margin="5"
+                        ToolTip="{DynamicResource String_Tooltip_PreviousFrame}">
+                    <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowLeft"/>
+                </Button>
+                <Button x:Name="PlayButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_Play}" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="PlayArrow" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Button x:Name="PauseButton" Command="{Binding PlayPauseCommand}" Width="30" Height="30" Margin="5" Visibility="Collapsed" ToolTip="{DynamicResource String_Tooltip_Pause}" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="Pause" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding NextFrameCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_NextFrame}">
+                    <iconPacks:PackIconMaterialDesign Kind="KeyboardArrowRight" />
+                </Button>
+                <Button x:Name="RepeatButton" Command="{Binding ToggleRepeatCommand}" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_RepeatToggle}" Focusable="False">
+                    <iconPacks:PackIconMaterialDesign Kind="Repeat" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Button x:Name="StretchModeButton" Width="30" Height="30" Margin="5" ToolTip="{DynamicResource String_Tooltip_StretchToggle}" Click="StretchModeButton_Click">
+                    <iconPacks:PackIconMaterialDesign x:Name="StretchModeIcon" Kind="ImageAspectRatio" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+            </StackPanel>
+
+            <!-- シークバー: SliderをBorderでラップしてPreviewイベントを捕捉 -->
+            <Border Grid.Column="1"
+                    x:Name="SeekBarContainer"
+                    Background="Transparent"
+                    PreviewMouseLeftButtonDown="SeekBarContainer_PreviewMouseLeftButtonDown"
+                    PreviewMouseLeftButtonUp="SeekBarContainer_PreviewMouseLeftButtonUp">
+                <Slider x:Name="SeekBar"
+                        VerticalAlignment="Center" Margin="10,0"
+                        Focusable="False"
+                        Minimum="0"
+                        Maximum="{Binding TotalFrames, Converter={StaticResource SubtractOneConverter}}"
+                        Value="{Binding CurrentFrameIndex, Mode=TwoWay}"
+                        Style="{DynamicResource CustomSliderStyle}"
+                        IsMoveToPointEnabled="True"
+                        Thumb.DragStarted="SeekBar_DragStarted"
+                        Thumb.DragCompleted="SeekBar_DragCompleted"/>
+            </Border>
+
+            <!-- 右側情報 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+                <TextBlock VerticalAlignment="Center" Margin="5,0">
+                    <Run Text="{Binding CurrentTime, Mode=OneWay, StringFormat={}{0:mm\\:ss}}"/>
+                    <Run Text=" / "/>
+                    <Run Text="{Binding TotalDuration, Mode=OneWay, StringFormat={}{0:mm\\:ss}}"/>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

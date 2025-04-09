@@ -200,13 +200,6 @@
     <system:String x:Key="String_Property_Comment">コメント</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">プロンプトの編集</system:String>
 
-    <!-- WebView2関連 -->
-    <system:String x:Key="String_WebView2_Status_Installed">✓ インストール済み</system:String>
-    <system:String x:Key="String_WebView2_Status_NotInstalled">✗ 未インストール</system:String>
-    <system:String x:Key="String_WebView2_Status_Description">アニメーション WebP の表示に必要なランタイム</system:String>
-    <system:String x:Key="String_WebView2_DownloadLink">ダウンロードページへ</system:String>
-
-
     <!-- メディア表示設定 (アニメーションと動画に適用) -->
     <system:String x:Key="String_Settings_Media_Section">メディア表示</system:String>
     <system:String x:Key="String_Settings_Media_FitToScreen">動画を画面に合わせて拡大</system:String>
@@ -385,4 +378,19 @@
     <system:String x:Key="String_FileSystemTreeView_DeleteConfirmMessage">フォルダ '{0}' とその内容すべてを完全に削除しますか？</system:String>
     <system:String x:Key="String_FileSystemTreeView_MoveToRecycleBinConfirmMessage">フォルダ '{0}' とその内容すべてをごみ箱に移動しますか？</system:String>
     <system:String x:Key="String_FileSystemTreeView_DeleteError">フォルダの削除に失敗しました: {0}</system:String>
+    <!-- WebpPlayerControl / VideoPlayerControl Tooltips -->
+    <system:String x:Key="String_Tooltip_Loading">読み込み中...</system:String>
+    <system:String x:Key="String_Tooltip_Rewind">巻き戻し</system:String>
+    <system:String x:Key="String_Tooltip_PreviousFrame">前のフレーム</system:String>
+    <system:String x:Key="String_Tooltip_Play">再生</system:String>
+    <system:String x:Key="String_Tooltip_Pause">一時停止</system:String>
+    <system:String x:Key="String_Tooltip_NextFrame">次のフレーム</system:String>
+    <system:String x:Key="String_Tooltip_RepeatToggle">リピート切替</system:String>
+    <system:String x:Key="String_Tooltip_StretchToggle">表示切替</system:String>
+    <system:String x:Key="String_Tooltip_RewindVideo">巻き戻し</system:String>
+    <system:String x:Key="String_Tooltip_PlayVideo">再生</system:String>
+    <system:String x:Key="String_Tooltip_PauseVideo">一時停止</system:String>
+    <system:String x:Key="String_Tooltip_RepeatMode">リピート切替</system:String>
+    <system:String x:Key="String_Tooltip_StretchMode">表示切替</system:String>
+    <system:String x:Key="String_Tooltip_MuteUnmute">ミュート/ミュート解除</system:String>
 </ResourceDictionary>

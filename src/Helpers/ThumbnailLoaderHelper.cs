@@ -795,7 +795,7 @@ public class ThumbnailLoaderHelper
                     if (Path.GetExtension(fileNode.FullPath).ToLowerInvariant() == ".webp" &&
                         new FileInfo(fileNode.FullPath).Length >= 512000) // 500KB = 512000バイト
                     {
-                        var isAnim = WebPHelper.IsAnimatedWebP(fileNode.FullPath);
+                        var isAnim = await WebPHelper.IsAnimatedWebPAsync(fileNode.FullPath);
                         if (isAnim)
                         {
                             fileNode.IsVideo = true;  // アニメーションWebPはIsVideoをtrue

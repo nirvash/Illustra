@@ -18,8 +18,6 @@ using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
 using System.IO;
 using Illustra.ViewModels;
-using Microsoft.Web.WebView2.Wpf;
-using Microsoft.Web.WebView2.Core;
 using Illustra.Controls;
 using System.Windows.Documents;
 using MahApps.Metro.IconPacks; // 追加
@@ -28,6 +26,15 @@ namespace Illustra.Views
 {
     public partial class ImageViewerWindow : MetroWindow, INotifyPropertyChanged
     {
+        /// <summary>
+        /// WebPアニメーションを表示
+        /// </summary>
+        public async Task ShowWebpAnimation(string filePath)
+        {
+            WebpPlayer.Visibility = Visibility.Visible;
+            await WebpPlayer.LoadWebpAsync(filePath);
+        }
+
         private const string CONTROL_ID = "ImageViewer";
         // フルスクリーン切り替え前のウィンドウ状態を保存
         private bool _isFullScreen = false;
@@ -155,6 +162,13 @@ namespace Illustra.Views
                     return;
                 }
 
+                if (WebpPlayer.Visibility == Visibility.Visible && WebpPlayer.IsMouseOverControls)
+                {
+                    // WebpPlayerControl が表示されていて、かつそのコントロール上にマウスがある場合は隠さない
+                    hideCursorTimer.Stop();
+                    return;
+                }
+
                 // 上記以外の場合で、カーソルが表示されているなら隠す
                 // マウスボタンが押されておらず、コンテキストメニューも表示されておらず、カーソルが現在表示されている場合のみ隠す
                 if (Mouse.LeftButton == MouseButtonState.Released &&
@@ -200,7 +214,6 @@ namespace Illustra.Views
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
             Unloaded += OnWindowUnloaded();
-            WebView.WebMessageReceived += WebView_WebMessageReceived;
         }
 
         private async void OnWindowLoaded()
@@ -598,6 +611,7 @@ namespace Illustra.Views
         // Renamed from LoadAndDisplayImage
         private async Task LoadAndDisplayContent(string filePath)
         {
+            LogHelper.LogWithTimestamp("LoadAndDisplayContent - Start", LogHelper.Categories.Performance);
             // Stop video if playing
             if (VideoPlayerControl.Visibility == Visibility.Visible)
             {
@@ -614,28 +628,17 @@ namespace Illustra.Views
                 // Hide video player
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
 
-                var IsWebView2Available = WebPHelper.IsWebView2Installed();
-                if (IsWebView2Available && WebPHelper.IsAnimatedWebP(filePath))
+                if (await WebPHelper.IsAnimatedWebPAsync(filePath))
                 {
-                    // Animated WebP logic (existing)
-                    try
-                    {
-                        WebView.Visibility = Visibility.Visible;
-                        ImageZoomControl.Visibility = Visibility.Collapsed;
-                        var settings = ViewerSettingsHelper.LoadSettings();
-                        await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath, settings.FitSmallAnimationToScreen);
-                        Mouse.OverrideCursor = Cursors.Arrow;
-                        hideCursorTimer.Stop();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.LogError($"WebView2の初期化中にエラーが発生: {ex.Message}", ex);
-                        ShowStaticImage(filePath); // Fallback to static image
-                    }
+                    WebpPlayer.Visibility = Visibility.Visible;
+                    LogHelper.LogWithTimestamp("LoadAndDisplayContent - Before LoadWebpAsync", LogHelper.Categories.Performance);
+                    await WebpPlayer.LoadWebpAsync(filePath);
+                    ImageZoomControl.Visibility = Visibility.Collapsed;
+                    LogHelper.LogWithTimestamp("LoadAndDisplayContent - After LoadWebpAsync", LogHelper.Categories.Performance);
                 }
                 else
                 {
-                    ShowStaticImage(filePath); // Static image logic
+                    ShowStaticImage(filePath);
                 }
             }
         }
@@ -650,25 +653,11 @@ namespace Illustra.Views
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
             }
 
-            var IsWebView2Available = WebPHelper.IsWebView2Installed();
-            if (IsWebView2Available && WebPHelper.IsAnimatedWebP(filePath))
+            if (await WebPHelper.IsAnimatedWebPAsync(filePath))
             {
-                try
-                {
-                    WebView.Visibility = Visibility.Visible;
-                    ImageZoomControl.Visibility = Visibility.Collapsed;
-                    var settings = ViewerSettingsHelper.LoadSettings();
-                    await WebPHelper.ShowAnimatedWebPAsync(WebView, filePath, settings.FitSmallAnimationToScreen);
-
-                    // WebView表示中はカーソルを隠す機能はオフ
-                    Mouse.OverrideCursor = Cursors.Arrow;
-                    hideCursorTimer.Stop();
-                }
-                catch (Exception ex)
-                {
-                    LogHelper.LogError($"WebView2の初期化中にエラーが発生: {ex.Message}", ex);
-                    ShowStaticImage(filePath);
-                }
+                WebpPlayer.Visibility = Visibility.Visible;
+                await WebpPlayer.LoadWebpAsync(filePath);
+                ImageZoomControl.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -680,7 +669,7 @@ namespace Illustra.Views
         {
             // Hide other controls
             ImageZoomControl.Visibility = Visibility.Collapsed;
-            WebView.Visibility = Visibility.Collapsed;
+            WebpPlayer.Visibility = Visibility.Collapsed;
 
             // Show video player and set source
             VideoPlayerControl.Visibility = Visibility.Visible;
@@ -695,7 +684,7 @@ namespace Illustra.Views
                 VideoPlayerControl.StopVideo();
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
             }
-            WebView.Visibility = Visibility.Collapsed;
+            WebpPlayer.Visibility = Visibility.Collapsed;
             ImageZoomControl.Visibility = Visibility.Visible;
 
             try
@@ -734,6 +723,7 @@ namespace Illustra.Views
         // 新しいコンテンツを読み込む (Renamed from SwitchToImage)
         private async Task SwitchToContent(string filePath, bool notifyFileSelection)
         {
+            LogHelper.LogWithTimestamp("SwitchToContent - Start", LogHelper.Categories.Performance);
             try
             {
                 if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -742,10 +732,17 @@ namespace Illustra.Views
                     return;
                 }
 
-                // Stop video if playing before switching content
+                // Stop video and webp animation if playing before switching content
                 if (VideoPlayerControl.Visibility == Visibility.Visible)
                 {
                     VideoPlayerControl.StopVideo();
+                }
+
+                // Stop WebP animation if visible
+                if (WebpPlayer.Visibility == Visibility.Visible)
+                {
+                    WebpPlayer.Stop();
+                    WebpPlayer.Visibility = Visibility.Collapsed;
                 }
 
                 hideCursorTimer.Start();
@@ -754,8 +751,10 @@ namespace Illustra.Views
                 _currentFilePath = filePath;
 
                 // 2. コンテンツを表示
+                LogHelper.LogWithTimestamp("SwitchToContent - Before LoadAndDisplayContent", LogHelper.Categories.Performance);
                 await LoadAndDisplayContent(filePath); // Call LoadAndDisplayContent
 
+                LogHelper.LogWithTimestamp("SwitchToContent - After LoadAndDisplayContent", LogHelper.Categories.Performance);
                 // 3. 画像の場合のみズームをリセット
                 if (ImageZoomControl.Visibility == Visibility.Visible)
                 {
@@ -796,8 +795,8 @@ namespace Illustra.Views
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // VideoPlayerが表示されている場合は、VideoPlayerControl側のイベントで処理するため何もしない
-            if (VideoPlayerControl.Visibility == Visibility.Visible)
+            // VideoPlayerまたはWebpPlayerが表示されている場合は、各コントロール側のイベントで処理するため何もしない
+            if (VideoPlayerControl.Visibility == Visibility.Visible || WebpPlayer.Visibility == Visibility.Visible)
             {
                 return;
             }
@@ -806,64 +805,6 @@ namespace Illustra.Views
             Close();
         }
 
-        private void WebView_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
-        {
-            try
-            {
-                var jsonDocument = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson);
-                var root = jsonDocument.RootElement;
-
-                if (root.TryGetProperty("type", out var typeProperty))
-                {
-                    string type = typeProperty.GetString();
-                    switch (type)
-                    {
-                        case "wheel":
-                            double deltaY = root.GetProperty("deltaY").GetDouble();
-                            // PreviewMouseWheelイベントを生成して呼び出し
-                            var wheelEventArgs = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, (int)deltaY)
-                            {
-                                RoutedEvent = PreviewMouseWheelEvent
-                            };
-                            LogHelper.LogAnalysis($"WebView_WebMessageReceived: Wheel event - deltaY: {deltaY}");
-                            WebView.RaiseEvent(wheelEventArgs);
-                            break;
-
-                        case "dblclick":
-                            // Window_MouseDoubleClickを直接呼び出し
-                            var doubleClickEventArgs = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left);
-                            Window_MouseDoubleClick(this, doubleClickEventArgs);
-                            break;
-
-                        case "keydown":
-                            string key = root.GetProperty("key").GetString();
-                            Console.WriteLine($"Key down received: {key}");
-                            try
-                            {
-                                Key wpfKey = (Key)Enum.Parse(typeof(Key), key, true);
-                                var keyEventArgs = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(this), Environment.TickCount, wpfKey)
-                                {
-                                    RoutedEvent = PreviewKeyDownEvent
-                                };
-                                RaiseEvent(keyEventArgs);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"Failed to parse key '{key}': {ex.Message}");
-                            }
-                            break;
-
-                        default:
-                            Console.WriteLine($"Unknown message type: {type}");
-                            break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing WebView2 message: {ex.Message}");
-            }
-        }
 
         private void MainWindow_StateChanged(object? sender, System.EventArgs e) // CS8622 Fix: Make sender nullable
         {
@@ -874,7 +815,6 @@ namespace Illustra.Views
                 WindowState = WindowState.Maximized;
                 // Topmost = true; // フルスクリーン時は常に最前面に表示
                 IsFullScreen = true; // プロパティ経由で設定
-                WebView.Margin = new Thickness(0, 20, 0, 0); // ボタン類が操作できるように上部50pxを空ける
                 hideCursorTimer.Start();
             }
             else if (this.WindowState == WindowState.Normal)
@@ -884,7 +824,6 @@ namespace Illustra.Views
                 WindowState = WindowState.Normal;
                 Topmost = false; // 通常時は最前面表示を解除
                 IsFullScreen = false; // プロパティ経由で設定
-                WebView.Margin = new Thickness(0, 0, 0, 0); //
 
                 // マウスカーソルを表示状態に戻す
                 Mouse.OverrideCursor = Cursors.Arrow;
@@ -1153,14 +1092,6 @@ namespace Illustra.Views
                 // ズームをリセット
                 ImageZoomControl.ResetZoom();
             }
-            else if (WebView.Visibility == Visibility.Visible)
-            {
-                // WebViewのズームをリセット
-                if (WebView.IsLoaded)
-                {
-                    WebView.Reload();
-                }
-            }
         }
 
         private async void DeleteCurrentImage()
@@ -1280,6 +1211,13 @@ namespace Illustra.Views
             Close();
 
         } // End of VideoPlayerControl_BackgroundDoubleClick
+
+        private void WebpPlayer_BackgroundDoubleClick(object sender, RoutedEventArgs e)
+        {
+            // WebpPlayerControlの背景がダブルクリックされたらウィンドウを閉じる
+            Close();
+        }
+
 
         private void ImageViewerWindow_Activated(object? sender, EventArgs e)
         {
