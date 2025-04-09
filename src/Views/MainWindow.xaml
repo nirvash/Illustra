@@ -108,11 +108,15 @@
                                                 <Setter TargetName="contentPresenter" Property="Content" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=DataContext.Header}" />
                                             </Trigger>
                                             <!-- Use MahApps brushes for IsMouseOver state -->
-                                            <Trigger Property="IsMouseOver" Value="True">
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsMouseOver" Value="True"/>
+                                                    <Condition Property="IsSelected" Value="False"/>
+                                                </MultiTrigger.Conditions>
                                                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" TargetName="Trapezoid"/>
                                                 <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.Accent}" TargetName="Trapezoid"/>
                                                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Selected.Foreground}"/>
-                                            </Trigger>
+                                            </MultiTrigger>
                                             <!-- Use MahApps brushes for IsSelected state -->
                                             <Trigger Property="IsSelected" Value="True">
                                                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabActive}" TargetName="Trapezoid"/>
@@ -121,12 +125,16 @@
                                                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabActiveBorder}" TargetName="Trapezoid"/>
                                             </Trigger>
                                             <!-- Trigger for non-selected state (overrides default setters below if needed) -->
-                                            <Trigger Property="IsSelected" Value="False">
-                                                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
-                                                 <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
-                                                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
-                                                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}" TargetName="Trapezoid"/>
-                                            </Trigger>
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsSelected" Value="False"/>
+                                                    <Condition Property="IsMouseOver" Value="False"/>
+                                                </MultiTrigger.Conditions>
+                                                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
+                                                <Setter Property="LongBasePenBrush" Value="{DynamicResource MahApps.Brushes.TabNonActive}" TargetName="Trapezoid"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.TabNonActiveBorder}" TargetName="Trapezoid"/>
+                                            </MultiTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Setter.Value>
