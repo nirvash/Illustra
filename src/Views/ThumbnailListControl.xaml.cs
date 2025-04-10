@@ -31,6 +31,8 @@ using System.Runtime.InteropServices;
 using System.Net.Http;
 using System; // IProgress を使うために追加
 using Illustra.Shared.Models; // Added for MCP events
+using System.Text.RegularExpressions; // Regex を使うために追加
+using System.Web; // HttpUtility を使うために追加
 
 namespace Illustra.Views
 {
@@ -2255,6 +2257,11 @@ namespace Illustra.Views
                 {
                     LogHelper.LogError("[仮想ファイル] 処理失敗: " + ex.Message);
                 }
+                finally
+                {
+                    // ストリームを破棄 (usingステートメントがないため手動)
+                    stream?.Dispose();
+                }
             }
             // ローカルファイル（FileDrop）
             else if (!hasIgnoreFlag && dataObject.GetDataPresent(DataFormats.FileDrop))
@@ -2269,7 +2276,107 @@ namespace Illustra.Views
                     LogHelper.LogError("[FileDrop] 例外: " + ex.Message);
                 }
             }
-            // URL（UnicodeText）
+            // HTML形式 (Twitterからのドロップなど)
+            else if (dataObject.GetDataPresent(DataFormats.Html))
+            {
+                try
+                {
+                    string html = dataObject.GetData(DataFormats.Html) as string;
+                    if (!string.IsNullOrEmpty(html))
+                    {
+                        // <img src="..."> から src 属性のURLを抽出
+                        var match = Regex.Match(html, @"<img[^>]+src=[""'](?<url>https?://[^""']+)[""']");
+                        if (match.Success)
+                        {
+                            string rawImageUrl = match.Groups["url"].Value;
+                            // HTMLエンティティをデコード (&amp; -> & など)
+                            string imageUrl = HttpUtility.HtmlDecode(rawImageUrl);
+                            LogHelper.LogAnalysis($"[HTML] デコード後画像URL: {imageUrl}");
+
+                            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri uri))
+                            {
+                                // URLからファイル名を取得
+                                string baseFileName = Path.GetFileNameWithoutExtension(uri.LocalPath);
+                                if (string.IsNullOrWhiteSpace(baseFileName) || !FileHelper.IsValidFileName(baseFileName + ".tmp"))
+                                {
+                                    baseFileName = "downloaded_image";
+                                }
+
+                                string tempPath;
+                                using (var client = new HttpClient())
+                                {
+                                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                                    var bytes = await client.GetByteArrayAsync(uri);
+
+                                    // 拡張子推定ロジックの改善
+                                    string? actualExtension = null;
+                                    var queryParams = HttpUtility.ParseQueryString(uri.Query);
+                                    string formatParam = queryParams["format"];
+
+                                    // 1. format パラメータから推定
+                                    if (!string.IsNullOrEmpty(formatParam))
+                                    {
+                                        string potentialExt = "." + formatParam.ToLowerInvariant();
+                                        if (FileHelper.SupportedExtensions.Contains(potentialExt))
+                                        {
+                                            actualExtension = potentialExt;
+                                            LogHelper.LogAnalysis($"[HTML] formatパラメータから拡張子を推定: {actualExtension}");
+                                        }
+                                    }
+
+                                    // 2. URLパスから推定 (formatがなかった場合)
+                                    if (string.IsNullOrEmpty(actualExtension))
+                                    {
+                                        actualExtension = Path.GetExtension(uri.AbsolutePath)?.ToLowerInvariant(); // LocalPathではなくAbsolutePathを使用
+                                        if (!string.IsNullOrEmpty(actualExtension) && FileHelper.SupportedExtensions.Contains(actualExtension))
+                                        {
+                                            LogHelper.LogAnalysis($"[HTML] URLパスから拡張子を推定: {actualExtension}");
+                                        }
+                                        else
+                                        {
+                                            actualExtension = null; // パスからの拡張子が非対応ならクリア
+                                        }
+                                    }
+
+                                    // 3. バイトデータから推定 (上記で見つからなかった場合)
+                                    if (string.IsNullOrEmpty(actualExtension))
+                                    {
+                                        actualExtension = FileHelper.GetImageExtensionFromBytes(bytes);
+                                        if (!string.IsNullOrEmpty(actualExtension))
+                                        {
+                                            LogHelper.LogAnalysis($"[HTML] バイトデータから拡張子を推定: {actualExtension}");
+                                        }
+                                    }
+
+                                    // 4. デフォルト (上記全てで不明だった場合)
+                                    if (string.IsNullOrEmpty(actualExtension))
+                                    {
+                                        LogHelper.LogAnalysis($"[HTML] 拡張子不明。デフォルトで.jpgを使用します。");
+                                        actualExtension = ".jpg";
+                                    }
+
+                                    string finalFileName = baseFileName + actualExtension;
+                                    tempPath = Path.Combine(Path.GetTempPath(), finalFileName);
+                                    await File.WriteAllBytesAsync(tempPath, bytes);
+                                    fileList.Add(tempPath);
+                                }
+                                isVirtual = true;
+                            }
+                        }
+                        else
+                        {
+                             LogHelper.LogAnalysis("[HTML] img タグが見つかりませんでした。UnicodeText を試します。");
+                             // HTMLから見つからなかった場合、UnicodeTextを試す (下のelse ifに処理が移る)
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError("[HTMLダウンロード] 失敗: " + ex.Message);
+                    // HTML処理でエラーが発生した場合でも、UnicodeTextを試す可能性があるため、ここでは return しない
+                }
+            }
+            // URL（UnicodeText） - HTMLから取得できなかった場合のフォールバック
             else if (dataObject.GetDataPresent(DataFormats.UnicodeText))
             {
                 try
