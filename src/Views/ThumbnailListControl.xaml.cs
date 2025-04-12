@@ -2461,6 +2461,39 @@ namespace Illustra.Views
 
             try
             {
+                // base64エンコードされた画像データの処理
+                if (dataObject.GetDataPresent(DataFormats.Html))
+                {
+                    string html = dataObject.GetData(DataFormats.Html) as string;
+                    if (!string.IsNullOrEmpty(html))
+                    {
+                        // data:image/jpeg;base64,... のパターンを検出
+                        var match = Regex.Match(html, @"<img[^>]+src=[""'](?<data>data:(?<mime>image/[^;]+);base64,(?<base64>[^""']+))[""']");
+                        if (match.Success)
+                        {
+                            string mimeType = match.Groups["mime"].Value;
+                            string base64Data = match.Groups["base64"].Value;
+
+                            // MIMEタイプから拡張子を決定
+                            string ext = mimeType switch
+                            {
+                                "image/jpeg" => ".jpg",
+                                "image/png" => ".png",
+                                "image/gif" => ".gif",
+                                "image/webp" => ".webp",
+                                _ => ".jpg" // デフォルト
+                            };
+
+                            // base64をデコード
+                            byte[] imageData = Convert.FromBase64String(base64Data);
+                            stream = new MemoryStream(imageData);
+                            fileName = $"clipboard_image_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+                            return true;
+                        }
+                    }
+                }
+
+                // 通常の仮想ファイル処理
                 if (!dataObject.GetDataPresent("FileGroupDescriptorW")) return false;
 
                 // ファイル名
@@ -2482,8 +2515,9 @@ namespace Illustra.Views
 
                 return stream != null;
             }
-            catch
+            catch (Exception ex)
             {
+                LogHelper.LogError($"[仮想ファイル] 処理エラー: {ex.Message}");
                 return false;
             }
         }
