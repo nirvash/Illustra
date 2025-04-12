@@ -250,8 +250,14 @@ namespace Illustra.Views
             var tabControl = TabablzControl.GetLoadedInstances().FirstOrDefault();
             if (_viewModel != null && tabControl != null)
             {
-                 _viewModel.TabControl = tabControl;
-                 Debug.WriteLine("[MainWindow_Loaded] TabControl instance set in ViewModel.");
+                _viewModel.TabControl = tabControl;
+                Debug.WriteLine("[MainWindow_Loaded] TabControl instance set in ViewModel.");
+
+                var headerItems = FindVisualChild<DragablzItemsControl>(tabControl);
+                if (headerItems != null)
+                {
+                    headerItems.ItemsOrganiser = new MySmartOrganiser();
+                }
             }
             else
             {
@@ -1153,5 +1159,160 @@ namespace Illustra.Views
                 e.Effects = DragDropEffects.None;
             }
         }
+
+        private void MainTabControl_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            var tabControl = sender as TabablzControl;
+            if (tabControl == null) return;
+
+            // ドラッグ中のアイテムを IsMouseCaptured で特定！
+            var draggedItem = FindVisualChildren<DragablzItem>(tabControl)
+                .FirstOrDefault(item => item.IsMouseCaptured);
+
+            if (draggedItem == null) return;
+
+            var transform = draggedItem.RenderTransform as TranslateTransform;
+            if (transform == null) return;
+
+            var scrollViewer = FindVisualChild<ScrollViewer>(tabControl);
+            if (scrollViewer == null) return;
+
+            // 最大X = 表示領域幅 - タブ幅
+            double maxX = scrollViewer.ActualWidth - draggedItem.ActualWidth;
+
+            if (transform.X > maxX)
+            {
+                transform.X = maxX;
+            }
+            if (transform.X < 0)
+            {
+                transform.X = 0;
+            }
+        }
+        public static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj == null) yield break;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+                if (child is T t)
+                    yield return t;
+
+                foreach (var childOfChild in FindVisualChildren<T>(child))
+                    yield return childOfChild;
+            }
+        }
     }
+    public class MySmartOrganiser : StackOrganiser
+    {
+        private DragablzItem? _currentDragItem;
+        private DragablzItem? _initialRightMostItem;
+        private readonly double _myItemOffset;
+
+        public MySmartOrganiser(double itemOffset = -18) : base(Orientation.Horizontal, itemOffset)
+        {
+            _myItemOffset = itemOffset;
+        }
+
+        public override void OrganiseOnDragStarted(
+            DragablzItemsControl requestor,
+            Size measureBounds,
+            IEnumerable<DragablzItem> siblingItems,
+            DragablzItem dragItem)
+        {
+            base.OrganiseOnDragStarted(requestor, measureBounds, siblingItems, dragItem);
+            _currentDragItem = dragItem;
+            var items = GetDragablzItems(requestor);
+            _initialRightMostItem = items
+                .OrderByDescending(i => i.X + i.ActualWidth)
+                .FirstOrDefault();
+        }
+
+        public override void OrganiseOnDragCompleted(
+            DragablzItemsControl requestor,
+            Size measureBounds,
+            IEnumerable<DragablzItem> siblingItems,
+            DragablzItem dragItem)
+        {
+            base.OrganiseOnDragCompleted(requestor, measureBounds, siblingItems, dragItem);
+            _currentDragItem = null;
+            _initialRightMostItem = null;
+        }
+
+        public override Point ConstrainLocation(
+            DragablzItemsControl requestor,
+            Size measureBounds,
+            Point itemCurrentLocation,
+            Size itemCurrentSize,
+            Point itemDesiredLocation,
+            Size itemDesiredSize)
+        {
+            // 一番右のアイテムを取得
+            var items = GetDragablzItems(requestor);
+            var rightMostItem = items
+                .Where(i => i != null)
+                .OrderByDescending(i => i.X + i.ActualWidth)
+                .FirstOrDefault();
+
+            // 自分が右端のアイテムか？
+            bool isOriginallyDraggingRightMost = _currentDragItem != null && _initialRightMostItem != null
+                && ReferenceEquals(_currentDragItem, _initialRightMostItem);
+
+            double correctedX;
+
+            if (_currentDragItem != null && rightMostItem != null)
+            {
+                if (!isOriginallyDraggingRightMost)
+                {
+                    double rightItemCenter = rightMostItem.X + rightMostItem.ActualWidth;
+
+                    // 自アイテムの「右端」がセンターを超えられるようにする
+                    // → 左端は center - width で調整
+                    double maxX = rightItemCenter; // +1 で誤差吸収
+
+                    correctedX = Math.Min(itemDesiredLocation.X, measureBounds.Width - rightMostItem.ActualWidth / 2 + 1);
+                }
+                else
+                {
+                    correctedX = Math.Min(itemDesiredLocation.X, measureBounds.Width - itemDesiredSize.Width);
+                }
+            }
+            else
+            {
+                // 通常の補正
+                correctedX = itemDesiredLocation.X;
+            }
+
+            // 左端制限も反映（固定タブがあればそこまで）
+            double fixedLowerBound = requestor.FixedItemCount == 0
+                ? -1d
+                : items
+                    .Take(requestor.FixedItemCount)
+                    .Select(i => i.X + i.ActualWidth)
+                    .DefaultIfEmpty(0)
+                    .Max() + _myItemOffset - 1;
+
+            correctedX = Math.Max(correctedX, fixedLowerBound);
+
+            return new Point(correctedX, itemCurrentLocation.Y); // Y固定
+        }
+
+        private static List<DragablzItem> GetDragablzItems(DragablzItemsControl requestor)
+        {
+            var result = new List<DragablzItem>();
+
+            foreach (var item in requestor.Items)
+            {
+                var container = requestor.ItemContainerGenerator.ContainerFromItem(item) as DragablzItem;
+                if (container != null)
+                {
+                    result.Add(container);
+                }
+            }
+
+            return result;
+        }
+    }
+
 }

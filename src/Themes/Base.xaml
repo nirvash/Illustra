@@ -519,6 +519,13 @@
     <markup:StaticResource x:Key="MahApps.Brushes.ToggleSwitch.KnobFillOnPressed" ResourceKey="MahApps.Brushes.SystemControlHighlightAltChromeWhite" />
     <markup:StaticResource x:Key="MahApps.Brushes.ToggleSwitch.KnobFillOnDisabled" ResourceKey="MahApps.Brushes.SystemControlPageBackgroundBaseLow" />
 
+    <!-- Definitions for dragablz/Theme/MahApps.xaml -->
+    <SolidColorBrush x:Key="WhiteBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" options:Freeze="True" />
+    <SolidColorBrush x:Key="WhiteColorBrush" Color="{DynamicResource MahApps.Colors.IdealForeground}" options:Freeze="True" />
+    <SolidColorBrush x:Key="TransparentWhiteBrush" Color="{DynamicResource MahApps.Colors.Gray1}" options:Freeze="True" />
+    <SolidColorBrush x:Key="AccentColorBrush" Color="{DynamicResource MahApps.Colors.Gray1}" options:Freeze="True" />
+    <SolidColorBrush x:Key="AccentColorBrush3" Color="{DynamicResource MahApps.Colors.Gray1}" options:Freeze="True" />
+
     <Style TargetType="{x:Type GridSplitter}">
         <Setter Property="Background"
                 Value="{DynamicResource MahApps.Brushes.Gray4}"/>
