@@ -561,7 +561,8 @@ namespace Illustra.Views
 
             // TextBoxのTextプロパティを使用する（Tagプロパティではなく）
             string tag = textBox.Text ?? string.Empty;
-            bool isMatch = _currentTagFilters.Contains(tag, StringComparer.OrdinalIgnoreCase);
+            bool isMatch = _currentTagFilters.Any(filter =>
+                tag.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
 
             // TextBoxの親要素（Border）を取得
             if (VisualTreeHelper.GetParent(textBox) is Border border)
