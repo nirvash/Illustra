@@ -569,13 +569,21 @@ namespace Illustra.Views
                 // ハイライト状態を設定
                 if (isMatch)
                 {
-                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 120, 215)); // #0078D7
-                    border.BorderThickness = new Thickness(2);
+                    // 元の背景色を保存（初回のみ）
+                    if (border.Tag == null)
+                        border.Tag = border.Background;
+
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 140, 0)); // 濃いオレンジ #FF8C00
+                    border.BorderThickness = new Thickness(3);
+                    border.Background = new SolidColorBrush(Color.FromRgb(255, 250, 205)); // 薄い黄色 #FFFACD
                 }
                 else
                 {
                     border.BorderBrush = new SolidColorBrush(Colors.Transparent);
                     border.BorderThickness = new Thickness(1);
+                    // 保存した元の背景色に戻す
+                    if (border.Tag is Brush original)
+                        border.Background = original;
                 }
             }
         }
