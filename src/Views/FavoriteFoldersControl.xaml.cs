@@ -570,21 +570,26 @@ namespace Illustra.Views
         }
 
         // 表示名を設定するメニューのクリックイベントハンドラ
-        private void SetDisplayName_Click(object sender, RoutedEventArgs e) // CS1998 Fix: Removed unnecessary async
+        private void SetDisplayName_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.CommandParameter is FavoriteFolderModel folder)
             {
                 var dialog = new SetDisplayNameDialog(folder)
                 {
-                    Owner = Window.GetWindow(this) // ダイアログの親ウィンドウを設定
+                    Owner = Window.GetWindow(this)
                 };
 
-                // MetroWindow.ShowDialog() は bool? を返すため、true と比較する
                 if (dialog.ShowDialog() == true)
                 {
-                    folder.DisplayName = dialog.ResultDisplayName; // ダイアログで設定された表示名を取得 (プロパティ名を変更)
+                    var newDisplayName = dialog.ResultDisplayName;
+                    folder.DisplayName = newDisplayName;
                     SetCurrentSettings();
                     SettingsHelper.SaveSettings(_appSettings);
+
+                    // イベントを発行
+                    _eventAggregator?.GetEvent<FavoriteDisplayNameChangedEvent>().Publish(
+                        new FavoriteDisplayNameChangedEventArgs(folder.Path, newDisplayName, CONTROL_ID)
+                    );
                 }
             }
         }

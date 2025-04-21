@@ -77,6 +77,14 @@ namespace Illustra.ViewModels
         }
 
         /// <summary>
+        /// 表示名を更新します。
+        /// </summary>
+        public void RefreshDisplayName()
+        {
+            RaisePropertyChanged(nameof(DisplayName));
+        }
+
+        /// <summary>
         /// コンストラクタ
         /// </summary>
         /// <param name="state">初期状態</param>

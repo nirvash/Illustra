@@ -154,12 +154,13 @@ namespace Illustra.ViewModels
             _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator)); // 引数から受け取るように変更
             // McpOpenFolderEvent を購読 (ステップ8の接続)
             _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpOpenFolderReceived, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID && filter.SourceId != "MainWindow"); // 自分以外からのイベントを受信するように変更
-            // OpenInNewTabEvent を購読 (ステップ9の接続)
+                filter => filter.SourceId != CONTROL_ID && filter.SourceId != "MainWindow");
             _eventAggregator.GetEvent<OpenInNewTabEvent>().Subscribe(args => HandleOpenInNewTab(args.FolderPath));
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread);
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
-                filter => filter.SourceId != CONTROL_ID); // ソート順変更イベントを購読 (自分以外から)
+                filter => filter.SourceId != CONTROL_ID);
+            _eventAggregator.GetEvent<FavoriteDisplayNameChangedEvent>().Subscribe(OnFavoriteDisplayNameChanged, ThreadOption.UIThread, false,
+                filter => filter.SourceId != CONTROL_ID);
 
 
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelectedInTab, ThreadOption.UIThread);
@@ -744,6 +745,18 @@ namespace Illustra.ViewModels
 
                 // SaveTabStates はアプリ終了時に呼ばれるので、ここでは不要
                 // 必要であれば、ここで明示的に設定保存をトリガーすることも可能
+            }
+        }
+
+        /// <summary>
+        /// お気に入りフォルダの表示名が変更された時のイベントハンドラ
+        /// </summary>
+        private void OnFavoriteDisplayNameChanged(FavoriteDisplayNameChangedEventArgs args)
+        {
+            // 変更されたお気に入りフォルダを表示しているタブの表示名を更新
+            foreach (var tab in Tabs.Where(t => t.State?.FolderPath == args.FolderPath))
+            {
+                tab.RefreshDisplayName();
             }
         }
 
