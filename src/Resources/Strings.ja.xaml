@@ -237,7 +237,7 @@
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">開く</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">プログラムから開く</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_CopyPath">パスをコピー</system:String>
-    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">削除</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">ファイルを削除</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Rename">ファイル名を変更</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Properties">プロパティ</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">評価を設定</system:String>

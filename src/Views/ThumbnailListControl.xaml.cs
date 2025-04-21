@@ -448,18 +448,11 @@ namespace Illustra.Views
                 };
                 copyAllPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.All);
                 menu.Items.Add(copyAllPromptItem);
+                menu.Items.Add(new Separator()); // 区切り線を追加
             }
 
             // --- 右クリックされたアイテムに対する操作 ---
-            // 名前の変更
-            var renameItem = new MenuItem
-            {
-                Header = (string)Application.Current.FindResource("String_Thumbnail_ContextMenu_Rename")
-            };
-            // DoRenameAsyncには右クリックされたアイテムを渡す
-            renameItem.Click += async (s, e) => await DoRenameAsync(clickedItem);
-            menu.Items.Add(renameItem);
-            // ファイルパスコピーを名前変更の下に追加
+            // ファイルパスコピーを追加
             var copyPathItem = new MenuItem
             {
                 Header = (string)Application.Current.FindResource("String_Thumbnail_CopyFilePath")
@@ -474,6 +467,28 @@ namespace Illustra.Views
             };
             menu.Items.Add(copyPathItem);
 
+                        // 名前の変更
+            var renameItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_ContextMenu_Rename")
+            };
+            // DoRenameAsyncには右クリックされたアイテムを渡す
+            renameItem.Click += async (s, e) => await DoRenameAsync(clickedItem);
+            menu.Items.Add(renameItem);
+
+
+            // ファイル削除のメニュー項目を追加
+            var deleteItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_ContextMenu_Delete")
+            };
+            deleteItem.Click += (s, e) =>
+            {
+                DeleteSelectedItems();
+            };
+            menu.Items.Add(deleteItem);
+            menu.Items.Add(new Separator()); // 区切り線を追加
+
             var explorerItem = new MenuItem
             {
                 Header = (string)Application.Current.FindResource("String_Thumbnail_OpenInExplorer")
@@ -486,9 +501,6 @@ namespace Illustra.Views
                 }
             };
             menu.Items.Add(explorerItem);
-
-            // TODO: 他の右クリックアイテムに対する操作メニュー項目をここに追加
-            // 例: 削除、パスをコピーなど
 
             // メニュー項目が1つもない場合は表示しない
             if (menu.Items.Count == 0) return;

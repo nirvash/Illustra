@@ -237,7 +237,7 @@
     <system:String x:Key="String_Thumbnail_ContextMenu_Open">Open</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_OpenWith">Open with</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_CopyPath">Copy path</system:String>
-    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">Delete</system:String>
+    <system:String x:Key="String_Thumbnail_ContextMenu_Delete">Delete file</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Rename">Rename File Name</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_Properties">Properties</system:String>
     <system:String x:Key="String_Thumbnail_ContextMenu_SetRating">Set rating</system:String>
