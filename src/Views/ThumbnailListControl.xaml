@@ -449,15 +449,24 @@
                             Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
                             BorderThickness="0">
                         <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <!-- サムネイル領域 -->
+                                <RowDefinition Height="Auto"/>
+                                <!-- ファイル名 -->
+                            </Grid.RowDefinitions>
+
                             <Image Source="{Binding ThumbnailInfo.Image}"
+                                Grid.Row="0"
                                 Stretch="Uniform"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Margin="2"/>
                             <TextBlock Text="{Binding FileName}"
+                                        Grid.Row="1"
                                         VerticalAlignment="Bottom"
                                         HorizontalAlignment="Center"
-                                        Margin="2,0,2,-20"
+                                        Margin="2,0,2,0"
                                         Padding="2"
                                         Foreground="{DynamicResource MahApps.Brushes.Text}"
                                         Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}"
@@ -465,6 +474,7 @@
                                         TextTrimming="CharacterEllipsis"/>
                             <!-- 動画アイコン -->
                             <TextBlock Text="🎞️"
+                                    Grid.Row="0"
                                     FontSize="14"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
@@ -480,7 +490,8 @@
                                 </TextBlock.Effect>
                             </TextBlock>
                             <!-- レーティング表示部分のみを更新 -->
-                            <Grid HorizontalAlignment="Left"
+                            <Grid Grid.Row="0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Visibility="{Binding Rating, Converter={StaticResource RatingToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                                 <!-- SVG星マーク -->

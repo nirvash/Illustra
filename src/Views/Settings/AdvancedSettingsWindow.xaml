@@ -8,7 +8,8 @@
         MinWidth="400" MinHeight="300"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        FontSize="{DynamicResource AppFontSize}">
 
     <!-- アイコンサイズを変更 -->
     <mahcontrols:MetroWindow.TitleTemplate>
@@ -84,13 +85,13 @@
             </Grid.ColumnDefinitions>
             <Button Grid.Column="1"
                     Content="{DynamicResource String_Common_Cancel}"
-                    Width="75"
+                    MinWidth="75"
                     Height="23"
                     Margin="0,0,10,0"
                     Click="CancelButton_Click"/>
             <Button Grid.Column="2"
                     Content="{DynamicResource String_Common_Ok}"
-                    Width="75"
+                    MinWidth="75"
                     Height="23"
                     Click="OKButton_Click"/>
         </Grid>

@@ -8,6 +8,7 @@
                          mc:Ignorable="d"
                          Padding="10"
                          Title="{Binding Title, RelativeSource={RelativeSource Self}, FallbackValue='Progress'}"
+                         FontSize="{DynamicResource AppFontSize}"
                          DialogTitleFontSize="15"
                          DialogContentMargin="10"
                          Height="200" MaxWidth="600" MinWidth="450" MinHeight="160">

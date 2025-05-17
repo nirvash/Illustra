@@ -3,7 +3,9 @@
                     xmlns:options="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     xmlns:system="clr-namespace:System;assembly=mscorlib"
                     xmlns:markup="clr-namespace:MahApps.Metro.Markup;assembly=MahApps.Metro"
-                    xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro">
+                    xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                    xmlns:converters="clr-namespace:Illustra.Converters">
+    <converters:FontSizeToMinHeightConverter x:Key="FontSizeToMinHeightConverter" />
 
     <!-- Theme-independent Colors -->
     <Color x:Key="MahApps.Colors.ValidationRed">#FFDB000C</Color>
@@ -658,11 +660,12 @@
         <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Button.Border}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontFamily" Value="{DynamicResource MahApps.Fonts.Family.Button}" />
-        <Setter Property="FontSize" Value="{DynamicResource MahApps.Font.Size.Button}" />
+        <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ThemeForeground}" />
-        <Setter Property="MinHeight" Value="25" />
-        <Setter Property="Padding" Value="5 6" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="MinHeight" Value="{Binding RelativeSource={RelativeSource Self}, Path=FontSize, Converter={StaticResource FontSizeToMinHeightConverter}}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="mah:ControlsHelper.ContentCharacterCasing" Value="{DynamicResource MahApps.CharacterCasing.Button}" />
         <Setter Property="mah:ControlsHelper.CornerRadius" Value="3" />
@@ -672,7 +675,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ButtonBase}">
-                    <Grid>
+                    <Grid MinHeight="{TemplateBinding MinHeight}">
                         <mah:ClipBorder x:Name="Border"
                                         Background="{TemplateBinding Background}"
                                         BorderBrush="{TemplateBinding BorderBrush}"

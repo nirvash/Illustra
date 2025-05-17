@@ -172,12 +172,28 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
+        private double _appFontSize = 13.0;
+        public double AppFontSize
+        {
+            get => _appFontSize;
+            set
+            {
+                if (_appFontSize != value)
+                {
+                    _appFontSize = value;
+                    OnPropertyChanged(nameof(AppFontSize));
+                }
+            }
+        }
+
         public GeneralSettingsViewModel(AppSettingsModel settings, ViewerSettings viewerSettings)
         {
             _settings = settings;
             _viewerSettings = viewerSettings;
             BrowseStartupFolderCommand = new RelayCommand(BrowseStartupFolder);
             BrowseNewTabFolderCommand = new RelayCommand(BrowseNewTabFolder);
+            // 起動時にAppFontSizeを反映
+            App.UpdateAppFontSize(_settings.AppFontSize);
         }
 
         private void UpdateStartupMode(AppSettingsModel.StartupFolderMode mode)
@@ -226,6 +242,8 @@ namespace Illustra.ViewModels.Settings
             UpdateStartupMode(_settings.StartupMode);
             StartupFolderPath = _settings.StartupFolderPath;
             SelectLastFileOnStartup = _settings.SelectLastFileOnStartup;
+            AppFontSize = _settings.AppFontSize;
+            App.UpdateAppFontSize(AppFontSize);
 
             // ViewerSettingsの読み込み
             DeleteModePermanent = _viewerSettings.DeleteMode == FileDeleteMode.Permanent;
@@ -244,6 +262,8 @@ namespace Illustra.ViewModels.Settings
                                    AppSettingsModel.StartupFolderMode.Specified;
             _settings.StartupFolderPath = StartupFolderPath;
             _settings.SelectLastFileOnStartup = SelectLastFileOnStartup;
+            _settings.AppFontSize = AppFontSize;
+            App.UpdateAppFontSize(AppFontSize);
 
             // ViewerSettingsの保存
             _viewerSettings.DeleteMode = DeleteModeRecycleBin ? FileDeleteMode.RecycleBin : FileDeleteMode.Permanent;

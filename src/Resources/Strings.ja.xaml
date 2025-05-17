@@ -396,4 +396,7 @@
     <system:String x:Key="String_Tooltip_RepeatMode">リピート切替</system:String>
     <system:String x:Key="String_Tooltip_StretchMode">表示切替</system:String>
     <system:String x:Key="String_Tooltip_MuteUnmute">ミュート/ミュート解除</system:String>
+    <system:String x:Key="String_Settings_Font_Section">フォント</system:String>
+    <system:String x:Key="String_Settings_FontSize_Label">フォントサイズ</system:String>
+    <system:String x:Key="String_Unit_Pixel">ピクセル</system:String>
 </ResourceDictionary>

@@ -16,7 +16,8 @@
         KeyDown="MainWindow_OnKeyDown"
         mc:Ignorable="d"
         Height="600"
-        Width="900">
+        Width="900"
+        FontSize="{DynamicResource AppFontSize}">
 
 
     <controls:MetroWindow.Resources>
@@ -109,7 +110,8 @@
 
         <!-- メニューバー -->
         <Menu Grid.Row="0"
-              KeyboardNavigation.TabNavigation="None">
+              KeyboardNavigation.TabNavigation="None"
+              FontSize="{DynamicResource AppFontSize}">
             <MenuItem Header="{DynamicResource String_Menu_File}">
                 <MenuItem Header="{DynamicResource String_Menu_About}"
                           Click="ShowAboutDialog"/>
@@ -354,6 +356,7 @@
                     BorderThickness="0,1,0,0">
             <StatusBarItem>
                 <TextBlock x:Name="StatusTextBlock"
+                            FontSize="{DynamicResource AppFontSize}"
                             Margin="5,2"
                             Padding="2"
                             Text="{Binding StatusMessage}"

@@ -96,7 +96,12 @@ namespace Illustra.Models
 
         public string Dimensions
         {
-            get => $"{_width} x {_height} ピクセル"; // 動画・画像共通で幅x高さを返す
+            get
+            {
+                // 多言語対応: "ピクセル" 部分をリソースから取得（Properties.Resources.PixelUnitLabel → Application.Current.TryFindResource）
+                var pixelLabel = System.Windows.Application.Current.TryFindResource("String_Unit_Pixel") as string ?? "pixels";
+                return $"{_width} x {_height} {pixelLabel}";
+            }
             // Setter は不要。値は Width/Height から計算されるため。
         }
 

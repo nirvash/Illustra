@@ -9,8 +9,10 @@
         mc:Ignorable="d"
         Title="{DynamicResource String_KeyboardShortcutSettingsWindow_Title}"
         Height="450"
-        Width="400"
-        MinWidth="350"
+        Width="500"
+        MinWidth="450"
+        MinHeight="300"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="CanResize">

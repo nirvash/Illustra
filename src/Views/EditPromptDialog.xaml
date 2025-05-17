@@ -9,6 +9,7 @@
         Title="{DynamicResource String_Dialog_EditPrompt}"
         Height="400"
         Width="600"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="CanResize">

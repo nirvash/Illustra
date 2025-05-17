@@ -5,7 +5,10 @@
                         xmlns:helpers="clr-namespace:Illustra.Helpers"
                         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
                         xmlns:prism="http://prismlibrary.com/"
-                        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz">
+                        xmlns:dragablz="http://dragablz.net/winfx/xaml/dragablz"
+                        xmlns:System="clr-namespace:System;assembly=mscorlib"
+                        xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                        xmlns:converters="clr-namespace:Illustra.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -28,6 +31,7 @@
             <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <helpers:RatingToVisibilityConverter x:Key="RatingToVisibilityConverter"/>
             <helpers:RatingToBooleanConverter x:Key="RatingToBooleanConverter"/>
+            <converters:FontSizeToMinHeightConverter x:Key="FontSizeToMinHeightConverter" />
 
             <!-- グローバルなListViewItemスタイル -->
             <Style TargetType="ListViewItem">
@@ -59,6 +63,44 @@
             <Style TargetType="{x:Type dragablz:TabablzControl}" BasedOn="{StaticResource MahAppsTabablzControlStyle}" />
             <Style TargetType="Button"
                    BasedOn="{StaticResource Illustra.Styles.Button}" />
+
+            <!-- グローバルフォントサイズ -->
+            <System:Double x:Key="AppFontSize">13</System:Double>
+
+            <!-- グローバルなRadioButtonスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="RadioButton" BasedOn="{StaticResource MahApps.Styles.RadioButton}">
+                <Setter Property="FontSize" Value="{DynamicResource AppFontSize}"/>
+            </Style>
+
+            <!-- グローバルなGroupBoxスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="GroupBox" BasedOn="{StaticResource MahApps.Styles.GroupBox}">
+                <Setter Property="FontSize" Value="{DynamicResource AppFontSize}"/>
+                <Setter Property="mah:HeaderedControlHelper.HeaderFontSize"
+                        Value="{DynamicResource AppFontSize}"/>
+            </Style>
+
+            <!-- グローバルなExpanderスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="Expander"
+                    BasedOn="{StaticResource MahApps.Styles.Expander}">
+                <Setter Property="FontSize"
+                        Value="{DynamicResource AppFontSize}"/>
+                <Setter Property="mah:HeaderedControlHelper.HeaderFontSize"
+                        Value="{DynamicResource AppFontSize}"/>
+            </Style>
+
+            <!-- グローバルなCheckBoxスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="CheckBox" BasedOn="{StaticResource MahApps.Styles.CheckBox}">
+                <Setter Property="FontSize" Value="{DynamicResource AppFontSize}"/>
+            </Style>
+
+            <!-- グローバルなTextBoxスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="TextBox" BasedOn="{StaticResource MahApps.Styles.TextBox}">
+                <Setter Property="FontSize" Value="{DynamicResource AppFontSize}"/>
+            </Style>
+            <!-- グローバルなComboBoxスタイル（MahAppsのスタイルを維持しつつフォントサイズのみ追加） -->
+            <Style TargetType="ComboBox" BasedOn="{StaticResource MahApps.Styles.ComboBox}">
+                <Setter Property="FontSize" Value="{DynamicResource AppFontSize}"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>

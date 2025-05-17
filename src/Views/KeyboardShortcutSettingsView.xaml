@@ -6,6 +6,7 @@
              xmlns:vm="clr-namespace:Illustra.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:KeyboardShortcutSettingsViewModel}"
+             FontSize="{DynamicResource AppFontSize}"
              d:DesignHeight="450"
              d:DesignWidth="800">
     <UserControl.Resources>
@@ -20,12 +21,13 @@
                     Content="{DynamicResource String_Settings_ResetToDefault}"
                     Command="{Binding ResetToDefaultCommand}"
                     Height="24"
+                    MinWidth="100"
                     Padding="10,0"/>
             <Button DockPanel.Dock="Right"
                     Content="{DynamicResource String_Common_Ok}"
                     Command="{Binding SaveCommand}"
                     Height="24"
-                    MinWidth="70"
+                    MinWidth="100"
                     Margin="0,0,5,0"/>
         </DockPanel>
 
@@ -44,29 +46,32 @@
                                         <DataTemplate>
                                             <Grid Margin="0,0,0,5">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"
-                                                                      MinWidth="100"/>
-                                                    <ColumnDefinition Width="55"/>
-                                                    <ColumnDefinition Width="55"/>
+                                                    <ColumnDefinition Width="Auto" MinWidth="100"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto" MinWidth="75"/>
+                                                    <ColumnDefinition Width="Auto" MinWidth="75"/>
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBlock Name="KeyTextBlock"
                                                            Text="{Binding DisplayText}"
                                                            VerticalAlignment="Center"
-                                                           Margin="0,0,5,0"/>
+                                                           Margin="0,0,5,0"
+                                                           Grid.Column="0"/>
 
                                                 <Button Name="EditKeyButton"
                                                         Content="{DynamicResource String_Settings_Edit}"
                                                         Command="{Binding DataContext.EditKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding .}"
-                                                        Grid.Column="1"
+                                                        Grid.Column="2"
+                                                        MinWidth="70"
                                                         Margin="0,0,5,0"/>
 
                                                 <Button Name="RemoveKeyButton"
                                                         Content="{DynamicResource String_Settings_Remove}"
                                                         Command="{Binding DataContext.RemoveKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding .}"
-                                                        Grid.Column="2"/>
+                                                        MinWidth="70"
+                                                        Grid.Column="3"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

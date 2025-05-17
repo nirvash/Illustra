@@ -14,6 +14,7 @@
         WindowTransitionsEnabled="False"
         ResizeMode="NoResize"
         PreviewKeyDown="Window_PreviewKeyDown"
+        FontSize="{DynamicResource AppFontSize}"
         d:DataContext="{d:DesignInstance Type=vm:KeyboardShortcutSettingDialogViewModel}">
 
     <mahcontrols:MetroWindow.Resources>
@@ -123,14 +124,14 @@
 
             <Button Grid.Column="1"
                     Content="キャンセル"
-                    Width="70"
+                    MinWidth="70"
                     Height="28"
                     Margin="0,0,8,0"
                     Command="{Binding CancelCommand}"/>
 
             <Button Grid.Column="2"
                     Content="保存"
-                    Width="70"
+                    MinWidth="70"
                     Height="28"
                     Command="{Binding SaveCommand}"/>
         </Grid>

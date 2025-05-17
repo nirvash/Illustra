@@ -135,6 +135,10 @@ namespace Illustra
 
             // dllフォルダをDLL検索パスに追加
 
+            // フォントサイズ初期化
+            var settingsForFont = Illustra.Helpers.SettingsHelper.GetSettings();
+            App.UpdateAppFontSize(settingsForFont.AppFontSize);
+
             base.OnStartup(e);
 
             // データベースのデバッグログを設定
@@ -476,6 +480,11 @@ namespace Illustra
             {
                 base.OnExit(e);
             }
+        }
+
+        public static void UpdateAppFontSize(double fontSize)
+        {
+            Application.Current.Resources["AppFontSize"] = fontSize;
         }
     }
 }

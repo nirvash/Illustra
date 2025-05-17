@@ -8,11 +8,13 @@
         xmlns:mahcontrols="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="{DynamicResource String_LanguageSettingsWindow_Title}"
-        Height="250"
+        SizeToContent="Height"
+        MinHeight="100"
         Width="400"
+        ResizeMode="NoResize"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner"
-        WindowTransitionsEnabled="False"
-        ResizeMode="NoResize">
+        WindowTransitionsEnabled="False">
     <!-- アイコンサイズを変更 -->
     <mahcontrols:MetroWindow.TitleTemplate>
         <DataTemplate>
@@ -27,29 +29,32 @@
         </DataTemplate>
     </mahcontrols:MetroWindow.TitleTemplate>
 
-    <Grid>
+    <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <local:LanguageSettingsView Grid.Row="0"/>
+        <local:LanguageSettingsView Grid.Row="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"/>
 
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    Margin="20">
+                    Margin="0,10,10,0">
             <Button Content="{DynamicResource String_Common_Cancel}"
                     Command="{Binding CancelCommand}"
                     Click="CancelButton_Click"
-                    Width="100"
+                    MinWidth="100"
                     Height="23"
-                    Margin="0,0,10,0"/>
+                    Margin="0,0,10,0" />
             <Button Content="{DynamicResource String_Common_Ok}"
                     Command="{Binding SaveCommand}"
                     Click="SaveButton_Click"
-                    Width="100"
+                    MinWidth="100"
                     Height="23"/>
+
         </StackPanel>
     </Grid>
 </mahcontrols:MetroWindow>

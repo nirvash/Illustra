@@ -115,5 +115,7 @@ namespace Illustra.Models
         // 最後にアクティブだったタブのインデックス
         public int LastActiveTabIndex { get; set; } = -1; // デフォルトは -1 (タブなし or 不明)
 
+        // フォントサイズ設定
+        public double AppFontSize { get; set; } = 13.0;
     }
 }

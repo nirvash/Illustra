@@ -7,6 +7,7 @@
              xmlns:local="clr-namespace:Illustra.Views"
              xmlns:controls="clr-namespace:Illustra.Controls"
              xmlns:helpers="clr-namespace:Illustra.Helpers"
+             FontSize="{DynamicResource AppFontSize}"
              mc:Ignorable="d"
              MaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Window}}">
         <UserControl.Resources>

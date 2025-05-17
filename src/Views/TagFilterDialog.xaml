@@ -9,6 +9,7 @@
         Title="{DynamicResource String_TagFilter_Title}"
         Height="300"
         Width="450"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="NoResize"
@@ -48,7 +49,7 @@
                 </StackPanel>
                 <Grid Margin="0,10,0,0">
                     <Button Content="{DynamicResource String_TagFilter_AddTag}"
-                            Width="60"
+                            MinWidth="60"
                             Height="20"
                             Click="AddTagButton_Click"
                             HorizontalAlignment="Center"/>
@@ -62,19 +63,19 @@
                     HorizontalAlignment="Right"
                     Margin="0,10,0,0">
             <Button Content="{DynamicResource String_TagFilter_ClearAll}"
-                    Width="100"
+                    MinWidth="100"
                     Height="25"
                     Margin="0,0,10,0"
                     Click="ClearAllButton_Click"
                     HorizontalAlignment="Left"/>
             <Button Content="{DynamicResource String_Common_Cancel}"
-                    Width="80"
+                    MinWidth="80"
                     Height="25"
                     Margin="0,0,10,0"
                     Click="CancelButton_Click"
                     IsCancel="True"/>
             <Button Content="{DynamicResource String_Common_Ok}"
-                    Width="80"
+                    MinWidth="80"
                     Height="25"
                     Click="OkButton_Click"
                     IsDefault="True"/>

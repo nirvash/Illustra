@@ -5,6 +5,7 @@
         Title="{DynamicResource String_About_Title}"
         SizeToContent="WidthAndHeight"
         MinWidth="400"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner"
         WindowTransitionsEnabled="False"
         ResizeMode="NoResize">

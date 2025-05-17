@@ -17,6 +17,7 @@
         ShowCloseButton="False"
         ResizeMode="NoResize"
         ShowActivated="False"
+        FontSize="{DynamicResource AppFontSize}"
         BorderThickness="0"
         WindowStartupLocation="Manual">
     <Border Background="#DD333333" CornerRadius="10" Padding="10" Margin="5">

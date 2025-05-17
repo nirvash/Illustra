@@ -396,4 +396,7 @@
     <system:String x:Key="String_Tooltip_RepeatMode">Toggle Repeat</system:String>
     <system:String x:Key="String_Tooltip_StretchMode">Toggle Stretch</system:String>
     <system:String x:Key="String_Tooltip_MuteUnmute">Mute/Unmute</system:String>
+    <system:String x:Key="String_Settings_Font_Section">Font</system:String>
+    <system:String x:Key="String_Settings_FontSize_Label">Font Size</system:String>
+    <system:String x:Key="String_Unit_Pixel">pixels</system:String>
 </ResourceDictionary>

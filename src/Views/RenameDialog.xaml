@@ -6,6 +6,7 @@
         Title="Rename File"
         WindowTransitionsEnabled="False"
         SizeToContent="WidthAndHeight"
+        FontSize="{DynamicResource AppFontSize}"
         WindowStartupLocation="CenterOwner">
     <controls:MetroWindow.TitleTemplate>
         <DataTemplate>
