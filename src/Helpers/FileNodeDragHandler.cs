@@ -77,28 +77,43 @@ namespace Illustra.Helpers
         {
             base.DragDropOperationFinished(operationResult, dragInfo);
 
-            // リフレクションを使用してDragDropPreviewを取得し、クリーンアップ
-            var dragDropType = typeof(GongSolutions.Wpf.DragDrop.DragDrop);
-            var dragDropPreviewField = dragDropType.GetField("dragDropPreview", BindingFlags.NonPublic | BindingFlags.Static);
-
-            if (dragDropPreviewField != null)
+            try
             {
-                var preview = dragDropPreviewField.GetValue(null);
-                if (preview != null)
+                // リフレクションを使用してDragDropPreviewを取得し、クリーンアップ
+                var dragDropType = typeof(GongSolutions.Wpf.DragDrop.DragDrop);
+                var dragDropPreviewField = dragDropType.GetField("dragDropPreview", BindingFlags.NonPublic | BindingFlags.Static);
+
+                if (dragDropPreviewField != null)
                 {
-                    // Popupとして処理
-                    var popupType = preview.GetType();
-                    var isOpenProperty = popupType.GetProperty("IsOpen");
-
-                    if (isOpenProperty != null)
+                    var preview = dragDropPreviewField.GetValue(null);
+                    if (preview != null)
                     {
-                        // IsOpenをfalseに設定
-                        isOpenProperty.SetValue(preview, false);
-                    }
+                        // Popupとして処理
+                        var popupType = preview.GetType();
+                        var isOpenProperty = popupType.GetProperty("IsOpen");
 
-                    // フィールドをnullに設定
-                    dragDropPreviewField.SetValue(null, null);
+                        if (isOpenProperty != null)
+                        {
+                            // UIスレッドでIsOpenをfalseに設定
+                            if (Application.Current?.Dispatcher?.CheckAccess() == false)
+                            {
+                                Application.Current.Dispatcher.Invoke(() => isOpenProperty.SetValue(preview, false));
+                            }
+                            else
+                            {
+                                isOpenProperty.SetValue(preview, false);
+                            }
+                        }
+
+                        // フィールドをnullに設定
+                        dragDropPreviewField.SetValue(null, null);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                // 必要に応じてログ出力（ここではDebug出力例）
+                System.Diagnostics.Debug.WriteLine($"[DragDropOperationFinished] Cleanup error: {ex}");
             }
         }
     }
