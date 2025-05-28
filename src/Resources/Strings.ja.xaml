@@ -335,10 +335,11 @@
     <system:String x:Key="String_Thumbnail_FileOperation_Move">移動</system:String>
     <system:String x:Key="String_Thumbnail_ImageCopied">画像をコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_FilesCopied">ファイルをコピーしました</system:String>
-    <system:String x:Key="String_Thumbnail_FilesMoved">ファイルを移動しました</system:String>
-    <system:String x:Key="String_Thumbnail_OpenInExplorer">エクスプローラで開く</system:String>
     <system:String x:Key="String_Thumbnail_CopyFilePath">ファイルパスをコピー</system:String>
     <system:String x:Key="String_Thumbnail_FilePathCopied">ファイルパスをクリップボードにコピーしました</system:String>
+    <system:String x:Key="String_Thumbnail_CopyFile">ファイルをコピー</system:String>
+    <system:String x:Key="String_Thumbnail_FilesMoved">ファイルを移動しました</system:String>
+    <system:String x:Key="String_Thumbnail_OpenInExplorer">エクスプローラで開く</system:String>
     <system:String x:Key="String_Thumbnail_CopyPrompt">プロンプトをコピー</system:String>
     <system:String x:Key="String_Thumbnail_CopyAllPrompt">プロンプト全体をコピー</system:String>
     <system:String x:Key="String_Thumbnail_CopyNegativePrompt">ネガティブプロンプトをコピー</system:String>

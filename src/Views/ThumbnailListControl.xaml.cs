@@ -467,6 +467,22 @@ namespace Illustra.Views
             };
             menu.Items.Add(copyPathItem);
 
+            // セパレータを追加
+            menu.Items.Add(new Separator());
+
+            // ファイルをコピー（CopySelectedImagesToClipboardメソッドを再利用）
+            var copyFileItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyFile")
+            };
+            copyFileItem.Click += (s, e) =>
+            {
+                // 既存のCopySelectedImagesToClipboardメソッドを使用
+                // これにより複数選択されたファイルのコピーにも対応
+                CopySelectedImagesToClipboard();
+            };
+            menu.Items.Add(copyFileItem);
+
                         // 名前の変更
             var renameItem = new MenuItem
             {
