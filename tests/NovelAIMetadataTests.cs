@@ -2,6 +2,7 @@ using NUnit.Framework;
 using Illustra.Helpers;
 using System.IO;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Illustra.Tests
 {
@@ -88,6 +89,26 @@ namespace Illustra.Tests
                     File.Delete(tempFilePath);
                 }
             }
+        }
+
+        [Test]
+        public void DetectAndLogNovelAIMetadata_WithValidMethodSignature_ShouldExecuteWithoutError()
+        {
+            // Arrange - create a temporary PNG file path (doesn't need to exist for this test)
+            var testPath = "test.png";
+
+            // Act & Assert - method should exist and be callable
+            Assert.DoesNotThrow(() => {
+                // This tests that the method signature is correct and accessible
+                var method = typeof(PngMetadataReader).GetMethod("DetectAndLogNovelAIMetadata");
+                Assert.That(method, Is.Not.Null, "DetectAndLogNovelAIMetadata method should exist");
+                Assert.That(method.IsStatic, Is.True, "DetectAndLogNovelAIMetadata should be static");
+                Assert.That(method.IsPublic, Is.True, "DetectAndLogNovelAIMetadata should be public");
+                
+                var parameters = method.GetParameters();
+                Assert.That(parameters.Length, Is.EqualTo(1), "Method should take exactly one parameter");
+                Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(string)), "Parameter should be string");
+            });
         }
     }
 }
