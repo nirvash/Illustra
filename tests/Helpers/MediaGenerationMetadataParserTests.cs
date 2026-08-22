@@ -101,5 +101,84 @@ namespace Illustra.Tests.Helpers
             // Assert
             Assert.That(result, Is.Null);
         }
+
+        [Test]
+        public void ParseFromPng_WithComfyUiChunks_ReturnsMetadata()
+        {
+            // Arrange: ComfyUI が出力する PNG と同じ構造
+            const string workflowJson = @"{""id"":""wf-1"",""nodes"":[]}";
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildComfyUiPng(PromptJson, workflowJson));
+
+            // Act
+            var result = MediaGenerationMetadataParser.ParseFromPng(_tempFilePath);
+
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Generator, Is.EqualTo("ComfyUI"));
+            Assert.That(result.ParseSuccess, Is.True);
+            Assert.That(result.Prompt, Is.EqualTo("test prompt"));
+            Assert.That(result.HasWorkflow, Is.True);
+            Assert.That(result.RawWorkflowJson, Is.EqualTo(workflowJson));
+        }
+
+        [Test]
+        public void ParseFromPng_WithPlainPng_ReturnsNull()
+        {
+            // Arrange: テキストチャンクなしの PNG（ComfyUI 以外）
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPlainPng());
+
+            // Act
+            var result = MediaGenerationMetadataParser.ParseFromPng(_tempFilePath);
+
+            // Assert
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void ParseFromPng_WithNonJsonTextChunks_ReturnsNull()
+        {
+            // Arrange: prompt / workflow 以外のテキストチャンクのみの PNG
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPngWithTextChunks(
+                ("Software", "Some Image Editor"),
+                ("Comment", "masterpiece, best quality")
+            ));
+
+            // Act
+            var result = MediaGenerationMetadataParser.ParseFromPng(_tempFilePath);
+
+            // Assert: ComfyUI 埋め込みではないため null
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void ParseFromPng_WithUnparseablePrompt_FallsBackToWorkflow()
+        {
+            // Arrange: prompt が解析不能でも workflow チャンクは有効なケース（未知ノードのみ）
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildComfyUiPng(
+                @"{""999"": {""inputs"": {}, ""class_type"": ""UnknownNode""}}",
+                @"{""id"":""wf-3"",""nodes"":[]}"));
+
+            // Act
+            var result = MediaGenerationMetadataParser.ParseFromPng(_tempFilePath);
+
+            // Assert: 解析失敗でもワークフロー埋め込みとして表示対象になる
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Generator, Is.EqualTo("ComfyUI"));
+            Assert.That(result.HasWorkflow, Is.True);
+            Assert.That(result.NeedsWorkflowNotice, Is.True);
+        }
+
+        [Test]
+        public void ParseFromPng_WithNonPngFile_ReturnsNull()
+        {
+            // Arrange
+            File.WriteAllBytes(_tempFilePath, Encoding.ASCII.GetBytes("not a png"));
+
+            // Act
+            var result = MediaGenerationMetadataParser.ParseFromPng(_tempFilePath);
+
+            // Assert
+            Assert.That(result, Is.Null);
+        }
     }
 }

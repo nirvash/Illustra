@@ -643,6 +643,23 @@ namespace Illustra.Models
 
                             // Exif情報の読み取り (画像ファイルのみ)
                             ReadExifData(filePath, properties);
+
+                            // 埋め込み生成メタデータ（ComfyUI PNG の prompt / workflow チャンク等）を解析
+                            if (Path.GetExtension(filePath).Equals(".png", StringComparison.OrdinalIgnoreCase))
+                            {
+                                try
+                                {
+                                    var generationMeta = MediaGenerationMetadataParser.ParseFromPng(filePath);
+                                    if (generationMeta != null && generationMeta.HasContent)
+                                    {
+                                        properties.GenerationMetadata = generationMeta;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"生成メタデータ解析エラー ({filePath}): {ex.Message}");
+                                }
+                            }
                         }
                         catch (Exception ex)
                         {

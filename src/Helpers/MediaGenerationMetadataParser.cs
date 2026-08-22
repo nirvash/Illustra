@@ -7,7 +7,9 @@ namespace Illustra.Helpers
     /// <summary>
     /// メディアファイルから埋め込み生成メタデータを取り出すファサード。
     /// MP4 の mdta メタデータ（"prompt" / "workflow" タグ）を
-    /// <see cref="Mp4MetadataReader"/> で読み出し、
+    /// <see cref="Mp4MetadataReader"/> で、
+    /// PNG のテキストチャンク（"prompt" / "workflow"）を
+    /// <see cref="PngTextChunkReader"/> で読み出し、
     /// <see cref="ComfyUIGraphAnalyzer"/> で解析して
     /// <see cref="GenerationMetadata"/> を構築する。
     /// </summary>
@@ -24,6 +26,35 @@ namespace Illustra.Helpers
             if (!Mp4MetadataReader.TryReadTags(filePath, out var tags))
                 return null;
 
+            return BuildFromTags(tags);
+        }
+
+        /// <summary>
+        /// PNG ファイルから生成メタデータを取得する。
+        /// "prompt" / "workflow" テキストチャンクが存在しない場合や
+        /// JSON として妥当でない場合は null を返す（ComfyUI 以外の PNG を弾く）。
+        /// </summary>
+        public static GenerationMetadata ParseFromPng(string filePath)
+        {
+            if (!PngTextChunkReader.TryReadTags(filePath, out var tags))
+                return null;
+
+            // prompt / workflow タグの少なくとも一方が JSON である場合のみ ComfyUI 埋め込みとみなす
+            bool isComfyUi =
+                (tags.TryGetValue("prompt", out string promptValue) && PngTextChunkReader.IsJsonLike(promptValue)) ||
+                (tags.TryGetValue("workflow", out string workflowValue) && PngTextChunkReader.IsJsonLike(workflowValue));
+
+            if (!isComfyUi)
+                return null;
+
+            return BuildFromTags(tags);
+        }
+
+        /// <summary>
+        /// "prompt" / "workflow" タグ辞書から GenerationMetadata を構築する。
+        /// </summary>
+        private static GenerationMetadata BuildFromTags(Dictionary<string, string> tags)
+        {
             bool hasPromptTag = tags.TryGetValue("prompt", out string promptJson);
             tags.TryGetValue("workflow", out string workflowJson);
 
