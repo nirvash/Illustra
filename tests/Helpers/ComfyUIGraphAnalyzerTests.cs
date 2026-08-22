@@ -198,5 +198,39 @@ namespace Illustra.Tests.Helpers
             // Assert
             Assert.That(result.Prompt, Is.EqualTo("deep chained prompt"));
         }
+
+        [Test]
+        public void Analyze_WithJsonNullParameter_DoesNotThrowAndSkipsValue()
+        {
+            // Arrange: "cfg": null のように JSON null を含むグラフ。
+            // System.Text.Json では JSON null は null JsonNode 参照になるため、
+            // ContainsKey が true を返しても値の取得結果は null になる（旧実装では NRE）
+            const string json = @"{
+  ""1"": { ""inputs"": { ""steps"": 6, ""cfg"": null, ""sampler_name"": ""euler"" }, ""class_type"": ""KSampler"" }
+}";
+
+            // Act: 例外が発生しないこと
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            // Assert: JSON null はスキップされ、他のパラメータは収集される
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Parameters.ContainsKey("cfg"), Is.False);
+            Assert.That(result.Parameters["steps"], Is.EqualTo("6"));
+            Assert.That(result.Parameters["sampler_name"], Is.EqualTo("euler"));
+        }
+
+        [Test]
+        public void Analyze_WithMalformedNodes_DoesNotThrow()
+        {
+            // Arrange: 想定外の構造（配列ノード / inputs がスカラー / null 値の混在）
+            const string json = @"{
+  ""a"": [1, 2, 3],
+  ""b"": { ""inputs"": 5, ""class_type"": null },
+  ""c"": { ""inputs"": { ""text"": null, ""seed"": null, ""model"": [""nope"", 0] }, ""class_type"": ""KSampler"" }
+}";
+
+            // Act / Assert: 例外を外部に漏らさない
+            Assert.DoesNotThrow(() => ComfyUIGraphAnalyzer.Analyze(json));
+        }
     }
 }

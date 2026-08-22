@@ -110,5 +110,35 @@ namespace Illustra.Tests.Helpers
             Assert.That(result, Is.False);
             Assert.That(readTags, Is.Null);
         }
+
+        [Test]
+        public void TryReadTags_WithOversizedMoov_ReturnsFalse()
+        {
+            // Arrange: moov サイズが読み取り上限を大きく超える宣言を持つファイル。
+            // 巨大アロケーションを防ぐため上限超過時はメタデータ解析対象外になる。
+            // 実データは書かず SetLength で疎領域を確保してサイズ制約だけ満たす
+            long declaredSize = 128L * 1024 * 1024;
+            using (var fs = new FileStream(_tempFilePath, FileMode.Create, FileAccess.Write))
+            {
+                var header = new byte[8];
+                header[0] = (byte)(declaredSize >> 24);
+                header[1] = (byte)(declaredSize >> 16);
+                header[2] = (byte)(declaredSize >> 8);
+                header[3] = (byte)declaredSize;
+                header[4] = (byte)'m';
+                header[5] = (byte)'o';
+                header[6] = (byte)'o';
+                header[7] = (byte)'v';
+                fs.Write(header, 0, header.Length);
+                fs.SetLength(declaredSize);
+            }
+
+            // Act
+            var result = Mp4MetadataReader.TryReadTags(_tempFilePath, out var readTags);
+
+            // Assert
+            Assert.That(result, Is.False);
+            Assert.That(readTags, Is.Null);
+        }
     }
 }

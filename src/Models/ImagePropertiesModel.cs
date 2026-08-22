@@ -605,9 +605,10 @@ namespace Illustra.Models
                     });
 
                     // 埋め込み生成メタデータ（ComfyUI の prompt / workflow タグ等）を解析
+                    // ファイル I/O と JSON 解析を伴うため、UI スレッドを塞がないようバックグラウンドで実行する
                     try
                     {
-                        var generationMeta = MediaGenerationMetadataParser.ParseFromMp4(filePath);
+                        var generationMeta = await Task.Run(() => MediaGenerationMetadataParser.ParseFromMp4(filePath));
                         if (generationMeta != null && generationMeta.HasContent)
                         {
                             properties.GenerationMetadata = generationMeta;

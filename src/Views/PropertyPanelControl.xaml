@@ -203,7 +203,8 @@
                                 <Button Content="{DynamicResource String_Thumbnail_CopyPrompt}"
                                         Padding="10,4"
                                         Margin="0,0,5,0"
-                                        Click="CopyGenerationPrompt_Click"/>
+                                        Click="CopyGenerationPrompt_Click"
+                                        Visibility="{Binding GenerationMetadata.Prompt, Converter={StaticResource StringToVisibilityConverter}}"/>
                                 <Button Content="{DynamicResource String_Thumbnail_CopyNegativePrompt}"
                                         Padding="10,4"
                                         Margin="0,0,5,0"

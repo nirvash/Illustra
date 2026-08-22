@@ -14,6 +14,13 @@ namespace Illustra.Helpers
     public static class Mp4MetadataReader
     {
         /// <summary>
+        /// moov box の読み取り上限。
+        /// 実際の ComfyUI 埋め込み（workflow JSON 等）は数 MB 程度だが、
+        /// 巨大/破損ファイルでのメモリ大量確保を防ぐため上限を設ける。
+        /// </summary>
+        private const long MaxMoovSizeBytes = 64 * 1024 * 1024;
+
+        /// <summary>
         /// MP4 ファイルから埋め込みタグ（"prompt" / "workflow" 等）を読み取る
         /// </summary>
         /// <param name="filePath">MP4 ファイルパス</param>
@@ -53,8 +60,15 @@ namespace Illustra.Helpers
 
                     if (type == "moov")
                     {
+                        long payloadSize = (long)(boxSize - (ulong)headerSize);
+                        if (payloadSize > MaxMoovSizeBytes)
+                        {
+                            // 上限超過の moov はメタデータ解析対象外とする（巨大アロケーション防止）
+                            break;
+                        }
+
                         stream.Seek(offset + headerSize, SeekOrigin.Begin);
-                        moovData = reader.ReadBytes((int)(boxSize - (ulong)headerSize));
+                        moovData = reader.ReadBytes((int)payloadSize);
                         break;
                     }
 

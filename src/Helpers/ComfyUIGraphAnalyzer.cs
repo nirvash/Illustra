@@ -57,13 +57,31 @@ namespace Illustra.Helpers
 
         /// <summary>
         /// prompt JSON を解析して GenerationMetadata を返す。
-        /// 解析できない場合は null を返す。
+        /// 解析できない場合や想定外の例外が発生した場合は null を返す。
         /// </summary>
         public static GenerationMetadata Analyze(string promptJson)
         {
             if (string.IsNullOrWhiteSpace(promptJson))
                 return null;
 
+            try
+            {
+                return AnalyzeCore(promptJson);
+            }
+            catch (Exception ex)
+            {
+                // 破損・想定外形式のグラフで例外を外部に漏らさず、
+                // 呼び出し元のワークフロー埋め込みフォールバックに委ねる
+                System.Diagnostics.Debug.WriteLine($"ComfyUI グラフ解析エラー: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Analyze の本体。
+        /// </summary>
+        private static GenerationMetadata AnalyzeCore(string promptJson)
+        {
             JsonObject root;
             try
             {
@@ -380,8 +398,9 @@ namespace Illustra.Helpers
 
                     var value = inputs[parameterKey];
 
-                    // リンク参照は除外（スカラー値のみ）
-                    if (value is JsonArray)
+                    // JSON null ("cfg": null 等) は JsonNode の null 参照になるため除外
+                    // リンク参照も除外（スカラー値のみ）
+                    if (value is null || value is JsonArray)
                         continue;
 
                     string text = value.ToString();

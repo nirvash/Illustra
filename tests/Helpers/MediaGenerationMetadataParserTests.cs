@@ -59,9 +59,11 @@ namespace Illustra.Tests.Helpers
         [Test]
         public void ParseFromMp4_WithUnparseablePrompt_ShowsWorkflowNotice()
         {
-            // Arrange: prompt タグが解析不能でも workflow タグは有効なケース
+            // Arrange: prompt タグが存在するが JSON として解析不能でも、
+            // workflow タグからのフォールバック解析が機能するケース
             File.WriteAllBytes(_tempFilePath, TestMp4Builder.BuildMp4WithMetadata(new Dictionary<string, string>
             {
+                ["prompt"] = "this is not a json string",
                 ["workflow"] = @"{""id"":""wf-2""}"
             }));
 
