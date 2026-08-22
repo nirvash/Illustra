@@ -106,7 +106,7 @@ namespace Illustra.Views
                 DataContext = ImageProperties;
                 OnPropertyChanged(nameof(ImageProperties));
                 OnPropertyChanged(nameof(ImageProperties.HasStableDiffusionData));
-                UpdateStableDiffusionVisibility();
+                UpdateGenerationDependentSectionsVisibility();
             }
         }
 
@@ -134,7 +134,7 @@ namespace Illustra.Views
 
             // 初期状態でSDセクションの表示を確定させる
             // (ビューアなど起動後に選択変更が発生しないケースでもメインと同じ状態にする)
-            UpdateStableDiffusionVisibility();
+            UpdateGenerationDependentSectionsVisibility();
 
             Loaded += PropertyPanelControl_Loaded;
             Unloaded += PropertyPanelControl_Unloaded;
@@ -173,7 +173,7 @@ namespace Illustra.Views
             // コメントセクション
             CommentSection.Visibility = _viewerSettings.ShowComment ? Visibility.Visible : Visibility.Collapsed;
 
-            // StableDiffusionセクションの表示は UpdateStableDiffusionVisibility() に一元化
+            // StableDiffusionセクションの表示は UpdateGenerationDependentSectionsVisibility() に一元化
             // (設定値とデータ有無の両方を考慮するため、ここでは直接設定しない)
 
             // フォントサイズを適用
@@ -207,7 +207,7 @@ namespace Illustra.Views
             LoadViewerSettings();
 
             // SDセクションはデータ有無も考慮して再確定
-            UpdateStableDiffusionVisibility();
+            UpdateGenerationDependentSectionsVisibility();
         }
 
         private void PropertyPanelControl_Unloaded(object sender, RoutedEventArgs e)
@@ -244,7 +244,7 @@ namespace Illustra.Views
                 Visibility = Visibility.Visible;
 
                 // Stable Diffusionのセクションを表示/非表示
-                UpdateStableDiffusionVisibility();
+                UpdateGenerationDependentSectionsVisibility();
             }
             else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
             {
@@ -253,24 +253,37 @@ namespace Illustra.Views
             }
         }
 
-        // StableDiffusionセクションの表示/非表示を更新
-        private void UpdateStableDiffusionVisibility()
+        // 生成メタデータの有無に依存するセクションの表示/非表示を更新
+        private void UpdateGenerationDependentSectionsVisibility()
         {
-            // 基本的な表示設定がオフの場合は非表示
-            if (!_viewerSettings.ShowStableDiffusion)
+            bool hasGenerationMetadata = ImageProperties?.HasGenerationMetadata == true;
+
+            // StableDiffusionセクション:
+            // 設定がオフ、または生成メタデータがある場合は非表示
+            // (ComfyUI の PNG/MP4 は旧 ComfyUIMetadataParser 経路でも
+            //  HasStableDiffusionData が立つため、生成メタデータ側を優先する)
+            if (!_viewerSettings.ShowStableDiffusion || hasGenerationMetadata)
             {
                 StableDiffusionSection.Visibility = Visibility.Collapsed;
-                return;
             }
-
-            // HasStableDiffusionDataの状態に応じて表示/非表示
-            if (ImageProperties?.HasStableDiffusionData == true)
+            else if (ImageProperties?.HasStableDiffusionData == true)
             {
                 StableDiffusionSection.Visibility = Visibility.Visible;
             }
             else
             {
                 StableDiffusionSection.Visibility = Visibility.Collapsed;
+            }
+
+            // コメントセクション:
+            // 設定がオフ、または生成メタデータがある場合は非表示
+            if (!_viewerSettings.ShowComment || hasGenerationMetadata)
+            {
+                CommentSection.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                CommentSection.Visibility = Visibility.Visible;
             }
         }
 

@@ -20,9 +20,15 @@ namespace Illustra.Helpers
     public static class ComfyUIGraphAnalyzer
     {
         /// <summary>
-        /// プロンプト本文として扱う入力キー
+        /// プロンプト本文として扱う入力キー。
+        /// populated_text / wildcard_text は ImpactWildcardProcessor 等の
+        /// 動的プロンプトノード用。確定テキストが入る populated_text の方が
+        /// 通常テンプレートより長いため、最長候補選択で自然に優先される。
         /// </summary>
-        private static readonly HashSet<string> TextInputKeys = new HashSet<string> { "text", "prompt", "value" };
+        private static readonly HashSet<string> TextInputKeys = new HashSet<string>
+        {
+            "text", "prompt", "value", "populated_text", "wildcard_text", "string"
+        };
 
         /// <summary>
         /// ファイルパス等のアセット文字列とみなす拡張子

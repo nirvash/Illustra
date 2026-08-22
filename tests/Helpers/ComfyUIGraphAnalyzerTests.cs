@@ -1,5 +1,6 @@
 using System;
 using Illustra.Helpers;
+using Illustra.Models;
 using NUnit.Framework;
 
 namespace Illustra.Tests.Helpers
@@ -231,6 +232,104 @@ namespace Illustra.Tests.Helpers
 
             // Act / Assert: 例外を外部に漏らさない
             Assert.DoesNotThrow(() => ComfyUIGraphAnalyzer.Analyze(json));
+        }
+
+        [Test]
+        public void Analyze_WildcardProcessor_ExtractsPopulatedText()
+        {
+            // Arrange: ImpactWildcardProcessor 等の動的プロンプトノード。
+            // populated_text（確定テキスト）と wildcard_text（テンプレート）の両方を
+            // 持つケース。最長候補選択により確定テキスト側が優先される
+            const string json = @"{
+  ""1"": { ""inputs"": { ""positive"": [""2"", 0] }, ""class_type"": ""KSampler"" },
+  ""2"": { ""inputs"": { ""wildcard_text"": ""__flower__ field"", ""populated_text"": ""red tulip field under blue sky"", ""mode"": true }, ""class_type"": ""ImpactWildcardProcessor"" }
+}";
+
+            // Act
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.EqualTo("red tulip field under blue sky"));
+        }
+
+        [Test]
+        public void Analyze_StringConcatenateChain_ExtractsWithoutError()
+        {
+            // Arrange: 文字列合成ノードを挟んだチェーン。
+            // リンク走査は型に依存しないため合成ノードも辿れる。
+            // 合成結果そのものではなく構成要素が候補になるが、
+            // 空にならず例外も発生しないことを重視する
+            const string json = @"{
+  ""1"": { ""inputs"": { ""positive"": [""2"", 0] }, ""class_type"": ""KSampler"" },
+  ""2"": { ""inputs"": { ""text"": [""3"", 0] }, ""class_type"": ""CLIPTextEncode"" },
+  ""3"": { ""inputs"": { ""string_a"": ""a girl holding a "", ""string_b"": [""4"", 0] }, ""class_type"": ""StringConcatenate"" },
+  ""4"": { ""inputs"": { ""string"": ""red rose"" }, ""class_type"": ""PrimitiveString"" }
+}";
+
+            // Act / Assert
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.Not.Null.And.Not.Empty);
+            Assert.That(result.ParseSuccess, Is.True);
+        }
+
+        [Test]
+        public void Analyze_RuntimeGeneratedPrompt_GracefullyDegrades()
+        {
+            // Arrange: LLM 等で実行時に生成されるプロンプトなど、
+            // グラフ上に静的なテキストが一切存在しないケース。
+            // 取得不可が仕様だが、例外や null 返却ではなく
+            // ワークフロー埋め込みとして扱えるメタデータを返すべき
+            const string json = @"{
+  ""1"": { ""inputs"": { ""positive"": [""2"", 0] }, ""class_type"": ""KSampler"" },
+  ""2"": { ""inputs"": { ""conditioning"": [""3"", 0] }, ""class_type"": ""LLMRandomPromptGenerator"" },
+  ""3"": { ""inputs"": { ""temperature"": 0.8, ""max_tokens"": 256 }, ""class_type"": ""SomeLLMNode"" }
+}";
+
+            // Act
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            // Assert: 解析成功とはならないが、ワークフロー通知の縮退先が機能する
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.Null);
+            Assert.That(result.ParseSuccess, Is.False);
+            Assert.That(result.HasWorkflow, Is.True);
+        }
+
+        [Test]
+        public void Analyze_NodeWithArbitraryStringInputs_DoesNotThrow()
+        {
+            // Arrange: api_key 等の任意文字列ウィジェットを持つノード。
+            // 汎用走査では文字列入力がプロンプト候補になり得るが、
+            // どのような値でも例外にはならないことが重要
+            const string json = @"{
+  ""1"": { ""inputs"": { ""positive"": [""2"", 0] }, ""class_type"": ""KSampler"" },
+  ""2"": { ""inputs"": { ""conditioning"": [""3"", 0] }, ""class_type"": ""LLMRandomPromptGenerator"" },
+  ""3"": { ""inputs"": { ""api_key"": ""sk-xxx"", ""model_id"": ""gpt-4o"", ""seed"": 42 }, ""class_type"": ""SomeLLMNode"" }
+}";
+
+            // Act / Assert
+            GenerationMetadata result = null;
+            Assert.DoesNotThrow(() => result = ComfyUIGraphAnalyzer.Analyze(json));
+            Assert.That(result, Is.Not.Null);
+        }
+
+        [Test]
+        public void Analyze_UnconnectedWildcardTemplate_FallbackScanPicksItUp()
+        {
+            // Arrange: サンプラー非接続のワイルドカードテンプレートのみのグラフ。
+            // フォールバック走査によりテンプレート文字列がプロンプト候補になる
+            const string json = @"{
+  ""9"": { ""inputs"": { ""wildcard_text"": ""__color__ __flower__"" }, ""class_type"": ""ImpactWildcardProcessor"" }
+}";
+
+            // Act
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.EqualTo("__color__ __flower__"));
         }
     }
 }
