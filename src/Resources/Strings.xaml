@@ -197,7 +197,13 @@
     <system:String x:Key="String_Property_CopyOriginalPrompt">Copy Original Prompt</system:String>
     <system:String x:Key="String_Property_EditOriginalPrompt">Edit Original Prompt</system:String>
     <system:String x:Key="String_Property_AddPrompt">Add Prompt</system:String>
+    <system:String x:Key="String_Property_ValueCopied">Copied to clipboard</system:String>
     <system:String x:Key="String_Property_Comment">Comment</system:String>
+    <system:String x:Key="String_Property_Generation">Generation Metadata</system:String>
+    <system:String x:Key="String_Property_GenerationTool">Tool</system:String>
+    <system:String x:Key="String_Property_CopyWorkflowJson">Copy Workflow JSON</system:String>
+    <system:String x:Key="String_Thumbnail_WorkflowCopied">Workflow JSON copied</system:String>
+    <system:String x:Key="String_Property_WorkflowEmbeddedOnly">Detailed prompt could not be parsed, but generation workflow data is embedded in this file. Load the copied workflow JSON into ComfyUI to view it.</system:String>
     <system:String x:Key="String_Dialog_EditPrompt">Edit Prompt</system:String>
 
     <!-- メディア表示設定 (アニメーションと動画に適用) -->

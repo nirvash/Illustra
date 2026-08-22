@@ -112,6 +112,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- ファイル名 -->
@@ -193,9 +195,25 @@
                                                                     CurrentRating="{Binding Rating, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Button>
                         </StackPanel>
+                        <!-- 生成メタデータ コピーボタン (上部に常設) -->
+                        <WrapPanel x:Name="GenerationCopyButtonsSection"
+                                   Grid.Row="2"
+                                   Margin="0,0,0,10"
+                                   Visibility="{Binding HasGenerationMetadata, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Button Content="{DynamicResource String_Thumbnail_CopyPrompt}"
+                                        Padding="10,4"
+                                        Margin="0,0,5,0"
+                                        Click="CopyGenerationPrompt_Click"/>
+                                <Button Content="{DynamicResource String_Thumbnail_CopyNegativePrompt}"
+                                        Padding="10,4"
+                                        Margin="0,0,5,0"
+                                        Click="CopyGenerationNegativePrompt_Click"
+                                        Visibility="{Binding GenerationMetadata.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>
+                        </WrapPanel>
+
                         <!-- 詳細情報（折りたたみ可能） -->
                         <Expander x:Name="DetailsSection"
-                                Grid.Row="2"
+                                Grid.Row="3"
                                 IsExpanded="{Binding FolderPathExpanded, Mode=TwoWay}"
                                 Header="{DynamicResource String_Property_DetailInfo}"
                                 FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -350,7 +368,7 @@
 
                         <!-- Stable Diffusion情報 -->
                         <Expander x:Name="StableDiffusionSection"
-                                  Grid.Row="3"
+                                  Grid.Row="4"
                                   Header="{DynamicResource String_Property_StableDiffusion}"
                                   Margin="0,0,0,10"
                                   IsExpanded="{Binding StableDiffusionExpanded}"
@@ -534,8 +552,204 @@
                                 </StackPanel>
                         </Expander>
 
-                        <!-- プロンプト追加ボタン -->
-                        <Button Grid.Row="4"
+                        <!-- 生成メタデータ (Stable Diffusion 以外の生成ツール、ComfyUI 動画等) -->
+                        <Expander x:Name="GenerationMetadataSection"
+                                  Grid.Row="5"
+                                  Header="{DynamicResource String_Property_Generation}"
+                                  IsExpanded="True"
+                                  Margin="0,0,0,10"
+                                  Visibility="{Binding HasGenerationMetadata, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                        <!-- 生成ツール -->
+                                        <Grid Margin="0,5,0,5"
+                                              Visibility="{Binding GenerationMetadata.Generator, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{DynamicResource String_Property_GenerationTool}"
+                                                           Margin="0,0,10,5"/>
+                                                 <TextBox Grid.Column="1"
+                                                          Text="{Binding GenerationMetadata.Generator, Mode=OneWay}"
+                                                          Style="{StaticResource ReadOnlyTextBoxStyle}">
+                                                         <TextBox.ContextMenu>
+                                                                 <ContextMenu>
+                                                                         <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                   Tag="Generator"
+                                                                                   Click="CopyGenerationField_Click"/>
+                                                                 </ContextMenu>
+                                                         </TextBox.ContextMenu>
+                                                 </TextBox>
+                                        </Grid>
+
+                                        <!-- モデル -->
+                                        <Grid Margin="0,5,0,5"
+                                              Visibility="{Binding GenerationMetadata.ModelName, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{DynamicResource String_Property_Model}"
+                                                           Margin="0,0,10,5"/>
+                                                 <TextBox Grid.Column="1"
+                                                          Text="{Binding GenerationMetadata.ModelName, Mode=OneWay}"
+                                                          Style="{StaticResource ReadOnlyTextBoxStyle}">
+                                                         <TextBox.ContextMenu>
+                                                                 <ContextMenu>
+                                                                         <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                   Tag="ModelName"
+                                                                                   Click="CopyGenerationField_Click"/>
+                                                                 </ContextMenu>
+                                                         </TextBox.ContextMenu>
+                                                 </TextBox>
+                                        </Grid>
+
+                                        <!-- パラメータ (キー: 値 の行で表示) -->
+                                        <ItemsControl ItemsSource="{Binding GenerationMetadata.Parameters}"
+                                                      Margin="0,5,0,0"
+                                                      Visibility="{Binding GenerationMetadata.Parameters.Count, Converter={StaticResource NumberToVisibilityConverter}}">
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <Grid Margin="0,2,0,2">
+                                                                        <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="110"/>
+                                                                                <ColumnDefinition Width="*"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{Binding Key}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Opacity="0.8"
+                                                                                   ToolTip="{Binding Value}"/>
+                                                                        <TextBox Grid.Column="1"
+                                                                                 Text="{Binding Value, Mode=OneWay}"
+                                                                                 Style="{StaticResource ReadOnlyTextBoxStyle}">
+                                                                                <TextBox.ContextMenu>
+                                                                                        <ContextMenu>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                                        Click="CopyTag_Click"/>
+                                                                                        </ContextMenu>
+                                                                                </TextBox.ContextMenu>
+                                                                        </TextBox>
+                                                                </Grid>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- プロンプト本文 (タグ分解せず長文のまま表示) -->
+                                        <TextBlock Text="{DynamicResource String_Property_Prompt}"
+                                                   Margin="0,10,0,5"
+                                                   Visibility="{Binding GenerationMetadata.Prompt, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                        <TextBox Text="{Binding GenerationMetadata.Prompt, Mode=OneWay}"
+                                                 Style="{StaticResource ReadOnlyTextBoxStyle}"
+                                                 TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 MaxHeight="200"
+                                                 HorizontalScrollBarVisibility="Disabled"
+                                                 Visibility="{Binding GenerationMetadata.Prompt, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <TextBox.ContextMenu>
+                                                        <ContextMenu>
+                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                          Click="CopyGenerationPrompt_Click"/>
+                                                        </ContextMenu>
+                                                </TextBox.ContextMenu>
+                                        </TextBox>
+
+                                        <!-- ネガティブプロンプト -->
+                                        <TextBlock Text="{DynamicResource String_Property_NegativePrompt}"
+                                                   Margin="0,10,0,5"
+                                                   Visibility="{Binding GenerationMetadata.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                        <TextBox Text="{Binding GenerationMetadata.NegativePrompt, Mode=OneWay}"
+                                                 Style="{StaticResource ReadOnlyTextBoxStyle}"
+                                                 TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 MaxHeight="120"
+                                                 HorizontalScrollBarVisibility="Disabled"
+                                                 Visibility="{Binding GenerationMetadata.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <TextBox.ContextMenu>
+                                                        <ContextMenu>
+                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                          Click="CopyGenerationNegativePrompt_Click"/>
+                                                        </ContextMenu>
+                                                </TextBox.ContextMenu>
+                                        </TextBox>
+
+                                        <!-- LoRA -->
+                                        <TextBlock Text="{DynamicResource String_Property_LoRA}"
+                                                   Margin="0,10,0,5"
+                                                   Visibility="{Binding GenerationMetadata.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}"/>
+                                        <ItemsControl ItemsSource="{Binding GenerationMetadata.Loras}"
+                                                      Visibility="{Binding GenerationMetadata.Loras.Count, Converter={StaticResource NumberToVisibilityConverter}}">
+                                                <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                                <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <Border Background="#D4EDDA"
+                                                                        BorderThickness="1"
+                                                                        BorderBrush="Transparent"
+                                                                        Padding="5,2"
+                                                                        Margin="0,0,5,5"
+                                                                        CornerRadius="3">
+                                                                        <TextBox Text="{Binding Path=.}"
+                                                                                 Foreground="Black"
+                                                                                 Style="{StaticResource LoRATagTextBoxStyle}"
+                                                                                 IsReadOnlyCaretVisible="True"
+                                                                                 VerticalAlignment="Center"
+                                                                                 MinWidth="20"
+                                                                                 Tag="{Binding Path=.}"
+                                                                                 PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown">
+                                                                                <TextBox.ContextMenu>
+                                                                                        <ContextMenu>
+                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                                                                                        Click="CopyTag_Click"
+                                                                                                        Tag="{Binding}"/>
+                                                                                        </ContextMenu>
+                                                                                </TextBox.ContextMenu>
+                                                                        </TextBox>
+                                                                </Border>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- コピー/保存ボタン -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Button Content="{DynamicResource String_Thumbnail_CopyPrompt}"
+                                                    Margin="0,0,10,0"
+                                                    Padding="10,5"
+                                                    Focusable="False"
+                                                    Click="CopyGenerationPrompt_Click"
+                                                    Visibility="{Binding GenerationMetadata.Prompt, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                            <Button Content="{DynamicResource String_Thumbnail_CopyNegativePrompt}"
+                                                    Margin="0,0,10,0"
+                                                    Padding="10,5"
+                                                    Focusable="False"
+                                                    Click="CopyGenerationNegativePrompt_Click"
+                                                    Visibility="{Binding GenerationMetadata.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                            <Button Content="{DynamicResource String_Property_CopyWorkflowJson}"
+                                                    Padding="10,5"
+                                                    Focusable="False"
+                                                    Click="CopyWorkflowJson_Click"
+                                                    Visibility="{Binding GenerationMetadata.HasWorkflow, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+
+                                        <!-- 解析失敗時のフォールバック表示:
+                                             ワークフローが埋め込まれていることだけでも伝える
+                                             (ComfyUI で workflow JSON を開けば内容を確認できる) -->
+                                        <TextBlock Text="{DynamicResource String_Property_WorkflowEmbeddedOnly}"
+                                                   Margin="0,10,0,0"
+                                                   FontStyle="Italic"
+                                                   Opacity="0.8"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="{Binding GenerationMetadata.NeedsWorkflowNotice, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </StackPanel>
+                        </Expander>
+
+                        <!-- プロンプト追加ボタン (Stable Diffusion 形式でないファイルでは非表示) -->
+                        <Button Grid.Row="6"
                                Content="{DynamicResource String_Property_AddPrompt}"
                                HorizontalAlignment="Left"
                                Padding="10,5"
@@ -547,13 +761,15 @@
                                              Converter="{StaticResource BooleanInverseConverter}"/>
                                     <Binding Path="CanEditExif"
                                              RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                    <Binding Path="HasGenerationMetadata"
+                                             Converter="{StaticResource BooleanInverseConverter}"/>
                                 </MultiBinding>
                             </Button.Visibility>
                         </Button>
 
                         <!-- コメント -->
                         <Grid x:Name="CommentSection"
-                              Grid.Row="5"
+                              Grid.Row="7"
                               Margin="0,0,0,5">
                                 <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
