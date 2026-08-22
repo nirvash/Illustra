@@ -124,7 +124,20 @@
     <system:String x:Key="String_Settings_Developer_LogCategories">Log Categories</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">Enable Developer Mode</system:String>
     <system:String x:Key="String_Settings_Developer_CleanDatabase">Clean Database</system:String>
-    <system:String x:Key="String_Settings_Developer_EnableMcpHost">Enable MCP Host (Requires restart)</system:String>
+    <system:String x:Key="String_Settings_Mcp_Category">MCP</system:String>
+    <system:String x:Key="String_Settings_Mcp_Section">MCP Server</system:String>
+    <system:String x:Key="String_Settings_Mcp_EnableServer">Enable MCP Server</system:String>
+    <system:String x:Key="String_Settings_Mcp_Port">Port:</system:String>
+    <system:String x:Key="String_Settings_Mcp_Apply">Apply</system:String>
+    <system:String x:Key="String_Settings_Mcp_Token">Access Token:</system:String>
+    <system:String x:Key="String_Settings_Mcp_ShowToken">Show</system:String>
+    <system:String x:Key="String_Settings_Mcp_HideToken">Hide</system:String>
+    <system:String x:Key="String_Settings_Mcp_CopyToken">Copy</system:String>
+    <system:String x:Key="String_Settings_Mcp_RegenerateToken">Regenerate</system:String>
+    <system:String x:Key="String_Settings_Mcp_StatusRunning">Running: {0}</system:String>
+    <system:String x:Key="String_Settings_Mcp_StatusStopped">Stopped</system:String>
+    <system:String x:Key="String_Settings_Mcp_PortInvalid" xml:space="preserve">Port must be an integer between 1 and 65535.</system:String>
+    <system:String x:Key="String_Settings_Mcp_ToggleError" xml:space="preserve">Failed to change MCP server state.&#x0a;{0}</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">Database Cleanup</system:String>
     <system:String x:Key="String_Settings_Developer_PreparingCleanup">Press Start to clean up database.</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupComplete"

@@ -1,4 +1,3 @@
-﻿﻿using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
 using System;
 using System.Windows;
 using Prism.Ioc;
@@ -19,11 +18,8 @@ using Illustra.Events;
 using ControlzEx.Theming;
 using System.IO;
 using Illustra.Models;
-using Illustra.Shared.Models; // Added for MCP events
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Builder; // Required for IApplicationBuilder extension methods
+using Illustra.Mcp;
+using System.Windows.Threading;
 
 namespace Illustra
 {
@@ -38,8 +34,8 @@ namespace Illustra
         private readonly DatabaseManager _db = new();
         public bool EnableCyclicNavigation { get; set; }
 
-        // Web API ホストのインスタンスを保持
-        private IHost? _mcpHost;
+        // MCP ホストのライフサイクル管理（動的な開始/停止を設定画面からも行う）
+        private McpHostManager? _mcpHostManager;
 
         // アプリケーション全体で共有するサービスへの参照を保持
         private IllustraAppContext _appContext;
@@ -94,6 +90,13 @@ namespace Illustra
                 ));
             containerRegistry.RegisterSingleton<IImagePropertiesService, ImagePropertiesService>();
             containerRegistry.RegisterSingleton<ThumbnailListViewModel>(); // MainViewModel をシングルトンで登録
+
+            // MCP ホスト管理
+            containerRegistry.RegisterSingleton<McpHostManager>(resolver =>
+                new McpHostManager(
+                    resolver.Resolve<IEventAggregator>(),
+                    Application.Current.Dispatcher,
+                    resolver.Resolve<DatabaseManager>()));
 
             // ビューの登録
             containerRegistry.Register<LanguageSettingsViewModel>();
@@ -166,44 +169,27 @@ namespace Illustra
             // var dispatcherService = new WpfDispatcherService(); // Removed
 
             // MCP Host の起動制御
+            _mcpHostManager = Container.Resolve<McpHostManager>();
             if (settings.EnableMcpHost)
             {
                 try
                 {
-                    // Web API ホストを起動（ポート5149を使用 - launchSettings.json に合わせる）
-                    // IEventAggregator instance is already resolved
-
-                    _mcpHost = Host.CreateDefaultBuilder()
-                        .ConfigureServices((hostContext, services) => // Add ConfigureServices here
-                        {
-                            // Register the existing IEventAggregator instance as a singleton
-                            services.AddSingleton(eventAggregator);
-                            // Register the WPF Dispatcher instance as a singleton
-                            services.AddSingleton(Application.Current.Dispatcher);
-                        })
-                        .ConfigureWebHostDefaults(webBuilder =>
-                        {
-                            // Use Startup class for configuration
-                            webBuilder.UseStartup<Illustra.MCPHost.Startup>();
-                            // Set the URL
-                            webBuilder.UseUrls("http://localhost:5149");
-                        })
-                        .Build();
-
-                    await _mcpHost.StartAsync();
-                    LogHelper.LogWithTimestamp("MCP Web API ホストを起動しました (Port: 5149)", LogHelper.Categories.MCP);
+                    await _mcpHostManager.StartAsync();
+                    LogHelper.LogWithTimestamp($"MCP ホストを起動しました ({_mcpHostManager.EndpointUrl})", LogHelper.Categories.MCP);
                 }
                 catch (Exception ex)
                 {
                     // MCPホストの起動に失敗しても、エラーログを記録してアプリケーションの起動は続行する
                     LogHelper.LogError("MCP ホストの起動中にエラーが発生しました", ex);
-                    _mcpHost = null; // 念のためホスト参照をクリア
                 }
             }
             else
             {
-                LogHelper.LogWithTimestamp("MCP Web API ホストは無効化されています", LogHelper.Categories.MCP);
+                LogHelper.LogWithTimestamp("MCP ホストは無効化されています", LogHelper.Categories.MCP);
             }
+
+            // MCP shutdown_application ツール経由での正常終了を処理する
+            eventAggregator.GetEvent<McpShutdownEvent>().Subscribe(OnMcpShutdownRequested, ThreadOption.UIThread);
 
             EnableCyclicNavigation = settings.EnableCyclicNavigation;
 
@@ -242,6 +228,32 @@ namespace Illustra
             {
                 // 引数がない場合は設定に基づいて動作
                 OpenFolderBasedOnSettings(settings, eventAggregator);
+            }
+        }
+
+        /// <summary>
+        /// MCP shutdown_application ツールからの終了要求。
+        /// レスポンスがクライアントへ返る猶予を設けてから正常終了する。
+        /// </summary>
+        private void OnMcpShutdownRequested(McpShutdownEventArgs args)
+        {
+            try
+            {
+                LogHelper.LogWithTimestamp("MCP 経由のシャットダウン要求を受信しました", LogHelper.Categories.MCP);
+                args.ResultCompletionSource?.TrySetResult(true);
+
+                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    Application.Current.Shutdown();
+                };
+                timer.Start();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP シャットダウン処理中にエラーが発生しました", ex);
+                args.ResultCompletionSource?.TrySetResult(false);
             }
         }
 
@@ -424,24 +436,25 @@ namespace Illustra
             {
                 LogHelper.LogWithTimestamp("アプリケーション終了処理を開始", LogHelper.Categories.UI);
 
-                // Web API ホストの停止
-                if (_mcpHost != null)
+                // MCP ホストの停止（StopAsync ベースの正常停止）
+                if (_mcpHostManager != null)
                 {
                     try
                     {
-                        LogHelper.LogWithTimestamp("MCP Web API ホストの Dispose を開始します...", LogHelper.Categories.MCP);
-                        _mcpHost.Dispose(); // StopAsync を呼ばずに直接 Dispose
-                        LogHelper.LogWithTimestamp("MCP Web API ホストの Dispose が完了しました", LogHelper.Categories.MCP);
+                        LogHelper.LogWithTimestamp("MCP ホストの停止を開始します...", LogHelper.Categories.MCP);
+                        // Host 側の await チェーンが Dispatcher コンテキストを捕捉しないよう、
+                        // スレッド プール上で停止処理を実行する（UI スレッド直呼び出しはデッドロックする）
+                        Task.Run(() => _mcpHostManager.StopAsync(TimeSpan.FromSeconds(5))).GetAwaiter().GetResult();
+                        LogHelper.LogWithTimestamp("MCP ホストを正常に停止しました", LogHelper.Categories.MCP);
                     }
                     catch (Exception ex)
                     {
-                        // Dispose中にエラーが発生した場合
-                        LogHelper.LogError("MCP Web API ホストの Dispose 中にエラーが発生しました", ex);
+                        // 停止中にエラーが発生した場合
+                        LogHelper.LogError("MCP ホストの停止中にエラーが発生しました", ex);
                     }
                     finally
                     {
-                        _mcpHost = null; // 参照をクリア
-                        LogHelper.LogWithTimestamp("MCP Web API ホストの参照を null に設定しました", LogHelper.Categories.MCP);
+                        _mcpHostManager = null; // 参照をクリア
                     }
                 }
                 else

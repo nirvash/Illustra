@@ -16,6 +16,7 @@ namespace Illustra.ViewModels.Settings
         public ThumbnailSettingsViewModel ThumbnailSettings { get; }
         public ViewerSettingsViewModel ViewerSettings { get; }
         public PropertyPanelSettingsViewModel PropertyPanelSettings { get; }
+        public McpSettingsViewModel McpSettings { get; }
         public DeveloperSettingsViewModel DeveloperSettings { get; }
 
         public AdvancedSettingsViewModel()
@@ -28,6 +29,7 @@ namespace Illustra.ViewModels.Settings
             ThumbnailSettings = new ThumbnailSettingsViewModel(_settings);
             ViewerSettings = new ViewerSettingsViewModel(_viewerSettings);
             PropertyPanelSettings = new PropertyPanelSettingsViewModel(_viewerSettings);
+            McpSettings = new McpSettingsViewModel(_settings);
             DeveloperSettings = new DeveloperSettingsViewModel(_settings);
 
             // 設定を読み込む
@@ -40,6 +42,7 @@ namespace Illustra.ViewModels.Settings
             ThumbnailSettings.LoadSettings();
             ViewerSettings.LoadSettings();
             PropertyPanelSettings.LoadSettings();
+            McpSettings.LoadSettings();
             DeveloperSettings.LoadSettings();
         }
 
@@ -49,6 +52,7 @@ namespace Illustra.ViewModels.Settings
                    ThumbnailSettings.ValidateSettings() &&
                    ViewerSettings.ValidateSettings() &&
                    PropertyPanelSettings.ValidateSettings() &&
+                   McpSettings.ValidateSettings() &&
                    DeveloperSettings.ValidateSettings();
         }
 
@@ -58,6 +62,7 @@ namespace Illustra.ViewModels.Settings
             ThumbnailSettings.SaveSettings();
             ViewerSettings.SaveSettings();
             PropertyPanelSettings.SaveSettings();
+            McpSettings.SaveSettings();
             DeveloperSettings.SaveSettings();
 
             // 基本設定の保存

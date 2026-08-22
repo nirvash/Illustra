@@ -240,6 +240,38 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
+        /// 確認ダイアログ等を表示せずにファイルを削除し、データベース情報も削除します（MCP ツールなど自動処理用）。
+        /// </summary>
+        /// <param name="filePath">削除するファイルのパス</param>
+        /// <param name="useRecycleBin">trueの場合、ごみ箱に移動。falseの場合、完全削除</param>
+        public async Task DeleteFileQuietAsync(string filePath, bool useRecycleBin)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentNullException(nameof(filePath));
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"File not found: {filePath}", filePath);
+
+            try
+            {
+                await RunOnStaThread(() =>
+                {
+                    FileSystem.DeleteFile(
+                        filePath,
+                        UIOption.OnlyErrorDialogs,
+                        useRecycleBin ? RecycleOption.SendToRecycleBin : RecycleOption.DeletePermanently
+                    );
+                });
+
+                await _db.DeleteFileNodeAsync(filePath);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"ファイルの削除中にエラーが発生しました: {filePath}\n{ex.Message}");
+                throw new FileOperationException($"Failed to delete file: {filePath}. {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// フォルダを削除し、関連するデータベース情報も削除します
         /// </summary>
         /// <param name="directoryPath">削除するフォルダのパス</param>

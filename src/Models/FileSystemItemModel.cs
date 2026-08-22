@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEvent/Args
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -9,7 +8,6 @@ using System.Windows;
 using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
-using Illustra.Shared.Models; // Added for MCP events
 using Illustra.Views;
 using Prism.Commands; // DelegateCommand を使用するために追加
 

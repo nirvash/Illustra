@@ -22,8 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\Illustra.csproj" />
-    <ProjectReference Include="..\src\MCPHost\Illustra.MCPHost.csproj" />
-    <ProjectReference Include="..\src\Shared\Illustra.Shared.csproj" />
   </ItemGroup>
 
 </Project>

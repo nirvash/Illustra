@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,7 +14,6 @@ using System.Windows.Documents;
 using System.Threading.Tasks; // Task を使うために追加
 using System; // IProgress を使うために追加
 // using Illustra.Helpers; // CS0105 Fix: Redundant using (DialogHelper を使うために追加)
-using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {
