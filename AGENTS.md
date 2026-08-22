@@ -13,9 +13,15 @@
 
 ## 開発環境
 
-- OS: Windows（シェルは bash）
+- OS: Windows（シェルは PowerShell 5.1）
 - .NET 9 SDK 必須
 - IDE: Visual Studio 2022（人間の開発者向け）
+- **シェル出力の文字コード注意**: 実シェルは PowerShell 5.1 であり、コンソール既定は **CP932（Shift-JIS）**。`dotnet` 等の CLI は UTF-8 で出力するため、そのままだと日本語出力が文字化けする。出力内容を確認するコマンドでは先頭に次を付けること（呼び出し毎にシェルは新規起動されるため毎回必要）:
+
+  ```powershell
+  [Console]::OutputEncoding = [Text.Encoding]::UTF8; $OutputEncoding = [Text.Encoding]::UTF8
+  ```
+
 
 ## コマンド
 
@@ -42,8 +48,6 @@ dotnet test tests/Illustra.Tests.csproj --filter "FullyQualifiedName~<TestName>"
 | プロジェクト | パス | 役割 |
 |---|---|---|
 | Illustra | `src/Illustra.csproj` | メインアプリケーション |
-| Illustra.Shared | `src/Shared/Illustra.Shared.csproj` | 共有ライブラリ |
-| Illustra.MCPHost | `src/MCPHost/Illustra.MCPHost.csproj` | MCP サーバー機能 |
 | Illustra.Tests | `tests/Illustra.Tests.csproj` | テスト（NUnit + Moq） |
 
 ## ソースコード構造（src/ 配下）
@@ -54,13 +58,12 @@ ViewModels/ ViewModel（Prism ベース）
 Models/     データモデル
 Services/   サービス層
 Controls/   再利用可能なカスタムコントロール
-Events/     イベントアグリゲーター用イベント定義（UIEvents.cs）
+Events/     イベントアグリゲーター用イベント定義（UIEvents.cs、McpEvents.cs）
 Helpers/    ユーティリティ
 Converters/ XAML 値コンバーター
 Themes/     テーマ（MahApps.Metro ベース、ライト/ダーク）
 Resources/  多言語リソース（Strings.xaml / Strings.ja.xaml）
-Shared/     共有プロジェクトソース
-MCPHost/    MCP ホスト実装
+Mcp/        MCP サーバー機能（アプリ内 Kestrel ホスト、Streamable HTTP、ツール実装）
 ```
 
 ## 重要なルール
@@ -98,7 +101,7 @@ MCPHost/    MCP ホスト実装
 | `docs/Implementation.md` | 機能 ↔ 実装箇所マッピング（コード理解の出発点） |
 | `docs/Spec.md`, `docs/Design.md` | 仕様・設計 |
 | `docs/Rule.md` | 開発ルール詳細 |
-| `docs/MCP_Design.md` ほか `MCP*.md` | MCPHost 関連設計 |
+| `docs/MCP_v2_Design.md` | MCP サーバー設計（アプリ内 Kestrel、Streamable HTTP、ツール仕様） |
 | `docs/ImageCacheDesign.md` | 画像キャッシュ設計 |
 | `docs/ZoomDesign.md` | ズーム/パン設計 |
 

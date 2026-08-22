@@ -140,6 +140,33 @@ Illustra.exe [ファイルパス]
 - 昇順/降順を切り替えられます
 - 設定は各フォルダごとに保存されます
 
+### MCP 機能
+
+Illustra は Model Context Protocol (MCP) をサポートし、外部クライアントからフォルダの開閉、ファイル選択、メタデータ取得などの操作が可能です。
+
+#### 利用方法
+
+設定メニューで MCP を有効にすると、ローカルで MCP サーバーが起動します。接続にはアプリ内で確認できる認証トークンが必要です。
+
+クライアント側の設定例（VS Code / Cursor 等）:
+
+```json
+{
+  "servers": {
+    "Illustra": {
+      "type": "http",
+      "url": "http://localhost:5149/mcp",
+      "headers": { "Authorization": "Bearer <your-mcp-token>" }
+    }
+  }
+}
+```
+
+#### 利用例
+
+- 画像フォルダを開き、サムネイル一覧と選択状態を取得する
+- ファイルのメタデータやサムネイル画像を取得する
+
 ### TIPS
 
 - ComfyUI の画像のメタデータを確認したい場合は Save Image w/Metadata のカスタムノードで保存することをおすすめします
@@ -198,6 +225,33 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - 🎬 MP4 video file playback
 - 🎞️ Animated WebP file playback
 - 📑 Multi-folder tab view
+
+### MCP Features
+
+Illustra supports the Model Context Protocol (MCP), allowing external clients to perform operations such as opening folders, selecting files, and retrieving metadata.
+
+#### Usage
+
+Enable MCP from the settings menu to start the local MCP server. An authentication token, which can be viewed within the app, is required for connections.
+
+Client configuration example (VS Code / Cursor, etc.):
+
+```json
+{
+  "servers": {
+    "Illustra": {
+      "type": "http",
+      "url": "http://localhost:5149/mcp",
+      "headers": { "Authorization": "Bearer <your-mcp-token>" }
+    }
+  }
+}
+```
+
+#### Examples
+
+- Open an image folder and retrieve the thumbnail list and selection state
+- Retrieve file metadata and thumbnail images
 
 ### System Requirements
 
