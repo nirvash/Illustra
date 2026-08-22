@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel; // INotifyPropertyChanged を使用するために追加
 using System.IO; // Path クラスを使用するために追加
 using System.Runtime.CompilerServices; // CallerMemberName を使用するために追加
+using Illustra.Helpers; // 診断ログ用
 
 namespace Illustra.Models
 {
@@ -17,7 +18,15 @@ namespace Illustra.Models
         public string FolderPath
         {
             get => _folderPath;
-            set => SetProperty(ref _folderPath, value);
+            set
+            {
+                if (_folderPath != value)
+                {
+                    NavigationDiagnosticsLog.Append(
+                        $"FolderPath CHANGED: \"{_folderPath}\" -> \"{value}\"", withStackTrace: true);
+                }
+                SetProperty(ref _folderPath, value);
+            }
         }
 
         private string? _selectedItemPath;

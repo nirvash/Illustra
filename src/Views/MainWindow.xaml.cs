@@ -88,6 +88,11 @@ namespace Illustra.Views
             // ウィンドウが閉じられるときに設定を保存
             Closing += MainWindow_Closing;
 
+            // 診断ログ（Issue #48 解析用）: ウィンドウのアクティブ状態変化を記録
+            Activated += (s, e) => Illustra.Helpers.NavigationDiagnosticsLog.Append("MainWindow ACTIVATED");
+            Deactivated += (s, e) => Illustra.Helpers.NavigationDiagnosticsLog.Append("MainWindow DEACTIVATED");
+            StateChanged += (s, e) => Illustra.Helpers.NavigationDiagnosticsLog.Append($"WindowState={WindowState}");
+
             // ソートメニューの初期化
             InitializeSortMenuItems();
 

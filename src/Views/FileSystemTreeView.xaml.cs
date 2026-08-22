@@ -109,6 +109,20 @@ namespace Illustra.Views
         // TreeViewの選択変更イベントハンドラ
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
+            // 展開・読み込み中に発生する過渡的な選択変更は無視する
+            // （コンテナ再生成時にルートや祖先ノードが一時的に選択され、
+            //   アクティブタブが意図せず移動する不具合の防止）
+            bool suppressed = _viewModel != null && (_viewModel.IsLoading || _viewModel.IsExpandingPath);
+            NavigationDiagnosticsLog.Append(
+                $"TreeView_SelectedItemChanged: new=\"{(e.NewValue as FileSystemItemModel)?.FullPath ?? "<null>"}\" " +
+                $"old=\"{(e.OldValue as FileSystemItemModel)?.FullPath ?? "<null>"}\" suppressed={suppressed} " +
+                $"windowActive={Application.Current?.MainWindow?.IsActive}");
+
+            if (suppressed)
+            {
+                return;
+            }
+
             if (e.NewValue is FileSystemItemModel item)
             {
                 if (_viewModel != null)

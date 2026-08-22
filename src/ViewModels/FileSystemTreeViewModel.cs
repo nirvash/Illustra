@@ -11,6 +11,7 @@ using Illustra.Models;
 using Illustra.Shared.Models; // Added for MCP events
 using GongSolutions.Wpf.DragDrop;
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.VisualBasic;
 
 namespace Illustra.ViewModels
@@ -23,8 +24,30 @@ namespace Illustra.ViewModels
         private FileSystemItemModel _selectedItem = new("", false, true);
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
-        private bool _isExpandingPath = false;
+        private bool _isExpandingPath = false; // プログラムによるパス展開中を示すフラグ
         private bool _ignoreSelectedChangedOnce = false; // フォルダ選択イベントを無視するフラグ
+
+        /// <summary>
+        /// プログラムによるパス展開中かどうか。
+        /// 展開中は TreeView の過渡的な選択変更をナビゲーションとして扱わない。
+        /// </summary>
+        public bool IsExpandingPath => _isExpandingPath;
+
+        /// <summary>
+        /// 展開処理の完了後もコンテナ再生成などに伴う過渡的な選択変更が発生し得るため、
+        /// フラグは同期で戻さず Background 優先度まで維持する
+        /// </summary>
+        private void BeginExpandingPath()
+        {
+            _isExpandingPath = true;
+        }
+
+        private void EndExpandingPathDeferred()
+        {
+            Application.Current.Dispatcher.BeginInvoke(
+                new Action(() => _isExpandingPath = false),
+                DispatcherPriority.Background);
+        }
 
         public FileSystemTreeViewModel(IEventAggregator eventAggregator, string? initialPath = null)
         {
@@ -181,13 +204,21 @@ namespace Illustra.ViewModels
         // 指定したパスを展開する
         public void Expand(string targetPath)
         {
-            if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
+            BeginExpandingPath();
+            try
             {
-                _model.Initialize(null);
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
+                {
+                    _model.Initialize(null);
+                    return;
+                }
 
-            _model.ExpandPath(targetPath);
+                _model.ExpandPath(targetPath);
+            }
+            finally
+            {
+                EndExpandingPathDeferred();
+            }
         }
 
         // お気に入りへの追加

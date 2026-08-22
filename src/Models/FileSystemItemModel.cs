@@ -497,6 +497,9 @@ namespace Illustra.Models
             bool isDirectChild = FullPath.Equals(Path.GetDirectoryName(path), StringComparison.OrdinalIgnoreCase);
             if (!isDirectChild) return;
 
+            Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                $"[FS] OnFileCreated: \"{path}\" parent=\"{FullPath}\" isExpanded={IsExpanded}");
+
             Debug.WriteLine($"[フォルダツリー] 子フォルダ作成: {path}, 親フォルダ: {FullPath}");
 
             Application.Current.Dispatcher.Invoke(() =>
@@ -557,6 +560,9 @@ namespace Illustra.Models
             // このフォルダ内の削除かチェック（このフォルダ自身が親の場合のみ処理）
             bool isDirectChild = FullPath.Equals(Path.GetDirectoryName(path), StringComparison.OrdinalIgnoreCase);
             if (!isDirectChild) return;
+
+            Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                $"[FS] OnFileDeleted: \"{path}\" parent=\"{FullPath}\" isExpanded={IsExpanded}");
 
             Debug.WriteLine($"[フォルダツリー] 子フォルダ削除: {path}, 親フォルダ: {FullPath}");
 
@@ -665,6 +671,9 @@ namespace Illustra.Models
             // このフォルダ内のリネームかチェック（このフォルダ自身が親の場合のみ処理）
             bool isDirectChild = FullPath.Equals(Path.GetDirectoryName(oldPath), StringComparison.OrdinalIgnoreCase);
             if (!isDirectChild) return;
+
+            Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                $"[FS] OnChildFolderRenamed: \"{oldPath}\" -> \"{newPath}\" parent=\"{FullPath}\" isExpanded={IsExpanded}");
 
             Debug.WriteLine($"[フォルダツリー] 子フォルダ名変更: {oldPath} -> {newPath}, 親フォルダ: {FullPath}");
 
