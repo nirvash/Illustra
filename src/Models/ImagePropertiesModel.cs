@@ -400,6 +400,31 @@ namespace Illustra.Models
 
         public bool HasStableDiffusionData => StableDiffusionResult != null;
 
+        private GenerationMetadata _generationMetadata;
+
+        /// <summary>
+        /// メディアに埋め込まれた生成メタデータ（ComfyUI 等、Stable Diffusion 形式以外）
+        /// </summary>
+        public GenerationMetadata GenerationMetadata
+        {
+            get => _generationMetadata;
+            private set
+            {
+                if (_generationMetadata != value)
+                {
+                    _generationMetadata = value;
+                    OnPropertyChanged(nameof(GenerationMetadata));
+                    OnPropertyChanged(nameof(HasGenerationMetadata));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 生成メタデータを持つかどうか
+        /// </summary>
+        public bool HasGenerationMetadata => GenerationMetadata != null;
+
+
         public DateTime DateTaken
         {
             get => _dateTaken;
@@ -510,6 +535,7 @@ namespace Illustra.Models
             FolderPath = string.Empty;
             FolderPathShort = string.Empty;
             StableDiffusionResult = null; // Clear SD data
+            GenerationMetadata = null; // Clear generation metadata
         }
 
         /// <summary>
@@ -577,6 +603,21 @@ namespace Illustra.Models
                             Debug.WriteLine($"TagLib 読み取りエラー ({filePath}): {ex.Message}");
                         }
                     });
+
+                    // 埋め込み生成メタデータ（ComfyUI の prompt / workflow タグ等）を解析
+                    // ファイル I/O と JSON 解析を伴うため、UI スレッドを塞がないようバックグラウンドで実行する
+                    try
+                    {
+                        var generationMeta = await Task.Run(() => MediaGenerationMetadataParser.ParseFromMp4(filePath));
+                        if (generationMeta != null && generationMeta.HasContent)
+                        {
+                            properties.GenerationMetadata = generationMeta;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"生成メタデータ解析エラー ({filePath}): {ex.Message}");
+                    }
                 }
                 else if (FileHelper.IsImageFile(filePath)) // 画像ファイルの場合
                 {

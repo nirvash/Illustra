@@ -132,6 +132,10 @@ namespace Illustra.Views
             // AppContextのCurrentPropertiesの変更を監視
             _appContext.PropertyChanged += OnAppContextPropertyChanged;
 
+            // 初期状態でSDセクションの表示を確定させる
+            // (ビューアなど起動後に選択変更が発生しないケースでもメインと同じ状態にする)
+            UpdateStableDiffusionVisibility();
+
             Loaded += PropertyPanelControl_Loaded;
             Unloaded += PropertyPanelControl_Unloaded;
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
@@ -166,11 +170,11 @@ namespace Illustra.Views
             // 詳細情報セクション
             DetailsSection.Visibility = _viewerSettings.ShowDetails ? Visibility.Visible : Visibility.Collapsed;
 
-            // Stable Diffusion情報セクション
-            StableDiffusionSection.Visibility = _viewerSettings.ShowStableDiffusion ? Visibility.Visible : Visibility.Collapsed;
-
             // コメントセクション
             CommentSection.Visibility = _viewerSettings.ShowComment ? Visibility.Visible : Visibility.Collapsed;
+
+            // StableDiffusionセクションの表示は UpdateStableDiffusionVisibility() に一元化
+            // (設定値とデータ有無の両方を考慮するため、ここでは直接設定しない)
 
             // フォントサイズを適用
             FontSize = _viewerSettings.PropertyPanelFontSize;
@@ -201,6 +205,9 @@ namespace Illustra.Views
         {
             // 設定を再読み込み
             LoadViewerSettings();
+
+            // SDセクションはデータ有無も考慮して再確定
+            UpdateStableDiffusionVisibility();
         }
 
         private void PropertyPanelControl_Unloaded(object sender, RoutedEventArgs e)
@@ -336,6 +343,88 @@ namespace Illustra.Views
                 {
                     Clipboard.SetText(_appContext.CurrentProperties.UserComment);
                     ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyGenerationPrompt_Click(object sender, RoutedEventArgs e)
+        {
+            var metadata = _appContext.CurrentProperties?.GenerationMetadata;
+            if (!string.IsNullOrEmpty(metadata?.Prompt))
+            {
+                try
+                {
+                    Clipboard.SetText(metadata.Prompt);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyGenerationNegativePrompt_Click(object sender, RoutedEventArgs e)
+        {
+            var metadata = _appContext.CurrentProperties?.GenerationMetadata;
+            if (!string.IsNullOrEmpty(metadata?.NegativePrompt))
+            {
+                try
+                {
+                    Clipboard.SetText(metadata.NegativePrompt);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyGenerationField_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem || menuItem.Tag is not string field)
+                return;
+
+            var metadata = _appContext.CurrentProperties?.GenerationMetadata;
+            var value = field switch
+            {
+                "ModelName" => metadata?.ModelName,
+                "Generator" => metadata?.Generator,
+                _ => null
+            };
+
+            if (!string.IsNullOrEmpty(value))
+            {
+                try
+                {
+                    Clipboard.SetText(value);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Property_ValueCopied"));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードへのコピーに失敗しました：{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyWorkflowJson_Click(object sender, RoutedEventArgs e)
+        {
+            var metadata = _appContext.CurrentProperties?.GenerationMetadata;
+            if (!string.IsNullOrEmpty(metadata?.RawWorkflowJson))
+            {
+                try
+                {
+                    Clipboard.SetText(metadata.RawWorkflowJson);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_WorkflowCopied"));
                 }
                 catch (Exception ex)
                 {
