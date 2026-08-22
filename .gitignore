@@ -67,6 +67,9 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# MSBuild preprocessed output
+pp.xml
+
 # Visual Studio files
 .vs/
 *.user
