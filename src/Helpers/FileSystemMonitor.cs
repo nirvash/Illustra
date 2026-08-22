@@ -45,6 +45,9 @@ namespace Illustra.Helpers
             _watcher.Created += (s, e) => QueueEvent(e);
             _watcher.Deleted += (s, e) => QueueEvent(e);
             _watcher.Renamed += (s, e) => QueueEvent(e);
+            _watcher.Error += (s, e) =>
+                Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                    $"[FSM] WATCHER ERROR: {e.GetException().GetType().Name}: {e.GetException().Message} handler={_handler.GetType().Name}");
         }
 
         public bool IsMonitoring => _isMonitoring;
@@ -59,6 +62,8 @@ namespace Illustra.Helpers
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
+                Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                    $"[FSM] StartMonitoring FAILED (not found): \"{path}\" handler={_handler.GetType().Name}");
                 return;
             }
             StopMonitoring();
@@ -68,6 +73,8 @@ namespace Illustra.Helpers
             {
                 _watcher.EnableRaisingEvents = true;
                 _isMonitoring = true;
+                Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                    $"[FSM] StartMonitoring OK: \"{path}\" handler={_handler.GetType().Name}");
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.ComponentModel.Win32Exception)
             {

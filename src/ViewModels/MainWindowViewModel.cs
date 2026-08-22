@@ -604,6 +604,8 @@ namespace Illustra.ViewModels
         /// </summary>
         private void OnMcpOpenFolderReceived(McpOpenFolderEventArgs args)
         {
+            Illustra.Helpers.NavigationDiagnosticsLog.Append(
+                $"McpOpenFolderEvent RECEIVED: path=\"{args.FolderPath}\" sourceId=\"{args.SourceId}\" selectedFile=\"{args.SelectedFilePath}\"");
             HandleFolderSelected(args.FolderPath, args.SelectedFilePath);
         }
 
