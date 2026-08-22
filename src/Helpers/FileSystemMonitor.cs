@@ -32,7 +32,9 @@ namespace Illustra.Helpers
 
             _watcher = isDirectoryMonitoring ? new FileSystemWatcher
             {
-                NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.LastWrite,
+                // ディレクトリ監視ではファイルの作成・削除・変更を無視し、
+                // フォルダの作成・削除・リネームのみを検知する
+                NotifyFilter = NotifyFilters.DirectoryName,
                 IncludeSubdirectories = false,
                 EnableRaisingEvents = false
             } : new FileSystemWatcher
