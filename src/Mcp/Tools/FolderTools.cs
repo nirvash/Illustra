@@ -139,17 +139,25 @@ namespace Illustra.Mcp.Tools
 
             Directory.Move(fullPath, newPath);
 
-            bool dbUpdated;
-            try
+            // DB パス更新は一時的な IO 競合などを考慮してリトライする。
+            // 全試行が失敗した場合はロールバックせず、結果で databaseUpdated=false を返す。
+            const int maxAttempts = 3;
+            var dbUpdated = false;
+            for (var attempt = 1; attempt <= maxAttempts && !dbUpdated; attempt++)
             {
-                await _db.UpdateFolderPathsAsync(fullPath, newPath);
-                dbUpdated = true;
-            }
-            catch (Exception ex)
-            {
-                // リネーム自体は成功している。DB 遅れは結果で正直に返す
-                LogHelper.LogError($"MCP rename_folder: DB パス更新に失敗しました ({fullPath} -> {newPath}): {ex.Message}");
-                dbUpdated = false;
+                try
+                {
+                    await _db.UpdateFolderPathsAsync(fullPath, newPath);
+                    dbUpdated = true;
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"MCP rename_folder: DB パス更新に失敗しました ({attempt}/{maxAttempts}) ({fullPath} -> {newPath}): {ex.Message}");
+                    if (attempt < maxAttempts)
+                    {
+                        await Task.Delay(500 * attempt);
+                    }
+                }
             }
 
             return new RenameFolderResult(true, fullPath, newPath, dbUpdated);
