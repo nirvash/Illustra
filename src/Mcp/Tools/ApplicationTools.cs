@@ -29,7 +29,7 @@ namespace Illustra.Mcp.Tools
             _bridge = bridge;
         }
 
-        [McpServerTool(Name = "shutdown_application")]
+        [McpServerTool(Name = "shutdown_application", Destructive = true)]
         [Description("Shuts down the Illustra application gracefully. Application state (settings, tabs, database) is persisted like a normal exit.")]
         public async Task<ShutdownResult> ShutdownApplication()
         {
