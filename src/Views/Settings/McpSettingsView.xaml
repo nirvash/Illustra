@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
     <StackPanel>
         <GroupBox Header="{DynamicResource String_Settings_Mcp_Section}">
-            <StackPanel Margin="5">
+            <StackPanel Margin="5" Grid.IsSharedSizeScope="True">
 
                 <!-- 有効/無効（即時反映） -->
                 <CheckBox Content="{DynamicResource String_Settings_Mcp_EnableServer}"
