@@ -1042,6 +1042,13 @@ namespace Illustra.Views
             {
                 if (element is TreeView || element is TreeViewItem)
                     return true;
+                // Hyperlink や Run 等の ContentElement はビジュアルツリーを持たないため
+                // VisualTreeHelper.GetParent に渡すと例外になる。Visual 以降は論理ツリーで辿る
+                if (!(element is Visual || element is System.Windows.Media.Media3D.Visual3D))
+                {
+                    element = LogicalTreeHelper.GetParent(element);
+                    continue;
+                }
                 element = VisualTreeHelper.GetParent(element);
             }
             return false;
