@@ -56,6 +56,17 @@ For each task:
 
 Do not explore unrelated modules merely to gain general familiarity with the repository.
 
+## PR Review Response Workflow
+
+When addressing PR review comments (e.g. CodeRabbit):
+
+1. Convert all review items into a todo list; the parent agent tracks each item's state (`unstarted → in progress → implemented → verified`).
+2. For each item: delegate investigation to a subagent when bounded, then present the user with a problem summary and a fix proposal, and wait for approval before implementing.
+3. After approval: implement → verify with `dotnet build Illustra.sln` (0 errors) → commit as an individual commit with a Japanese Conventional Commits message.
+4. Group multiple review items into one delegation only when they touch the same file or the same area (e.g. several fixes in one ViewModel).
+5. Do not mark an item `verified` based solely on the subagent's completion report; the parent confirms it first.
+6. Push only when the user asks.
+
 ## Search-First Policy
 
 Before broadly reading source code:
