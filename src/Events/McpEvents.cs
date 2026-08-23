@@ -136,6 +136,8 @@ namespace Illustra.Events
     {
         /// <summary>表示するファイルの絶対パス。空の場合はアクティブビューの選択中ファイルを使用する。</summary>
         public string FilePath { get; set; } = string.Empty;
+        /// <summary>true の場合、ビューワを一時的に最前面へ移動する。</summary>
+        public bool BringToFront { get; set; } = true;
         public bool Shown { get; set; }
         /// <summary>表示対象が現在のビューフィルタで可視かどうか。false の場合はユーザーには見えていない状態での表示。</summary>
         public bool VisibleInCurrentFilter { get; set; }
