@@ -212,7 +212,7 @@ namespace Illustra.ViewModels.Settings
         /// </summary>
         private void RegenerateToken()
         {
-            _settings.McpAccessToken = Guid.NewGuid().ToString("N");
+            _settings.McpAccessToken = McpAccessTokenGenerator.Generate();
             SettingsHelper.SaveSettings(_settings);
             OnPropertyChanged(nameof(TokenDisplay));
         }

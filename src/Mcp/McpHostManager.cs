@@ -43,7 +43,7 @@ namespace Illustra.Mcp
             var settings = SettingsHelper.GetSettings();
             if (string.IsNullOrEmpty(settings.McpAccessToken))
             {
-                settings.McpAccessToken = Guid.NewGuid().ToString("N");
+                settings.McpAccessToken = McpAccessTokenGenerator.Generate();
                 SettingsHelper.SaveSettings(settings);
             }
 
