@@ -12,7 +12,6 @@ using System.Windows.Input; // ICommand を使うために追加
 using Illustra.Models; // IllustraAppContext, TabViewModel を使うために追加
 using System.Collections.ObjectModel; // ObservableCollection を使うために追加
 using System.Threading.Tasks;
-using Illustra.Shared.Models.Tools; // Task を使うために追加
 using System.Linq; // Linq を使用するために追加
 using System.Diagnostics; // Debug を使用するために追加
 using System.IO; // Path クラスを使用するために追加

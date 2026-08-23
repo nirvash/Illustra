@@ -52,8 +52,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="MCPHost\**\*.cs" />
-    <Compile Remove="Shared\**\*.cs" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dragablz" Version="0.0.3.234" />
@@ -92,8 +91,6 @@
     <Resource Include="Resources\Strings.ja.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="MCPHost\Illustra.MCPHost.csproj" />
-    <ProjectReference Include="Shared\Illustra.Shared.csproj" />
   </ItemGroup>
 
   <Target Name="CreateGitVersionTag">

@@ -75,6 +75,12 @@ namespace Illustra.Models
 
         // MCP Host 有効化設定
         public bool EnableMcpHost { get; set; } = false;
+
+        // MCP Host リッスンポート
+        public int McpPort { get; set; } = 5149;
+
+        // MCP Host Bearer トークン（初回有効化時に自動生成）
+        public string McpAccessToken { get; set; } = string.Empty;
         // 起動時フォルダ設定
         public enum StartupFolderMode
         {

@@ -31,7 +31,7 @@ namespace Illustra.Views.Settings
         {
             if (GeneralSettings == null || ThumbnailSettings == null ||
                 ViewerSettings == null || PropertyPanelSettings == null ||
-                DeveloperSettings == null)
+                McpSettings == null || DeveloperSettings == null)
             {
                 return;
             }
@@ -40,6 +40,7 @@ namespace Illustra.Views.Settings
             ThumbnailSettings.Visibility = Visibility.Collapsed;
             ViewerSettings.Visibility = Visibility.Collapsed;
             PropertyPanelSettings.Visibility = Visibility.Collapsed;
+            McpSettings.Visibility = Visibility.Collapsed;
             DeveloperSettings.Visibility = Visibility.Collapsed;
 
             switch (tag)
@@ -55,6 +56,9 @@ namespace Illustra.Views.Settings
                     break;
                 case "PropertyPanel":
                     PropertyPanelSettings.Visibility = Visibility.Visible;
+                    break;
+                case "Mcp":
+                    McpSettings.Visibility = Visibility.Visible;
                     break;
                 case "Developer":
                     DeveloperSettings.Visibility = Visibility.Visible;

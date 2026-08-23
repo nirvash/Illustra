@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -17,7 +16,6 @@ using System.Reflection;
 using Prism.Events;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Illustra.Shared.Models; // Added for MCP events
 
 namespace Illustra.Views
 {

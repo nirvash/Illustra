@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.IO;
 using System.Windows;
 using System.Windows.Controls; // Add this for MenuItem
@@ -19,7 +18,6 @@ using DryIoc.ImTools;
 using Illustra.Models;
 using MahApps.Metro.Controls;
 using System.Windows.Media;
-using Illustra.Shared.Models; // Added for MCP events
 
 using System.Linq;
 using System.Collections.Generic; // For List<string> if needed later

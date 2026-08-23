@@ -1,6 +1,5 @@
 using Illustra.Functions; // Added for KeyboardShortcutHandler and FuncId
 
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +10,6 @@ using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
-using Illustra.Shared.Models; // Added for MCP events
 using Prism.Ioc;
 
 namespace Illustra.Views

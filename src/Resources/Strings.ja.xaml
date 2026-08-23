@@ -124,7 +124,20 @@
     <system:String x:Key="String_Settings_Developer_LogCategories">ログカテゴリ設定</system:String>
     <system:String x:Key="String_Settings_Developer_EnableDevMode">開発者モードを有効にする</system:String>
     <system:String x:Key="String_Settings_Developer_CleanDatabase">データベース整理</system:String>
-    <system:String x:Key="String_Settings_Developer_EnableMcpHost">MCP Host を有効にする (再起動が必要)</system:String>
+    <system:String x:Key="String_Settings_Mcp_Category">MCP</system:String>
+    <system:String x:Key="String_Settings_Mcp_Section">MCP サーバー</system:String>
+    <system:String x:Key="String_Settings_Mcp_EnableServer">MCP サーバーを有効にする</system:String>
+    <system:String x:Key="String_Settings_Mcp_Port">ポート番号:</system:String>
+    <system:String x:Key="String_Settings_Mcp_Apply">適用</system:String>
+    <system:String x:Key="String_Settings_Mcp_Token">アクセストークン:</system:String>
+    <system:String x:Key="String_Settings_Mcp_ShowToken">表示</system:String>
+    <system:String x:Key="String_Settings_Mcp_HideToken">隠す</system:String>
+    <system:String x:Key="String_Settings_Mcp_CopyToken">コピー</system:String>
+    <system:String x:Key="String_Settings_Mcp_RegenerateToken">再生成</system:String>
+    <system:String x:Key="String_Settings_Mcp_StatusRunning">実行中: {0}</system:String>
+    <system:String x:Key="String_Settings_Mcp_StatusStopped">停止中</system:String>
+    <system:String x:Key="String_Settings_Mcp_PortInvalid" xml:space="preserve">ポート番号は 1 ～ 65535 の整数で入力してください。</system:String>
+    <system:String x:Key="String_Settings_Mcp_ToggleError" xml:space="preserve">MCP サーバーの状態切替に失敗しました。&#x0a;{0}</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupDatabase">データベース整理</system:String>
     <system:String x:Key="String_Settings_Developer_PreparingCleanup">データベースの整理を行います。</system:String>
     <system:String x:Key="String_Settings_Developer_CleanupComplete"

@@ -1,0 +1,89 @@
+using System.ComponentModel;
+using System.Text.Json.Serialization;
+using Illustra.Events;
+using Illustra.Mcp;
+using ModelContextProtocol.Server;
+
+namespace Illustra.Mcp.Tools
+{
+    public record ShutdownResult(
+        [property: JsonPropertyName("success")] bool Success,
+        [property: JsonPropertyName("message")] string Message);
+
+    public record AppStatusResult(
+        [property: JsonPropertyName("currentFolder")] string? CurrentFolder,
+        [property: JsonPropertyName("loadedFileCount")] int LoadedFileCount,
+        [property: JsonPropertyName("selectedFiles")] IReadOnlyList<SelectedFileInfo> SelectedFiles,
+        [property: JsonPropertyName("openTabs")] IReadOnlyList<string> OpenTabs,
+        [property: JsonPropertyName("filterState")] ViewFilterState? FilterState = null);
+
+    public record ViewFilterState(
+        [property: JsonPropertyName("rating")] int Rating,
+        [property: JsonPropertyName("promptFilterEnabled")] bool PromptFilterEnabled,
+        [property: JsonPropertyName("tagFilterEnabled")] bool TagFilterEnabled,
+        [property: JsonPropertyName("tagFilters")] IReadOnlyList<string> TagFilters,
+        [property: JsonPropertyName("extensionFilterEnabled")] bool ExtensionFilterEnabled,
+        [property: JsonPropertyName("extensionFilters")] IReadOnlyList<string> ExtensionFilters);
+
+    /// <summary>
+    /// アプリケーション操作系ツール。
+    /// </summary>
+    [McpServerToolType]
+    public class ApplicationTools
+    {
+        private readonly IMcpAppBridge _bridge;
+
+        public ApplicationTools(IMcpAppBridge bridge)
+        {
+            _bridge = bridge;
+        }
+
+        [McpServerTool(Name = "shutdown_application", Destructive = true)]
+        [Description("Shuts down the Illustra application gracefully. Application state (settings, tabs, database) is persisted like a normal exit.")]
+        public async Task<ShutdownResult> ShutdownApplication()
+        {
+            var args = new McpShutdownEventArgs();
+            var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpShutdownEvent>(), TimeSpan.FromSeconds(10));
+
+            if (result is not true)
+            {
+                throw new InvalidOperationException("Illustra did not accept the shutdown request.");
+            }
+
+            // レスポンスをクライアントへ返してから終了シーケンスが走るよう、ハンドラ側で遅延終了する。
+            return new ShutdownResult(true, "Illustra is shutting down. State will be persisted.");
+        }
+
+        [McpServerTool(Name = "get_app_status", ReadOnly = true, Idempotent = true)]
+        [Description("Returns the current application status of Illustra: the active tab folder, files loaded in the active view, currently selected files, open tab folders and the filter state applied to the active view (what the user currently sees).")]
+        public async Task<AppStatusResult> GetAppStatus()
+        {
+            var args = new McpGetAppStatusEventArgs();
+            await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpGetAppStatusEvent>());
+
+            if (args.ErrorMessage is not null)
+            {
+                throw new InvalidOperationException($"Failed to get the application status: {args.ErrorMessage}");
+            }
+
+            ViewFilterState? filterState = null;
+            if (args.FilterState is { } f)
+            {
+                filterState = new ViewFilterState(
+                    f.Rating,
+                    f.IsPromptFilterEnabled,
+                    f.IsTagFilterEnabled,
+                    f.TagFilters,
+                    f.IsExtensionFilterEnabled,
+                    f.ExtensionFilters);
+            }
+
+            return new AppStatusResult(
+                args.CurrentFolder,
+                args.LoadedFileCount,
+                (args.SelectedFiles ?? []).Select(m => new SelectedFileInfo(m.Path, m.FileName)).ToList(),
+                args.OpenTabs ?? [],
+                filterState);
+        }
+    }
+}

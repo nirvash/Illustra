@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,7 +29,6 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Net.Http;
 using System; // IProgress を使うために追加
-using Illustra.Shared.Models; // Added for MCP events
 using System.Text.RegularExpressions; // Regex を使うために追加
 using System.Web; // HttpUtility を使うために追加
 
@@ -569,6 +567,9 @@ namespace Illustra.Views
             // ContainerLocatorを使ってEventAggregatorを取得
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<SelectedTabChangedEvent>().Subscribe(OnSelectedTabChanged, ThreadOption.UIThread);
+
+            // MCP v2 ツール用イベントの購読
+            SubscribeMcpEvents();
 
 
             // ThumbnailItemsControlの右クリックイベントを設定 (async void に変更)
@@ -1299,7 +1300,6 @@ namespace Illustra.Views
                 }
             });
         }
-
 
         private async void OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {

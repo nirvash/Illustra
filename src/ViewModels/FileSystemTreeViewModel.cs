@@ -1,4 +1,3 @@
-using Illustra.Shared.Models.Tools; // Added for McpOpenFolderEventArgs
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,7 +7,6 @@ using System.Windows.Input;
 using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
-using Illustra.Shared.Models; // Added for MCP events
 using GongSolutions.Wpf.DragDrop;
 using System.Windows;
 using System.Windows.Threading;

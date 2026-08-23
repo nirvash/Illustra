@@ -1,117 +1,144 @@
-# Illustra - AI Developer Guide
-
-このファイルは AI エージェント（opencode）がこのリポジトリで作業する際のガイドラインです。
+# Illustra - AI エージェントガイド
 
 ## プロジェクト概要
 
-**Illustra** は Windows 用の高速画像ビューア。WPF + .NET 9 で実装され、仮想化サムネイル表示、画像レーティング、Stable Diffusion プロンプト表示、タブ表示などの機能を持つ。
+Windows 用画像ビューア（WPF + .NET 9、`net9.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
 
-- 対象 OS: Windows 10/11
-- フレームワーク: `net9.0-windows`（WPF）
-- アーキテクチャ: MVVM（Prism、イベントアグリゲーター）
-- ライセンス: MIT
+- ソリューション: `src/Illustra.csproj`（メインアプリ）+ `tests/Illustra.Tests.csproj`（NUnit + Moq）
+- ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（UI 共通 = `src/Events/UIEvents.cs`、MCP 関連 = `src/Events/McpEvents.cs`）
+- 永続化: 設定 = JSON（`SettingsHelper` → `AppSettingsModel`）、レーティング等 = SQLite（`DatabaseManager`）
+- `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー。既定ポートは 5149（設定 `McpPort` で変更可、Debug ビルドは +10 のため 5159）
+- 作業言語・ドキュメント・コミットメッセージは日本語。コミットは Conventional Commits（`feat:`/`fix:` プレフィックスがリリースノート生成に使われる）
 
-## 開発環境
+環境の罠（毎回影響）: NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要。PowerShell 出力を見るコマンドには UTF-8 設定プレフィックスが必要。詳細は `docs/agent-context/build-and-test.md`。
 
-- OS: Windows（シェルは bash）
-- .NET 9 SDK 必須
-- IDE: Visual Studio 2022（人間の開発者向け）
+## コンテキストポリシー
 
-## コマンド
+コンテキスト使用量を最小化する。
 
-```bash
-# ビルド
-dotnet build Illustra.sln
+- タスク開始時にリポジトリ全体をスキャン・事前読み込みしない
+- このファイルから参照されるドキュメントを自動的にすべて読み込まない
+- 現在のタスクに関係するファイルだけを読み込む
+- ソースファイルを開く前に検索・シンボル参照を優先する
+- 最小限で役に立つ範囲のファイルだけを読む
+- 検証目的でない限り、すでにコンテキストに十分あるファイルを読み直さない
+- 実装詳細を調べる前にプロジェクトサマリを利用する
+- ドキュメントが古い・実装と矛盾する場合はソースコードを正とする
 
-# 実行（メインアプリ）
-dotnet run --project src/Illustra.csproj
+## コンテキスト索引
 
-# テスト（NUnit）
-dotnet test Illustra.sln
+関連する場合のみ読むこと:
 
-# 特定テストのみ実行
-dotnet test tests/Illustra.Tests.csproj --filter "FullyQualifiedName~<TestName>"
-```
+- アーキテクチャと構成要素の関係、データフロー、設計上の制約:
+  `docs/agent-context/architecture.md`
+- モジュール別の責務と「この問題ならどのファイルを見るべきか」の地図:
+  `docs/agent-context/modules.md`
+- ビルド・テスト・実行コマンド、検証の順序（狭い→広い）:
+  `docs/agent-context/build-and-test.md`
+- プロジェクト固有のコーディング規約（多言語対応・UI・データ・Git）:
+  `docs/agent-context/conventions.md`
+- 既知の罠、生成ファイル、危険な操作、プラットフォーム固有の挙動:
+  `docs/agent-context/known-gotchas.md`
 
-- バージョン番号は GitVersion で管理（`src/GitVersion.yml`）。手動でバージョンを書き換えないこと
-- `*_wpftmp.csproj` は XAML コンパイラが生成する一時ファイル。編集・削除しないこと
-- lint/format の専用コマンドは存在しない。ビルド警告をゼロに保つこと
+セッション開始時にこれらを一括で読み込まないこと。
 
-## ソリューション構成
+## タスクワークフロー
 
-| プロジェクト | パス | 役割 |
-|---|---|---|
-| Illustra | `src/Illustra.csproj` | メインアプリケーション |
-| Illustra.Shared | `src/Shared/Illustra.Shared.csproj` | 共有ライブラリ |
-| Illustra.MCPHost | `src/MCPHost/Illustra.MCPHost.csproj` | MCP サーバー機能 |
-| Illustra.Tests | `tests/Illustra.Tests.csproj` | テスト（NUnit + Moq） |
+各タスクについて:
 
-## ソースコード構造（src/ 配下）
+1. AGENTS.md から影響対象のサブシステムを特定する。
+2. 必要なら関連する agent-context ドキュメントのみ読み込む。
+3. 対象のシンボル・クラス・メソッド・ファイルを検索する。
+4. 動作の理解・変更に必要なファイルだけを読む。
+5. 変更を行う。
+6. 最初に最も狭い範囲の検証を実行する。
+7. 狭いアプローチで不十分な場合のみ調査を広げる。
 
-```
-Views/      XAML + code-behind（Partial クラスで機能分割）
-ViewModels/ ViewModel（Prism ベース）
-Models/     データモデル
-Services/   サービス層
-Controls/   再利用可能なカスタムコントロール
-Events/     イベントアグリゲーター用イベント定義（UIEvents.cs）
-Helpers/    ユーティリティ
-Converters/ XAML 値コンバーター
-Themes/     テーマ（MahApps.Metro ベース、ライト/ダーク）
-Resources/  多言語リソース（Strings.xaml / Strings.ja.xaml）
-Shared/     共有プロジェクトソース
-MCPHost/    MCP ホスト実装
-```
+一般的な把握を目的に無関係なモジュールを探索しないこと。
 
-## 重要なルール
+## PR レビュー対応ワークフロー
 
-### 多言語対応（必須）
+PR レビューコメント（例: CodeRabbit）に対応するとき:
 
-- 文言は `Resources/Strings.xaml`（英語）と `Resources/Strings.ja.xaml`（日本語）の **両方** に定義する
-- **片方だけだと起動時にクラッシュする**
-- 文言 ID は `String_<カテゴリ>_<名称>` 形式
-- 参照は `{DynamicResource String_XXX}` を使う
+1. 指摘をすべて todo リスト化し、親エージェントが各項目の状態（`unstarted → in progress → implemented → verified`）を管理する。
+2. 各項目について: 境界づけ可能なら subagent に調査を委譲し、ユーザーへ問題サマリと修正案を提示して承認を得てから実装する。
+3. 承認後: 実装 → `dotnet build Illustra.sln`（0 エラー）で検証 → 日本語 Conventional Commits メッセージで個別コミット。
+4. 複数の指摘を 1 つの委譲にまとめるのは、同一ファイル・同一領域への修正のときだけにする（例: 同じ ViewModel への複数修正）。
+5. subagent の完了報告だけでは項目を `verified` にしない。親が確認してから更新する。
+6. push はユーザーが依頼したときだけ行う。
 
-### コード規約
+## 検索ファースト方針
 
-- 機能ごとにクラス分割または Partial クラス化し、1 ファイルが巨大にならないようにする
-- 似たコードは共通化し、再利用可能なコンポーネントとして切り出す
-- 画面間通信はイベントアグリゲーターを使い、イベントは `Events/UIEvents.cs` に定義する
-- `Math.Min()` のように Math ライブラリのメソッドは大文字始まりで呼ぶ
-- 新しい名前空間を使ったら `using` を忘れない
-- ビルド警告（warning）を出さない・残したままにしない
+ソースコードを広く読む前に:
 
-### ダイアログデザイン
+1. 関連するシンボルや機能名を検索する。
+2. 起点になりそうなエントリポイントを特定する。
+3. タスクに関係する依存だけを追う。
+4. 実装が必要な場合にのみソースファイル全体を開く。
 
-- ボタン配置は **キャンセルが左、OK が右**（日英共通）
+的確な検索で特定できる場合はディレクトリ全体を走査しないこと。
 
-### データ管理
+## 探索の限界
 
-- レーティング等は SQLite（linq2db / sqlite-net）でファイルパスに紐付けて永続化
-- 設定のシリアライズは Newtonsoft.Json
-- DB 設計ドキュメント: `docs/DatabaseDesign.md`
+要求された変更を安全に行うための情報が揃ったら探索を止めること。
 
-## 主要ドキュメント
+しないこと:
+- 必要がないのにインターフェースの全実装を調べる
+- ディレクトリ内の全ファイルを読む
+- 無関係な呼び出し元・呼び出し先を再帰的にたどる
+- 生成・ビルド挙動の診断以外で生成ファイルを調べる
+- 無関係なテストを読む
+- 明確な理由なく過去・バックアップ・アーカイブファイルを読む
 
-| ドキュメント | 内容 |
-|---|---|
-| `docs/Implementation.md` | 機能 ↔ 実装箇所マッピング（コード理解の出発点） |
-| `docs/Spec.md`, `docs/Design.md` | 仕様・設計 |
-| `docs/Rule.md` | 開発ルール詳細 |
-| `docs/MCP_Design.md` ほか `MCP*.md` | MCPHost 関連設計 |
-| `docs/ImageCacheDesign.md` | 画像キャッシュ設計 |
-| `docs/ZoomDesign.md` | ズーム/パン設計 |
+次に大きなファイルを開く前に考えること:
 
-実装前に対応する設計ドキュメントがあるか確認し、大きな変更時にはドキュメントを更新すること。
+「このファイルは実装・診断・検証計画を実質的に変えるか?」
 
-## Git 運用
+変わらないなら読まないこと。
 
-- コミットメッセージは日本語で Conventional Commits スタイル: `feat: xxxを追加`、`fix: xxxの不具合を修正`
-- 作業ブランチから master への PR で開発
-- リリースは GitHub Actions（`.github/workflows/release.yml`）
+## 親エージェントポリシー
 
-## 注意事項
+親（プライマリ）エージェントの責務:
 
-- UI 変更後は必ずビルドして動作確認する（XAML エラーは実行時まで気づきにくい）
-- テストを追加・更新した場合は `dotnet test` で通ることを確認する
-- `bin/`、`obj/`、`publish/`、`TestResults/` は生成物。コミットしない
+- タスクやレビュー指摘の正式なチェックリストを管理する
+- 現在対応中の項目を決める
+- 境界づけられた実装・調査タスクを委譲する
+- subagent の結果を確認する
+- 完了を検証する
+- 親のコンテキストを簡潔に保つ
+
+親は、境界づけられたタスクとして委譲できるものを自分で広く実装・探索することを避けること。
+
+subagent の応答後は、作業継続に必要な情報だけを残すこと:
+
+- 結論
+- 変更ファイル
+- 重要な設計上の示唆
+- 実施した検証
+- 残存リスク
+
+大きなソース抜粋や調査ログの全文を親コンテキストへコピーしないこと。
+
+レビュー指摘を順に処理する場合は各項目の状態を親側で管理する:
+`unstarted → in progress → implemented → verified`
+subagent の修正完了だけでは `verified` にしない。親が確認した後でのみ更新する。
+
+## Subagent Policy
+
+委譲用 subagent 定義: `.opencode/agent/bounded-task.md`。subagent に委譲する際はこの定義を使う（または同等の方針をプロンプトに含める）。1 つの小さな修正ごとに複数の subagent を起動せず、まとまった 1 単位で委譲する。
+
+## エージェントコンテキストの維持
+
+次の変更で agent-context ドキュメントを更新すること:
+
+- アーキテクチャ
+- モジュールの責務
+- 主要なエントリポイント
+- 重要な依存関係
+- ビルド・テスト手順
+- リポジトリ全体の規約
+- 重要な既知の罠
+
+日常的な局所実装変更ではサマリを更新しないこと。
+
+更新は簡潔に保つこと。

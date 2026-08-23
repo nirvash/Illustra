@@ -240,6 +240,74 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
+        /// 確認ダイアログ等を表示せずにファイルを削除し、データベース情報も削除します（MCP ツールなど自動処理用）。
+        /// エラー時もモーダルダイアログは表示せず、例外として呼び出し元へ返します。
+        /// </summary>
+        /// <param name="filePath">削除するファイルのパス</param>
+        /// <param name="useRecycleBin">trueの場合、ごみ箱に移動。falseの場合、完全削除</param>
+        public async Task DeleteFileQuietAsync(string filePath, bool useRecycleBin)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentNullException(nameof(filePath));
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"File not found: {filePath}", filePath);
+
+            try
+            {
+                await RunOnStaThread(() => DeleteFileSilentViaShell(filePath, useRecycleBin));
+
+                await _db.DeleteFileNodeAsync(filePath);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"ファイルの削除中にエラーが発生しました: {filePath}\n{ex.Message}");
+                throw new FileOperationException($"Failed to delete file: {filePath}. {ex.Message}", ex);
+            }
+        }
+
+        private const uint FO_DELETE = 0x0003;
+        private const ushort FOF_SILENT = 0x0004;             // 進行状況ダイアログ非表示
+        private const ushort FOF_NOCONFIRMATION = 0x0010;     // 確認ダイアログ非表示
+        private const ushort FOF_ALLOWUNDO = 0x0040;          // ごみ箱へ移動
+        private const ushort FOF_NOERRORUI = 0x0400;          // エラーダイアログ非表示
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct SHFILEOPSTRUCTW
+        {
+            public IntPtr hwnd;
+            public uint wFunc;
+            public string pFrom;
+            public string pTo;
+            public ushort fFlags;
+            public int fAnyOperationsAborted;
+            public IntPtr hNameMappings;
+            public string lpszProgressTitle;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SHFileOperationW(ref SHFILEOPSTRUCTW lpFileOp);
+
+        /// <summary>
+        /// UI を一切表示せずに SHFileOperation でファイルを削除します（ごみ箱移動可）。
+        /// Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile は OnlyErrorDialogs 指定でも
+        /// エラー時にモーダルを出すため、MCP など無人操作ではこちらを使用します。
+        /// </summary>
+        private void DeleteFileSilentViaShell(string filePath, bool useRecycleBin)
+        {
+            var op = new SHFILEOPSTRUCTW
+            {
+                hwnd = IntPtr.Zero,
+                wFunc = FO_DELETE,
+                pFrom = filePath + "\0",
+                fFlags = (ushort)(FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | (useRecycleBin ? FOF_ALLOWUNDO : 0))
+            };
+
+            int result = SHFileOperationW(ref op);
+            if (result != 0 || op.fAnyOperationsAborted != 0)
+                throw new IOException($"削除操作が完了しませんでした (code={result}): {filePath}");
+        }
+
+        /// <summary>
         /// フォルダを削除し、関連するデータベース情報も削除します
         /// </summary>
         /// <param name="directoryPath">削除するフォルダのパス</param>

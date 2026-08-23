@@ -32,20 +32,6 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
-        private bool _enableMcpHost;
-        public bool EnableMcpHost
-        {
-            get => _enableMcpHost;
-            set
-            {
-                if (_enableMcpHost != value)
-                {
-                    _enableMcpHost = value;
-                    OnPropertyChanged(nameof(EnableMcpHost));
-                }
-            }
-        }
-
 
         public ObservableCollection<LogCategoryItem> LogCategories { get; } = new();
 
@@ -157,7 +143,6 @@ namespace Illustra.ViewModels.Settings
         public override void LoadSettings()
         {
             DeveloperMode = _settings.DeveloperMode;
-            EnableMcpHost = _settings.EnableMcpHost;
             if (DeveloperMode)
             {
                 InitializeLogCategories();
@@ -167,7 +152,6 @@ namespace Illustra.ViewModels.Settings
         public override void SaveSettings()
         {
             _settings.DeveloperMode = DeveloperMode;
-            _settings.EnableMcpHost = EnableMcpHost;
             if (DeveloperMode)
             {
                 foreach (var category in LogCategories)
