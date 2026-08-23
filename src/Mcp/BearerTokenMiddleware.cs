@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Http;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Illustra.Mcp
 {
@@ -35,7 +37,9 @@ namespace Illustra.Mcp
                 const string BearerPrefix = "Bearer ";
 
                 if (!authHeader.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(authHeader[BearerPrefix.Length..].Trim(), expectedToken, StringComparison.Ordinal))
+                    !CryptographicOperations.FixedTimeEquals(
+                        Encoding.UTF8.GetBytes(authHeader[BearerPrefix.Length..].Trim()),
+                        Encoding.UTF8.GetBytes(expectedToken)))
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     context.Response.Headers.WWWAuthenticate = "Bearer";
