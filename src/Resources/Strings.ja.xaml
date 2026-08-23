@@ -130,6 +130,7 @@
     <system:String x:Key="String_Settings_Mcp_Port">ポート番号:</system:String>
     <system:String x:Key="String_Settings_Mcp_Apply">適用</system:String>
     <system:String x:Key="String_Settings_Mcp_Token">アクセストークン:</system:String>
+    <system:String x:Key="String_Settings_Mcp_RequireAuth">アクセストークン認証を要求する</system:String>
     <system:String x:Key="String_Settings_Mcp_ShowToken">表示</system:String>
     <system:String x:Key="String_Settings_Mcp_HideToken">隠す</system:String>
     <system:String x:Key="String_Settings_Mcp_CopyToken">コピー</system:String>

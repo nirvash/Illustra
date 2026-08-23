@@ -33,6 +33,7 @@ namespace Illustra.Mcp
         private readonly DatabaseManager _dbManager;
         private readonly int _port;
         private readonly Func<string?> _tokenProvider;
+        private readonly Func<bool> _requireAuthProvider;
 
         private WebApplication? _app;
 
@@ -44,7 +45,8 @@ namespace Illustra.Mcp
             Dispatcher dispatcher,
             DatabaseManager dbManager,
             int port,
-            Func<string?> tokenProvider)
+            Func<string?> tokenProvider,
+            Func<bool> requireAuthProvider)
         {
             _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator));
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -54,6 +56,7 @@ namespace Illustra.Mcp
             _port += DebugPortOffset;
 #endif
             _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
+            _requireAuthProvider = requireAuthProvider ?? throw new ArgumentNullException(nameof(requireAuthProvider));
         }
 
         /// <summary>
@@ -96,7 +99,7 @@ namespace Illustra.Mcp
                 .WithToolsFromAssembly(typeof(McpHostService).Assembly);
 
             var app = builder.Build();
-            app.UseMiddleware<BearerTokenMiddleware>(_tokenProvider);
+            app.UseMiddleware<BearerTokenMiddleware>(_tokenProvider, _requireAuthProvider);
             app.MapMcp("/mcp");
 
             await app.StartAsync().ConfigureAwait(false);

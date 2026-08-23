@@ -81,6 +81,9 @@ namespace Illustra.Models
 
         // MCP Host Bearer トークン（初回有効化時に自動生成）
         public string McpAccessToken { get; set; } = string.Empty;
+
+        // MCP Host Bearer 認証要求（localhost のみリッスンのため無効化可）
+        public bool McpRequireAuth { get; set; } = true;
         // 起動時フォルダ設定
         public enum StartupFolderMode
         {

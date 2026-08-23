@@ -52,7 +52,8 @@ namespace Illustra.Mcp
                     _dispatcher,
                     _dbManager,
                     settings.McpPort,
-                    () => SettingsHelper.GetSettings().McpAccessToken);
+                    () => SettingsHelper.GetSettings().McpAccessToken,
+                    () => SettingsHelper.GetSettings().McpRequireAuth);
 
                 await host.StartAsync().ConfigureAwait(false);
 

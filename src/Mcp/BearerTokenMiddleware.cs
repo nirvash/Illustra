@@ -12,16 +12,18 @@ namespace Illustra.Mcp
         private const string McpPath = "/mcp";
         private readonly RequestDelegate _next;
         private readonly Func<string?> _tokenProvider;
+        private readonly Func<bool> _requireAuthProvider;
 
-        public BearerTokenMiddleware(RequestDelegate next, Func<string?> tokenProvider)
+        public BearerTokenMiddleware(RequestDelegate next, Func<string?> tokenProvider, Func<bool> requireAuthProvider)
         {
             _next = next ?? throw new ArgumentNullException(nameof(next));
             _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
+            _requireAuthProvider = requireAuthProvider ?? throw new ArgumentNullException(nameof(requireAuthProvider));
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
-            if (context.Request.Path.StartsWithSegments(McpPath))
+            if (context.Request.Path.StartsWithSegments(McpPath) && _requireAuthProvider())
             {
                 var expectedToken = _tokenProvider();
 
