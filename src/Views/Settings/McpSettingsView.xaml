@@ -37,8 +37,14 @@
                             Padding="10,3"/>
                 </Grid>
 
+                <!-- Bearer 認証（即時反映） -->
+                <CheckBox Content="{DynamicResource String_Settings_Mcp_RequireAuth}"
+                          IsChecked="{Binding RequireAuth}"
+                          Margin="0,5,0,0"
+                          VerticalAlignment="Center"/>
+
                 <!-- アクセストークン -->
-                <Grid Margin="0,10,0,0">
+                <Grid Margin="0,10,0,0" IsEnabled="{Binding RequireAuth}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="McpLabel"/>
                         <ColumnDefinition Width="*"/>

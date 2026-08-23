@@ -130,6 +130,7 @@
     <system:String x:Key="String_Settings_Mcp_Port">Port:</system:String>
     <system:String x:Key="String_Settings_Mcp_Apply">Apply</system:String>
     <system:String x:Key="String_Settings_Mcp_Token">Access Token:</system:String>
+    <system:String x:Key="String_Settings_Mcp_RequireAuth">Require access token authentication</system:String>
     <system:String x:Key="String_Settings_Mcp_ShowToken">Show</system:String>
     <system:String x:Key="String_Settings_Mcp_HideToken">Hide</system:String>
     <system:String x:Key="String_Settings_Mcp_CopyToken">Copy</system:String>

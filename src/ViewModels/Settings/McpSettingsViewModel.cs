@@ -108,6 +108,19 @@ namespace Illustra.ViewModels.Settings
             }
         }
 
+        /// <summary>Bearer 認証を要求するか。変更は即時保存され、リクエスト毎に反映されるため再起動は不要。</summary>
+        public bool RequireAuth
+        {
+            get => _settings.McpRequireAuth;
+            set
+            {
+                if (_settings.McpRequireAuth == value) return;
+                _settings.McpRequireAuth = value;
+                SettingsHelper.SaveSettings(_settings);
+                OnPropertyChanged(nameof(RequireAuth));
+            }
+        }
+
         /// <summary>表示切替ボタンのラベル。</summary>
         public string ShowHideTokenLabel =>
             ShowToken
@@ -280,6 +293,7 @@ namespace Illustra.ViewModels.Settings
             ShowToken = false;
 
             OnPropertyChanged(nameof(EnableServer));
+            OnPropertyChanged(nameof(RequireAuth));
             OnPropertyChanged(nameof(TokenDisplay));
             OnPropertyChanged(nameof(IsPortChanged));
             OnPropertyChanged(nameof(StatusText));
