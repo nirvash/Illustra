@@ -102,7 +102,7 @@
                 <Slider x:Name="ThumbnailSizeSlider"
                         Width="150"
                         Minimum="60"
-                        Maximum="400"
+                        Maximum="800"
                         Value="120"
                         TickFrequency="20"
                         IsSnapToTickEnabled="True"
