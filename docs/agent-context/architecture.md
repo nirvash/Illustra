@@ -4,7 +4,7 @@ Windows 用画像ビューア。WPF (.NET 9) + MVVM（Prism 9 / DryIoc / イベ�
 
 ## 主要コンポーネントと関係
 
-```
+```text
 Views (WPF) ←→ ViewModels ←→ Models
      ↓ イベントアグリゲーター (Events/) で画面間疎結合通信
 Helpers (ロジック本体: DB/サムネイル/ファイル操作/メタデータ解析)
@@ -34,7 +34,7 @@ Mcp/ (アプリ内 Kestrel で動く MCP サーバー → UI を経由してア�
 
 ## MCP サーバー（src/Mcp/）
 
-- アプリ内 Kestrel ホストで `http://localhost:5149/mcp` を公開（公式 ModelContextProtocol ASP.NET Core SDK）。
+- アプリ内 Kestrel ホストで MCP エンドポイントを公開（公式 ModelContextProtocol ASP.NET Core SDK）。既定ポートは 5149（設定 `AppSettingsModel.McpPort` で変更可）。Debug ビルドでは `McpHostService.DebugPortOffset`(=10) が加算され 5159 になる。エンドポイントパスは `/mcp`。
 - `McpHostService`（ホスト）/ `McpHostManager`（ライフサイクル管理シングルトン）/ `BearerTokenMiddleware` + `McpAccessTokenGenerator`（認証）。
 - `Tools/*.cs`（folder/file/selection/metadata/application ツール）→ `McpAppBridge` 経由で Dispatcher 上の UI 状態を操作。
 - 外部クライアントからの操作は必ず UI スレッド経由でアプリ状態に反映される。

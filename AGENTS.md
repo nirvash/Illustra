@@ -1,33 +1,33 @@
 # Illustra - AI エージェントガイド
 
-## Project Overview
+## プロジェクト概要
 
 Windows 用画像ビューア（WPF + .NET 9、`net9.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
 
 - ソリューション: `src/Illustra.csproj`（メインアプリ）+ `tests/Illustra.Tests.csproj`（NUnit + Moq）
 - ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（UI 共通 = `src/Events/UIEvents.cs`、MCP 関連 = `src/Events/McpEvents.cs`）
 - 永続化: 設定 = JSON（`SettingsHelper` → `AppSettingsModel`）、レーティング等 = SQLite（`DatabaseManager`）
-- `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー（`http://localhost:5149/mcp`）
+- `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー。既定ポートは 5149（設定 `McpPort` で変更可、Debug ビルドは +10 のため 5159）
 - 作業言語・ドキュメント・コミットメッセージは日本語。コミットは Conventional Commits（`feat:`/`fix:` プレフィックスがリリースノート生成に使われる）
 
 環境の罠（毎回影響）: NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要。PowerShell 出力を見るコマンドには UTF-8 設定プレフィックスが必要。詳細は `docs/agent-context/build-and-test.md`。
 
-## Context Policy
+## コンテキストポリシー
 
-Minimize context usage.
+コンテキスト使用量を最小化する。
 
-- Do NOT scan or preload the entire repository at the start of a task.
-- Do NOT automatically load all documents referenced by this file.
-- Load files only when they are relevant to the current task.
-- Prefer search and symbol lookup before opening source files.
-- Read the smallest useful set of files.
-- Do not reread files already sufficiently represented in the current context unless verification is necessary.
-- Use project summaries before exploring implementation details.
-- Source code is authoritative if documentation is stale or conflicts with implementation.
+- タスク開始時にリポジトリ全体をスキャン・事前読み込みしない
+- このファイルから参照されるドキュメントを自動的にすべて読み込まない
+- 現在のタスクに関係するファイルだけを読み込む
+- ソースファイルを開く前に検索・シンボル参照を優先する
+- 最小限で役に立つ範囲のファイルだけを読む
+- 検証目的でない限り、すでにコンテキストに十分あるファイルを読み直さない
+- 実装詳細を調べる前にプロジェクトサマリを利用する
+- ドキュメントが古い・実装と矛盾する場合はソースコードを正とする
 
-## Context Index
+## コンテキスト索引
 
-Read these only when relevant:
+関連する場合のみ読むこと:
 
 - アーキテクチャと構成要素の関係、データフロー、設計上の制約:
   `docs/agent-context/architecture.md`
@@ -42,82 +42,82 @@ Read these only when relevant:
 
 セッション開始時にこれらを一括で読み込まないこと。
 
-## Task Workflow
+## タスクワークフロー
 
-For each task:
+各タスクについて:
 
-1. Identify the affected subsystem from AGENTS.md.
-2. Load only the relevant agent-context document if necessary.
-3. Search for the specific symbols, classes, methods, or files involved.
-4. Read only the files needed to understand or modify the behavior.
-5. Make the change.
-6. Run the narrowest relevant verification first.
-7. Expand the investigation only if the narrow approach is insufficient.
+1. AGENTS.md から影響対象のサブシステムを特定する。
+2. 必要なら関連する agent-context ドキュメントのみ読み込む。
+3. 対象のシンボル・クラス・メソッド・ファイルを検索する。
+4. 動作の理解・変更に必要なファイルだけを読む。
+5. 変更を行う。
+6. 最初に最も狭い範囲の検証を実行する。
+7. 狭いアプローチで不十分な場合のみ調査を広げる。
 
-Do not explore unrelated modules merely to gain general familiarity with the repository.
+一般的な把握を目的に無関係なモジュールを探索しないこと。
 
-## PR Review Response Workflow
+## PR レビュー対応ワークフロー
 
-When addressing PR review comments (e.g. CodeRabbit):
+PR レビューコメント（例: CodeRabbit）に対応するとき:
 
-1. Convert all review items into a todo list; the parent agent tracks each item's state (`unstarted → in progress → implemented → verified`).
-2. For each item: delegate investigation to a subagent when bounded, then present the user with a problem summary and a fix proposal, and wait for approval before implementing.
-3. After approval: implement → verify with `dotnet build Illustra.sln` (0 errors) → commit as an individual commit with a Japanese Conventional Commits message.
-4. Group multiple review items into one delegation only when they touch the same file or the same area (e.g. several fixes in one ViewModel).
-5. Do not mark an item `verified` based solely on the subagent's completion report; the parent confirms it first.
-6. Push only when the user asks.
+1. 指摘をすべて todo リスト化し、親エージェントが各項目の状態（`unstarted → in progress → implemented → verified`）を管理する。
+2. 各項目について: 境界づけ可能なら subagent に調査を委譲し、ユーザーへ問題サマリと修正案を提示して承認を得てから実装する。
+3. 承認後: 実装 → `dotnet build Illustra.sln`（0 エラー）で検証 → 日本語 Conventional Commits メッセージで個別コミット。
+4. 複数の指摘を 1 つの委譲にまとめるのは、同一ファイル・同一領域への修正のときだけにする（例: 同じ ViewModel への複数修正）。
+5. subagent の完了報告だけでは項目を `verified` にしない。親が確認してから更新する。
+6. push はユーザーが依頼したときだけ行う。
 
-## Search-First Policy
+## 検索ファースト方針
 
-Before broadly reading source code:
+ソースコードを広く読む前に:
 
-1. Search for the relevant symbol or feature name.
-2. Identify likely entry points.
-3. Follow only the dependencies relevant to the task.
-4. Open complete source files only when their implementation is actually needed.
+1. 関連するシンボルや機能名を検索する。
+2. 起点になりそうなエントリポイントを特定する。
+3. タスクに関係する依存だけを追う。
+4. 実装が必要な場合にのみソースファイル全体を開く。
 
-Avoid broad directory scans when targeted search can identify the relevant code.
+的確な検索で特定できる場合はディレクトリ全体を走査しないこと。
 
-## Exploration Limits
+## 探索の限界
 
-Stop exploring once enough information has been obtained to perform the requested change safely.
+要求された変更を安全に行うための情報が揃ったら探索を止めること。
 
-Do not:
-- inspect every implementation of an interface unless required
-- read every file in a directory
-- recursively inspect unrelated callers and callees
-- inspect generated files unless diagnosing generation or build behavior
-- inspect unrelated tests
-- inspect historical, backup, or archived files without a specific reason
+しないこと:
+- 必要がないのにインターフェースの全実装を調べる
+- ディレクトリ内の全ファイルを読む
+- 無関係な呼び出し元・呼び出し先を再帰的にたどる
+- 生成・ビルド挙動の診断以外で生成ファイルを調べる
+- 無関係なテストを読む
+- 明確な理由なく過去・バックアップ・アーカイブファイルを読む
 
-Before opening another large file, consider:
+次に大きなファイルを開く前に考えること:
 
-"Will this file materially change the implementation, diagnosis, or verification plan?"
+「このファイルは実装・診断・検証計画を実質的に変えるか?」
 
-If not, do not read it.
+変わらないなら読まないこと。
 
-## Parent Agent Policy
+## 親エージェントポリシー
 
-The primary agent is responsible for:
+親（プライマリ）エージェントの責務:
 
-- maintaining the authoritative task or review checklist
-- deciding which item is currently active
-- delegating bounded implementation or investigation tasks
-- reviewing subagent results
-- verifying completion
-- keeping the parent context concise
+- タスクやレビュー指摘の正式なチェックリストを管理する
+- 現在対応中の項目を決める
+- 境界づけられた実装・調査タスクを委譲する
+- subagent の結果を確認する
+- 完了を検証する
+- 親のコンテキストを簡潔に保つ
 
-The parent agent should avoid performing broad implementation exploration when it can delegate a well-bounded task.
+親は、境界づけられたタスクとして委譲できるものを自分で広く実装・探索することを避けること。
 
-When a subagent returns, retain only the information needed to continue:
+subagent の応答後は、作業継続に必要な情報だけを残すこと:
 
-- conclusion
-- files changed
-- important design implications
-- verification performed
-- unresolved risks
+- 結論
+- 変更ファイル
+- 重要な設計上の示唆
+- 実施した検証
+- 残存リスク
 
-Do not copy large source excerpts or full investigation logs into the parent context.
+大きなソース抜粋や調査ログの全文を親コンテキストへコピーしないこと。
 
 レビュー指摘を順に処理する場合は各項目の状態を親側で管理する:
 `unstarted → in progress → implemented → verified`
@@ -127,18 +127,18 @@ subagent の修正完了だけでは `verified` にしない。親が確認し�
 
 委譲用 subagent 定義: `.opencode/agent/bounded-task.md`。subagent に委譲する際はこの定義を使う（または同等の方針をプロンプトに含める）。1 つの小さな修正ごとに複数の subagent を起動せず、まとまった 1 単位で委譲する。
 
-## Maintaining Agent Context
+## エージェントコンテキストの維持
 
-Update agent-context documentation only when a change materially affects:
+次の変更で agent-context ドキュメントを更新すること:
 
-- architecture
-- module responsibilities
-- major entry points
-- important dependencies
-- build/test procedures
-- repository-wide conventions
-- important known pitfalls
+- アーキテクチャ
+- モジュールの責務
+- 主要なエントリポイント
+- 重要な依存関係
+- ビルド・テスト手順
+- リポジトリ全体の規約
+- 重要な既知の罠
 
-Do not update summaries for routine local implementation changes.
+日常的な局所実装変更ではサマリを更新しないこと。
 
-Keep all updates concise.
+更新は簡潔に保つこと。
