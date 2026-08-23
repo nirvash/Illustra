@@ -66,6 +66,10 @@ namespace Illustra.Views
 
         private CancellationTokenSource? _thumbnailLoadCts;
 
+        // フォルダ読み込みの世代カウンタ。
+        // 新しい読み込みが開始されたときに古い読み込みの後処理（フィルタ適用・選択・イベント発行）を
+        // 破棄するために使う。bool フラグ方式と異なり、連続選択時の割り込みでも状態が壊れない。
+        private uint _folderLoadGeneration = 0;
 
         private bool _isLoadingFileNodes = false; // ファイルノード読み込み中フラグ
         private string? _initialSelectedFilePath;
@@ -2549,8 +2553,13 @@ namespace Illustra.Views
         /// <summary>
         /// 指定されたフォルダのファイルノードを読み込みます
         /// </summary>
-        public async Task LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null, bool requestFocus = false)
+        /// <returns>この読み込みが最新のまま完了した場合は true。処理中により新しいフォルダ読み込みが
+        /// 開始されて破棄された場合は false（呼び出し側は後続の状態更新を行わないこと）</returns>
+        public async Task<bool> LoadFileNodesAsync(string path, string? initialSelectedFilePath = null, FilterSettings? filterSettings = null, SortSettings? sortSettings = null, bool requestFocus = false)
         {
+            // 世代を進めて、この実行の世代を記録する。
+            // await の再開後に世代が変わっていたら、その実行は破棄して共有状態に触れない。
+            uint generation = ++_folderLoadGeneration;
             try
             {
                 _isLoadingFileNodes = true; // ファイルノード読み込み開始
@@ -2584,6 +2593,7 @@ namespace Illustra.Views
 
                 // 重要: UIの更新を待機
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                if (generation != _folderLoadGeneration) return false;
 
                 // ファイル一覧を読み込む前にスクロールイベントを一時的に無効化
                 bool originalScrollingState = _isScrolling;
@@ -2595,6 +2605,7 @@ namespace Illustra.Views
                     // ファイル一覧を読み込む
                     // ThumbnailLoaderHelper を使ってファイルノードを読み込む (イベント削除に伴いパラメータ削除)
                     await _thumbnailLoader.LoadFileNodesAsync(path);
+                    if (generation != _folderLoadGeneration) return false;
                     _isLoadingFileNodes = false; // 読み込み完了
 
                     // フィルタとソート設定を適用 (読み込み後)
@@ -2615,6 +2626,7 @@ namespace Illustra.Views
                         _viewModel.SortAscending = sortSettings.SortAscending;
                         _viewModel.SortItems(_viewModel.SortByDate, _viewModel.SortAscending);
                     }
+                    if (generation != _folderLoadGeneration) return false;
 
                     // 重要: ファイル一覧の読み込みとフィルタ/ソート適用後、UIの更新を待機
                     await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
@@ -2684,15 +2696,34 @@ namespace Illustra.Views
                         }, DispatcherPriority.Render);
                     }
                     // --- ここまで移動 ---
+                    if (generation != _folderLoadGeneration) return false;
+
+                    // 安全網: ScrollChanged の発火を待たずに初期表示範囲のサムネイルを明示的に要求する。
+                    // レイアウト済みの項目はスキップされるため二重生成にはならない。
+                    var safetyScrollViewer = UIHelper.FindVisualChild<ScrollViewer>(ThumbnailItemsControl);
+                    if (safetyScrollViewer != null && _thumbnailLoadCts != null)
+                    {
+                        (int safetyFirstIndex, int safetyLastIndex) = GetVisibleRangeWithBuffer(safetyScrollViewer, bufferSize: 5);
+                        await _thumbnailLoader.LoadMoreThumbnailsAsync(safetyFirstIndex, safetyLastIndex, _thumbnailLoadCts.Token, isHighPriority: true);
+                    }
 
                 }
                 finally
                 {
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
-                    // スクロールイベントを元の状態に戻す
-                    _isScrolling = originalScrollingState;
-                    _isFirstLoad = false; // 初回読み込みフラグをリセット
+                    // 破棄された古い実行は共有状態に触れない（最新の実行が管理しているため）
+                    if (generation == _folderLoadGeneration)
+                    {
+                        ThumbnailItemsControl.Visibility = Visibility.Visible;
+                        // スクロールイベントを元の状態に戻す
+                        _isScrolling = originalScrollingState;
+                        _isFirstLoad = false; // 初回読み込みフラグをリセット
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // 新しい読み込み開始に伴うキャンセルは正常な動作
+                LogHelper.LogWithTimestamp("[フォルダ切替] LoadFileNodesがキャンセルされました", LogHelper.Categories.ThumbnailLoader);
             }
             catch (Exception ex)
             {
@@ -2700,9 +2731,13 @@ namespace Illustra.Views
             }
             finally
             {
-                _isLoadingFileNodes = false; // 読み込み完了または例外発生時にフラグをリセット
-                // _processingFolderPath = null; // OnFileNodesLoaded 削除により不要
+                if (generation == _folderLoadGeneration)
+                {
+                    _isLoadingFileNodes = false; // 読み込み完了または例外発生時にフラグをリセット
+                    // _processingFolderPath = null; // OnFileNodesLoaded 削除により不要
+                }
             }
+            return generation == _folderLoadGeneration;
         }
 
 
@@ -3483,20 +3518,28 @@ namespace Illustra.Views
             _currentExtensionFilters.Clear();
             _isExtensionFilterEnabled = false;
 
-            // 2. ファイルシステム監視を更新
+            // 2. ファイルシステム監視を停止（再開は読み込み完了後に行う。
+            // 読み込み中の監視イベントがアイテム一覧の再構築と競合するのを防ぐ）
             if (_fileSystemMonitor.IsMonitoring)
             {
                 _fileSystemMonitor.StopMonitoring();
             }
-            _fileSystemMonitor.StartMonitoring(folderPath);
 
             // 3. ViewModelに新しい状態を適用 (フィルタとソート)
             _viewModel.SortByDate = sortSettings.SortByDate;
             _viewModel.SortAscending = sortSettings.SortAscending;
 
             // 4. ファイルノードとサムネイルをロード (選択ファイルパスとフィルタ/ソート設定を渡す)
-            // LoadFileNodesAsync の引数を変更する必要がある
-            await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings, requestFocus: true);
+            bool isLoadCurrent = await LoadFileNodesAsync(folderPath, selectedFilePath, filterSettings, sortSettings, requestFocus: true);
+            if (!isLoadCurrent)
+            {
+                // 処理中により新しいフォルダ読み込みが開始されたため、この更新は破棄する
+                Debug.WriteLine("[タブ変更] 新しいフォルダ読み込みが開始されたため、この更新を破棄します");
+                return;
+            }
+
+            // 5. 読み込み完了後にファイルシステム監視を開始
+            _fileSystemMonitor.StartMonitoring(folderPath);
 
             // 6. UIを表示 (OnFileNodesLoaded で表示される想定)
             // FilterChangedEventも発行してUIを更新 (全更新として発行)
