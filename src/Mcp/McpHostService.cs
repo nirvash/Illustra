@@ -65,7 +65,7 @@ namespace Illustra.Mcp
 
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders(); // WPF 側のログ体系を使うため既定ロガーを無効化
-            builder.WebHost.UseUrls($"http://127.0.0.1:{_port}");
+            builder.WebHost.UseUrls($"http://localhost:{_port}");
 
             var bridge = new McpAppBridge(_eventAggregator, _dispatcher);
             builder.Services.AddSingleton<IMcpAppBridge>(bridge);
