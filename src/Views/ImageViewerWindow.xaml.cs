@@ -191,6 +191,9 @@ namespace Illustra.Views
             PropertyPanel.Visibility = settings.VisiblePropertyPanel ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
             PropertySplitter.Visibility = settings.VisiblePropertyPanel ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
 
+            // 表示状態を共有コンテキストへ通知（非表示ならメタデータ解析をスキップする）
+            _appContext.SetViewerPropertyPanelVisible(settings.VisiblePropertyPanel);
+
             // フルスクリーン状態に応じた幅を読み込む
             _lastPropertyPanelWidth = settings.IsFullScreen
                 ? settings.FullScreenPropertyColumnWidth
@@ -560,6 +563,9 @@ namespace Illustra.Views
 
             // 設定を保存. この時点では ActualWidth に反映されていない
             SaveCurrentSettings(false);
+
+            // 表示状態の変更を共有コンテキストへ通知（表示時は現在表示中ファイルのプロパティを再読み込み）
+            _appContext.SetViewerPropertyPanelVisible(PropertyPanel.Visibility == System.Windows.Visibility.Visible);
         }
 
         private async void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
@@ -961,6 +967,9 @@ namespace Illustra.Views
         {
             base.OnClosed(e);
             // OnClosingで既に保存したので、ここでは何もしない
+
+            // ビューアのパネルが閉じたことを共有コンテキストへ通知
+            _appContext.SetViewerPropertyPanelVisible(false);
 
             // サムネイルリストにフォーカスを設定
             Parent?.FocusSelectedThumbnail();
