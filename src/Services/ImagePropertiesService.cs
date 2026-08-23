@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Illustra.Events;
 using Illustra.Helpers;
@@ -19,8 +18,12 @@ namespace Illustra.Services
 
     public class ImagePropertiesService : IImagePropertiesService, IDisposable
     {
+        // 連続選択時に画像表示を阻害しないよう、選択が落ち着いてからプロパティ解析を開始するまでの遅延
+        private const int PropertyLoadDebounceMilliseconds = 150;
+
         private readonly IEventAggregator _eventAggregator;
         private readonly IllustraAppContext _appContext;
+        private int _selectionSequence;
 
         public ImagePropertiesService(
             IEventAggregator eventAggregator,
@@ -99,20 +102,8 @@ namespace Illustra.Services
             {
                 LogHelper.LogWithTimestamp($"プロパティ再読み込み: {filePath}", LogHelper.Categories.UI);
 
-                var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-
-                // MainViewModelから対応するFileNodeModelのレーティングを設定
-                var fileNode = _appContext.MainViewModel?.Items?.FirstOrDefault(n => n.FullPath == filePath);
-                if (fileNode != null)
-                {
-                    properties.Rating = fileNode.Rating;
-                    LogHelper.LogWithTimestamp("MainViewModelからレーティングを設定", LogHelper.Categories.UI);
-                }
-
-                // _appContext.CurrentProperties = properties; // 直接代入は不可
-                // UpdateCurrentPropertiesAsync を呼び出して更新を依頼する
-                // 注意: これによりプロパティが再度読み込まれる
-                await _appContext.UpdateCurrentPropertiesAsync(filePath);
+                // forceReload により同一ファイルでも確実に再解析する（二重解析を避けるためここでは直接読み込まない）
+                await _appContext.UpdateCurrentPropertiesAsync(filePath, forceReload: true);
 
                 LogHelper.LogWithTimestamp("プロパティ再読み込み完了", LogHelper.Categories.UI);
             }
@@ -135,8 +126,16 @@ namespace Illustra.Services
             {
                 LogHelper.LogWithTimestamp($"ファイル選択: {model.FullPath}", LogHelper.Categories.UI);
 
+                var sequence = ++_selectionSequence;
+
+                // パネル表示中の連続選択（矢印キー連打等）では、選択が落ち着いてから重い解析を開始する
+                if (_appContext.IsPropertyPanelVisible)
+                {
+                    await Task.Delay(PropertyLoadDebounceMilliseconds);
+                    if (sequence != _selectionSequence) return; // 選択が変わったため古い要求は破棄
+                }
+
                 // UpdateCurrentPropertiesAsync を呼び出して更新を依頼する
-                // 注意: これによりプロパティが再度読み込まれる
                 await _appContext.UpdateCurrentPropertiesAsync(model.FullPath);
             }
             catch (Exception ex)

@@ -52,14 +52,16 @@ namespace Illustra.Views
         private MenuItem? _sortByNameDescendingMenuItem;
 
         private readonly MainWindowViewModel _viewModel;
+        private readonly IllustraAppContext _appContext;
 
-        public MainWindow(IEventAggregator eventAggregator, MainWindowViewModel viewModel)
+        public MainWindow(IEventAggregator eventAggregator, MainWindowViewModel viewModel, IllustraAppContext appContext)
         {
             // InitializeComponentはXAMLから自動生成されるメソッドで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             InitializeComponent();
             _eventAggregator = eventAggregator;
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            _appContext = appContext ?? throw new ArgumentNullException(nameof(appContext));
             DataContext = _viewModel;
             // ViewModelにDialogCoordinatorを設定
             _viewModel.MahAppsDialogCoordinator = MahApps.Metro.Controls.Dialogs.DialogCoordinator.Instance;
@@ -105,6 +107,9 @@ namespace Illustra.Views
             _mainSplitterPosition = _appSettings.MainSplitterPosition;
             _favoritesFoldersSplitterPosition = _appSettings.FavoriteFoldersHeight;
             RestoreSplitterPositions();
+
+            // プロパティパネルの表示状態を共有コンテキストへ通知（非表示ならメタデータ解析をスキップする）
+            _appContext.SetMainPropertyPanelVisible(_appSettings.MainPropertyPanelVisible);
 
             // バージョン情報をタイトルに追加
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
@@ -169,6 +174,9 @@ namespace Illustra.Views
             _appSettings.MainPropertyPanelVisible = !isVisible;
             _appSettings.PropertySplitterPosition = _lastPropertyPanelHeight;
             SettingsHelper.SaveSettings(_appSettings);
+
+            // 表示状態の変更を共有コンテキストへ通知（表示時は現在選択中ファイルのプロパティを再読み込み）
+            _appContext.SetMainPropertyPanelVisible(!isVisible);
         }
 
         private void InitializeSortMenuItems()
