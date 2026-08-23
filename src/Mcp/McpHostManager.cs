@@ -15,7 +15,7 @@ namespace Illustra.Mcp
         private readonly IEventAggregator _eventAggregator;
         private readonly Dispatcher _dispatcher;
         private readonly DatabaseManager _dbManager;
-        private readonly object _gate = new();
+        private readonly SemaphoreSlim _lifecycleLock = new SemaphoreSlim(1, 1);
 
         private McpHostService? _host;
 
@@ -35,32 +35,35 @@ namespace Illustra.Mcp
         /// </summary>
         public async Task StartAsync()
         {
-            lock (_gate)
+            await _lifecycleLock.WaitAsync().ConfigureAwait(false);
+            try
             {
                 if (IsRunning) return;
-            }
 
-            var settings = SettingsHelper.GetSettings();
-            if (string.IsNullOrEmpty(settings.McpAccessToken))
-            {
-                settings.McpAccessToken = McpAccessTokenGenerator.Generate();
-                SettingsHelper.SaveSettings(settings);
-            }
+                var settings = SettingsHelper.GetSettings();
+                if (string.IsNullOrEmpty(settings.McpAccessToken))
+                {
+                    settings.McpAccessToken = McpAccessTokenGenerator.Generate();
+                    SettingsHelper.SaveSettings(settings);
+                }
 
-            var host = new McpHostService(
-                _eventAggregator,
-                _dispatcher,
-                _dbManager,
-                settings.McpPort,
-                () => SettingsHelper.GetSettings().McpAccessToken);
+                var host = new McpHostService(
+                    _eventAggregator,
+                    _dispatcher,
+                    _dbManager,
+                    settings.McpPort,
+                    () => SettingsHelper.GetSettings().McpAccessToken);
 
-            await host.StartAsync().ConfigureAwait(false);
+                await host.StartAsync().ConfigureAwait(false);
 
-            lock (_gate)
-            {
                 _host = host;
                 IsRunning = true;
             }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
+
             PublishStatus();
         }
 
@@ -69,23 +72,26 @@ namespace Illustra.Mcp
         /// </summary>
         public async Task StopAsync(TimeSpan? timeout = null)
         {
-            McpHostService? host;
-            lock (_gate)
-            {
-                host = _host;
-                _host = null;
-                IsRunning = false;
-            }
-
-            if (host == null) return;
-
+            await _lifecycleLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                await host.StopAsync(timeout).ConfigureAwait(false);
+                var host = _host;
+                if (host == null) return;
+                _host = null;
+                IsRunning = false;
+
+                try
+                {
+                    await host.StopAsync(timeout).ConfigureAwait(false);
+                }
+                finally
+                {
+                    PublishStatus();
+                }
             }
             finally
             {
-                PublishStatus();
+                _lifecycleLock.Release();
             }
         }
 
