@@ -146,7 +146,7 @@ Illustra は Model Context Protocol (MCP) をサポートし、外部クライ�
 
 #### 利用方法
 
-設定メニューで MCP を有効にすると、ローカルで MCP サーバーが起動します。接続にはアプリ内で確認できる認証トークンが必要です。
+設定メニューで MCP を有効にすると、ローカルで MCP サーバーが起動します。既定では接続に認証トークンが必要で、トークンはアプリの MCP 設定画面で確認できます。「アクセストークン認証を要求する」を無効にした場合は、ヘッダーなしで接続できます。
 
 クライアント側の設定例（VS Code / Cursor 等）:
 
@@ -232,7 +232,7 @@ Illustra supports the Model Context Protocol (MCP), allowing external clients to
 
 #### Usage
 
-Enable MCP from the settings menu to start the local MCP server. An authentication token, which can be viewed within the app, is required for connections.
+Enable MCP from the settings menu to start the local MCP server. Connections require an authentication token by default; the token can be viewed in the MCP settings. If "Require access token authentication" is disabled, clients can connect without the Authorization header.
 
 Client configuration example (VS Code / Cursor, etc.):
 
