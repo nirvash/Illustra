@@ -233,10 +233,15 @@ public class ThumbnailLoaderHelper
             SortFileNodes(fileNodes);
         }
 
+        // 破棄された古い読み込みは共有状態に触れない（新しい読み込みが管理しているため）
+        token.ThrowIfCancellationRequested();
+
         // ノード構築が完了してから一覧を一括差し替える。
         // 構築前にクリアすると、キャンセルや例外で一覧が空のまま残ってしまう。
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
+            // ディスパッチャ待ちの間に新しい読み込みが開始された場合は何もしない
+            if (token.IsCancellationRequested) return;
             _viewModel.Items.Clear();
             foreach (var node in fileNodes)
             {
@@ -250,6 +255,7 @@ public class ThumbnailLoaderHelper
         }, DispatcherPriority.Send);
 
         // 現在のフォルダパスを更新
+        token.ThrowIfCancellationRequested();
         _currentFolderPath = folderPath;
 
         LogHelper.LogWithTimestamp("完了", LogHelper.Categories.ThumbnailLoader);
