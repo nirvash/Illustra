@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json.Nodes;
 using Illustra.Helpers;
 using Illustra.Tests.Helpers;
 using NUnit.Framework;
@@ -53,6 +54,38 @@ namespace Illustra.Tests.Helpers
             Assert.That(result.Prompt, Is.EqualTo("test prompt"));
             Assert.That(result.HasWorkflow, Is.True);
             // 生 workflow は ComfyUI で再利用できる GUI 形式が優先される
+            Assert.That(result.RawWorkflowJson, Is.EqualTo(workflowJson));
+        }
+
+        [Test]
+        public void ParseFromMp4_WithH3ContextLoopPlan_ReturnsShotPrompts()
+        {
+            const string workflowJson = @"{""id"":""h3-chain"",""nodes"":[]}";
+            var plan = new JsonObject
+            {
+                ["shots"] = new JsonArray("first scene", "second scene")
+            };
+            var graph = new JsonObject
+            {
+                ["1"] = new JsonObject
+                {
+                    ["inputs"] = new JsonObject { ["plan_json"] = plan.ToJsonString() },
+                    ["class_type"] = "MiniMaxH3ChainPlan"
+                }
+            };
+            File.WriteAllBytes(_tempFilePath, TestMp4Builder.BuildMp4WithMetadata(
+                new Dictionary<string, string>
+                {
+                    ["workflow"] = workflowJson,
+                    ["prompt"] = graph.ToJsonString()
+                }));
+
+            var result = MediaGenerationMetadataParser.ParseFromMp4(_tempFilePath);
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.ParseSuccess, Is.True);
+            Assert.That(result.Prompt, Is.EqualTo("first scene\n\nsecond scene"));
+            Assert.That(result.HasWorkflow, Is.True);
             Assert.That(result.RawWorkflowJson, Is.EqualTo(workflowJson));
         }
 
