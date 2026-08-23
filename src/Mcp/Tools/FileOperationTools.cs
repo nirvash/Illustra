@@ -123,12 +123,8 @@ namespace Illustra.Mcp.Tools
 
         private async Task<FileOperationResult> ExecuteAsync(IReadOnlyList<string>? paths, string? targetFolder, bool isCopy)
         {
-            var operationName = isCopy ? "copy" : "move";
+            ValidatePaths(paths);
 
-            if (paths == null || paths.Count == 0)
-            {
-                throw new ArgumentException("paths is required and must contain at least one entry.", nameof(paths));
-            }
             if (string.IsNullOrWhiteSpace(targetFolder))
             {
                 throw new ArgumentException("targetFolder is required.", nameof(targetFolder));
