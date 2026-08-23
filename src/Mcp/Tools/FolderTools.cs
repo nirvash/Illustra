@@ -24,6 +24,12 @@ namespace Illustra.Mcp.Tools
         [property: JsonPropertyName("alreadyExisted")] bool AlreadyExisted,
         [property: JsonPropertyName("path")] string Path);
 
+    public record RenameFolderResult(
+        [property: JsonPropertyName("renamed")] bool Renamed,
+        [property: JsonPropertyName("oldPath")] string OldPath,
+        [property: JsonPropertyName("newPath")] string NewPath,
+        [property: JsonPropertyName("databaseUpdated")] bool DatabaseUpdated);
+
     public record ServerInfoResult(
         [property: JsonPropertyName("serverName")] string ServerName,
         [property: JsonPropertyName("version")] string Version,
@@ -36,11 +42,13 @@ namespace Illustra.Mcp.Tools
     public class FolderTools
     {
         private readonly IMcpAppBridge _bridge;
+        private readonly DatabaseManager _db;
         private readonly string _version;
 
-        public FolderTools(IMcpAppBridge bridge)
+        public FolderTools(IMcpAppBridge bridge, DatabaseManager db)
         {
             _bridge = bridge;
+            _db = db ?? throw new ArgumentNullException(nameof(db));
             _version = typeof(FolderTools).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
         }
 
@@ -97,6 +105,54 @@ namespace Illustra.Mcp.Tools
             }
 
             return new CreateFolderResult(!existed, existed, path);
+        }
+
+        [McpServerTool(Name = "rename_folder", Destructive = true)]
+        [Description("Renames a folder in the file system. Database entries of contained files follow the rename. Open views and the folder tree update automatically via the file system monitor.")]
+        public async Task<RenameFolderResult> RenameFolder(
+            [Description("Absolute path of the folder to rename.")] string folderPath,
+            [Description("New folder name only, without path separators. Must not already exist in the parent folder.")] string newFolderName)
+        {
+            ValidatePath(folderPath, nameof(folderPath), requireDirectory: true);
+
+            // ドライブルート (D:\ 等) は親を持たないためリネーム不可
+            var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+            if (fullPath.Equals(Path.GetPathRoot(fullPath), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Cannot rename a drive root: {fullPath}", nameof(folderPath));
+            }
+
+            if (string.IsNullOrWhiteSpace(newFolderName) ||
+                newFolderName.IndexOfAny(['/', '\\', ':']) >= 0 ||
+                Path.GetInvalidFileNameChars().Any(newFolderName.Contains))
+            {
+                throw new ArgumentException("newFolderName must be a plain folder name without path separators or invalid characters.", nameof(newFolderName));
+            }
+
+            var parent = Path.GetDirectoryName(fullPath)!;
+            var newPath = Path.Combine(parent, newFolderName);
+            if (!string.Equals(fullPath, newPath, StringComparison.OrdinalIgnoreCase) &&
+                (Directory.Exists(newPath) || File.Exists(newPath)))
+            {
+                throw new IOException($"Target already exists: {newPath}");
+            }
+
+            Directory.Move(fullPath, newPath);
+
+            bool dbUpdated;
+            try
+            {
+                await _db.UpdateFolderPathsAsync(fullPath, newPath);
+                dbUpdated = true;
+            }
+            catch (Exception ex)
+            {
+                // リネーム自体は成功している。DB 遅れは結果で正直に返す
+                LogHelper.LogError($"MCP rename_folder: DB パス更新に失敗しました ({fullPath} -> {newPath}): {ex.Message}");
+                dbUpdated = false;
+            }
+
+            return new RenameFolderResult(true, fullPath, newPath, dbUpdated);
         }
 
         [McpServerTool(Name = "get_server_info", ReadOnly = true, Idempotent = true)]
