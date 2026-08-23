@@ -590,14 +590,14 @@ namespace Illustra.Models
                             if (itemToRemove != null)
                             {
                                 Children.Remove(itemToRemove);
-                            }
 
-                            // ソート設定があれば適用
-                            var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                            var sortType = sortSettings?.SortType ?? SortType.Name;
-                            var isAscending = sortSettings?.IsAscending ?? true;
-                            var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
-                            Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                                // ソート設定があれば適用
+                                var sortSettings = _treeModel?.GetSortSettings(FullPath);
+                                var sortType = sortSettings?.SortType ?? SortType.Name;
+                                var isAscending = sortSettings?.IsAscending ?? true;
+                                var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
+                                Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                            }
                         }
                     }
                     // 展開されていない場合はダミー要素を管理
