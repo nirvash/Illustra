@@ -66,7 +66,7 @@ builder.Services.AddMcpServer(options => {
         options.ServerName = "Illustra";
         options.ServerVersion = version;
     })
-    .WithToolsFromAssembly(); // MCPHost アセンブリ内の [McpServerTool] を検出
+    .WithToolsFromAssembly(); // メインアセンブリ内の [McpServerTool] を検出
 
 app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 ```
@@ -78,7 +78,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 
 ### Bearer トークン認証
 
-- トークン: 初回有効化時に `Guid.NewGuid().ToString("N")` で生成、`AppSettingsModel.McpAccessToken` に永続化
+- トークン: 初回有効化時に `McpAccessTokenGenerator` が暗号学的乱数（`RandomNumberGenerator.GetBytes(32)` の Base64Url エンコード）で生成、`AppSettingsModel.McpAccessToken` に永続化
 - 検証: `/mcp` への全リクエストに対して `Authorization: Bearer {token}` を要求。不一致・未提示は 401
 - 検証時はリクエスト毎に現在の設定値を参照するため、設定画面でのトークン再生成が即時反映される
 - クライアント設定例（VS Code mcp.json）:
@@ -152,7 +152,7 @@ public abstract class McpRequestEventArgs : EventArgs
 }
 ```
 
-- 新規イベント: `McpSelectFilesEvent`、`McpGetFileListEvent`、`McpGetSelectedFilesEvent`、`McpShutdownEvent`（`Events/UIEvents.cs` に集約。`McpOpenFolderEvent` は Shared から本プロジェクトへ移設）
+- 新規イベント: `McpSelectFilesEvent`、`McpGetFileListEvent`、`McpGetSelectedFilesEvent`、`McpShutdownEvent`（`Events/McpEvents.cs` に集約）
 - 購読側ハンドラは `ThreadOption.UIThread` で購読し、`finally` で必ず `Completion.SetResult(...)`（タイムアウト付き: 既定 30 秒）
 - `SourceId` フィルタで自己発火ループを防止（既存パターン踏襲）
 
@@ -174,23 +174,23 @@ Developer 設定ウィンドウに独立した「MCP」セクションを追加:
 ## 8. 実装構成
 
 ```
-src/MCPHost/
-  ├─ Illustra.MCPHost.csproj        (ModelContextProtocol.AspNetCore 追加、Swashbuckle 削除)
-  ├─ McpHostStartup.cs              (WebApplication 構築: DI/ミドルウェア/MapMcp)
-  ├─ McpHostService.cs              (起動/停止ライフサイクル管理、動的開始停止)
-  ├─ Security/BearerTokenMiddleware.cs
-  ├─ Tools/
-  │   ├─ ApplicationTools.cs        (shutdown_application)
-  │   ├─ FolderTools.cs             (open_folder, get_favorite_folders, create_folder, get_server_info)
-  │   ├─ FileSelectionTools.cs      (select_file, get_selected_files, list_files)
-  │   ├─ MetadataTools.cs           (get_file_metadata, get_thumbnail)
-  │   └─ FileOperationTools.cs      (move_files, copy_files)
-  └─ Models/McpRequestEventArgs.cs
+src/Mcp/
+  ├─ McpHostService.cs              (WebApplication 構築: DI/ミドルウェア/MapMcp)
+  ├─ McpHostManager.cs              (起動/停止ライフサイクル管理シングルトン、動的開始停止)
+  ├─ BearerTokenMiddleware.cs       (/mcp への Bearer トークン検証)
+  ├─ McpAccessTokenGenerator.cs     (暗号学的乱数による Bearer トークン生成)
+  ├─ McpAppBridge.cs                (IMcpAppBridge: EventAggregator + TCS ブリッジ)
+  └─ Tools/
+      ├─ ApplicationTools.cs        (shutdown_application, get_app_status)
+      ├─ FolderTools.cs             (open_folder, get_favorite_folders, create_folder, get_server_info)
+      ├─ FileSelectionTools.cs      (select_file, get_selected_files, list_files)
+      ├─ MetadataTools.cs           (get_file_metadata, get_thumbnail)
+      └─ FileOperationTools.cs      (move_files, copy_files, delete_files, rename_file)
 src/
-  ├─ App.xaml.cs                    (McpHostService へ置換、OnExit 改修: StopAsync ベースの正常停止)
-  ├─ Events/UIEvents.cs             (新規 Mcp* イベント追加)
-  ├─ Views/ThumbnailListControl.xaml.cs (選択・一覧・選択取得ハンドラ)
-  └─ ViewModels/DeveloperSettingsViewModel.xaml.cs (+UI)
+  ├─ Events/McpEvents.cs            (Mcp* イベント定義)
+  ├─ App.xaml.cs                    (起動時自動開始、OnExit の StopAsync ベース正常停止)
+  ├─ Views/ThumbnailListControl.Mcp.cs (選択・一覧・選択取得ハンドラ)
+  └─ ViewModels/Settings/McpSettingsViewModel.cs (+UI)
 ```
 
 ## 9. テスト計画（NUnit、tests/Illustra.Tests.csproj 内）

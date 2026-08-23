@@ -5,7 +5,7 @@
 Windows 用画像ビューア（WPF + .NET 9、`net9.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
 
 - ソリューション: `src/Illustra.csproj`（メインアプリ）+ `tests/Illustra.Tests.csproj`（NUnit + Moq）
-- ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（`src/Events/UIEvents.cs`）
+- ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（UI 共通 = `src/Events/UIEvents.cs`、MCP 関連 = `src/Events/McpEvents.cs`）
 - 永続化: 設定 = JSON（`SettingsHelper` → `AppSettingsModel`）、レーティング等 = SQLite（`DatabaseManager`）
 - `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー（`http://localhost:5149/mcp`）
 - 作業言語・ドキュメント・コミットメッセージは日本語。コミットは Conventional Commits（`feat:`/`fix:` プレフィックスがリリースノート生成に使われる）
