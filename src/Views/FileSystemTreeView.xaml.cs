@@ -90,9 +90,11 @@ namespace Illustra.Views
             });
 
             // ツリーアイテムを画面内に表示するイベントを購読
+            // 起動時やプログラムによるパス展開では IsExpandingPath 中に選択変更イベントが抑制され、
+            // 標準の BringIntoView 動作も無効化されているため、ここで明示的にスクロールする
             _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Subscribe(path =>
             {
-                // ScrollToSelectedItem(); // Loaded 時の不要なスクロールを削除。選択変更時に実行される。
+                ScrollToPath(path);
             });
 
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, null);
@@ -194,117 +196,157 @@ namespace Illustra.Views
                 if (targetItem == null)
                     return;
 
-                // コンテナ生成を非同期で待つ
-                await WaitForTreeViewItemToBeReady(targetItem);
-
-                // ScrollViewer を取得
-                ScrollViewer scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(treeView);
-                if (scrollViewer == null) return; // ScrollViewer がなければ処理中断
-
-                // --- TreeViewItem のヘッダー部分を取得 ---
-                var headerElement = targetItem.Template?.FindName("PART_Header", targetItem) as FrameworkElement;
-                if (headerElement == null) return; // ヘッダーがなければスクロール計算不可
-
-                // --- アイテムのサイズと位置を取得 ---
-                double itemHeight = headerElement.DesiredSize.Height;
-                double itemWidth = headerElement.DesiredSize.Width;
-
-                // ItemsHost を取得 (仮想化非対応前提)
-                ItemsPresenter itemsPresenter = UIHelper.FindVisualChild<ItemsPresenter>(treeView);
-                Panel itemsHost = VisualTreeHelper.GetChild(itemsPresenter, 0) as Panel;
-
-                // ItemsHost に対する TreeViewItem の位置 (垂直スクロール用)
-                Point positionInHost = targetItem.TranslatePoint(new Point(0, 0), itemsHost);
-                double itemTopInHost = positionInHost.Y;
-                double itemBottomInHost = itemTopInHost + itemHeight;
-
-                // ScrollViewer 内でのヘッダーの位置 (水平スクロール用)
-                Point positionInScrollViewer = headerElement.TranslatePoint(new Point(0, 0), scrollViewer);
-                double itemLeftInScrollViewer = positionInScrollViewer.X;
-                double itemRightInScrollViewer = itemLeftInScrollViewer + itemWidth;
-
-                // --- 現在のスクロール状態を取得 ---
-                double viewportHeight = scrollViewer.ViewportHeight;
-                double viewportWidth = scrollViewer.ViewportWidth;
-                double currentVerticalOffset = scrollViewer.VerticalOffset;
-                double currentHorizontalOffset = scrollViewer.HorizontalOffset;
-                double viewportBottom = currentVerticalOffset + viewportHeight;
-
-                // --- 目標オフセットを計算 ---
-                double targetVerticalOffset = currentVerticalOffset; // 初期値は現在のオフセット
-                double targetHorizontalOffset = currentHorizontalOffset; // 初期値は現在のオフセット
-                const double horizontalMargin = 20.0;
-
-                // --- 垂直方向の目標オフセット計算 ---
-                bool needsVerticalScroll = itemTopInHost < currentVerticalOffset || itemBottomInHost > viewportBottom;
-                if (needsVerticalScroll)
-                {
-                    targetVerticalOffset = itemTopInHost + (itemHeight / 2) - (viewportHeight / 2);
-                    targetVerticalOffset = Math.Max(0, Math.Min(targetVerticalOffset, scrollViewer.ScrollableHeight));
-                }
-
-                // --- 水平方向の目標オフセット計算 ---
-                bool isLeftCut = itemLeftInScrollViewer < horizontalMargin;
-                bool isRightCut = itemRightInScrollViewer > viewportWidth - horizontalMargin;
-                bool needsHorizontalScroll = isLeftCut || isRightCut;
-
-                if (needsHorizontalScroll)
-                {
-                    // ケース1: アイテム幅がビューポート幅より大きい
-                    if (itemWidth > viewportWidth)
-                    {
-                        // 常に左端が見えることを優先
-                        targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin;
-                    }
-                    // ケース2: アイテム幅がビューポート幅以下
-                    else
-                    {
-                        if (isLeftCut) // 左が見切れ
-                        {
-                            targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin;
-                        }
-                        else // 右が見切れ (isRightCut is true)
-                        {
-                            double rightAlignedOffset = currentHorizontalOffset + itemRightInScrollViewer - (viewportWidth - horizontalMargin);
-                            double predictedItemLeft = itemLeftInScrollViewer - (rightAlignedOffset - currentHorizontalOffset);
-
-                            if (predictedItemLeft < horizontalMargin)
-                            {
-                                targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin; // 左基準に戻す
-                            }
-                            else
-                            {
-                                targetHorizontalOffset = rightAlignedOffset; // 右基準を採用
-                            }
-                        }
-                    }
-
-                    // スクロール範囲内に収める
-                    targetHorizontalOffset = Math.Max(0, Math.Min(targetHorizontalOffset, scrollViewer.ScrollableWidth));
-                }
-
-                // --- スクロール実行 ---
-                bool verticalChanged = Math.Abs(targetVerticalOffset - currentVerticalOffset) > 1.0;
-                bool horizontalChanged = Math.Abs(targetHorizontalOffset - currentHorizontalOffset) > 1.0;
-
-                // 垂直または水平スクロールが必要な場合のみ実行
-                if (verticalChanged || horizontalChanged)
-                {
-                    // 念のため Dispatcher で UI スレッドでの実行を保証し、描画を待つ
-                    await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                    // 垂直・水平オフセットを連続して設定
-                    if (verticalChanged)
-                    {
-                        scrollViewer.ScrollToVerticalOffset(targetVerticalOffset);
-                    }
-                    if (horizontalChanged)
-                    {
-                        scrollViewer.ScrollToHorizontalOffset(targetHorizontalOffset);
-                    }
-                }
+                await ScrollTreeViewItemIntoView(targetItem);
             } // ラムダ式の閉じ括弧
             , DispatcherPriority.Background); // InvokeAsync の閉じ括弧とセミコロン
+        }
+
+        /// <summary>
+        /// 指定した TreeViewItem をスクロールして表示する（垂直・水平両対応）
+        /// </summary>
+        private async Task ScrollTreeViewItemIntoView(TreeViewItem targetItem)
+        {
+            // コンテナ生成を非同期で待つ
+            await WaitForTreeViewItemToBeReady(targetItem);
+
+            // ScrollViewer を取得
+            ScrollViewer scrollViewer = UIHelper.FindVisualChild<ScrollViewer>(FolderTreeView);
+            if (scrollViewer == null) return; // ScrollViewer がなければ処理中断
+
+            // --- TreeViewItem のヘッダー部分を取得 ---
+            var headerElement = targetItem.Template?.FindName("PART_Header", targetItem) as FrameworkElement;
+            if (headerElement == null) return; // ヘッダーがなければスクロール計算不可
+
+            // --- アイテムのサイズと位置を取得 ---
+            double itemHeight = headerElement.DesiredSize.Height;
+            double itemWidth = headerElement.DesiredSize.Width;
+
+            // ItemsHost を取得 (仮想化非対応前提)
+            ItemsPresenter itemsPresenter = UIHelper.FindVisualChild<ItemsPresenter>(FolderTreeView);
+            if (itemsPresenter == null || VisualTreeHelper.GetChildrenCount(itemsPresenter) == 0) return;
+            Panel itemsHost = VisualTreeHelper.GetChild(itemsPresenter, 0) as Panel;
+            if (itemsHost == null) return;
+
+            // ItemsHost に対する TreeViewItem の位置 (垂直スクロール用)
+            Point positionInHost = targetItem.TranslatePoint(new Point(0, 0), itemsHost);
+            double itemTopInHost = positionInHost.Y;
+            double itemBottomInHost = itemTopInHost + itemHeight;
+
+            // ScrollViewer 内でのヘッダーの位置 (水平スクロール用)
+            Point positionInScrollViewer = headerElement.TranslatePoint(new Point(0, 0), scrollViewer);
+            double itemLeftInScrollViewer = positionInScrollViewer.X;
+            double itemRightInScrollViewer = itemLeftInScrollViewer + itemWidth;
+
+            // --- 現在のスクロール状態を取得 ---
+            double viewportHeight = scrollViewer.ViewportHeight;
+            double viewportWidth = scrollViewer.ViewportWidth;
+            double currentVerticalOffset = scrollViewer.VerticalOffset;
+            double currentHorizontalOffset = scrollViewer.HorizontalOffset;
+            double viewportBottom = currentVerticalOffset + viewportHeight;
+
+            // --- 目標オフセットを計算 ---
+            double targetVerticalOffset = currentVerticalOffset; // 初期値は現在のオフセット
+            double targetHorizontalOffset = currentHorizontalOffset; // 初期値は現在のオフセット
+            const double horizontalMargin = 20.0;
+
+            // --- 垂直方向の目標オフセット計算 ---
+            bool needsVerticalScroll = itemTopInHost < currentVerticalOffset || itemBottomInHost > viewportBottom;
+            if (needsVerticalScroll)
+            {
+                targetVerticalOffset = itemTopInHost + (itemHeight / 2) - (viewportHeight / 2);
+                targetVerticalOffset = Math.Max(0, Math.Min(targetVerticalOffset, scrollViewer.ScrollableHeight));
+            }
+
+            // --- 水平方向の目標オフセット計算 ---
+            bool isLeftCut = itemLeftInScrollViewer < horizontalMargin;
+            bool isRightCut = itemRightInScrollViewer > viewportWidth - horizontalMargin;
+            bool needsHorizontalScroll = isLeftCut || isRightCut;
+
+            if (needsHorizontalScroll)
+            {
+                // ケース1: アイテム幅がビューポート幅より大きい
+                if (itemWidth > viewportWidth)
+                {
+                    // 常に左端が見えることを優先
+                    targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin;
+                }
+                // ケース2: アイテム幅がビューポート幅以下
+                else
+                {
+                    if (isLeftCut) // 左が見切れ
+                    {
+                        targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin;
+                    }
+                    else // 右が見切れ (isRightCut is true)
+                    {
+                        double rightAlignedOffset = currentHorizontalOffset + itemRightInScrollViewer - (viewportWidth - horizontalMargin);
+                        double predictedItemLeft = itemLeftInScrollViewer - (rightAlignedOffset - currentHorizontalOffset);
+
+                        if (predictedItemLeft < horizontalMargin)
+                        {
+                            targetHorizontalOffset = currentHorizontalOffset + itemLeftInScrollViewer - horizontalMargin; // 左基準に戻す
+                        }
+                        else
+                        {
+                            targetHorizontalOffset = rightAlignedOffset; // 右基準を採用
+                        }
+                    }
+                }
+
+                // スクロール範囲内に収める
+                targetHorizontalOffset = Math.Max(0, Math.Min(targetHorizontalOffset, scrollViewer.ScrollableWidth));
+            }
+
+            // --- スクロール実行 ---
+            bool verticalChanged = Math.Abs(targetVerticalOffset - currentVerticalOffset) > 1.0;
+            bool horizontalChanged = Math.Abs(targetHorizontalOffset - currentHorizontalOffset) > 1.0;
+
+            // 垂直または水平スクロールが必要な場合のみ実行
+            if (verticalChanged || horizontalChanged)
+            {
+                // 念のため Dispatcher で UI スレッドでの実行を保証し、描画を待つ
+                await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                // 垂直・水平オフセットを連続して設定
+                if (verticalChanged)
+                {
+                    scrollViewer.ScrollToVerticalOffset(targetVerticalOffset);
+                }
+                if (horizontalChanged)
+                {
+                    scrollViewer.ScrollToHorizontalOffset(targetHorizontalOffset);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 指定したパスのノードをツリー内で見える位置までスクロールする。
+        /// 起動直後や展開完了直後は TreeViewItem コンテナやレイアウトが未確定の可能性があるため、
+        /// 条件を満たすまで短い間隔でリトライする。
+        /// </summary>
+        private void ScrollToPath(string path)
+        {
+            if (_viewModel == null || string.IsNullOrEmpty(path))
+                return;
+
+            Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                for (int attempt = 0; attempt < 40; attempt++)
+                {
+                    var model = _viewModel.FindItem(path);
+                    var container = model != null ? GetTreeViewItemForItem(FolderTreeView, model) : null;
+                    var scrollViewer = container != null ? FindScrollViewer(FolderTreeView) : null;
+
+                    // コンテナ生成と初回レイアウト（Viewport 確定）が済んでいるときだけ実行
+                    if (container != null && scrollViewer != null && scrollViewer.ViewportHeight > 0)
+                    {
+                        await ScrollTreeViewItemIntoView(container);
+                        return;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }, DispatcherPriority.Background);
         }
 
         // TreeViewItem の標準 BringIntoView 動作を常に抑制するためのハンドラ
@@ -318,7 +360,9 @@ namespace Illustra.Views
         private async Task WaitForTreeViewItemToBeReady(TreeViewItem item)
         {
             // 視覚ツリー上に乗るまで待つ
-            while (!item.IsVisible)
+            // （起動直後やパネル非表示時など、IsVisible が永久に立たない場合に備えてタイムアウトを設ける）
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (!item.IsVisible && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(50); // 少し待つ（調整可）
                 await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
