@@ -106,7 +106,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 5. 画像の検索・選択誘導 | `list_files` + `get_thumbnail` → `select_file` |
 | 6. お気に入りフォルダの把握 | `get_favorite_folders` |
 
-## 5. ツール仕様（v1: 15 ツール + 拡張 3）
+## 5. ツール仕様（v1: 15 ツール + 拡張 5）
 
 | # | ツール | 引数 | 戻り値 | 実装経路 |
 |---|---|---|---|---|
@@ -128,6 +128,8 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 16 | `set_files_rating` | `paths[]`(必須), `rating`(必須・0〜5、0で解除) | `{processed:[paths], processedCount, requestedCount, rating, failedCount, failed?}` | UI スレッド不要: `DatabaseManager.UpdateRatingAsync`（Upsert/未登録なら新規ノード）+ `RatingChangedEvent` 発行で表示中ビューへ即時反映 |
 | 17 | `set_view_filter` | `promptFilter?`, `rating?`(0〜5、完全一致), `extensions?[]`, `clear?`=false | `{applied, filterState:{rating, promptFilterEnabled, tagFilterEnabled, tagFilters, extensionFilterEnabled, extensionFilters}}` | 新規 `McpSetViewFilterEvent` + TCS → ThumbnailListControl が既存 `FilterChangedEvent` フローへ橋渡し。UI 表示・ViewModel も連動 |
 | 18 | `rename_folder` | `folderPath`(必須), `newFolderName`(必須・パス区切り不可) | `{renamed, oldPath, newPath, databaseUpdated}` | UI スレッド不要: `Directory.Move` + `DatabaseManager.UpdateFolderPathsAsync`（子孫ファイルの FolderPath/FullPath 一括更新）。UI 反映は FileSystemMonitor 経由（監視外ドライブではタブ再オープン時に反映）。DB 更新失敗時は `databaseUpdated:false` を返す |
+| 19 | `show_viewer` | `filePath?`(省略時=アクティブビューの選択中ファイル) | `{shown, filePath}` | 新規 `McpShowViewerEvent` + TCS → ThumbnailListControl が既存 `ShowImageViewer` を呼び出し（既存ビューワは再利用）。ファイル不在時はエラー応答 |
+| 20 | `close_viewer` | なし | `{closed, wasOpen}` | 新規 `McpCloseViewerEvent` + TCS → ThumbnailListControl が `_imageViewerWindow?.Close()`。未表示時は `closed:true, wasOpen:false` |
 
 ### 制約・方針
 
@@ -186,6 +188,7 @@ src/Mcp/
   └─ Tools/
       ├─ ApplicationTools.cs        (shutdown_application, get_app_status)
   ├─ ViewTools.cs               (set_view_filter)
+├─ ViewerTools.cs              (show_viewer, close_viewer)
       ├─ FolderTools.cs             (open_folder, get_favorite_folders, create_folder, get_server_info)
       ├─ FileSelectionTools.cs      (select_file, get_selected_files, list_files)
       ├─ MetadataTools.cs           (get_file_metadata, get_thumbnail)

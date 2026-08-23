@@ -26,6 +26,8 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<McpGetSelectedFilesEvent>().Subscribe(OnMcpGetSelectedFiles, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpGetAppStatusEvent>().Subscribe(OnMcpGetAppStatus, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpSetViewFilterEvent>().Subscribe(OnMcpSetViewFilter, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpShowViewerEvent>().Subscribe(OnMcpShowViewer, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpCloseViewerEvent>().Subscribe(OnMcpCloseViewer, ThreadOption.UIThread);
         }
 
         /// <summary>
@@ -234,6 +236,61 @@ namespace Illustra.Views
             catch (Exception ex)
             {
                 LogHelper.LogError("MCP get_app_status 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// ビューワでファイルを表示する（MCP show_viewer 用）。
+        /// FilePath が空の場合はアクティブビューの選択中ファイルを使用する。
+        /// </summary>
+        private void OnMcpShowViewer(McpShowViewerEventArgs args)
+        {
+            try
+            {
+                var path = args.FilePath;
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    path = _viewModel.SelectedItems.Count > 0 ? _viewModel.SelectedItems[0].FullPath : string.Empty;
+                }
+
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+                {
+                    args.ErrorMessage = "No file specified or the file does not exist.";
+                    args.ResultCompletionSource?.TrySetResult(false);
+                    return;
+                }
+
+                args.FilePath = path;
+                ShowImageViewer(path);
+                args.Shown = true;
+                args.VisibleInCurrentFilter = GetFilteredItemsList().Any(x => string.Equals(x.FullPath, path, StringComparison.OrdinalIgnoreCase));
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP show_viewer 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// ビューワを閉じる（MCP close_viewer 用）。
+        /// </summary>
+        private void OnMcpCloseViewer(McpCloseViewerEventArgs args)
+        {
+            try
+            {
+                args.WasOpen = _imageViewerWindow != null;
+                _imageViewerWindow?.Close();
+                args.Closed = true;
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP close_viewer 処理中にエラーが発生しました", ex);
                 args.ErrorMessage = ex.Message;
                 args.ResultCompletionSource?.TrySetResult(false);
             }

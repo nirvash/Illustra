@@ -128,6 +128,33 @@ namespace Illustra.Events
     }
 
     /// <summary>
+    /// ビューワでのファイル表示を要求するイベント（MCP show_viewer 用）。
+    /// </summary>
+    public class McpShowViewerEvent : PubSubEvent<McpShowViewerEventArgs> { }
+
+    public class McpShowViewerEventArgs : McpBaseEventArgs
+    {
+        /// <summary>表示するファイルの絶対パス。空の場合はアクティブビューの選択中ファイルを使用する。</summary>
+        public string FilePath { get; set; } = string.Empty;
+        public bool Shown { get; set; }
+        /// <summary>表示対象が現在のビューフィルタで可視かどうか。false の場合はユーザーには見えていない状態での表示。</summary>
+        public bool VisibleInCurrentFilter { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
+    /// <summary>
+    /// ビューワの終了を要求するイベント（MCP close_viewer 用）。
+    /// </summary>
+    public class McpCloseViewerEvent : PubSubEvent<McpCloseViewerEventArgs> { }
+
+    public class McpCloseViewerEventArgs : McpBaseEventArgs
+    {
+        public bool WasOpen { get; set; }
+        public bool Closed { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
+    /// <summary>
     /// MCP サーバー（Kestrel ホスト）の稼働状態が変化したことを通知するイベント。
     /// </summary>
     public class McpServerStatusChangedEvent : PubSubEvent<McpServerStatusChangedEventArgs> { }
