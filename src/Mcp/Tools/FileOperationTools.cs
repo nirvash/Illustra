@@ -6,11 +6,21 @@ using ModelContextProtocol.Server;
 
 namespace Illustra.Mcp.Tools
 {
+    /// <summary>
+    /// ファイル操作で失敗したファイルの情報。
+    /// </summary>
+    public record FileOperationFailure(
+        [property: JsonPropertyName("path")] string Path,
+        [property: JsonPropertyName("error")] string Error);
+
     public record FileOperationResult(
         [property: JsonPropertyName("processed")] IReadOnlyList<string> Processed,
         [property: JsonPropertyName("processedCount")] int ProcessedCount,
         [property: JsonPropertyName("requestedCount")] int RequestedCount,
-        [property: JsonPropertyName("failedCount")] int FailedCount);
+        [property: JsonPropertyName("failedCount")] int FailedCount,
+        [property: JsonPropertyName("failed")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        IReadOnlyList<FileOperationFailure>? Failed = null);
 
     public record RenameResult(
         [property: JsonPropertyName("renamed")] bool Renamed,
@@ -54,6 +64,7 @@ namespace Illustra.Mcp.Tools
 
             var fileOperation = new FileOperationHelper(_db);
             var processed = new List<string>();
+            var failures = new List<FileOperationFailure>();
             foreach (var path in paths)
             {
                 try
@@ -64,10 +75,12 @@ namespace Illustra.Mcp.Tools
                 catch (Exception ex)
                 {
                     LogHelper.LogError($"MCP delete_files: {path} の削除に失敗しました: {ex.Message}");
+                    // エージェントが再試行/代替手段を判断できるよう、失敗理由をそのまま返す
+                    failures.Add(new FileOperationFailure(path, ex.GetBaseException().Message));
                 }
             }
 
-            return new FileOperationResult(processed, processed.Count, paths.Count, paths.Count - processed.Count);
+            return new FileOperationResult(processed, processed.Count, paths.Count, failures.Count, failures);
         }
 
         [McpServerTool(Name = "rename_file", Destructive = true)]
