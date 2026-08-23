@@ -23,7 +23,8 @@ namespace Illustra.ViewModels
         private bool _isLoading;
         private const string CONTROL_ID = "FileSystemTree";
         private bool _isExpandingPath = false; // プログラムによるパス展開中を示すフラグ
-        private bool _ignoreSelectedChangedOnce = false; // フォルダ選択イベントを無視するフラグ
+        // プログラム的な選択変更として無視すべきパス（このパス自体の選択のみを1回無視する）
+        private string? _ignoreSelectedPathOnce = null;
 
         /// <summary>
         /// プログラムによるパス展開中かどうか。
@@ -159,9 +160,13 @@ namespace Illustra.ViewModels
                     ((DelegateCommand<FileSystemItemModel>)AddToFavoritesCommand).RaiseCanExecuteChanged();
                     ((DelegateCommand<FileSystemItemModel>)RemoveFromFavoritesCommand).RaiseCanExecuteChanged();
 
-                    if (_ignoreSelectedChangedOnce)
+                    // プログラム的な選択（McpOpenFolderEvent による展開先ノードの選択）と
+                    // 同じパスの選択のみを1回無視する。
+                    // bool フラグ方式だと起動時の抑制（IsExpandingPath 等）でフラグが消費されず、
+                    // ユーザーの最初のフォルダクリックが握り潰される不具合があったためパス一致で判定する。
+                    if (_ignoreSelectedPathOnce != null && _selectedItem.FullPath == _ignoreSelectedPathOnce)
                     {
-                        _ignoreSelectedChangedOnce = false; // フラグをリセット
+                        _ignoreSelectedPathOnce = null; // 対象パスの選択のみ無視してリセット
                         return; // McpOpenFolderEventからの選択変更を無視
                     }
 
@@ -256,8 +261,23 @@ namespace Illustra.ViewModels
             {
                 if (!string.IsNullOrEmpty(args.FolderPath) && Directory.Exists(args.FolderPath))
                 {
-                    _ignoreSelectedChangedOnce = true;
+                    _ignoreSelectedPathOnce = args.FolderPath;
                     Expand(args.FolderPath);
+
+                    // 展開サイクル終了後にフラグを掃除する。
+                    // 展開に伴う選択変更が抑制（IsExpandingPath 等）で SelectedItem セッターを
+                    // 経由しなかった場合、フラグが残留し、後のユーザーによる同じパスへのクリックを
+                    // 誤って握り潰すため。エコー選択はレイアウト（Background より高い優先度）で
+                    // 先に処理されるため、この時点で残っているフラグは消費されなかったもの。
+                    Application.Current.Dispatcher.BeginInvoke(
+                        new Action(() =>
+                        {
+                            if (_ignoreSelectedPathOnce == args.FolderPath)
+                            {
+                                _ignoreSelectedPathOnce = null;
+                            }
+                        }),
+                        DispatcherPriority.Background);
                     // フォルダを展開した後、そのノードを画面内に表示
                     _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.FolderPath);
 

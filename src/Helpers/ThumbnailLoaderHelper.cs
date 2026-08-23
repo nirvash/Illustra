@@ -193,88 +193,72 @@ public class ThumbnailLoaderHelper
     /// <summary>
     /// 指定されたフォルダの画像のノードを読み込みます
     /// </summary>
-    /// <param name="folderPath">画像のノードを読み込むフォルダのパス</param>
+    /// <remarks>
+    /// キャンセル（新しいフォルダ読み込みの開始）や失敗時は例外を呼び出し側へ伝播する。
+    /// 一覧のクリアと再構築は単一のディスパッチャ操作で行うため、途中失敗しても旧一覧が維持される。
+    /// </remarks>
     public async Task LoadFileNodesAsync(string folderPath)
     {
-        try
+        // 内部でのみトークンを管理
+        if (_folderLoadingCTS != null)
         {
-            // 内部でのみトークンを管理
-            if (_folderLoadingCTS != null)
+            _folderLoadingCTS.Cancel();
+            _folderLoadingCTS.Dispose();
+        }
+        _folderLoadingCTS = new CancellationTokenSource();
+        var token = _folderLoadingCTS.Token;
+
+        LogHelper.LogWithTimestamp($"[THUMBNAIL_LOADER] フォルダ読み込み開始: {folderPath}", LogHelper.Categories.ThumbnailLoader);
+
+        // ファイル一覧を取得
+        LogHelper.LogWithTimestamp("[PERFORMANCE] ファイル一覧の取得を開始", LogHelper.Categories.ThumbnailLoader);
+        var sw = Stopwatch.StartNew();
+        var files = await Task.Run(() => GetFilesInFolder(folderPath), token);
+        sw.Stop();
+        LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ファイル取得: {sw.ElapsedMilliseconds}ms - {files.Count}件のファイルを取得", LogHelper.Categories.ThumbnailLoader);
+
+        // ダミー画像をUIスレッドで先に生成してキャッシュしておく。
+        // ノード作成はバックグラウンドで行われるため、WPFオブジェクトの生成はここで済ませる。
+        await Application.Current.Dispatcher.InvokeAsync(() => GetDummyImage(), DispatcherPriority.Send);
+
+        // ファイルノードの作成とDB情報の取得はバックグラウンドスレッドで実行する
+        // （UIスレッド上で行うと大きなフォルダでUIが長時間ブロックされる）
+        var fileNodes = await Task.Run(() => CreateFileNodesAsync(files, token), token);
+
+        // レーティングが設定されたときにノードを更新するのでここでのDB更新は不要になった
+
+        // ソート条件に基づいてノードをソート
+        if (fileNodes.Count > 0)
+        {
+            SortFileNodes(fileNodes);
+        }
+
+        // 破棄された古い読み込みは共有状態に触れない（新しい読み込みが管理しているため）
+        token.ThrowIfCancellationRequested();
+
+        // ノード構築が完了してから一覧を一括差し替える。
+        // 構築前にクリアすると、キャンセルや例外で一覧が空のまま残ってしまう。
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            // ディスパッチャ待ちの間に新しい読み込みが開始された場合は何もしない
+            if (token.IsCancellationRequested) return;
+            _viewModel.Items.Clear();
+            foreach (var node in fileNodes)
             {
-                _folderLoadingCTS.Cancel();
-                _folderLoadingCTS.Dispose();
+                _viewModel.Items.Add(node);
             }
-            _folderLoadingCTS = new CancellationTokenSource();
-            var token = _folderLoadingCTS.Token;
+            _viewModel.FilteredItems.Refresh();
 
-            LogHelper.LogWithTimestamp($"[THUMBNAIL_LOADER] フォルダ読み込み開始: {folderPath}", LogHelper.Categories.ThumbnailLoader);
+            // FilteredItemsの件数を確認してログ出力
+            int filteredCount = _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
+            LogHelper.LogWithTimestamp($"FilteredItemsの件数: {filteredCount}件", LogHelper.Categories.ThumbnailLoader);
+        }, DispatcherPriority.Send);
 
-            // 既存のアイテムをクリア
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                _viewModel.Items.Clear();
-                _viewModel.FilteredItems.Refresh();
-            }, DispatcherPriority.Send);
+        // 現在のフォルダパスを更新
+        token.ThrowIfCancellationRequested();
+        _currentFolderPath = folderPath;
 
-            // ファイル一覧を取得
-            LogHelper.LogWithTimestamp("[PERFORMANCE] ファイル一覧の取得を開始", LogHelper.Categories.ThumbnailLoader);
-            var sw = Stopwatch.StartNew();
-            var files = await Task.Run(() => GetFilesInFolder(folderPath), token);
-            sw.Stop();
-            LogHelper.LogWithTimestamp($"[PERFORMANCE] [完了] ファイル取得: {sw.ElapsedMilliseconds}ms - {files.Count}件のファイルを取得", LogHelper.Categories.ThumbnailLoader);
-
-            // ファイルノードを作成
-            LogHelper.LogWithTimestamp("ファイルノードの作成を開始", LogHelper.Categories.ThumbnailLoader);
-            LogHelper.LogWithTimestamp($"{files.Count}件のファイルからノードを作成します", LogHelper.Categories.ThumbnailLoader);
-            var fileNodes = CreateFileNodes(files, token);
-
-            // データベースから情報を取得してノードを強化
-            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のファイルのメタデータをバルク取得します", LogHelper.Categories.ThumbnailLoader);
-            LogHelper.LogWithTimestamp($"フォルダパス: {folderPath}", LogHelper.Categories.ThumbnailLoader);
-            await EnrichFileNodesWithDatabaseInfoBulk(fileNodes, folderPath);
-            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードをDBから取得しました", LogHelper.Categories.ThumbnailLoader);
-            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードにDBの情報を設定しました", LogHelper.Categories.ThumbnailLoader);
-            LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードを作成しました", LogHelper.Categories.ThumbnailLoader);
-
-            // レーティングが設定されたときにノードを更新するのでここでのDB更新は不要になった
-
-            // ソート条件に基づいてノードをソート
-            if (fileNodes.Count > 0)
-            {
-                SortFileNodes(fileNodes);
-            }
-
-            // ViewModelのItemsを更新
-            LogHelper.LogWithTimestamp($"ViewModelのItemsを更新開始: {fileNodes.Count}件", LogHelper.Categories.ThumbnailLoader);
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                _viewModel.Items.Clear();
-                foreach (var node in fileNodes)
-                {
-                    _viewModel.Items.Add(node);
-                }
-                _viewModel.FilteredItems.Refresh();
-
-                // 重要: FilteredItemsの件数を確認してログ出力
-                int filteredCount = _viewModel.FilteredItems.Cast<FileNodeModel>().Count();
-                LogHelper.LogWithTimestamp($"FilteredItemsの件数: {filteredCount}件", LogHelper.Categories.ThumbnailLoader);
-            }, DispatcherPriority.Send);
-
-            // 現在のフォルダパスを更新
-            _currentFolderPath = folderPath;
-
-            // FileNodesLoaded イベントは不要になったため削除
-
-            LogHelper.LogWithTimestamp("完了", LogHelper.Categories.ThumbnailLoader);
-        }
-        catch (OperationCanceledException)
-        {
-            LogHelper.LogWithTimestamp("キャンセルされました", LogHelper.Categories.ThumbnailLoader);
-        }
-        catch (Exception ex)
-        {
-            LogHelper.LogError($"ファイルノードの読み込み中にエラーが発生しました: {ex.Message}", ex);
-        }
+        LogHelper.LogWithTimestamp("完了", LogHelper.Categories.ThumbnailLoader);
     }
 
     /// <summary>
@@ -900,11 +884,22 @@ public class ThumbnailLoaderHelper
             sw.Start();
 
             // サポートされている拡張子をFileHelperから取得
-            var files = new List<string>();
-            foreach (var extension in FileHelper.SupportedExtensions)
+            // 拡張子ごとの Directory.GetFiles ではなく単一パスの列挙を使用する。
+            // 従来方式は一部のファイルでエラー（長いパス、アクセス権、クラウドプレースホルダ等）が
+            // 発生すると例外扱いで全体が空になり、「フォルダを選んだのに一覧が空」の原因になっていた。
+            var supportedExtensions = new HashSet<string>(
+                FileHelper.SupportedExtensions,
+                StringComparer.OrdinalIgnoreCase);
+            var enumerationOptions = new EnumerationOptions
             {
-                files.AddRange(Directory.GetFiles(folderPath, $"*{extension}", SearchOption.TopDirectoryOnly));
-            }
+                RecurseSubdirectories = false,
+                IgnoreInaccessible = true, // アクセス不能な項目はスキップして列挙を継続
+                AttributesToSkip = 0       // 従来の Directory.GetFiles 同様に隠し/システムファイルも対象
+            };
+            var files = Directory
+                .EnumerateFiles(folderPath, "*", enumerationOptions)
+                .Where(f => supportedExtensions.Contains(Path.GetExtension(f)))
+                .ToList();
 
             // ファイル取得時間を計測
             var fileGetTime = sw.ElapsedMilliseconds;
@@ -963,7 +958,7 @@ public class ThumbnailLoaderHelper
         }
     }
 
-    private List<FileNodeModel> CreateFileNodes(List<string> files, CancellationToken cancellationToken)
+    private async Task<List<FileNodeModel>> CreateFileNodesAsync(List<string> files, CancellationToken cancellationToken)
     {
         var fileNodes = new List<FileNodeModel>(files.Count); // 容量を事前に確保
         LogHelper.LogWithTimestamp($"{files.Count}件のファイルからノードを作成します", "ThumbnailLoader");
@@ -997,19 +992,11 @@ public class ThumbnailLoaderHelper
             }
         }
 
-        // ファイルノードを作成した後、バルクでデータベース情報を取得
+        // ファイルノードを作成した後、バルクでデータベース情報を取得（ここで一度だけ実行する）
         if (fileNodes.Count > 0)
         {
-            try
-            {
-                string folderPath = Path.GetDirectoryName(files[0]);
-                // 同期的に実行（非同期メソッドを同期的に呼び出す）
-                EnrichFileNodesWithDatabaseInfoBulk(fileNodes, folderPath).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"DBからのバルク情報取得エラー: {ex.Message}", ex, "ThumbnailLoader");
-            }
+            string folderPath = Path.GetDirectoryName(files[0]);
+            await EnrichFileNodesWithDatabaseInfoBulk(fileNodes, folderPath);
         }
 
         LogHelper.LogWithTimestamp($"{fileNodes.Count}件のノードを作成しました", "ThumbnailLoader");
