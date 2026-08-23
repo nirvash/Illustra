@@ -28,10 +28,10 @@ namespace Illustra.Mcp.Tools
         public async Task<SetViewFilterResult> SetViewFilter(
             [Description("Enable or disable the AI-generation-prompt filter.")] bool? promptFilter = null,
             [Description("Shows only files rated exactly at this value (1-5). 0 disables the rating filter.")] int? rating = null,
-            [Description("File extensions to show, with or without a leading dot (e.g. \"png\", \".mp4\"). Enables the extension filter when specified.")] IReadOnlyList<string>? extensions = null,
+            [Description("File extensions to show, with or without a leading dot (e.g. \"png\", \".mp4\"). Enables the extension filter when specified. Pass an empty list to disable the extension filter only.")] IReadOnlyList<string>? extensions = null,
             [Description("When true, removes all filters and ignores other options.")] bool clear = false)
         {
-            if (!clear && !promptFilter.HasValue && !rating.HasValue && (extensions == null || extensions.Count == 0))
+            if (!clear && !promptFilter.HasValue && !rating.HasValue && extensions == null)
             {
                 throw new ArgumentException("Specify at least one filter option (promptFilter, rating, extensions) or set clear=true.");
             }

@@ -49,7 +49,8 @@ namespace Illustra.Views
                 {
                     if (args.Rating.HasValue) builder.WithRatingFilter(args.Rating.Value);
                     if (args.PromptFilterEnabled.HasValue) builder.WithPromptFilter(args.PromptFilterEnabled.Value);
-                    if (args.Extensions is { Count: > 0 }) builder.WithExtensionFilter(true, args.Extensions);
+                    // 空配列は「拡張子フィルタの単独解除」として扱う
+                    if (args.Extensions != null) builder.WithExtensionFilter(args.Extensions.Count > 0, args.Extensions);
 
                     filterArgs = builder.Build();
                 }
@@ -91,6 +92,12 @@ namespace Illustra.Views
             {
                 state.IsExtensionFilterEnabled = true;
                 state.ExtensionFilters = new List<string>(args.Extensions);
+            }
+            else if (args.Extensions != null)
+            {
+                // 空配列指定は拡張子フィルタの明示的な解除
+                state.IsExtensionFilterEnabled = false;
+                state.ExtensionFilters = new List<string>();
             }
             else
             {
