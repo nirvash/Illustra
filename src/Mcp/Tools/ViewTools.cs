@@ -11,7 +11,8 @@ namespace Illustra.Mcp.Tools
         [property: JsonPropertyName("filterState")] ViewFilterState FilterState);
 
     /// <summary>
-    /// 繧｢繧ｯ繝・ぅ繝悶ン繝･繝ｼ縺ｮ繝輔ぅ繝ｫ繧ｿ謫堺ｽ懊ヤ繝ｼ繝ｫ縲６I 迥ｶ諷九ｒ螟画峩縺吶ｋ縺溘ａ繝悶Μ繝・ず邨檎罰縺ｧ螳溯｡後☆繧九・    /// </summary>
+    /// アクティブビューのフィルタ操作ツール。UI 状況を変更するためブリッジ経路で実行する。
+    /// </summary>
     [McpServerToolType]
     public class ViewTools
     {
@@ -27,7 +28,7 @@ namespace Illustra.Mcp.Tools
         public async Task<SetViewFilterResult> SetViewFilter(
             [Description("Enable or disable the AI-generation-prompt filter.")] bool? promptFilter = null,
             [Description("Shows only files rated exactly at this value (1-5). 0 disables the rating filter.")] int? rating = null,
-            [Description("File extensions to show without dot (e.g. \"png\", \"mp4\"). Enables the extension filter when specified.")] IReadOnlyList<string>? extensions = null,
+            [Description("File extensions to show, with or without a leading dot (e.g. \"png\", \".mp4\"). Enables the extension filter when specified.")] IReadOnlyList<string>? extensions = null,
             [Description("When true, removes all filters and ignores other options.")] bool clear = false)
         {
             if (!clear && !promptFilter.HasValue && !rating.HasValue && (extensions == null || extensions.Count == 0))
@@ -39,12 +40,19 @@ namespace Illustra.Mcp.Tools
                 throw new ArgumentOutOfRangeException(nameof(rating), "rating must be between 0 and 5.");
             }
 
+            var normalizedExtensions = extensions?
+                .Select(e => e?.Trim())
+                .Where(e => !string.IsNullOrEmpty(e))
+                .Select(e => "." + e.TrimStart('.').ToLowerInvariant())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
             var args = new McpSetViewFilterEventArgs
             {
                 Clear = clear,
                 PromptFilterEnabled = promptFilter,
                 Rating = rating,
-                Extensions = extensions?.ToList()
+                Extensions = normalizedExtensions
             };
 
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpSetViewFilterEvent>());
