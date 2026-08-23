@@ -142,6 +142,11 @@ namespace Illustra.Mcp.Tools
                 throw new DirectoryNotFoundException($"Target folder does not exist: {targetFolder}. Create it with create_folder first.");
             }
 
+            // ドライブルート (D:\ 等) も対象になり得るため、ルートの区切り文字を保持する
+            // Path.TrimEndingDirectorySeparator を使う。string.TrimEnd だと "D:\" が "D:"
+            // (ドライブ相対パス) に変わってしまう。
+            var normalizedTarget = Path.TrimEndingDirectorySeparator(Path.GetFullPath(targetFolder));
+
             foreach (var path in paths)
             {
                 if (!string.IsNullOrWhiteSpace(path) && !File.Exists(path))
@@ -155,8 +160,8 @@ namespace Illustra.Mcp.Tools
             {
                 var sameFolder = paths.All(p =>
                     string.Equals(
-                        Path.GetDirectoryName(Path.GetFullPath(p)),
-                        Path.GetFullPath(targetFolder).TrimEnd(Path.DirectorySeparatorChar),
+                        Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(Path.GetFullPath(p))!),
+                        normalizedTarget,
                         StringComparison.OrdinalIgnoreCase));
                 if (sameFolder)
                 {
@@ -167,7 +172,7 @@ namespace Illustra.Mcp.Tools
             var fileOperation = new FileOperationHelper(_db);
             var processed = await fileOperation.ExecuteFileOperation(
                 paths.ToList(),
-                Path.GetFullPath(targetFolder).TrimEnd(Path.DirectorySeparatorChar),
+                normalizedTarget,
                 isCopy);
 
             return new FileOperationResult(processed, processed.Count, paths.Count, paths.Count - processed.Count);
