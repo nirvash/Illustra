@@ -18,7 +18,7 @@ namespace Illustra.Mcp.Tools
         [property: JsonPropertyName("filterState")] ViewFilterState? FilterState = null);
 
     public record ViewFilterState(
-        [property: JsonPropertyName("ratingMin")] int RatingMin,
+        [property: JsonPropertyName("rating")] int Rating,
         [property: JsonPropertyName("promptFilterEnabled")] bool PromptFilterEnabled,
         [property: JsonPropertyName("tagFilterEnabled")] bool TagFilterEnabled,
         [property: JsonPropertyName("tagFilters")] IReadOnlyList<string> TagFilters,
@@ -70,7 +70,7 @@ namespace Illustra.Mcp.Tools
             if (args.FilterState is { } f)
             {
                 filterState = new ViewFilterState(
-                    f.RatingMin,
+                    f.Rating,
                     f.IsPromptFilterEnabled,
                     f.IsTagFilterEnabled,
                     f.TagFilters,

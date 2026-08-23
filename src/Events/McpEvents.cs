@@ -93,8 +93,8 @@ namespace Illustra.Events
     /// </summary>
     public class ViewFilterStateModel
     {
-        /// <summary>レーティングフィルタ下限。0 はフィルタ無しを意味する。</summary>
-        public int RatingMin { get; set; }
+        /// <summary>レーティングフィルタ値。0 はフィルタ無しを意味する。</summary>
+        public int Rating { get; set; }
         public bool IsPromptFilterEnabled { get; set; }
         public bool IsTagFilterEnabled { get; set; }
         public List<string> TagFilters { get; set; } = [];
@@ -120,7 +120,7 @@ namespace Illustra.Events
     public class McpSetViewFilterEventArgs : McpBaseEventArgs
     {
         public bool Clear { get; set; }
-        public int? RatingMin { get; set; }
+        public int? Rating { get; set; }
         public bool? PromptFilterEnabled { get; set; }
         public List<string>? Extensions { get; set; }
         public ViewFilterStateModel? AppliedFilterState { get; set; }

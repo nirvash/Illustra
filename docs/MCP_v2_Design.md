@@ -115,7 +115,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 3 | `select_file` | `paths[]`(必須) | `{selectedCount, paths}` | 新規 `McpSelectFilesEvent` + TCS → ThumbnailListControl が選択反映 |
 | 4 | `list_files` | `offset?=0`, `limit?=1000`, `filter?{ratingMin?, ratingMax?, fileType?}` | `{folderPath, totalCount, files:[{path,fileName,fileSize,lastModified,rating}]}` | 新規 `McpGetFileListEvent` + TCS（アクティブタブの読み込み済み一覧スナップショット） |
 | 5 | `get_selected_files` | なし | `{files:[{path,fileName}]}` | 新規 `McpGetSelectedFilesEvent` + TCS |
-| 6 | `get_app_status` | なし | `{currentFolder, loadedFileCount, selectedFiles:[{path,fileName}], openTabs[], filterState:{ratingMin, promptFilterEnabled, tagFilterEnabled, tagFilters, extensionFilterEnabled, extensionFilters}}` | 新規 `McpGetAppStatusEvent` + TCS（アクティブタブと全タブのフォルダ・選択状態・アクティブビューのフィルタ状態＝ユーザーが見えている状態を返す接続診断/状況把握用） |
+| 6 | `get_app_status` | なし | `{currentFolder, loadedFileCount, selectedFiles:[{path,fileName}], openTabs[], filterState:{rating, promptFilterEnabled, tagFilterEnabled, tagFilters, extensionFilterEnabled, extensionFilters}}` | 新規 `McpGetAppStatusEvent` + TCS（アクティブタブと全タブのフォルダ・選択状態・アクティブビューのフィルタ状態＝ユーザーが見えている状態を返す接続診断/状況把握用） |
 | 7 | `get_file_metadata` | `filePath`(必須) | `{basicInfo, rating, userComment, generationMetadata}` | UI スレッド不要: `ImagePropertiesModel.LoadFromFileAsync` + `DatabaseManager.GetFileNodeAsync` |
 | 8 | `get_thumbnail` | `filePath`(必須), `maxSize?=512` | ImageContent (base64 JPEG) | UI スレッド不要: `ThumbnailHelper.CreateThumbnailAsync` → JPEG エンコード |
 | 9 | `get_favorite_folders` | なし | `{folders:[{path,displayName}]}` | `SettingsHelper.GetSettings().FavoriteFolders` を読み取り |
@@ -126,7 +126,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 14 | `create_folder` | `path`(必須) | `{created, path}` | `Directory.CreateDirectory`（既存なら created=false） |
 | 15 | `get_server_info` | なし | `{serverName, version, currentFolder, enabledToolsCount}` | 接続診断用 |
 | 16 | `set_files_rating` | `paths[]`(必須), `rating`(必須・0〜5、0で解除) | `{processed:[paths], processedCount, requestedCount, rating, failedCount, failed?}` | UI スレッド不要: `DatabaseManager.UpdateRatingAsync`（Upsert/未登録なら新規ノード）+ `RatingChangedEvent` 発行で表示中ビューへ即時反映 |
-| 17 | `set_view_filter` | `promptFilter?`, `ratingMin?`(0〜5), `extensions?[]`, `clear?`=false | `{applied, filterState:{ratingMin, promptFilterEnabled, tagFilterEnabled, tagFilters, extensionFilterEnabled, extensionFilters}}` | 新規 `McpSetViewFilterEvent` + TCS → ThumbnailListControl が既存 `FilterChangedEvent` フローへ橋渡し。UI 表示・ViewModel も連動 |
+| 17 | `set_view_filter` | `promptFilter?`, `rating?`(0〜5、完全一致), `extensions?[]`, `clear?`=false | `{applied, filterState:{rating, promptFilterEnabled, tagFilterEnabled, tagFilters, extensionFilterEnabled, extensionFilters}}` | 新規 `McpSetViewFilterEvent` + TCS → ThumbnailListControl が既存 `FilterChangedEvent` フローへ橋渡し。UI 表示・ViewModel も連動 |
 | 18 | `rename_folder` | `folderPath`(必須), `newFolderName`(必須・パス区切り不可) | `{renamed, oldPath, newPath, databaseUpdated}` | UI スレッド不要: `Directory.Move` + `DatabaseManager.UpdateFolderPathsAsync`（子孫ファイルの FolderPath/FullPath 一括更新）。UI 反映は FileSystemMonitor 経由（監視外ドライブではタブ再オープン時に反映）。DB 更新失敗時は `databaseUpdated:false` を返す |
 
 ### 制約・方針

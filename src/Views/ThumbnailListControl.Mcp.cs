@@ -45,7 +45,7 @@ namespace Illustra.Views
                 }
                 else
                 {
-                    if (args.RatingMin.HasValue) builder.WithRatingFilter(args.RatingMin.Value);
+                    if (args.Rating.HasValue) builder.WithRatingFilter(args.Rating.Value);
                     if (args.PromptFilterEnabled.HasValue) builder.WithPromptFilter(args.PromptFilterEnabled.Value);
                     if (args.Extensions is { Count: > 0 }) builder.WithExtensionFilter(true, args.Extensions);
 
@@ -79,7 +79,7 @@ namespace Illustra.Views
 
             var state = new ViewFilterStateModel
             {
-                RatingMin = args.RatingMin ?? _viewModel.CurrentRatingFilter,
+                Rating = args.Rating ?? _viewModel.CurrentRatingFilter,
                 IsPromptFilterEnabled = args.PromptFilterEnabled ?? _isPromptFilterEnabled,
                 IsTagFilterEnabled = _isTagFilterEnabled,
                 TagFilters = new List<string>(_currentTagFilters)
@@ -106,7 +106,7 @@ namespace Illustra.Views
         {
             return new ViewFilterStateModel
             {
-                RatingMin = _viewModel.CurrentRatingFilter,
+                Rating = _viewModel.CurrentRatingFilter,
                 IsPromptFilterEnabled = _isPromptFilterEnabled,
                 IsTagFilterEnabled = _isTagFilterEnabled,
                 TagFilters = new List<string>(_currentTagFilters),
