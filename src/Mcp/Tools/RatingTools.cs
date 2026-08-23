@@ -74,6 +74,11 @@ namespace Illustra.Mcp.Tools
             // UpdateRatingAsync は Upsert（更新0行なら Insert）で動くため、
             // Insert 時の NOT NULL 列を埋めておく必要がある。
             var fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException($"File not found: {fullPath}", fullPath);
+            }
+
             var node = await _db.GetFileNodeAsync(fullPath) ?? new FileNodeModel
             {
                 FullPath = fullPath,
