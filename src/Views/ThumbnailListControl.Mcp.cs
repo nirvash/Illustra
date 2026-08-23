@@ -1,0 +1,153 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows.Controls;
+using Illustra.Events;
+using Illustra.Helpers;
+using Illustra.Models;
+using Prism.Events;
+
+namespace Illustra.Views
+{
+    /// <summary>
+    /// ThumbnailListControl のうち MCP v2 ツール連携に関する partial クラス。
+    /// </summary>
+    public partial class ThumbnailListControl : UserControl, IActiveAware, IFileSystemChangeHandler, INotifyPropertyChanged
+    {
+        /// <summary>
+        /// MCP ツール（select_file / list_files / get_selected_files）用のイベント購読。
+        /// </summary>
+        private void SubscribeMcpEvents()
+        {
+            _eventAggregator.GetEvent<McpSelectFilesEvent>().Subscribe(OnMcpSelectFiles, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpGetFileListEvent>().Subscribe(OnMcpGetFileList, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpGetSelectedFilesEvent>().Subscribe(OnMcpGetSelectedFiles, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpGetAppStatusEvent>().Subscribe(OnMcpGetAppStatus, ThreadOption.UIThread);
+        }
+
+        /// <summary>
+        /// 指定パスのファイルをアクティブタブで選択状態にする。
+        /// フィルタで非表示のファイルは選択対象外とし、反映件数を ResultCompletionSource 経由で返す。
+        /// （select_file ツールは selectedCount と requestedCount の比較で部分成功を検出できる）
+        /// </summary>
+        private void OnMcpSelectFiles(McpSelectFilesEventArgs args)
+        {
+            try
+            {
+                var pathSet = new HashSet<string>(args.Paths ?? [], StringComparer.OrdinalIgnoreCase);
+
+                // 現在フィルタリングされて表示中のアイテムのみを選択対象にする。
+                // 非表示アイテムを選択状態にすると、UI 上は未選択なのに copy/delete 等が
+                // 見えないファイルへ作用するため許可しない。
+                var matches = GetFilteredItemsList().Where(x => pathSet.Contains(x.FullPath)).ToList();
+
+                foreach (var path in (args.Paths ?? []).Where(p => !matches.Any(m => string.Equals(m.FullPath, p, StringComparison.OrdinalIgnoreCase))))
+                {
+                    Debug.WriteLine($"[MCP] 選択をスキップ（フィルタで非表示または未読み込み）: {path}");
+                }
+
+                ThumbnailItemsControl.SelectedItems.Clear();
+                _viewModel.SelectedItems.Clear();
+                foreach (var match in matches)
+                {
+                    ThumbnailItemsControl.SelectedItems.Add(match);
+                    _viewModel.SelectedItems.Add(match);
+                }
+                if (matches.Count > 0)
+                {
+                    ThumbnailItemsControl.ScrollIntoView(matches[0]);
+                }
+
+                args.ResultCompletionSource?.TrySetResult(matches.Count);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP select_file 処理中にエラーが発生しました", ex);
+                args.ResultCompletionSource?.TrySetException(new InvalidOperationException($"Failed to select files in Illustra: {ex.Message}", ex));
+            }
+        }
+
+        /// <summary>
+        /// アクティブタブのフォルダパスと読み込み済みファイル一覧を返す。
+        /// </summary>
+        private void OnMcpGetFileList(McpGetFileListEventArgs args)
+        {
+            try
+            {
+                args.FolderPath = _mainWindowViewModel.SelectedTab?.State?.FolderPath;
+                args.Files = _viewModel.Items.Cast<FileNodeModel>()
+                    .Select(n => new FileListItemModel
+                    {
+                        Path = n.FullPath,
+                        FileName = n.FileName,
+                        FileSize = n.FileSize,
+                        LastModified = n.LastModified,
+                        Rating = n.Rating
+                    })
+                    .ToList();
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP list_files 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// アクティブタブの選択中ファイル一覧を返す。
+        /// </summary>
+        private void OnMcpGetSelectedFiles(McpGetSelectedFilesEventArgs args)
+        {
+            try
+            {
+                args.Files = _viewModel.SelectedItems
+                    .Select(n => new SelectedFileInfoModel
+                    {
+                        Path = n.FullPath,
+                        FileName = n.FileName
+                    })
+                    .ToList();
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP get_selected_files 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// アクティブタブのフォルダ・選択中ファイルなどアプリ全体のステータスを返す。
+        /// </summary>
+        private void OnMcpGetAppStatus(McpGetAppStatusEventArgs args)
+        {
+            try
+            {
+                args.CurrentFolder = _mainWindowViewModel.SelectedTab?.State?.FolderPath;
+                args.LoadedFileCount = _viewModel.Items.Count;
+                args.SelectedFiles = _viewModel.SelectedItems
+                    .Select(n => new SelectedFileInfoModel
+                    {
+                        Path = n.FullPath,
+                        FileName = n.FileName
+                    })
+                    .ToList();
+                args.OpenTabs = _mainWindowViewModel.Tabs
+                    .Select(t => t.State?.FolderPath ?? string.Empty)
+                    .ToList();
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP get_app_status 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+    }
+}
