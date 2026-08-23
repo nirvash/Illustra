@@ -14,7 +14,16 @@ namespace Illustra.Mcp.Tools
         [property: JsonPropertyName("currentFolder")] string? CurrentFolder,
         [property: JsonPropertyName("loadedFileCount")] int LoadedFileCount,
         [property: JsonPropertyName("selectedFiles")] IReadOnlyList<SelectedFileInfo> SelectedFiles,
-        [property: JsonPropertyName("openTabs")] IReadOnlyList<string> OpenTabs);
+        [property: JsonPropertyName("openTabs")] IReadOnlyList<string> OpenTabs,
+        [property: JsonPropertyName("filterState")] ViewFilterState? FilterState = null);
+
+    public record ViewFilterState(
+        [property: JsonPropertyName("ratingMin")] int RatingMin,
+        [property: JsonPropertyName("promptFilterEnabled")] bool PromptFilterEnabled,
+        [property: JsonPropertyName("tagFilterEnabled")] bool TagFilterEnabled,
+        [property: JsonPropertyName("tagFilters")] IReadOnlyList<string> TagFilters,
+        [property: JsonPropertyName("extensionFilterEnabled")] bool ExtensionFilterEnabled,
+        [property: JsonPropertyName("extensionFilters")] IReadOnlyList<string> ExtensionFilters);
 
     /// <summary>
     /// アプリケーション操作系ツール。
@@ -46,7 +55,7 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_app_status", ReadOnly = true, Idempotent = true)]
-        [Description("Returns the current application status of Illustra: the active tab folder, files loaded in the active view, currently selected files and open tab folders.")]
+        [Description("Returns the current application status of Illustra: the active tab folder, files loaded in the active view, currently selected files, open tab folders and the filter state applied to the active view (what the user currently sees).")]
         public async Task<AppStatusResult> GetAppStatus()
         {
             var args = new McpGetAppStatusEventArgs();
@@ -57,11 +66,24 @@ namespace Illustra.Mcp.Tools
                 throw new InvalidOperationException($"Failed to get the application status: {args.ErrorMessage}");
             }
 
+            ViewFilterState? filterState = null;
+            if (args.FilterState is { } f)
+            {
+                filterState = new ViewFilterState(
+                    f.RatingMin,
+                    f.IsPromptFilterEnabled,
+                    f.IsTagFilterEnabled,
+                    f.TagFilters,
+                    f.IsExtensionFilterEnabled,
+                    f.ExtensionFilters);
+            }
+
             return new AppStatusResult(
                 args.CurrentFolder,
                 args.LoadedFileCount,
                 (args.SelectedFiles ?? []).Select(m => new SelectedFileInfo(m.Path, m.FileName)).ToList(),
-                args.OpenTabs ?? []);
+                args.OpenTabs ?? [],
+                filterState);
         }
     }
 }

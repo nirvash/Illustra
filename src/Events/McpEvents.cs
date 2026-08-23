@@ -88,12 +88,42 @@ namespace Illustra.Events
     /// </summary>
     public class McpGetAppStatusEvent : PubSubEvent<McpGetAppStatusEventArgs> { }
 
+    /// <summary>
+    /// アクティブビューに適用されているフィルタの状態。
+    /// </summary>
+    public class ViewFilterStateModel
+    {
+        /// <summary>レーティングフィルタ下限。0 はフィルタ無しを意味する。</summary>
+        public int RatingMin { get; set; }
+        public bool IsPromptFilterEnabled { get; set; }
+        public bool IsTagFilterEnabled { get; set; }
+        public List<string> TagFilters { get; set; } = [];
+        public bool IsExtensionFilterEnabled { get; set; }
+        public List<string> ExtensionFilters { get; set; } = [];
+    }
+
     public class McpGetAppStatusEventArgs : McpBaseEventArgs
     {
         public string? CurrentFolder { get; set; }
         public int LoadedFileCount { get; set; }
         public List<SelectedFileInfoModel>? SelectedFiles { get; set; }
         public List<string>? OpenTabs { get; set; }
+        public ViewFilterStateModel? FilterState { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
+    /// <summary>
+    /// アクティブビューのフィルタ変更を要求するイベント（MCP set_view_filter 用）。
+    /// </summary>
+    public class McpSetViewFilterEvent : PubSubEvent<McpSetViewFilterEventArgs> { }
+
+    public class McpSetViewFilterEventArgs : McpBaseEventArgs
+    {
+        public bool Clear { get; set; }
+        public int? RatingMin { get; set; }
+        public bool? PromptFilterEnabled { get; set; }
+        public List<string>? Extensions { get; set; }
+        public ViewFilterStateModel? AppliedFilterState { get; set; }
         public string? ErrorMessage { get; set; }
     }
 

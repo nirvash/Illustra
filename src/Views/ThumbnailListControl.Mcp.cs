@@ -25,6 +25,61 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<McpGetFileListEvent>().Subscribe(OnMcpGetFileList, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpGetSelectedFilesEvent>().Subscribe(OnMcpGetSelectedFiles, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpGetAppStatusEvent>().Subscribe(OnMcpGetAppStatus, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<McpSetViewFilterEvent>().Subscribe(OnMcpSetViewFilter, ThreadOption.UIThread);
+        }
+
+        /// <summary>
+        /// アクティブビューのフィルタを変更する（MCP set_view_filter 用）。
+        /// 既存の FilterChangedEvent フローへ橋渡しし、UI 表示・ViewModel と同期する。
+        /// </summary>
+        private void OnMcpSetViewFilter(McpSetViewFilterEventArgs args)
+        {
+            try
+            {
+                var builder = new FilterChangedEventArgsBuilder("mcp-v2");
+                FilterChangedEventArgs filterArgs;
+
+                if (args.Clear)
+                {
+                    filterArgs = builder.SetClear().Build();
+                }
+                else
+                {
+                    if (args.RatingMin.HasValue) builder.WithRatingFilter(args.RatingMin.Value);
+                    if (args.PromptFilterEnabled.HasValue) builder.WithPromptFilter(args.PromptFilterEnabled.Value);
+                    if (args.Extensions is { Count: > 0 }) builder.WithExtensionFilter(true, args.Extensions);
+
+                    filterArgs = builder.Build();
+                }
+
+                // SourceId が CONTROL_ID でないため、自身の OnFilterChanged で適用される
+                _eventAggregator.GetEvent<FilterChangedEvent>().Publish(filterArgs);
+
+                args.AppliedFilterState = GetActiveViewFilterState();
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError("MCP set_view_filter 処理中にエラーが発生しました", ex);
+                args.ErrorMessage = ex.Message;
+                args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// アクティブビューに現在有効なフィルタ状態を取得する。
+        /// </summary>
+        private ViewFilterStateModel GetActiveViewFilterState()
+        {
+            return new ViewFilterStateModel
+            {
+                RatingMin = _viewModel.CurrentRatingFilter,
+                IsPromptFilterEnabled = _isPromptFilterEnabled,
+                IsTagFilterEnabled = _isTagFilterEnabled,
+                TagFilters = new List<string>(_currentTagFilters),
+                IsExtensionFilterEnabled = _isExtensionFilterEnabled,
+                ExtensionFilters = new List<string>(_currentExtensionFilters)
+            };
         }
 
         /// <summary>
@@ -140,6 +195,7 @@ namespace Illustra.Views
                 args.OpenTabs = _mainWindowViewModel.Tabs
                     .Select(t => t.State?.FolderPath ?? string.Empty)
                     .ToList();
+                args.FilterState = GetActiveViewFilterState();
                 args.ResultCompletionSource?.TrySetResult(true);
             }
             catch (Exception ex)
