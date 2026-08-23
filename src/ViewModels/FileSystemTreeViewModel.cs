@@ -263,6 +263,21 @@ namespace Illustra.ViewModels
                 {
                     _ignoreSelectedPathOnce = args.FolderPath;
                     Expand(args.FolderPath);
+
+                    // 展開サイクル終了後にフラグを掃除する。
+                    // 展開に伴う選択変更が抑制（IsExpandingPath 等）で SelectedItem セッターを
+                    // 経由しなかった場合、フラグが残留し、後のユーザーによる同じパスへのクリックを
+                    // 誤って握り潰すため。エコー選択はレイアウト（Background より高い優先度）で
+                    // 先に処理されるため、この時点で残っているフラグは消費されなかったもの。
+                    Application.Current.Dispatcher.BeginInvoke(
+                        new Action(() =>
+                        {
+                            if (_ignoreSelectedPathOnce == args.FolderPath)
+                            {
+                                _ignoreSelectedPathOnce = null;
+                            }
+                        }),
+                        DispatcherPriority.Background);
                     // フォルダを展開した後、そのノードを画面内に表示
                     _eventAggregator.GetEvent<BringTreeItemIntoViewEvent>().Publish(args.FolderPath);
 
