@@ -26,19 +26,21 @@ namespace Illustra.ViewModels.Settings
         private bool _enableServer;
         private string _portText = string.Empty;
         private bool _showToken;
+        private bool _isBusy;
 
         public McpSettingsViewModel(AppSettingsModel settings)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _hostManager = ContainerLocator.Container.Resolve<McpHostManager>();
 
-            ApplyPortCommand = new RelayCommand(ApplyPort, () => IsPortChanged);
+            ApplyPortCommand = new RelayCommand(ApplyPort, () => IsPortChanged && !_isBusy);
             CopyTokenCommand = new RelayCommand(CopyToken);
             RegenerateTokenCommand = new RelayCommand(RegenerateToken);
 
-            // ホスト状態が変化したらステータス表示を更新
+            // ホスト状態が変化したらステータス表示を更新（バックグラウンド発火のため UI スレッドで受信する）
             var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
-            eventAggregator.GetEvent<McpServerStatusChangedEvent>().Subscribe(_ => OnPropertyChanged(nameof(StatusText)));
+            eventAggregator.GetEvent<McpServerStatusChangedEvent>()
+                .Subscribe(OnMcpServerStatusChanged, ThreadOption.UIThread);
         }
 
         /// <summary>
@@ -47,7 +49,16 @@ namespace Illustra.ViewModels.Settings
         public bool EnableServer
         {
             get => _enableServer;
-            set => ApplyEnableStateAsync(value);
+            set
+            {
+                if (_isBusy)
+                {
+                    // 切替処理中は新しい値を採用せず、現在の状態へ表示を戻す
+                    OnPropertyChanged(nameof(EnableServer));
+                    return;
+                }
+                ApplyEnableStateAsync(value);
+            }
         }
 
         /// <summary>リッスンポート（テキスト入力）。適用ボタンで保存・反映。</summary>
@@ -128,6 +139,7 @@ namespace Illustra.ViewModels.Settings
         /// </summary>
         private async void ApplyEnableStateAsync(bool enable)
         {
+            _isBusy = true;
             try
             {
                 if (enable)
@@ -156,8 +168,18 @@ namespace Illustra.ViewModels.Settings
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+            finally
+            {
+                _isBusy = false;
+            }
 
             OnPropertyChanged(nameof(EnableServer));
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        /// <summary>MCP サーバーの稼働状態変化イベントを受け取る。</summary>
+        private void OnMcpServerStatusChanged(McpServerStatusChangedEventArgs args)
+        {
             OnPropertyChanged(nameof(StatusText));
         }
 
@@ -166,20 +188,28 @@ namespace Illustra.ViewModels.Settings
         /// </summary>
         private async void ApplyPort()
         {
-            if (!ValidatePort(out var port)) return;
+            if (_isBusy || !ValidatePort(out var port)) return;
 
+            var oldPort = _settings.McpPort;
+            _isBusy = true;
             try
             {
+                // ホストは SettingsHelper.GetSettings() 経由で最新のメモリ上のポートを参照するため、
+                // 先にメモリ上の設定だけ更新して再起動する。永続化は再起動成功後に限定する。
                 _settings.McpPort = port;
-                SettingsHelper.SaveSettings(_settings);
 
                 if (_hostManager.IsRunning)
                 {
                     await _hostManager.RestartAsync();
                 }
+
+                SettingsHelper.SaveSettings(_settings);
             }
             catch (Exception ex)
             {
+                // 失敗時はメモリ上のポートを元に戻す（settings.json は未更新のまま）
+                _settings.McpPort = oldPort;
+
                 LogHelper.LogError("MCP ポートの適用中にエラーが発生しました", ex);
                 MessageBox.Show(
                     string.Format(
@@ -188,6 +218,10 @@ namespace Illustra.ViewModels.Settings
                     GetLocalizedString("String_Error", "Error"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isBusy = false;
             }
 
             OnPropertyChanged(nameof(IsPortChanged));
@@ -253,12 +287,8 @@ namespace Illustra.ViewModels.Settings
 
         public override void SaveSettings()
         {
-            // 動的反映済みのため整合性維持のみ行う（キャンセルしても動的変更は取り消さない）
+            // ポートは「適用」成功時のみ保存するため、ここではトグル状態の整合性維持のみ行う
             _settings.EnableMcpHost = _enableServer;
-            if (int.TryParse(PortText, out var port))
-            {
-                _settings.McpPort = port;
-            }
         }
 
         public override bool ValidateSettings()
