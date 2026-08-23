@@ -271,6 +271,10 @@ namespace Illustra.Views
 
                 args.FilePath = path;
                 ShowImageViewer(path);
+                if (args.BringToFront)
+                {
+                    BringMcpViewerToFront();
+                }
                 args.Shown = true;
                 args.VisibleInCurrentFilter = GetFilteredItemsList().Any(x => string.Equals(x.FullPath, path, StringComparison.OrdinalIgnoreCase));
                 args.ResultCompletionSource?.TrySetResult(true);
@@ -280,6 +284,40 @@ namespace Illustra.Views
                 LogHelper.LogError("MCP show_viewer 処理中にエラーが発生しました", ex);
                 args.ErrorMessage = ex.Message;
                 args.ResultCompletionSource?.TrySetResult(false);
+            }
+        }
+
+        /// <summary>
+        /// Windows のフォアグラウンド制限下でも MCP から要求されたビューワを前面へ移動する。
+        /// 常時最前面にはせず、元が Topmost でなければ UI 処理後に解除する。
+        /// </summary>
+        private void BringMcpViewerToFront()
+        {
+            var viewer = _imageViewerWindow;
+            if (viewer == null)
+                return;
+
+            if (viewer.WindowState == System.Windows.WindowState.Minimized)
+            {
+                viewer.WindowState = System.Windows.WindowState.Normal;
+            }
+
+            bool wasTopmost = viewer.Topmost;
+            viewer.Topmost = true;
+            viewer.Activate();
+            viewer.Focus();
+
+            if (!wasTopmost)
+            {
+                viewer.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+                    new Action(() =>
+                    {
+                        if (ReferenceEquals(_imageViewerWindow, viewer))
+                        {
+                            viewer.Topmost = false;
+                        }
+                    }));
             }
         }
 
