@@ -55,7 +55,8 @@ namespace Illustra.Views
                 // SourceId が CONTROL_ID でないため、自身の OnFilterChanged で適用される
                 _eventAggregator.GetEvent<FilterChangedEvent>().Publish(filterArgs);
 
-                args.AppliedFilterState = GetActiveViewFilterState();
+                // UIThread への反映は非同期のため、要求適用後の状態をここで算出して返す
+                args.AppliedFilterState = ComputeFilterStateAfterRequest(args);
                 args.ResultCompletionSource?.TrySetResult(true);
             }
             catch (Exception ex)
@@ -64,6 +65,38 @@ namespace Illustra.Views
                 args.ErrorMessage = ex.Message;
                 args.ResultCompletionSource?.TrySetResult(false);
             }
+        }
+
+        /// <summary>
+        /// 要求適用後のフィルタ状態を算出する（OnFilterChanged の適用ロジックと同一の規則）。
+        /// </summary>
+        private ViewFilterStateModel ComputeFilterStateAfterRequest(McpSetViewFilterEventArgs args)
+        {
+            if (args.Clear)
+            {
+                return new ViewFilterStateModel();
+            }
+
+            var state = new ViewFilterStateModel
+            {
+                RatingMin = args.RatingMin ?? _viewModel.CurrentRatingFilter,
+                IsPromptFilterEnabled = args.PromptFilterEnabled ?? _isPromptFilterEnabled,
+                IsTagFilterEnabled = _isTagFilterEnabled,
+                TagFilters = new List<string>(_currentTagFilters)
+            };
+
+            if (args.Extensions is { Count: > 0 })
+            {
+                state.IsExtensionFilterEnabled = true;
+                state.ExtensionFilters = new List<string>(args.Extensions);
+            }
+            else
+            {
+                state.IsExtensionFilterEnabled = _isExtensionFilterEnabled;
+                state.ExtensionFilters = new List<string>(_currentExtensionFilters);
+            }
+
+            return state;
         }
 
         /// <summary>
