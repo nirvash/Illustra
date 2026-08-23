@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Nodes;
 using Illustra.Helpers;
 using Illustra.Models;
 using NUnit.Framework;
@@ -157,6 +158,35 @@ namespace Illustra.Tests.Helpers
         }
 
         [Test]
+        public void Analyze_H3ContextLoop_ExtractsResolvedShotPromptsInOrder()
+        {
+            var plan = new JsonObject
+            {
+                ["prompt_prefix"] = "shared direction",
+                ["shots"] = new JsonArray("first scene", "second scene")
+            };
+            var graph = new JsonObject
+            {
+                ["1"] = new JsonObject
+                {
+                    ["inputs"] = new JsonObject
+                    {
+                        ["plan_json"] = plan.ToJsonString(),
+                        ["run_name"] = "must not become prompt"
+                    },
+                    ["class_type"] = "MiniMaxH3ChainPlan"
+                }
+            };
+
+            var result = ComfyUIGraphAnalyzer.Analyze(graph.ToJsonString());
+
+            Assert.That(result.Prompt, Is.EqualTo(
+                "shared direction\n\nfirst scene\n\nshared direction\n\nsecond scene"));
+            Assert.That(result.Prompt, Is.Not.Contains("must not become prompt"));
+            Assert.That(result.ParseSuccess, Is.True);
+        }
+
+        [Test]
         public void Analyze_WithOnlyAssetStrings_PromptStaysEmpty()
         {
             // Arrange: プロンプトらしき文字列がなく、アセットパスだけの場合
@@ -171,6 +201,49 @@ namespace Illustra.Tests.Helpers
             Assert.That(result, Is.Not.Null);
             Assert.That(result.Prompt, Is.Null.Or.Empty);
             Assert.That(result.ParseSuccess, Is.False);
+        }
+
+        [Test]
+        public void Analyze_H3ContextLoop_WithInvalidPlanJson_DoesNotThrow()
+        {
+            var graph = new JsonObject
+            {
+                ["1"] = new JsonObject
+                {
+                    ["inputs"] = new JsonObject { ["plan_json"] = "not valid JSON" },
+                    ["class_type"] = "MiniMaxH3ChainPlan"
+                }
+            };
+
+            GenerationMetadata result = null;
+            Assert.DoesNotThrow(() => result = ComfyUIGraphAnalyzer.Analyze(graph.ToJsonString()));
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.Null.Or.Empty);
+        }
+
+        [Test]
+        public void Analyze_H3ContextLoop_WithBareNaN_NormalizesOnlyJsonValue()
+        {
+            var plan = new JsonObject
+            {
+                ["shots"] = new JsonArray("literal NaN prompt")
+            };
+            var graph = new JsonObject
+            {
+                ["1"] = new JsonObject
+                {
+                    ["inputs"] = new JsonObject { ["plan_json"] = plan.ToJsonString() },
+                    ["is_changed"] = new JsonArray((JsonNode)null),
+                    ["class_type"] = "MiniMaxH3ChainPlan"
+                }
+            };
+            string json = graph.ToJsonString().Replace("[null]", "[NaN]");
+
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Prompt, Is.EqualTo("literal NaN prompt"));
+            Assert.That(result.ParseSuccess, Is.True);
         }
 
         [Test]

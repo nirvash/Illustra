@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Illustra.Models;
@@ -95,7 +96,18 @@ namespace Illustra.Helpers
             }
             catch (JsonException)
             {
-                return null;
+                string normalizedJson = NormalizeNamedFloatingPointLiterals(promptJson);
+                if (ReferenceEquals(normalizedJson, promptJson))
+                    return null;
+
+                try
+                {
+                    root = JsonNode.Parse(normalizedJson) as JsonObject;
+                }
+                catch (JsonException)
+                {
+                    return null;
+                }
             }
 
             if (root == null || root.Count == 0)
@@ -132,6 +144,94 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
+        /// ComfyUI が変更検知値などへ出力する非標準 JSON 数値を null に正規化する。
+        /// 文字列内の同名テキストは変更しない。
+        /// </summary>
+        private static string NormalizeNamedFloatingPointLiterals(string json)
+        {
+            StringBuilder normalized = null;
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = 0; i < json.Length; i++)
+            {
+                char current = json[i];
+                if (inString)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                    }
+                    else if (current == '\\')
+                    {
+                        escaped = true;
+                    }
+                    else if (current == '"')
+                    {
+                        inString = false;
+                    }
+
+                    normalized?.Append(current);
+                    continue;
+                }
+
+                if (current == '"')
+                {
+                    inString = true;
+                    normalized?.Append(current);
+                    continue;
+                }
+
+                int tokenLength = GetNamedNumberTokenLength(json, i);
+                if (tokenLength > 0 &&
+                    IsJsonTokenBoundary(json, i - 1) &&
+                    IsJsonTokenBoundary(json, i + tokenLength))
+                {
+                    if (normalized == null)
+                    {
+                        normalized = new StringBuilder(json.Length);
+                        normalized.Append(json, 0, i);
+                    }
+
+                    normalized.Append("null");
+                    i += tokenLength - 1;
+                    continue;
+                }
+
+                normalized?.Append(current);
+            }
+
+            return normalized?.ToString() ?? json;
+        }
+
+        private static int GetNamedNumberTokenLength(string json, int index)
+        {
+            if (index + 9 <= json.Length &&
+                string.CompareOrdinal(json, index, "-Infinity", 0, 9) == 0)
+                return 9;
+            if (index + 8 <= json.Length &&
+                string.CompareOrdinal(json, index, "Infinity", 0, 8) == 0)
+                return 8;
+            if (index + 3 <= json.Length &&
+                string.CompareOrdinal(json, index, "NaN", 0, 3) == 0)
+                return 3;
+
+            return 0;
+        }
+
+        private static bool IsJsonTokenBoundary(string json, int index)
+        {
+            if (index < 0 || index >= json.Length)
+                return true;
+
+            char value = json[index];
+            return char.IsWhiteSpace(value) ||
+                   value == '[' || value == ']' ||
+                   value == '{' || value == '}' ||
+                   value == ',' || value == ':';
+        }
+
+        /// <summary>
         /// 生成系ノードから逆方向にリンクを辿り、プロンプト本文を収集する
         /// </summary>
         private static void ExtractPrompts(
@@ -165,6 +265,14 @@ namespace Illustra.Helpers
             metadata.Prompt = PickLongest(positives);
             metadata.NegativePrompt = PickLongest(negatives.Where(n => n != metadata.Prompt));
 
+            // MiniMax H3 Context Loop は実行時に現在の scene prompt を出力するため、
+            // API グラフ上の prompt リンクだけでは静的な文字列へ到達できない。
+            // 通常の接続グラフ解析で見つからなかった場合に限り、Plan の各 shot から抽出する。
+            if (metadata.Prompt == null)
+            {
+                metadata.Prompt = ExtractH3ChainPlanPrompts(nodeClassTypes, nodeInputs);
+            }
+
             // グラフ辿りで見つからない場合のフォールバック:
             // 未接続だが text 系入力を持つノードを探す（メモ系ノードは除外）
             if (metadata.Prompt == null && negatives.Count == 0)
@@ -189,6 +297,72 @@ namespace Illustra.Helpers
 
                 metadata.Prompt = PickLongest(fallbackPositives);
             }
+        }
+
+        /// <summary>
+        /// MiniMax H3 Context Loop の plan_json から、実行時に各 shot へ渡される
+        /// prompt_prefix + scene prompt を shot 順に抽出する。
+        /// </summary>
+        private static string ExtractH3ChainPlanPrompts(
+            Dictionary<string, string> nodeClassTypes,
+            Dictionary<string, JsonObject> nodeInputs)
+        {
+            var candidates = new List<string>();
+
+            foreach (var nodeId in nodeClassTypes.Keys)
+            {
+                if (nodeClassTypes[nodeId] != "MiniMaxH3ChainPlan" ||
+                    !(nodeInputs[nodeId]["plan_json"] is JsonValue planValue) ||
+                    !planValue.TryGetValue<string>(out string planJson) ||
+                    string.IsNullOrWhiteSpace(planJson))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    JsonNode planNode = JsonNode.Parse(planJson);
+                    JsonObject planObject = planNode as JsonObject;
+                    JsonArray shots = planNode as JsonArray ?? planObject?["shots"] as JsonArray;
+                    if (shots == null)
+                        continue;
+
+                    string prefix = GetStringValue(planObject?["prompt_prefix"]);
+                    if (string.IsNullOrWhiteSpace(prefix))
+                        prefix = GetStringValue(planObject?["global_prompt"]);
+
+                    var resolvedPrompts = new List<string>();
+                    foreach (var shot in shots)
+                    {
+                        string scenePrompt = shot is JsonObject shotObject
+                            ? GetStringValue(shotObject["prompt"])
+                            : GetStringValue(shot);
+
+                        var parts = new[] { prefix, scenePrompt }
+                            .Where(part => !string.IsNullOrWhiteSpace(part));
+                        string resolvedPrompt = string.Join("\n\n", parts);
+                        if (!string.IsNullOrEmpty(resolvedPrompt))
+                            resolvedPrompts.Add(resolvedPrompt);
+                    }
+
+                    if (resolvedPrompts.Count > 0)
+                        candidates.Add(string.Join("\n\n", resolvedPrompts));
+                }
+                catch (JsonException)
+                {
+                    // 不正な plan_json は他の通常フォールバックを妨げない。
+                }
+            }
+
+            return PickLongest(candidates);
+        }
+
+        private static string GetStringValue(JsonNode node)
+        {
+            if (node is JsonValue value && value.TryGetValue<string>(out string text))
+                return text?.Trim();
+
+            return null;
         }
 
         /// <summary>
