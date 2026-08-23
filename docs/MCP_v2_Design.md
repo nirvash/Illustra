@@ -106,7 +106,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 5. 画像の検索・選択誘導 | `list_files` + `get_thumbnail` → `select_file` |
 | 6. お気に入りフォルダの把握 | `get_favorite_folders` |
 
-## 5. ツール仕様（v1: 15 ツール）
+## 5. ツール仕様（v1: 15 ツール + 拡張 1）
 
 | # | ツール | 引数 | 戻り値 | 実装経路 |
 |---|---|---|---|---|
@@ -125,6 +125,7 @@ app.MapMcp(); // /mcp エンドポイント（Streamable HTTP）
 | 13 | `rename_file` | `filePath`(必須), `newFileName`(必須・パス区切り不可) | `{renamed, oldPath, newPath}` | `FileOperationHelper.RenameFile` — DB 追従。同名ファイル存在時はエラー |
 | 14 | `create_folder` | `path`(必須) | `{created, path}` | `Directory.CreateDirectory`（既存なら created=false） |
 | 15 | `get_server_info` | なし | `{serverName, version, currentFolder, enabledToolsCount}` | 接続診断用 |
+| 16 | `set_files_rating` | `paths[]`(必須), `rating`(必須・0〜5、0で解除) | `{processed:[paths], processedCount, requestedCount, rating, failedCount, failed?}` | UI スレッド不要: `DatabaseManager.UpdateRatingAsync`（Upsert/未登録なら新規ノード）+ `RatingChangedEvent` 発行で表示中ビューへ即時反映 |
 
 ### 制約・方針
 
@@ -185,6 +186,7 @@ src/Mcp/
       ├─ FolderTools.cs             (open_folder, get_favorite_folders, create_folder, get_server_info)
       ├─ FileSelectionTools.cs      (select_file, get_selected_files, list_files)
       ├─ MetadataTools.cs           (get_file_metadata, get_thumbnail)
+      ├─ RatingTools.cs             (set_files_rating)
       └─ FileOperationTools.cs      (move_files, copy_files, delete_files, rename_file)
 src/
   ├─ Events/McpEvents.cs            (Mcp* イベント定義)
