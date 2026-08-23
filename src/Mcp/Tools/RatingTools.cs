@@ -72,19 +72,15 @@ namespace Illustra.Mcp.Tools
         {
             // 未登録のファイルにレーティングを付けた場合は新規ノードを作る。
             // UpdateRatingAsync は Upsert（更新0行なら Insert）で動くため、
-            // Insert 時の NOT NULL 列を埋めておく必要がある。
+            // ファイルパス付きコンストラクタで FileType/FileSize 等の
+            // NOT NULL 列とメタデータを初期化しておく。
             var fullPath = Path.GetFullPath(path);
             if (!File.Exists(fullPath))
             {
                 throw new FileNotFoundException($"File not found: {fullPath}", fullPath);
             }
 
-            var node = await _db.GetFileNodeAsync(fullPath) ?? new FileNodeModel
-            {
-                FullPath = fullPath,
-                FileName = Path.GetFileName(fullPath),
-                FolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty
-            };
+            var node = await _db.GetFileNodeAsync(fullPath) ?? new FileNodeModel(fullPath);
 
             node.Rating = rating;
             await _db.UpdateRatingAsync(node);
