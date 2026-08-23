@@ -105,7 +105,20 @@ namespace Illustra.Views
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            // Process.Start (ShellExecute) はセキュリティソフトの検査等で
+            // 長時間ブロックされることがあり、UI スレッドで直接実行すると
+            // アプリ全体がフリーズするため、UI スレッド外で実行する
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to open URL: {ex.Message}");
+                }
+            });
             e.Handled = true;
         }
     }
