@@ -2724,10 +2724,12 @@ namespace Illustra.Views
             {
                 // 新しい読み込み開始に伴うキャンセルは正常な動作
                 LogHelper.LogWithTimestamp("[フォルダ切替] LoadFileNodesがキャンセルされました", LogHelper.Categories.ThumbnailLoader);
+                return false; // キャンセル=失敗扱い。後続の状態更新（監視開始・イベント発行）を行わない
             }
             catch (Exception ex)
             {
                 LogHelper.LogError($"[フォルダ切替] LoadFileNodesでエラーが発生しました: {ex.Message}", ex);
+                return false; // 失敗時も true を返さない（古い一覧のまま監視を開始しない）
             }
             finally
             {
