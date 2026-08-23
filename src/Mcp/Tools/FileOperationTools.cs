@@ -151,17 +151,19 @@ namespace Illustra.Mcp.Tools
                 }
             }
 
-            // 移動元と移動先が同一フォルダの場合は意味がないため拒否
+            // 移動元が移動先フォルダと同一の場合は意味がないため拒否する。
+            // 混在要求（同一フォルダと別フォルダが混在）でも同一フォルダの移動元が
+            // GetUniqueDestinationPath により意図せずリネームされるため、1件でも含まれていれば拒否。
             if (!isCopy)
             {
-                var sameFolder = paths.All(p =>
+                var sameFolderSource = paths.FirstOrDefault(p =>
                     string.Equals(
                         Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(Path.GetFullPath(p))!),
                         normalizedTarget,
                         StringComparison.OrdinalIgnoreCase));
-                if (sameFolder)
+                if (sameFolderSource != null)
                 {
-                    throw new InvalidOperationException($"Source and target folders are the same: {targetFolder}");
+                    throw new InvalidOperationException($"Source is already in the target folder: {sameFolderSource}");
                 }
             }
 
