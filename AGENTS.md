@@ -1,120 +1,133 @@
-# Illustra - AI Developer Guide
+# Illustra - AI エージェントガイド
 
-このファイルは AI エージェント（opencode）がこのリポジトリで作業する際のガイドラインです。
+## Project Overview
 
-## プロジェクト概要
+Windows 用画像ビューア（WPF + .NET 9、`net9.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
 
-**Illustra** は Windows 用の高速画像ビューア。WPF + .NET 9 で実装され、仮想化サムネイル表示、画像レーティング、Stable Diffusion プロンプト表示、タブ表示などの機能を持つ。
+- ソリューション: `src/Illustra.csproj`（メインアプリ）+ `tests/Illustra.Tests.csproj`（NUnit + Moq）
+- ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（`src/Events/UIEvents.cs`）
+- 永続化: 設定 = JSON（`SettingsHelper` → `AppSettingsModel`）、レーティング等 = SQLite（`DatabaseManager`）
+- `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー（`http://localhost:5149/mcp`）
+- 作業言語・ドキュメント・コミットメッセージは日本語。コミットは Conventional Commits（`feat:`/`fix:` プレフィックスがリリースノート生成に使われる）
 
-- 対象 OS: Windows 10/11
-- フレームワーク: `net9.0-windows`（WPF）
-- アーキテクチャ: MVVM（Prism、イベントアグリゲーター）
-- ライセンス: MIT
+環境の罠（毎回影響）: NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要。PowerShell 出力を見るコマンドには UTF-8 設定プレフィックスが必要。詳細は `docs/agent-context/build-and-test.md`。
 
-## 開発環境
+## Context Policy
 
-- OS: Windows（シェルは PowerShell 5.1）
-- .NET 9 SDK 必須
-- IDE: Visual Studio 2022（人間の開発者向け）
-- **シェル出力の文字コード注意**: 実シェルは PowerShell 5.1 であり、コンソール既定は **CP932（Shift-JIS）**。`dotnet` 等の CLI は UTF-8 で出力するため、そのままだと日本語出力が文字化けする。出力内容を確認するコマンドでは先頭に次を付けること（呼び出し毎にシェルは新規起動されるため毎回必要）:
+Minimize context usage.
 
-  ```powershell
-  [Console]::OutputEncoding = [Text.Encoding]::UTF8; $OutputEncoding = [Text.Encoding]::UTF8
-  ```
+- Do NOT scan or preload the entire repository at the start of a task.
+- Do NOT automatically load all documents referenced by this file.
+- Load files only when they are relevant to the current task.
+- Prefer search and symbol lookup before opening source files.
+- Read the smallest useful set of files.
+- Do not reread files already sufficiently represented in the current context unless verification is necessary.
+- Use project summaries before exploring implementation details.
+- Source code is authoritative if documentation is stale or conflicts with implementation.
 
+## Context Index
 
-## コマンド
+Read these only when relevant:
 
-```bash
-# ビルド
-dotnet build Illustra.sln
+- アーキテクチャと構成要素の関係、データフロー、設計上の制約:
+  `docs/agent-context/architecture.md`
+- モジュール別の責務と「この問題ならどのファイルを見るべきか」の地図:
+  `docs/agent-context/modules.md`
+- ビルド・テスト・実行コマンド、検証の順序（狭い→広い）:
+  `docs/agent-context/build-and-test.md`
+- プロジェクト固有のコーディング規約（多言語対応・UI・データ・Git）:
+  `docs/agent-context/conventions.md`
+- 既知の罠、生成ファイル、危険な操作、プラットフォーム固有の挙動:
+  `docs/agent-context/known-gotchas.md`
 
-# 実行（メインアプリ）
-dotnet run --project src/Illustra.csproj
+セッション開始時にこれらを一括で読み込まないこと。
 
-# テスト（NUnit）
-dotnet test Illustra.sln
+## Task Workflow
 
-# 特定テストのみ実行
-dotnet test tests/Illustra.Tests.csproj --filter "FullyQualifiedName~<TestName>"
-```
+For each task:
 
-- バージョン番号は GitVersion で管理（`src/GitVersion.yml`）。手動でバージョンを書き換えないこと
-- `*_wpftmp.csproj` は XAML コンパイラが生成する一時ファイル。編集・削除しないこと
-- lint/format の専用コマンドは存在しない。ビルド警告をゼロに保つこと
+1. Identify the affected subsystem from AGENTS.md.
+2. Load only the relevant agent-context document if necessary.
+3. Search for the specific symbols, classes, methods, or files involved.
+4. Read only the files needed to understand or modify the behavior.
+5. Make the change.
+6. Run the narrowest relevant verification first.
+7. Expand the investigation only if the narrow approach is insufficient.
 
-## ソリューション構成
+Do not explore unrelated modules merely to gain general familiarity with the repository.
 
-| プロジェクト | パス | 役割 |
-|---|---|---|
-| Illustra | `src/Illustra.csproj` | メインアプリケーション |
-| Illustra.Tests | `tests/Illustra.Tests.csproj` | テスト（NUnit + Moq） |
+## Search-First Policy
 
-## ソースコード構造（src/ 配下）
+Before broadly reading source code:
 
-```
-Views/      XAML + code-behind（Partial クラスで機能分割）
-ViewModels/ ViewModel（Prism ベース）
-Models/     データモデル
-Services/   サービス層
-Controls/   再利用可能なカスタムコントロール
-Events/     イベントアグリゲーター用イベント定義（UIEvents.cs、McpEvents.cs）
-Helpers/    ユーティリティ
-Converters/ XAML 値コンバーター
-Themes/     テーマ（MahApps.Metro ベース、ライト/ダーク）
-Resources/  多言語リソース（Strings.xaml / Strings.ja.xaml）
-Mcp/        MCP サーバー機能（アプリ内 Kestrel ホスト、Streamable HTTP、ツール実装）
-```
+1. Search for the relevant symbol or feature name.
+2. Identify likely entry points.
+3. Follow only the dependencies relevant to the task.
+4. Open complete source files only when their implementation is actually needed.
 
-## 重要なルール
+Avoid broad directory scans when targeted search can identify the relevant code.
 
-### 多言語対応（必須）
+## Exploration Limits
 
-- 文言は `Resources/Strings.xaml`（英語）と `Resources/Strings.ja.xaml`（日本語）の **両方** に定義する
-- **片方だけだと起動時にクラッシュする**
-- 文言 ID は `String_<カテゴリ>_<名称>` 形式
-- 参照は `{DynamicResource String_XXX}` を使う
+Stop exploring once enough information has been obtained to perform the requested change safely.
 
-### コード規約
+Do not:
+- inspect every implementation of an interface unless required
+- read every file in a directory
+- recursively inspect unrelated callers and callees
+- inspect generated files unless diagnosing generation or build behavior
+- inspect unrelated tests
+- inspect historical, backup, or archived files without a specific reason
 
-- 機能ごとにクラス分割または Partial クラス化し、1 ファイルが巨大にならないようにする
-- 似たコードは共通化し、再利用可能なコンポーネントとして切り出す
-- 画面間通信はイベントアグリゲーターを使い、イベントは `Events/UIEvents.cs` に定義する
-- `Math.Min()` のように Math ライブラリのメソッドは大文字始まりで呼ぶ
-- 新しい名前空間を使ったら `using` を忘れない
-- ビルド警告（warning）を出さない・残したままにしない
+Before opening another large file, consider:
 
-### ダイアログデザイン
+"Will this file materially change the implementation, diagnosis, or verification plan?"
 
-- ボタン配置は **キャンセルが左、OK が右**（日英共通）
+If not, do not read it.
 
-### データ管理
+## Parent Agent Policy
 
-- レーティング等は SQLite（linq2db / sqlite-net）でファイルパスに紐付けて永続化
-- 設定のシリアライズは Newtonsoft.Json
-- DB 設計ドキュメント: `docs/DatabaseDesign.md`
+The primary agent is responsible for:
 
-## 主要ドキュメント
+- maintaining the authoritative task or review checklist
+- deciding which item is currently active
+- delegating bounded implementation or investigation tasks
+- reviewing subagent results
+- verifying completion
+- keeping the parent context concise
 
-| ドキュメント | 内容 |
-|---|---|
-| `docs/Implementation.md` | 機能 ↔ 実装箇所マッピング（コード理解の出発点） |
-| `docs/Spec.md`, `docs/Design.md` | 仕様・設計 |
-| `docs/Rule.md` | 開発ルール詳細 |
-| `docs/MCP_v2_Design.md` | MCP サーバー設計（アプリ内 Kestrel、Streamable HTTP、ツール仕様） |
-| `docs/ImageCacheDesign.md` | 画像キャッシュ設計 |
-| `docs/ZoomDesign.md` | ズーム/パン設計 |
+The parent agent should avoid performing broad implementation exploration when it can delegate a well-bounded task.
 
-実装前に対応する設計ドキュメントがあるか確認し、大きな変更時にはドキュメントを更新すること。
+When a subagent returns, retain only the information needed to continue:
 
-## Git 運用
+- conclusion
+- files changed
+- important design implications
+- verification performed
+- unresolved risks
 
-- コミットメッセージは日本語で Conventional Commits スタイル: `feat: xxxを追加`、`fix: xxxの不具合を修正`
-- 作業ブランチから master への PR で開発
-- リリースは GitHub Actions（`.github/workflows/release.yml`）
+Do not copy large source excerpts or full investigation logs into the parent context.
 
-## 注意事項
+レビュー指摘を順に処理する場合は各項目の状態を親側で管理する:
+`unstarted → in progress → implemented → verified`
+subagent の修正完了だけでは `verified` にしない。親が確認した後でのみ更新する。
 
-- UI 変更後は必ずビルドして動作確認する（XAML エラーは実行時まで気づきにくい）
-- テストを追加・更新した場合は `dotnet test` で通ることを確認する
-- `bin/`、`obj/`、`publish/`、`TestResults/` は生成物。コミットしない
+## Subagent Policy
+
+委譲用 subagent 定義: `.opencode/agent/bounded-task.md`。subagent に委譲する際はこの定義を使う（または同等の方針をプロンプトに含める）。1 つの小さな修正ごとに複数の subagent を起動せず、まとまった 1 単位で委譲する。
+
+## Maintaining Agent Context
+
+Update agent-context documentation only when a change materially affects:
+
+- architecture
+- module responsibilities
+- major entry points
+- important dependencies
+- build/test procedures
+- repository-wide conventions
+- important known pitfalls
+
+Do not update summaries for routine local implementation changes.
+
+Keep all updates concise.
