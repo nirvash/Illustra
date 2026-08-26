@@ -56,7 +56,7 @@ namespace Illustra.Mcp.Tools
         [Description("Opens the specified folder in the Illustra application and optionally selects a file.")]
         public async Task<FolderToolResult> OpenFolder(
             [Description("Absolute path of the folder to open.")] string folderPath,
-            [Description("Optional absolute path of a file to select after opening the folder.")] string? selectedFilePath = null)
+            [Description("Optional absolute path of a file to select after opening the folder.")] string selectedFilePath = "")
         {
             ValidatePath(folderPath, nameof(folderPath), requireDirectory: true);
             if (!string.IsNullOrEmpty(selectedFilePath) && !File.Exists(selectedFilePath))
