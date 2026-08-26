@@ -81,7 +81,7 @@ namespace Illustra.Mcp.Tools
             [Description("Maximum number of items to return. Default 1000.")] int limit = 1000,
             [Description("Minimum rating filter (0-5). -1 means no filter.")] int ratingMin = -1,
             [Description("Maximum rating filter (0-5). -1 means no filter.")] int ratingMax = -1,
-            [Description("Extension filter without dot (e.g. \"png\", \"jpg\", \"mp4\"). Case-insensitive.")] string? fileType = null)
+            [Description("Extension filter without dot (e.g. \"png\", \"jpg\", \"mp4\"). Case-insensitive.")] string fileType = "")
         {
             if (offset < 0) throw new ArgumentException("offset must be >= 0.", nameof(offset));
             if (limit <= 0 || limit > 5000) throw new ArgumentException("limit must be between 1 and 5000.", nameof(limit));

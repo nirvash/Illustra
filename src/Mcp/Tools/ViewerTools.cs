@@ -33,7 +33,7 @@ namespace Illustra.Mcp.Tools
         [McpServerTool(Name = "show_viewer", Idempotent = true)]
         [Description("Shows a file in the Illustra image viewer window. If filePath is omitted, the currently selected file in the active folder view is used. The file is shown even when it is hidden by the current view filter; the response reports its visibility as visibleInCurrentFilter. Reuses the existing viewer window when it is already open. By default, forces the viewer to the front.")]
         public async Task<ShowViewerResult> ShowViewer(
-            [Description("Absolute path of the image/video file to show. Optional when the active view has a selection.")] string? filePath = null,
+            [Description("Absolute path of the image/video file to show. Omit to use the currently selected file.")] string filePath = "",
             [Description("When true, forces the viewer window to the front. Default true.")] bool bringToFront = true)
         {
             if (!string.IsNullOrWhiteSpace(filePath))
@@ -49,7 +49,7 @@ namespace Illustra.Mcp.Tools
 
             var args = new McpShowViewerEventArgs
             {
-                FilePath = filePath ?? string.Empty,
+                FilePath = filePath,
                 BringToFront = bringToFront
             };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpShowViewerEvent>());
