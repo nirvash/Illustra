@@ -63,6 +63,21 @@ namespace Illustra.Mcp.Tools
             return new ShowViewerResult(true, args.FilePath, args.VisibleInCurrentFilter);
         }
 
+        [McpServerTool(Name = "close_viewer", Idempotent = true)]
+        [Description("Closes the Illustra image viewer window if it is open.")]
+        public async Task<CloseViewerResult> CloseViewer()
+        {
+            var args = new McpCloseViewerEventArgs();
+            var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpCloseViewerEvent>());
+
+            if (result is not true)
+            {
+                throw new InvalidOperationException($"Failed to close the viewer{(args.ErrorMessage is null ? "" : $": {args.ErrorMessage}")}");
+            }
+
+            return new CloseViewerResult(args.Closed, args.WasOpen);
+        }
+
         private async Task SelectSpecifiedFileAsync(string filePath)
         {
             var targetFolder = Path.GetDirectoryName(filePath)
@@ -91,22 +106,12 @@ namespace Illustra.Mcp.Tools
             }
 
             var selectArgs = new McpSelectFilesEventArgs { Paths = [filePath] };
-            await _bridge.PublishAndWaitAsync(selectArgs, ea => ea.GetEvent<McpSelectFilesEvent>());
-        }
-
-        [McpServerTool(Name = "close_viewer", Idempotent = true)]
-        [Description("Closes the Illustra image viewer window if it is open.")]
-        public async Task<CloseViewerResult> CloseViewer()
-        {
-            var args = new McpCloseViewerEventArgs();
-            var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpCloseViewerEvent>());
-
-            if (result is not true)
+            var selectResult = await _bridge.PublishAndWaitAsync(selectArgs, ea => ea.GetEvent<McpSelectFilesEvent>());
+            if (selectResult is not int selectedCount || selectedCount != 1)
             {
-                throw new InvalidOperationException($"Failed to close the viewer{(args.ErrorMessage is null ? "" : $": {args.ErrorMessage}")}");
+                throw new InvalidOperationException($"Failed to select the file: {filePath}");
             }
-
-            return new CloseViewerResult(args.Closed, args.WasOpen);
         }
+
     }
 }

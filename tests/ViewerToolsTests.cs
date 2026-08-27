@@ -67,9 +67,23 @@ namespace Illustra.Tests
             Assert.That(bridge.SelectFilesArgs, Is.Null);
         }
 
+        [Test]
+        public void ShowViewer_WhenFileSelectionFails_DoesNotShowViewer()
+        {
+            var bridge = new CapturingMcpAppBridge
+            {
+                CurrentFolder = Path.GetDirectoryName(_tempFilePath),
+                SelectedCount = 0
+            };
+            var tools = new ViewerTools(bridge);
+
+            Assert.ThrowsAsync<InvalidOperationException>(() => tools.ShowViewer(_tempFilePath));
+            Assert.That(bridge.ShowViewerArgs, Is.Null);
+        }
         private sealed class CapturingMcpAppBridge : IMcpAppBridge
         {
             public string? CurrentFolder { get; init; }
+            public int SelectedCount { get; init; } = 1;
             public McpShowViewerEventArgs? ShowViewerArgs { get; private set; }
             public McpOpenFolderEventArgs? OpenFolderArgs { get; private set; }
             public McpSelectFilesEventArgs? SelectFilesArgs { get; private set; }
@@ -90,7 +104,7 @@ namespace Illustra.Tests
                         return Task.FromResult<object?>(true);
                     case McpSelectFilesEventArgs selectFilesArgs:
                         SelectFilesArgs = selectFilesArgs;
-                        return Task.FromResult<object?>(1);
+                        return Task.FromResult<object?>(SelectedCount);
                     case McpShowViewerEventArgs showViewerArgs:
                         ShowViewerArgs = showViewerArgs;
                         return Task.FromResult<object?>(true);
