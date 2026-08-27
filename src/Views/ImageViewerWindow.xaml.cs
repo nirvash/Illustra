@@ -16,6 +16,7 @@ using Illustra.Functions;
 using MahApps.Metro.Controls;
 using System.Windows.Controls.Primitives;
 using System.Threading.Tasks;
+using System.Threading;
 using System.IO;
 using Illustra.ViewModels;
 using Illustra.Controls;
@@ -58,6 +59,8 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
+        private CancellationTokenSource? _imageLoadCancellationTokenSource;
+        private CancellationTokenSource? _preloadCancellationTokenSource;
         private bool _isSlideshowActive = false;
         private readonly DispatcherTimer _slideshowTimer;
         public new ThumbnailListControl? Parent { get; set; }
@@ -241,6 +244,9 @@ namespace Illustra.Views
         {
             return (s, e) =>
             {
+                CancelAndDispose(ref _imageLoadCancellationTokenSource);
+                CancelAndDispose(ref _preloadCancellationTokenSource);
+
                 // イベントの購読解除
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
@@ -615,7 +621,7 @@ namespace Illustra.Views
         }
 
         // Renamed from LoadAndDisplayImage
-        private async Task LoadAndDisplayContent(string filePath)
+        private async Task LoadAndDisplayContent(string filePath, CancellationToken cancellationToken)
         {
             LogHelper.LogWithTimestamp("LoadAndDisplayContent - Start", LogHelper.Categories.Performance);
             // Stop video if playing
@@ -644,7 +650,7 @@ namespace Illustra.Views
                 }
                 else
                 {
-                    ShowStaticImage(filePath);
+                    await ShowStaticImageAsync(filePath, cancellationToken);
                 }
             }
         }
@@ -667,7 +673,7 @@ namespace Illustra.Views
             }
             else
             {
-                ShowStaticImage(filePath);
+                await ShowStaticImageAsync(filePath, CancellationToken.None);
             }
         }
 
@@ -682,7 +688,7 @@ namespace Illustra.Views
             VideoPlayerControl.FilePath = filePath; // Set FilePath to trigger loading in the control
         }
 
-        private void ShowStaticImage(string filePath)
+        private async Task ShowStaticImageAsync(string filePath, CancellationToken cancellationToken)
         {
             // Hide video player if visible
             if (VideoPlayerControl.Visibility == Visibility.Visible)
@@ -717,7 +723,17 @@ namespace Illustra.Views
                         LogHelper.Categories.ImageCache);
                 }
                 */
-                ImageSource = _imageCache.GetImage(filePath);
+                var image = await _imageCache.GetImageAsync(filePath, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    ImageSource = image;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 画像切替によるキャンセルは正常な動作として扱う。
             }
             catch (Exception ex)
             {
@@ -730,6 +746,8 @@ namespace Illustra.Views
         private async Task SwitchToContent(string filePath, bool notifyFileSelection)
         {
             LogHelper.LogWithTimestamp("SwitchToContent - Start", LogHelper.Categories.Performance);
+            var measurePerformance = ViewerPerformanceLog.IsEnabled;
+            var stopwatch = measurePerformance ? Stopwatch.StartNew() : null;
             try
             {
                 if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -755,12 +773,27 @@ namespace Illustra.Views
 
                 // 1. 現在のファイルパスを更新
                 _currentFilePath = filePath;
+                CancelAndDispose(ref _imageLoadCancellationTokenSource);
+                _imageLoadCancellationTokenSource = new CancellationTokenSource();
+                var imageLoadCancellationToken = _imageLoadCancellationTokenSource.Token;
+                var cacheHitBeforeLoad = FileHelper.IsImageFile(filePath) && _imageCache.HasImage(filePath);
 
                 // 2. コンテンツを表示
                 LogHelper.LogWithTimestamp("SwitchToContent - Before LoadAndDisplayContent", LogHelper.Categories.Performance);
-                await LoadAndDisplayContent(filePath); // Call LoadAndDisplayContent
+                await LoadAndDisplayContent(filePath, imageLoadCancellationToken); // Call LoadAndDisplayContent
+
+                if (imageLoadCancellationToken.IsCancellationRequested ||
+                    !string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
 
                 LogHelper.LogWithTimestamp("SwitchToContent - After LoadAndDisplayContent", LogHelper.Categories.Performance);
+                if (measurePerformance && ImageZoomControl.Visibility == Visibility.Visible)
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                    ViewerPerformanceLog.Append($"static-switch path=\"{filePath}\" renderMs={stopwatch!.ElapsedMilliseconds} cacheHit={cacheHitBeforeLoad}");
+                }
                 // 3. 画像の場合のみズームをリセット
                 if (ImageZoomControl.Visibility == Visibility.Visible)
                 {
@@ -780,7 +813,9 @@ namespace Illustra.Views
                         // ここでは呼び出し側でチェックする例を示す
                         // _imageCache.UpdateCache(files.Where(f => FileHelper.IsImageFile(f.FullPath)).ToList(), currentIndex);
                         // もしくは、UpdateCacheメソッド自体が動画を除外するように修正する
-                        _imageCache.UpdateCache(files, currentIndex); // IImageCache側で動画を除外すると仮定
+                        CancelAndDispose(ref _preloadCancellationTokenSource);
+                        _preloadCancellationTokenSource = new CancellationTokenSource();
+                        _ = PreloadImagesAsync(files, currentIndex, _preloadCancellationTokenSource.Token);
                     }
                 }
 
@@ -792,11 +827,38 @@ namespace Illustra.Views
                         new SelectedFileModel(CONTROL_ID, filePath));
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // 画像切替によるキャンセルは正常な動作として扱う。
+            }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading content: {ex.Message}");
                 MessageBox.Show($"コンテンツの読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private async Task PreloadImagesAsync(List<FileNodeModel> files, int currentIndex, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _imageCache.UpdateCacheAsync(files, currentIndex, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 新しい表示位置への切替によるキャンセルは正常な動作として扱う。
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"画像プリロード中にエラーが発生: {ex.Message}", ex);
+            }
+        }
+
+        private static void CancelAndDispose(ref CancellationTokenSource? cancellationTokenSource)
+        {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = null;
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
