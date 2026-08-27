@@ -46,11 +46,41 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "select_file", Destructive = false)]
-        [Description("Selects files in the active Illustra folder view. Only files currently loaded in the list can be selected.")]
+        [Description("Selects files in the active Illustra folder view. When exactly one requested file is in another folder, navigates to that folder and selects the file.")]
         public async Task<SelectFilesResult> SelectFile(
             [Description("Absolute paths of the image/video files to select.")] IReadOnlyList<string> paths)
         {
             ValidatePaths(paths);
+
+            if (paths.Count == 1)
+            {
+                var targetPath = Path.GetFullPath(paths[0]);
+                var targetFolder = Path.GetDirectoryName(targetPath)
+                    ?? throw new ArgumentException($"Could not determine the parent folder: {paths[0]}", nameof(paths));
+
+                var statusArgs = new McpGetAppStatusEventArgs();
+                await _bridge.PublishAndWaitAsync(statusArgs, ea => ea.GetEvent<McpGetAppStatusEvent>());
+
+                if (!string.Equals(
+                        Path.TrimEndingDirectorySeparator(statusArgs.CurrentFolder ?? string.Empty),
+                        Path.TrimEndingDirectorySeparator(targetFolder),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    var openFolderArgs = new McpOpenFolderEventArgs
+                    {
+                        FolderPath = targetFolder,
+                        SelectedFilePath = targetPath
+                    };
+                    var openResult = await _bridge.PublishAndWaitAsync(openFolderArgs, ea => ea.GetEvent<McpOpenFolderEvent>());
+                    if (openResult is not true)
+                    {
+                        throw new InvalidOperationException($"Illustra failed to open the folder: {targetFolder}");
+                    }
+
+                    return new SelectFilesResult(1, 1);
+                }
+            }
+
             var args = new McpSelectFilesEventArgs { Paths = paths };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpSelectFilesEvent>());
             var selectedCount = result is int count ? count : 0;
