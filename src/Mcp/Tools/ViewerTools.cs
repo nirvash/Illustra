@@ -31,7 +31,7 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "show_viewer", Idempotent = true)]
-        [Description("Shows a file in the Illustra image viewer window. If filePath is omitted, the currently selected file in the active folder view is used. The file is shown even when it is hidden by the current view filter; the response reports its visibility as visibleInCurrentFilter. Reuses the existing viewer window when it is already open. By default, forces the viewer to the front.")]
+        [Description("Shows a file in the Illustra image viewer window. When filePath is specified, it is selected in the active folder view (navigating to its parent folder when needed). If filePath is omitted, the currently selected file in the active folder view is used. The file is shown even when it is hidden by the current view filter; the response reports its visibility as visibleInCurrentFilter. Reuses the existing viewer window when it is already open. By default, forces the viewer to the front.")]
         public async Task<ShowViewerResult> ShowViewer(
             [Description("Absolute path of the image/video file to show. Omit to use the currently selected file.")] string filePath = "",
             [Description("When true, forces the viewer window to the front. Default true.")] bool bringToFront = true)
@@ -45,6 +45,7 @@ namespace Illustra.Mcp.Tools
                 }
 
                 filePath = full;
+                await SelectSpecifiedFileAsync(filePath);
             }
 
             var args = new McpShowViewerEventArgs
@@ -60,6 +61,37 @@ namespace Illustra.Mcp.Tools
             }
 
             return new ShowViewerResult(true, args.FilePath, args.VisibleInCurrentFilter);
+        }
+
+        private async Task SelectSpecifiedFileAsync(string filePath)
+        {
+            var targetFolder = Path.GetDirectoryName(filePath)
+                ?? throw new ArgumentException($"Could not determine the parent folder: {filePath}", nameof(filePath));
+
+            var statusArgs = new McpGetAppStatusEventArgs();
+            await _bridge.PublishAndWaitAsync(statusArgs, ea => ea.GetEvent<McpGetAppStatusEvent>());
+
+            if (!string.Equals(
+                    Path.TrimEndingDirectorySeparator(statusArgs.CurrentFolder ?? string.Empty),
+                    Path.TrimEndingDirectorySeparator(targetFolder),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var openFolderArgs = new McpOpenFolderEventArgs
+                {
+                    FolderPath = targetFolder,
+                    SelectedFilePath = filePath
+                };
+                var openResult = await _bridge.PublishAndWaitAsync(openFolderArgs, ea => ea.GetEvent<McpOpenFolderEvent>());
+                if (openResult is not true)
+                {
+                    throw new InvalidOperationException($"Illustra failed to open the folder: {targetFolder}");
+                }
+
+                return;
+            }
+
+            var selectArgs = new McpSelectFilesEventArgs { Paths = [filePath] };
+            await _bridge.PublishAndWaitAsync(selectArgs, ea => ea.GetEvent<McpSelectFilesEvent>());
         }
 
         [McpServerTool(Name = "close_viewer", Idempotent = true)]
