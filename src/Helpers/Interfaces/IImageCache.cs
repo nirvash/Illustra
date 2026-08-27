@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Illustra.Models;
 
@@ -17,6 +19,8 @@ namespace Illustra.Helpers.Interfaces
         /// <returns>画像データ</returns>
         BitmapSource GetImage(string path);
 
+        Task<BitmapSource> GetImageAsync(string path, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// キャッシュに画像が存在するか確認
         /// </summary>
@@ -31,6 +35,8 @@ namespace Illustra.Helpers.Interfaces
         /// <param name="currentIndex">現在の画像のインデックス</param>
         /// <remarks>このメソッドの実装は、動画ファイルを除外してキャッシュを更新する必要があります。</remarks>
         void UpdateCache(List<FileNodeModel> files, int currentIndex);
+
+        Task UpdateCacheAsync(List<FileNodeModel> files, int currentIndex, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// キャッシュのクリア

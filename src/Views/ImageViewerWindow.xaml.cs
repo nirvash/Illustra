@@ -644,7 +644,7 @@ namespace Illustra.Views
                 }
                 else
                 {
-                    ShowStaticImage(filePath);
+                    await ShowStaticImageAsync(filePath);
                 }
             }
         }
@@ -667,7 +667,7 @@ namespace Illustra.Views
             }
             else
             {
-                ShowStaticImage(filePath);
+                await ShowStaticImageAsync(filePath);
             }
         }
 
@@ -682,7 +682,7 @@ namespace Illustra.Views
             VideoPlayerControl.FilePath = filePath; // Set FilePath to trigger loading in the control
         }
 
-        private void ShowStaticImage(string filePath)
+        private async Task ShowStaticImageAsync(string filePath)
         {
             // Hide video player if visible
             if (VideoPlayerControl.Visibility == Visibility.Visible)
@@ -717,7 +717,7 @@ namespace Illustra.Views
                         LogHelper.Categories.ImageCache);
                 }
                 */
-                ImageSource = _imageCache.GetImage(filePath);
+                ImageSource = await _imageCache.GetImageAsync(filePath);
             }
             catch (Exception ex)
             {
@@ -730,6 +730,8 @@ namespace Illustra.Views
         private async Task SwitchToContent(string filePath, bool notifyFileSelection)
         {
             LogHelper.LogWithTimestamp("SwitchToContent - Start", LogHelper.Categories.Performance);
+            var measurePerformance = ViewerPerformanceLog.IsEnabled;
+            var stopwatch = measurePerformance ? Stopwatch.StartNew() : null;
             try
             {
                 if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -761,6 +763,11 @@ namespace Illustra.Views
                 await LoadAndDisplayContent(filePath); // Call LoadAndDisplayContent
 
                 LogHelper.LogWithTimestamp("SwitchToContent - After LoadAndDisplayContent", LogHelper.Categories.Performance);
+                if (measurePerformance)
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                    ViewerPerformanceLog.Append($"static-switch path=\"{filePath}\" renderMs={stopwatch!.ElapsedMilliseconds} cacheHit={_imageCache.HasImage(filePath)}");
+                }
                 // 3. 画像の場合のみズームをリセット
                 if (ImageZoomControl.Visibility == Visibility.Visible)
                 {
@@ -780,7 +787,7 @@ namespace Illustra.Views
                         // ここでは呼び出し側でチェックする例を示す
                         // _imageCache.UpdateCache(files.Where(f => FileHelper.IsImageFile(f.FullPath)).ToList(), currentIndex);
                         // もしくは、UpdateCacheメソッド自体が動画を除外するように修正する
-                        _imageCache.UpdateCache(files, currentIndex); // IImageCache側で動画を除外すると仮定
+                        _ = _imageCache.UpdateCacheAsync(files, currentIndex);
                     }
                 }
 

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using Illustra.Models;
 using Illustra.Helpers.Interfaces;
@@ -47,6 +49,17 @@ namespace Illustra.Helpers
                 System.Diagnostics.Debug.WriteLine($"画像の読み込みエラー: {ex.Message}");
                 throw; // 呼び出し元に例外を伝播
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task<BitmapSource> GetImageAsync(string path, CancellationToken cancellationToken = default)
+        {
+            if (_cache.TryGetValue(path, out var image)) return image;
+            var decodedImage = await Task.Run(() => LoadImageFromFile(path), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_cache.TryGetValue(path, out var cachedImage)) return cachedImage;
+            _cache[path] = decodedImage;
+            return decodedImage;
         }
 
         /// <inheritdoc/>
@@ -119,6 +132,24 @@ namespace Illustra.Helpers
                         }
                     }
                 }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task UpdateCacheAsync(List<FileNodeModel> files, int currentIndex, CancellationToken cancellationToken = default)
+        {
+            if (currentIndex < 0 || currentIndex >= files.Count) return;
+            var imageFiles = files.Where(f => FileHelper.IsImageFile(f.FullPath)).ToList();
+            var currentImageFile = imageFiles.FirstOrDefault(f => f.FullPath == files[currentIndex].FullPath);
+            if (currentImageFile == null) return;
+            var currentImageIndex = imageFiles.IndexOf(currentImageFile);
+            var startIndex = Math.Max(0, currentImageIndex - _backwardSize);
+            var endIndex = Math.Min(imageFiles.Count - 1, currentImageIndex + _forwardSize);
+            CleanUpCache(new HashSet<string>(imageFiles.Skip(startIndex).Take(endIndex - startIndex + 1).Select(f => f.FullPath)));
+            for (var i = startIndex; i <= endIndex; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!_cache.ContainsKey(imageFiles[i].FullPath)) await GetImageAsync(imageFiles[i].FullPath, cancellationToken);
             }
         }
 
