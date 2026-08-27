@@ -10,6 +10,7 @@ namespace Illustra.Helpers
     public interface IFileSystemChangeHandler
     {
         void OnFileCreated(string path);
+        void OnFileChanged(string path);
         void OnFileDeleted(string path);
         Task OnChildFolderRenamed(string oldPath, string newPath); // 子要素がリネームされた場合に呼び出される
     }
@@ -45,6 +46,7 @@ namespace Illustra.Helpers
             };
 
             _watcher.Created += (s, e) => QueueEvent(e);
+            _watcher.Changed += (s, e) => QueueEvent(e);
             _watcher.Deleted += (s, e) => QueueEvent(e);
             _watcher.Renamed += (s, e) => QueueEvent(e);
             _watcher.Error += (s, e) =>
@@ -110,6 +112,10 @@ namespace Illustra.Helpers
                 {
                     case FileSystemEventArgs createEvent when evt.ChangeType == WatcherChangeTypes.Created:
                         _handler.OnFileCreated(createEvent.FullPath);
+                        break;
+
+                    case FileSystemEventArgs changeEvent when evt.ChangeType == WatcherChangeTypes.Changed:
+                        _handler.OnFileChanged(changeEvent.FullPath);
                         break;
 
                     case FileSystemEventArgs deleteEvent when evt.ChangeType == WatcherChangeTypes.Deleted:

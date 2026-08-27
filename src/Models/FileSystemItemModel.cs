@@ -551,6 +551,10 @@ namespace Illustra.Models
         /// </summary>
         /// <param name="path">削除されたフォルダのパス</param>
         /// <returns>このフォルダで処理された場合はtrue</returns>
+        public virtual void OnFileChanged(string path)
+        {
+        }
+
         public virtual void OnFileDeleted(string path)
         {
             if (!IsFolder) return;

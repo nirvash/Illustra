@@ -126,6 +126,10 @@ namespace Illustra.ViewModels
             }
         }
 
+        public void OnFileChanged(string path)
+        {
+        }
+
         public void OnFileDeleted(string path)
         {
             Debug.WriteLine($"フォルダ削除を検知: {path}");

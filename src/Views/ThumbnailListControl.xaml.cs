@@ -1122,6 +1122,29 @@ namespace Illustra.Views
             });
         }
 
+        public void OnFileChanged(string path)
+        {
+            if (!string.Equals(Path.GetExtension(path), ".mp4", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            Dispatcher.Invoke(async () =>
+            {
+                var fileNode = _viewModel.Items.FirstOrDefault(x =>
+                    string.Equals(x.FullPath, path, StringComparison.OrdinalIgnoreCase));
+                if (fileNode == null || fileNode.ThumbnailInfo.IsLoadingThumbnail)
+                    return;
+
+                fileNode.ThumbnailInfo = new ThumbnailInfo(null, ThumbnailState.NotLoaded);
+                fileNode.ThumbnailAttemptCount = 0;
+
+                var index = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList().IndexOf(fileNode);
+                if (index >= 0)
+                {
+                    await _thumbnailLoader.CreateThumbnailAsync(index, CancellationToken.None);
+                }
+            });
+        }
+
         public void OnFileDeleted(string path)
         {
             Dispatcher.Invoke(() =>
