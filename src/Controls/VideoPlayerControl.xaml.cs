@@ -19,6 +19,9 @@ namespace Illustra.Controls
         private bool _isSeekBarDragging = false;
         private bool _isVolumeSliderDragging = false;
         private string _currentFilePath = string.Empty;
+        private int _videoLoadGeneration;
+        private bool _isMediaReady;
+        private bool _hasAutomaticallyRetried;
 
         private bool _isStretchMode = false; // ストレッチモードフラグ
 
@@ -125,27 +128,53 @@ namespace Illustra.Controls
 
         public void LoadVideo(string filePath)
         {
-            if (_currentFilePath == filePath) return; // 同じファイルなら何もしない
-
             _currentFilePath = filePath;
-            ApplyInitialStretchMode(); // Apply stretch mode when loading new video
-            StopVideo(); // 以前の動画を停止
+            _hasAutomaticallyRetried = false;
+            QueueVideoLoad(filePath);
+        }
+
+        private async void QueueVideoLoad(string filePath)
+        {
+            int loadGeneration = ++_videoLoadGeneration;
+            _isMediaReady = false;
+            ApplyInitialStretchMode();
+            StopVideo();
+
+            // 前回のメディアセッションを完全に解放してから、
+            // コントロールが表示ツリーに配置された後に Source を設定する。
+            VideoPlayer.Source = null;
 
             try
             {
-                VideoPlayer.Source = new Uri(filePath);
-                // MediaOpenedイベントはXAMLで設定済み
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+
+                if (loadGeneration != _videoLoadGeneration || filePath != _currentFilePath)
+                {
+                    return;
+                }
+
+                VideoPlayer.Source = new Uri(filePath, UriKind.Absolute);
             }
             catch (Exception ex)
             {
                 LogHelper.LogError($"動画の読み込み中にエラーが発生: {ex.Message}", ex);
-                // エラー処理（例：メッセージ表示、デフォルト画像表示など）
-                // ここではシンプルにログ出力のみ
+                StopVideo();
             }
         }
 
         public void Play()
         {
+            // 失敗後の MediaElement は Play() だけでは復旧しないことがある。
+            // 再生ボタンで完全なリロードを行い、ビューアーの閉じ直しを不要にする。
+            if (!_isMediaReady)
+            {
+                if (!string.IsNullOrEmpty(_currentFilePath))
+                {
+                    QueueVideoLoad(_currentFilePath);
+                }
+
+                return;
+            }
             // 再生位置が終端に近い場合は先頭に戻す (再生終了後の再再生のため)
             if (VideoPlayer.NaturalDuration.HasTimeSpan &&
                 Math.Abs(VideoPlayer.Position.TotalSeconds - VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds) < 0.1) // 誤差を考慮
@@ -193,6 +222,7 @@ namespace Illustra.Controls
         {
             if (VideoPlayer.NaturalDuration.HasTimeSpan)
             {
+                _isMediaReady = true;
                 SeekBar.Maximum = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                 TimeLabel.Text = $"00:00 / {VideoPlayer.NaturalDuration.TimeSpan:mm\\:ss}";
 
@@ -571,10 +601,18 @@ namespace Illustra.Controls
         private void VideoPlayer_MediaFailed(object? sender, ExceptionRoutedEventArgs e)
         {
             LogHelper.LogError($"動画の再生に失敗しました: {e.ErrorException.Message}", e.ErrorException);
-            MessageBox.Show($"動画の再生に失敗しました: {e.ErrorException.Message}", "再生エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            _isMediaReady = false;
+
+            // 一時的な初期化失敗は自動で一度だけ復旧を試みる。
+            // それでも失敗した場合は、再生ボタンが同じリロードを再実行する。
+            if (!_hasAutomaticallyRetried && !string.IsNullOrEmpty(_currentFilePath))
+            {
+                _hasAutomaticallyRetried = true;
+                QueueVideoLoad(_currentFilePath);
+                return;
+            }
+
             StopVideo();
-            // 必要に応じてエラーイベントを外部に通知する
-            // MediaFailed?.Invoke(this, e);
         }
 
         // UserControlがUnloadedされたときにリソースを解放
