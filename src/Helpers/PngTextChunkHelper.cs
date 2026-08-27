@@ -33,6 +33,19 @@ namespace Illustra.Helpers
         };
 
         /// <summary>
+        /// NovelAIで使用される一般的なメタデータキー
+        /// </summary>
+        public static readonly string[] KnownNovelAIKeys = new[]
+        {
+            "Description", // NovelAI画像の説明
+            "Comment",     // コメント情報
+            "Software",    // 使用ソフトウェア
+            "parameters",  // パラメータ情報（Stable Diffusionと重複するが、NovelAIも使用）
+            "Source",      // 生成元情報
+            "Title"        // タイトル情報
+        };
+
+        /// <summary>
         /// PNGファイルから指定したtEXtチャンクのデータを返す
         /// </summary>
         /// <param name="filePath">対象PNGファイルパス</param>
@@ -70,6 +83,33 @@ namespace Illustra.Helpers
         }
 
         /// <summary>
+        /// PNGファイルからNovelAIメタデータを検出してデバッグログに出力する
+        /// </summary>
+        /// <param name="filePath">対象PNGファイルパス</param>
+        public static void DetectAndLogNovelAIMetadata(string filePath)
+        {
+            if (!IsPng(filePath))
+                return;
+
+            try
+            {
+                foreach (var key in KnownNovelAIKeys)
+                {
+                    var metadata = ReadTextChunk(filePath, key);
+                    if (!string.IsNullOrEmpty(metadata))
+                    {
+                        // NovelAI関連のメタデータが見つかった場合、デバッグログに出力
+                        System.Diagnostics.Debug.WriteLine($"NovelAI Metadata Detected - Key: {key}, Value: {metadata}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error detecting NovelAI metadata: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// ファイルがPNG形式かどうかを判定する
         /// </summary>
         private static bool IsPng(string filePath)
@@ -89,6 +129,9 @@ namespace Illustra.Helpers
         {
             if (!IsPng(filePath))
                 return new StableDiffusionMetadata();
+
+            // NovelAIメタデータの検出とログ出力を行う
+            DetectAndLogNovelAIMetadata(filePath);
 
             // 既知のキーを順番に試す
             foreach (var key in KnownStableDiffusionKeys)
