@@ -9,6 +9,7 @@
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800"
              Background="Transparent"
+             Unloaded="UserControl_Unloaded"
              PreviewMouseMove="VideoPlayerRoot_PreviewMouseMove"
              MouseLeave="VideoPlayerRoot_MouseLeave"
              MouseDoubleClick="VideoPlayerRoot_MouseDoubleClick">
@@ -27,8 +28,6 @@
                         LoadedBehavior="Manual"
                         UnloadedBehavior="Stop"
                         MediaEnded="VideoPlayer_MediaEnded"
-                        MediaFailed="VideoPlayer_MediaFailed"
-                        MediaOpened="VideoPlayer_MediaOpened"
                         ScrubbingEnabled="True"/>
         </Border>
 
