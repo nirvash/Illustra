@@ -22,6 +22,8 @@ namespace Illustra.Controls
         private int _videoLoadGeneration;
         private bool _isMediaReady;
         private bool _hasAutomaticallyRetried;
+        private RoutedEventHandler? _mediaOpenedHandler;
+        private EventHandler<ExceptionRoutedEventArgs>? _mediaFailedHandler;
 
         private bool _isStretchMode = false; // ストレッチモードフラグ
 
@@ -133,35 +135,6 @@ namespace Illustra.Controls
             QueueVideoLoad(filePath);
         }
 
-        private async void QueueVideoLoad(string filePath)
-        {
-            int loadGeneration = ++_videoLoadGeneration;
-            _isMediaReady = false;
-            ApplyInitialStretchMode();
-            StopVideo();
-
-            // 前回のメディアセッションを完全に解放してから、
-            // コントロールが表示ツリーに配置された後に Source を設定する。
-            VideoPlayer.Source = null;
-
-            try
-            {
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
-
-                if (loadGeneration != _videoLoadGeneration || filePath != _currentFilePath)
-                {
-                    return;
-                }
-
-                VideoPlayer.Source = new Uri(filePath, UriKind.Absolute);
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"動画の読み込み中にエラーが発生: {ex.Message}", ex);
-                StopVideo();
-            }
-        }
-
         public void Play()
         {
             // 失敗後の MediaElement は Play() だけでは復旧しないことがある。
@@ -218,8 +191,64 @@ namespace Illustra.Controls
             // _currentFilePath = string.Empty; // パスはクリアしない
         }
 
-        private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e)
+        private async void QueueVideoLoad(string filePath)
         {
+            int loadGeneration = ++_videoLoadGeneration;
+            _isMediaReady = false;
+            ApplyInitialStretchMode();
+            StopVideo();
+
+            // 前回のメディアセッションを完全に解放してから、
+            // コントロールが表示ツリーに配置された後に Source を設定する。
+            VideoPlayer.Source = null;
+
+            try
+            {
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+
+                if (!IsLoaded || loadGeneration != _videoLoadGeneration || filePath != _currentFilePath)
+                {
+                    return;
+                }
+
+                Uri source = new(filePath, UriKind.Absolute);
+                SetVideoSource(source, loadGeneration);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError(string.Format((string)Application.Current.FindResource("String_Video_LoadError"), ex.Message), ex);
+                StopVideo();
+            }
+        }
+
+        private void SetVideoSource(Uri source, int loadGeneration)
+        {
+            if (_mediaOpenedHandler != null)
+            {
+                VideoPlayer.MediaOpened -= _mediaOpenedHandler;
+            }
+
+            if (_mediaFailedHandler != null)
+            {
+                VideoPlayer.MediaFailed -= _mediaFailedHandler;
+            }
+
+            _mediaOpenedHandler = (_, _) => VideoPlayer_MediaOpened(loadGeneration, source);
+            _mediaFailedHandler = (_, e) => VideoPlayer_MediaFailed(e, loadGeneration, source);
+            VideoPlayer.MediaOpened += _mediaOpenedHandler;
+            VideoPlayer.MediaFailed += _mediaFailedHandler;
+            VideoPlayer.Source = source;
+        }
+
+        private bool IsCurrentVideoLoad(int loadGeneration, Uri source)
+        {
+            return IsLoaded && loadGeneration == _videoLoadGeneration && source.Equals(VideoPlayer.Source);
+        }
+
+        private void VideoPlayer_MediaOpened(int loadGeneration, Uri source)
+        {
+            if (!IsCurrentVideoLoad(loadGeneration, source)) return;
+
             if (VideoPlayer.NaturalDuration.HasTimeSpan)
             {
                 _isMediaReady = true;
@@ -598,8 +627,10 @@ namespace Illustra.Controls
             UpdateStretchMode();
         }
 
-        private void VideoPlayer_MediaFailed(object? sender, ExceptionRoutedEventArgs e)
+        private void VideoPlayer_MediaFailed(ExceptionRoutedEventArgs e, int loadGeneration, Uri source)
         {
+            if (!IsCurrentVideoLoad(loadGeneration, source)) return;
+
             LogHelper.LogError($"動画の再生に失敗しました: {e.ErrorException.Message}", e.ErrorException);
             _isMediaReady = false;
 
@@ -618,6 +649,8 @@ namespace Illustra.Controls
         // UserControlがUnloadedされたときにリソースを解放
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
+            _videoLoadGeneration++;
+            _isMediaReady = false;
             // StopVideo() ではなく、直接 Stop() と Source=null を呼び出してリソースを解放
             VideoPlayer.Pause();
             VideoPlayer.Source = null;
