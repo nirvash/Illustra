@@ -272,6 +272,7 @@ namespace Illustra.Controls
     {
         private ZoomLogic _zoomLogic;
         private BitmapSource _source; // 現在の画像（論理サイズに変換必要）
+        private int _sourceVersion;
 
         private bool _userInteracted = false; // 操作があったかを記録
 
@@ -296,9 +297,13 @@ namespace Illustra.Controls
         {
             if (_source == null) return;
 
+            var sourceVersion = _sourceVersion;
+
             // ウィンドウサイズが決まってからビューポートを初期化
             Dispatcher.InvokeAsync(() =>
             {
+                if (sourceVersion != _sourceVersion)
+                    return;
                 if (ActualWidth <= 0 || ActualHeight <= 0)
                     return;
 
@@ -380,6 +385,8 @@ namespace Illustra.Controls
         private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var control = (ZoomControl)d;
+            control._sourceVersion++;
+            control.ImageControl.Visibility = Visibility.Hidden;
 
             if (e.NewValue is BitmapSource bmp)
             {
@@ -389,6 +396,12 @@ namespace Illustra.Controls
                 {
                     control.ZoomControl_Loaded(null, null); // 強制再初期化
                 }
+            }
+            else
+            {
+                control._source = null;
+                control.ImageControl.Source = null;
+                control._zoomLogic = null;
             }
         }
 
