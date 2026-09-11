@@ -72,13 +72,6 @@ namespace Illustra.Views
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _appSettings = SettingsHelper.GetSettings();
 
-            // 初期状態ではフォルダを選択しない（App.xaml.csからの選択を待つ）
-            _viewModel = new FileSystemTreeViewModel(_eventAggregator, null);
-            DataContext = _viewModel;
-            FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
-
-            GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
-
             // 設定の更新を監視するためにお気に入り関連イベントを購読
             _eventAggregator.GetEvent<AddToFavoritesEvent>().Subscribe(path =>
             {
@@ -97,6 +90,7 @@ namespace Illustra.Views
                 ScrollToPath(path);
             });
 
+            // 初期状態ではフォルダを選択しない（App.xaml.csからの選択を待つ）
             _viewModel = new FileSystemTreeViewModel(_eventAggregator, null);
             DataContext = _viewModel;
             FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
