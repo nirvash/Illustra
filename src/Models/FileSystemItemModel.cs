@@ -523,15 +523,10 @@ namespace Illustra.Models
                             return; // 既に存在する場合は追加しない
                         }
 
-                        // 既存のChildrenコレクションに追加
+                        // コレクション自体を差し替えると既存の TreeViewItem が再生成され、
+                        // 選択中の兄弟まで再選択されてしまう。追加対象だけを適切な位置へ挿入する。
                         Children.Add(newItem);
-
-                        // ソート設定があれば適用
-                        var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                        var sortType = sortSettings?.SortType ?? SortType.Name;
-                        var isAscending = sortSettings?.IsAscending ?? true;
-                        var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
-                        Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                        MoveChildToSortedPosition(newItem);
                     }
                 }
                 // 展開されていない場合はダミー要素を追加
@@ -595,12 +590,8 @@ namespace Illustra.Models
                             {
                                 Children.Remove(itemToRemove);
 
-                                // ソート設定があれば適用
-                                var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                                var sortType = sortSettings?.SortType ?? SortType.Name;
-                                var isAscending = sortSettings?.IsAscending ?? true;
-                                var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
-                                Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                                // 削除では残った兄弟の相対順序は変化しないため、再ソートや
+                                // コレクション全置換は不要。
                             }
                         }
                     }
@@ -703,12 +694,9 @@ namespace Illustra.Models
                         renamedChild.StartMonitoring();
                     }
 
-                    // ソート設定があれば適用
-                    var sortSettings = _treeModel?.GetSortSettings(FullPath);
-                    var sortType = sortSettings?.SortType ?? SortType.Name;
-                    var isAscending = sortSettings?.IsAscending ?? true;
-                    var sorted = FolderSortHelper.Sort(Children, sortType, isAscending);
-                    Children = new ObservableCollection<FileSystemItemModel>(sorted);
+                    // リネームされた対象だけを移動する。既存兄弟のコレクションと
+                    // TreeViewItem を維持するため、全体を差し替えない。
+                    MoveChildToSortedPosition(renamedChild);
 
                     // 現在選択されているアイテムがリネームの影響を受けるか確認
                     var currentSelectedItem = _treeModel?.SelectedItem;
@@ -748,6 +736,31 @@ namespace Illustra.Models
             });
 
             return;  // 処理完了
+        }
+
+        /// <summary>
+        /// 指定した子ノードだけを現在のソート設定に従う位置へ移動する。
+        /// Children のコレクション参照を維持して、無関係な兄弟ノードのコンテナ再生成を防ぐ。
+        /// </summary>
+        private void MoveChildToSortedPosition(FileSystemItemModel child)
+        {
+            var currentIndex = Children.IndexOf(child);
+            if (currentIndex < 0)
+            {
+                return;
+            }
+
+            var sortSettings = _treeModel?.GetSortSettings(FullPath);
+            var sortType = sortSettings?.SortType ?? SortType.Name;
+            var isAscending = sortSettings?.IsAscending ?? true;
+            var targetIndex = FolderSortHelper.Sort(Children, sortType, isAscending)
+                .ToList()
+                .IndexOf(child);
+
+            if (targetIndex >= 0 && targetIndex != currentIndex)
+            {
+                Children.Move(currentIndex, targetIndex);
+            }
         }
 
         /// <summary>
