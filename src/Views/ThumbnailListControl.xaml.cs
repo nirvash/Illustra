@@ -1040,6 +1040,8 @@ namespace Illustra.Views
             return null;
         }
 
+        public bool IsWatchingCurrentFolder => _fileSystemMonitor?.IsMonitoring == true;
+
         private static bool IsInsideTreeView(DependencyObject element)
         {
             while (element != null)

@@ -613,7 +613,12 @@ namespace Illustra.Views
             }
             else if (_isSlideshowActive)
             {
-                // 次の画像がない場合はスライドショーを停止
+                // フォルダー監視中は新しい画像が追加される可能性があるため、
+                // 次の画像が一覧に現れるまでタイマーを動かしたまま待つ。
+                if (Parent.IsWatchingCurrentFolder)
+                    return;
+
+                // 次の画像がなく、監視もしていない場合はスライドショーを停止
                 _slideshowTimer.Stop();
                 _isSlideshowActive = false;
                 ShowNotification(iconKind: PackIconMaterialDesignKind.Pause); // アイコン表示に変更
