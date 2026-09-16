@@ -883,6 +883,17 @@ namespace Illustra.Views
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            // ウィンドウコマンド（プロパティパネル等）のダブルクリックを
+            // ビューア全体の「閉じる」ジェスチャとして扱わない。
+            var clickedElement = e.OriginalSource as DependencyObject;
+            if (clickedElement != null &&
+                (IsDescendantOf(clickedElement, WindowCommands) ||
+                 IsDescendantOf(clickedElement, FullScreenControls)))
+            {
+                e.Handled = true;
+                return;
+            }
+
             // VideoPlayerまたはWebpPlayerが表示されている場合は、各コントロール側のイベントで処理するため何もしない
             if (VideoPlayerControl.Visibility == Visibility.Visible || WebpPlayer.Visibility == Visibility.Visible)
             {
