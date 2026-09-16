@@ -98,7 +98,11 @@ namespace Illustra.Models
         /// </summary>
         /// <param name="filePath">プロパティを読み込むファイルのパス。</param>
         /// <param name="forceReload">同一ファイル済み読み込みでも強制的に再読み込みするかどうか。</param>
-        public async Task UpdateCurrentPropertiesAsync(string filePath, bool forceReload = false)
+        /// <param name="forceMetadata">プロパティパネルが非表示でもメタデータを解析するかどうか。</param>
+        public async Task UpdateCurrentPropertiesAsync(
+            string filePath,
+            bool forceReload = false,
+            bool forceMetadata = false)
         {
             if (string.IsNullOrEmpty(filePath))
             {
@@ -110,7 +114,7 @@ namespace Illustra.Models
             if (!forceReload && CurrentProperties?.FilePath == filePath) return;
 
             // プロパティパネル非表示時はメタデータ解析（重い処理）をスキップする
-            if (!IsPropertyPanelVisible)
+            if (!IsPropertyPanelVisible && !forceMetadata)
             {
                 SetLightweightProperties(filePath);
                 return;

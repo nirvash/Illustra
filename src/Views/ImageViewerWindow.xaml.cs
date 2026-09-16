@@ -136,12 +136,16 @@ namespace Illustra.Views
             this.StateChanged += MainWindow_StateChanged;
 
             // 右クリックイベントを設定
-            ImageZoomControl.MouseRightButtonDown += (s, e) =>
+            ImageZoomControl.MouseRightButtonDown += async (s, e) =>
             {
-                if (_appContext?.CurrentProperties?.StableDiffusionResult != null)
+                if (!string.IsNullOrEmpty(_currentFilePath))
                 {
-                    ShowPromptMenu();
                     e.Handled = true;
+                    await _appContext.UpdateCurrentPropertiesAsync(
+                        _currentFilePath,
+                        forceReload: true,
+                        forceMetadata: true);
+                    ShowPromptMenu();
                 }
             };
 

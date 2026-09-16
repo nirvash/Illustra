@@ -598,7 +598,10 @@ namespace Illustra.Views
                     try
                     {
                         // AppContextのプロパティを非同期で更新し、完了を待つ
-                        await _appContext.UpdateCurrentPropertiesAsync(clickedItem.FullPath);
+                        await _appContext.UpdateCurrentPropertiesAsync(
+                            clickedItem.FullPath,
+                            forceReload: true,
+                            forceMetadata: true);
 
                         // プロパティ更新後にコンテキストメニューを表示
                         ShowContextMenu(clickedItem, listViewItem);
