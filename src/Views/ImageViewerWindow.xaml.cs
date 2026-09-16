@@ -578,6 +578,17 @@ namespace Illustra.Views
             _appContext.SetViewerPropertyPanelVisible(PropertyPanel.Visibility == System.Windows.Visibility.Visible);
         }
 
+        private void TogglePropertyPanel_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePropertyPanel();
+        }
+
+        private void PropertyPanelButton_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // Viewer全体のダブルクリック処理（画像クリックで閉じる）へ伝播させない。
+            e.Handled = true;
+        }
+
         private async void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             // プロパティパネルのサイズ変更時に幅を保存

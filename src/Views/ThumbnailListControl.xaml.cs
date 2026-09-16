@@ -1043,6 +1043,14 @@ namespace Illustra.Views
             return null;
         }
 
+        private void TogglePropertyPanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is MainWindow mainWindow)
+            {
+                mainWindow.TogglePropertyPanel();
+            }
+        }
+
         public bool IsWatchingCurrentFolder => _fileSystemMonitor?.IsMonitoring == true;
 
         private static bool IsInsideTreeView(DependencyObject element)

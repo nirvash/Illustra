@@ -71,6 +71,11 @@
                     ToolTip="{DynamicResource String_Function_ZoomReset}"
                     Click="ResetZoom_Click"
                     Margin="5, 0, 10, 0"/>
+            <Button Content="▣"
+                    ToolTip="{DynamicResource String_Function_TogglePropertyPanel}"
+                    Click="TogglePropertyPanel_Click"
+                    MouseDoubleClick="PropertyPanelButton_MouseDoubleClick"
+                    Margin="5, 0, 10, 0"/>
         </mahcontrols:WindowCommands>
     </mahcontrols:MetroWindow.RightWindowCommands>
     <Grid>
@@ -130,6 +135,16 @@
                         </ResourceDictionary>
                     </Button.Resources>
                 </Button>
+                <Button Content="▣"
+                        Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                        ToolTip="{DynamicResource String_Function_TogglePropertyPanel}"
+                        Click="TogglePropertyPanel_Click"
+                        MouseDoubleClick="PropertyPanelButton_MouseDoubleClick"
+                        Width="34"
+                        Height="26"
+                        Margin="5 0 10 0"
+                        Padding="8,0"
+                        Style="{DynamicResource MahApps.Styles.Button.WindowCommands}"/>
             </ItemsControl>
         </Border>
         <Grid x:Name="MainGrid"

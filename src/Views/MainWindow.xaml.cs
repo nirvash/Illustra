@@ -149,7 +149,7 @@ namespace Illustra.Views
             }
         }
 
-        private void TogglePropertyPanel()
+        internal void TogglePropertyPanel()
         {
             // プロパティパネルとスプリッターの現在の状態を取得
             var isVisible = RightPanelGrid.RowDefinitions[2].Height.Value > 0;
