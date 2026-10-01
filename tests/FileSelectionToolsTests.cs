@@ -42,8 +42,29 @@ namespace Illustra.Tests
             Assert.That(bridge.SelectFilesArgs?.Paths, Is.EqualTo(new[] { targetPath }));
         }
 
+        [TestCase("mcp")]
+        [TestCase("active")]
+        public async Task SelectFile_PreservesTargetAcrossFolderNavigationAsync(string targetTab)
+        {
+            var bridge = new CapturingMcpAppBridge { CurrentFolder = @"E:\FolderA" };
+            var tools = new FileSelectionTools(bridge);
+            await tools.SelectFile([@"E:\FolderB\image.png"], targetTab: targetTab);
+            Assert.That(bridge.OpenFolderArgs!.TargetTab, Is.EqualTo(targetTab));
+            Assert.That(bridge.OpenFolderArgs.ResolvedTabId, Is.EqualTo(bridge.TabId));
+        }
+
+        [Test]
+        public void InvalidTarget_IsRejectedBeforeUiRequests()
+        {
+            var bridge = new CapturingMcpAppBridge();
+            var tools = new FileSelectionTools(bridge);
+            Assert.ThrowsAsync<ArgumentException>(() => tools.SelectFile([@"E:\FolderB\image.png"], targetTab: "other"));
+            Assert.That(bridge.OpenFolderArgs, Is.Null);
+        }
+
         private sealed class CapturingMcpAppBridge : IMcpAppBridge
         {
+            public Guid TabId { get; } = Guid.NewGuid();
             public string? CurrentFolder { get; init; }
             public McpOpenFolderEventArgs? OpenFolderArgs { get; private set; }
             public McpSelectFilesEventArgs? SelectFilesArgs { get; private set; }
@@ -58,6 +79,7 @@ namespace Illustra.Tests
                 {
                     case McpGetAppStatusEventArgs statusArgs:
                         statusArgs.CurrentFolder = CurrentFolder;
+                        statusArgs.ResolvedTabId = TabId;
                         return Task.FromResult<object?>(true);
                     case McpOpenFolderEventArgs openFolderArgs:
                         OpenFolderArgs = openFolderArgs;

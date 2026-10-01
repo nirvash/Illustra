@@ -51,3 +51,11 @@ Mcp/ (アプリ内 Kestrel で動く MCP サーバー → UI を経由してア�
 - 機能↔実装マップ: `docs/Implementation.md`
 - 開発ルール: `docs/Rule.md` / DB 設計: `docs/DatabaseDesign.md`
 - MCP 設計: `docs/MCP_v2_Design.md` / キャッシュ: `docs/ImageCacheDesign.md` / ズーム&パン: `docs/ZoomDesign.md`
+
+
+### MCP のタブ選択
+
+UI 系ツールは `targetTab="mcp"` が既定、`"active"` でアクティブタブを明示操作する。
+`McpAppBridge` が内部 `McpPrepareTabEvent` で `MainWindowViewModel.ResolveMcpTab` を呼び、
+共有 `ThumbnailListControl` のタブ読込 Task 完了を待って要求を発行する。要求は bridge で直列化する。
+専用属性は `TabState.IsMcpTab` として保存され、MCP タブの複製は通常タブになる。

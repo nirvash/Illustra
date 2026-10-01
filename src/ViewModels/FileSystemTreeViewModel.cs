@@ -299,7 +299,9 @@ namespace Illustra.ViewModels
             {
                 System.Diagnostics.Debug.WriteLine($"[FileSystemTreeVM] Setting McpOpenFolderEvent result: {success}");
                 // Notify the APIService about the result
-                args.ResultCompletionSource?.SetResult(success);
+                // MCP v2 の完了はタブ更新を担当する MainWindowViewModel が通知する。
+                if (args.SourceId != Illustra.Mcp.McpAppBridge.SourceId)
+                    args.ResultCompletionSource?.TrySetResult(success);
                 System.Diagnostics.Debug.WriteLine($"[FileSystemTreeVM] McpOpenFolderEvent result set.");
             }
         }

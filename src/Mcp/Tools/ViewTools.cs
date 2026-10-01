@@ -24,12 +24,13 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "set_view_filter", Idempotent = true)]
-        [Description("Changes the filter of the active Illustra folder view. Specify at least one option, or clear=true to remove all filters. rating shows only files rated exactly at the value (0 disables the rating filter). Use get_app_status to read the current filter state.")]
+        [Description("Changes the filter of the target Illustra folder view. Specify at least one option, or clear=true to remove all filters. rating shows only files rated exactly at the value (0 disables the rating filter). Use get_app_status to read the current filter state.")]
         public async Task<SetViewFilterResult> SetViewFilter(
             [Description("Enable or disable the AI-generation-prompt filter.")] bool? promptFilter = null,
             [Description("Shows only files rated exactly at this value (1-5). 0 disables the rating filter.")] int? rating = null,
             [Description("File extensions to show, with or without a leading dot (e.g. \"png\", \".mp4\"). Enables the extension filter when specified. Pass an empty list to disable the extension filter only.")] IReadOnlyList<string>? extensions = null,
-            [Description("When true, removes all filters and ignores other options.")] bool clear = false)
+            [Description("When true, removes all filters and ignores other options.")] bool clear = false,
+            [Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
             if (!clear && !promptFilter.HasValue && !rating.HasValue && extensions == null)
             {
@@ -49,6 +50,7 @@ namespace Illustra.Mcp.Tools
 
             var args = new McpSetViewFilterEventArgs
             {
+                TargetTab = McpTabTarget.Normalize(targetTab),
                 Clear = clear,
                 PromptFilterEnabled = promptFilter,
                 Rating = rating,

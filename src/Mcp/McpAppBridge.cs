@@ -35,6 +35,7 @@ namespace Illustra.Mcp
 
         private readonly IEventAggregator _eventAggregator;
         private readonly Dispatcher _dispatcher;
+        private readonly SemaphoreSlim _requestLock = new(1, 1);
 
         public McpAppBridge(IEventAggregator eventAggregator, Dispatcher dispatcher)
         {
@@ -50,12 +51,63 @@ namespace Illustra.Mcp
         {
             if (args == null) throw new ArgumentNullException(nameof(args));
 
+            await _requestLock.WaitAsync();
+            try
+            {
+                if (args is not McpShutdownEventArgs)
+                {
+                    await PrepareTabAsync(args, timeout);
+                }
+                var result = await PublishCoreAsync(args, eventSelector, timeout);
+                // タブ状態の変更通知後、サムネイルと選択の反映まで待つ。
+                if (args is McpOpenFolderEventArgs && result is true)
+                {
+                    await PrepareTabAsync(args, timeout, waitOnly: true);
+                }
+                return result;
+            }
+            finally
+            {
+                _requestLock.Release();
+            }
+        }
+
+        private async Task PrepareTabAsync(McpBaseEventArgs args, TimeSpan? timeout, bool waitOnly = false)
+        {
+            var prepare = new McpPrepareTabEventArgs
+            {
+                WaitOnly = waitOnly,
+                TargetTab = args.TargetTab,
+                ResolvedTabId = args.ResolvedTabId
+            };
+            await PublishCoreAsync(prepare, ea => ea.GetEvent<McpPrepareTabEvent>(), timeout);
+            args.ResolvedTabId = prepare.ResolvedTabId;
+        }
+
+        private async Task<object?> PublishCoreAsync<TArgs>(
+            TArgs args, Func<IEventAggregator, PubSubEvent<TArgs>> eventSelector, TimeSpan? timeout)
+            where TArgs : McpBaseEventArgs
+        {
             args.SourceId ??= SourceId;
             args.ResultCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            // イベントは UI スレッド購読前提のため、発行も UI スレッドへマーシャリングする
-            await _dispatcher.InvokeAsync(() => eventSelector(_eventAggregator).Publish(args));
-
+            await _dispatcher.InvokeAsync(() =>
+            {
+                if (args.ResolvedTabId.HasValue && args is not McpPrepareTabEventArgs)
+                {
+                    // 検証と発行を同じ UI 処理内で行い、間にユーザーのタブ変更を挟ませない。
+                    var check = new McpPrepareTabEventArgs
+                    {
+                        ValidateOnly = true,
+                        ResolvedTabId = args.ResolvedTabId,
+                        ResultCompletionSource = new TaskCompletionSource<object>()
+                    };
+                    _eventAggregator.GetEvent<McpPrepareTabEvent>().Publish(check);
+                    if (!check.ResultCompletionSource.Task.IsCompleted)
+                        throw new InvalidOperationException("The tab validation handler is not available.");
+                    check.ResultCompletionSource.Task.GetAwaiter().GetResult();
+                }
+                eventSelector(_eventAggregator).Publish(args);
+            });
             try
             {
                 return await args.ResultCompletionSource.Task.WaitAsync(timeout ?? DefaultTimeout);

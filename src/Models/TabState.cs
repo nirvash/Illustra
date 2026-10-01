@@ -11,6 +11,13 @@ namespace Illustra.Models
     /// </summary>
     public class TabState : INotifyPropertyChanged // INotifyPropertyChanged を実装
     {
+        private bool _isMcpTab;
+        public bool IsMcpTab
+        {
+            get => _isMcpTab;
+            set => SetProperty(ref _isMcpTab, value);
+        }
+
         private string _folderPath = string.Empty;
         /// <summary>
         /// タブが表示しているフォルダのフルパス

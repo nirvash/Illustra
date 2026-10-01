@@ -11,6 +11,7 @@ namespace Illustra.ViewModels
     /// </summary>
     public class TabViewModel : BindableBase
     {
+        public System.Guid Id { get; } = System.Guid.NewGuid();
         private TabState _state;
         private readonly AppSettingsModel _appSettings; // お気に入りフォルダリストにアクセスするために追加
 
@@ -51,7 +52,7 @@ namespace Illustra.ViewModels
                 if (string.IsNullOrEmpty(State?.FolderPath))
                 {
                     // TODO: 新規タブや未設定の場合のデフォルト名をリソースから取得する
-                    return "New Tab";
+                    return State?.IsMcpTab == true ? "MCP" : "New Tab";
                 }
 
                 // お気に入りフォルダリストから一致するものを検索
@@ -59,19 +60,19 @@ namespace Illustra.ViewModels
                 if (favorite != null && !string.IsNullOrEmpty(favorite.DisplayName))
                 {
                     // お気に入りに登録されており、表示名が設定されていればそれを返す
-                    return favorite.DisplayName;
+                    return PrefixMcp(favorite.DisplayName);
                 }
 
                 // お気に入りでない、または表示名が未設定の場合はフォルダ名を返す
                 try
                 {
                     string folderName = Path.GetFileName(State.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                    return string.IsNullOrEmpty(folderName) ? State.FolderPath : folderName;
+                    return PrefixMcp(string.IsNullOrEmpty(folderName) ? State.FolderPath : folderName);
                 }
                 catch
                 {
                     // パスが無効な場合などは元のパスをそのまま表示
-                    return State.FolderPath;
+                    return PrefixMcp(State.FolderPath);
                 }
             }
         }
@@ -79,6 +80,8 @@ namespace Illustra.ViewModels
         /// <summary>
         /// 表示名を更新します。
         /// </summary>
+        private string PrefixMcp(string name) => State.IsMcpTab ? $"MCP: {name}" : name;
+
         public void RefreshDisplayName()
         {
             RaisePropertyChanged(nameof(DisplayName));
@@ -108,7 +111,7 @@ namespace Illustra.ViewModels
         private void State_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             // FolderPath が変更されたら DisplayName の変更を通知
-            if (e.PropertyName == nameof(TabState.FolderPath))
+            if (e.PropertyName == nameof(TabState.FolderPath) || e.PropertyName == nameof(TabState.IsMcpTab))
             {
                 RaisePropertyChanged(nameof(DisplayName));
             }

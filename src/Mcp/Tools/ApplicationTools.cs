@@ -54,11 +54,11 @@ namespace Illustra.Mcp.Tools
             return new ShutdownResult(true, "Illustra is shutting down. State will be persisted.");
         }
 
-        [McpServerTool(Name = "get_app_status", ReadOnly = true, Idempotent = true)]
-        [Description("Returns the current application status of Illustra: the active tab folder, files loaded in the active view, currently selected files, open tab folders and the filter state applied to the active view (what the user currently sees).")]
-        public async Task<AppStatusResult> GetAppStatus()
+        [McpServerTool(Name = "get_app_status", ReadOnly = false, Idempotent = true)]
+        [Description("Returns the current application status of Illustra: the target tab folder, files loaded in the target view, currently selected files, open tab folders and the filter state applied to the target view (what the user currently sees).")]
+        public async Task<AppStatusResult> GetAppStatus([Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
-            var args = new McpGetAppStatusEventArgs();
+            var args = new McpGetAppStatusEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
             await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpGetAppStatusEvent>());
 
             if (args.ErrorMessage is not null)

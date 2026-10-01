@@ -6,8 +6,21 @@ namespace Illustra.Events
     /// MCP ツール実行リクエストの基底イベント引数。
     /// UI 側ハンドラが処理完了時に <see cref="ResultCompletionSource"/> へ結果を設定する。
     /// </summary>
+    public class McpPrepareTabEvent : PubSubEvent<McpPrepareTabEventArgs> { }
+
+    public class McpPrepareTabEventArgs : McpBaseEventArgs
+    {
+        public bool ValidateOnly { get; set; }
+        public bool WaitOnly { get; set; }
+    }
+
     public abstract class McpBaseEventArgs : EventArgs
     {
+        /// <summary>操作対象。MCP ツールの既定は専用タブ、active は現在のタブ。</summary>
+        public string TargetTab { get; set; } = "mcp";
+        /// <summary>複数のイベントにまたがる操作で解決済みタブを固定する。</summary>
+        public Guid? ResolvedTabId { get; set; }
+
         /// <summary>発行者識別子。自己発火ループ防止のフィルタに使用。</summary>
         public string? SourceId { get; set; }
 

@@ -220,3 +220,23 @@ src/
 4. **Phase 4**: ファイル操作系（create_folder / move_files / copy_files）、設定 UI、ドキュメント整備
 
 各フェーズでビルド警告ゼロ・テスト緑を維持する。
+
+
+## UI 操作対象タブ
+
+`open_folder`、`select_file`、`list_files`、`get_selected_files`、`get_app_status`、
+`set_view_filter`、`show_viewer`、`close_viewer` は `targetTab` を共通で受け取る。
+
+- 省略または `"mcp"`: 専用 MCP タブを作成・再利用し、そのタブを選択して操作する。
+- `"active"`: 呼び出し開始時のアクティブタブを操作する。
+- その他の値はエラー。ファイル操作やメタデータ取得など、タブと無関係なツールには適用しない。
+
+切り替えとフォルダ読み込み待ちは内部処理であり、MCP クライアントからの呼び出しは 1 回で完結する。
+`show_viewer` のファイル省略時は対象タブの選択ファイルを使う。`close_viewer` は対象タブから表示した
+ビューワのみを閉じる（共有ビューワ自体は従来どおり再利用）。読込中にユーザーが別タブへ移動した場合は
+操作を失敗として返す。橋渡しイベントは直列処理し、複数イベントにまたがる操作では解決したタブを固定する。
+専用タブは青い背景と `MCP:` の見出しで識別する。タブ状態の保存・復元でも専用属性を維持し、
+閉じた後は次回操作で再作成する。専用タブの複製は通常タブとなる。
+
+例: `show_viewer({"filePath":"C:\\Pictures\\image.png"})`、
+`show_viewer({"filePath":"C:\\Pictures\\image.png","targetTab":"active"})`。

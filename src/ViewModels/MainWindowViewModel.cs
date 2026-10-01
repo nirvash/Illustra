@@ -598,14 +598,50 @@ namespace Illustra.ViewModels
             AddNewTab(path);
         }
 
-        /// <summary>
-        /// McpOpenFolderEvent を受信したときの処理
-        /// </summary>
+        /// <summary>MCP の操作対象を解決する。通常タブの状態はコピーしない。</summary>
+        public TabViewModel ResolveMcpTab(McpBaseEventArgs args)
+        {
+            TabViewModel tab;
+            if (args.ResolvedTabId.HasValue)
+            {
+                tab = Tabs.FirstOrDefault(t => t.Id == args.ResolvedTabId.Value)
+                    ?? throw new InvalidOperationException("The target tab has been closed.");
+            }
+            else if (args.TargetTab == "active")
+            {
+                tab = SelectedTab ?? throw new InvalidOperationException("No active tab.");
+            }
+            else if (args.TargetTab == "mcp")
+            {
+                tab = Tabs.FirstOrDefault(t => t.State.IsMcpTab);
+                if (tab == null)
+                {
+                    tab = new TabViewModel(new TabState { IsMcpTab = true });
+                    Tabs.Add(tab);
+                    RaisePropertyChanged(nameof(ShowCloseButton));
+                }
+            }
+            else
+            {
+                throw new ArgumentException("targetTab must be mcp or active.");
+            }
+            args.ResolvedTabId = tab.Id;
+            SelectedTab = tab;
+            return tab;
+        }
+
         private void OnMcpOpenFolderReceived(McpOpenFolderEventArgs args)
         {
             Illustra.Helpers.NavigationDiagnosticsLog.Append(
                 $"McpOpenFolderEvent RECEIVED: path=\"{args.FolderPath}\" sourceId=\"{args.SourceId}\" selectedFile=\"{args.SelectedFilePath}\"");
+            if (args.ResolvedTabId.HasValue && args.ResolvedTabId != SelectedTab?.Id)
+            {
+                args.ResultCompletionSource?.TrySetException(new InvalidOperationException("The target tab changed. Retry the operation."));
+                return;
+            }
             HandleFolderSelected(args.FolderPath, args.SelectedFilePath);
+            if (args.SourceId == Illustra.Mcp.McpAppBridge.SourceId)
+                args.ResultCompletionSource?.TrySetResult(true);
         }
 
         /// <summary>

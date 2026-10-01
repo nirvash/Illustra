@@ -80,8 +80,31 @@ namespace Illustra.Tests
             Assert.ThrowsAsync<InvalidOperationException>(() => tools.ShowViewer(_tempFilePath));
             Assert.That(bridge.ShowViewerArgs, Is.Null);
         }
+        [TestCase("mcp")]
+        [TestCase("active")]
+        public async Task ShowViewer_PreservesTargetAcrossFolderNavigationAsync(string targetTab)
+        {
+            var bridge = new CapturingMcpAppBridge { CurrentFolder = @"E:\FolderA" };
+            var tools = new ViewerTools(bridge);
+            await tools.ShowViewer(_tempFilePath, targetTab: targetTab);
+            Assert.That(bridge.OpenFolderArgs!.TargetTab, Is.EqualTo(targetTab));
+            Assert.That(bridge.OpenFolderArgs.ResolvedTabId, Is.EqualTo(bridge.TabId));
+            Assert.That(bridge.ShowViewerArgs!.ResolvedTabId, Is.EqualTo(bridge.TabId));
+            Assert.That(bridge.ShowViewerArgs.TargetTab, Is.EqualTo(targetTab));
+        }
+
+        [Test]
+        public void InvalidTarget_IsRejectedBeforeUiRequests()
+        {
+            var bridge = new CapturingMcpAppBridge();
+            var tools = new ViewerTools(bridge);
+            Assert.ThrowsAsync<ArgumentException>(() => tools.ShowViewer(_tempFilePath, targetTab: "other"));
+            Assert.That(bridge.OpenFolderArgs, Is.Null);
+        }
+
         private sealed class CapturingMcpAppBridge : IMcpAppBridge
         {
+            public Guid TabId { get; } = Guid.NewGuid();
             public string? CurrentFolder { get; init; }
             public int SelectedCount { get; init; } = 1;
             public McpShowViewerEventArgs? ShowViewerArgs { get; private set; }
@@ -98,6 +121,7 @@ namespace Illustra.Tests
                 {
                     case McpGetAppStatusEventArgs statusArgs:
                         statusArgs.CurrentFolder = CurrentFolder;
+                        statusArgs.ResolvedTabId = TabId;
                         return Task.FromResult<object?>(true);
                     case McpOpenFolderEventArgs openFolderArgs:
                         OpenFolderArgs = openFolderArgs;

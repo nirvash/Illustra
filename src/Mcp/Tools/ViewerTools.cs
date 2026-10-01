@@ -31,11 +31,14 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "show_viewer", Idempotent = true)]
-        [Description("Shows a file in the Illustra image viewer window. When filePath is specified, it is selected in the active folder view (navigating to its parent folder when needed). If filePath is omitted, the currently selected file in the active folder view is used. The file is shown even when it is hidden by the current view filter; the response reports its visibility as visibleInCurrentFilter. Reuses the existing viewer window when it is already open. By default, forces the viewer to the front.")]
+        [Description("Shows a file in the Illustra image viewer window. When filePath is specified, it is selected in the target folder view (navigating to its parent folder when needed). If filePath is omitted, the currently selected file in the target folder view is used. The file is shown even when it is hidden by the current view filter; the response reports its visibility as visibleInCurrentFilter. Reuses the existing viewer window when it is already open. By default, forces the viewer to the front.")]
         public async Task<ShowViewerResult> ShowViewer(
             [Description("Absolute path of the image/video file to show. Omit to use the currently selected file.")] string filePath = "",
-            [Description("When true, forces the viewer window to the front. Default true.")] bool bringToFront = true)
+            [Description("When true, forces the viewer window to the front. Default true.")] bool bringToFront = true,
+            [Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
+            targetTab = McpTabTarget.Normalize(targetTab);
+            Guid? resolvedTabId = null;
             if (!string.IsNullOrWhiteSpace(filePath))
             {
                 var full = Path.GetFullPath(filePath);
@@ -45,11 +48,13 @@ namespace Illustra.Mcp.Tools
                 }
 
                 filePath = full;
-                await SelectSpecifiedFileAsync(filePath);
+                resolvedTabId = await SelectSpecifiedFileAsync(filePath, targetTab);
             }
 
             var args = new McpShowViewerEventArgs
             {
+                TargetTab = McpTabTarget.Normalize(targetTab),
+                ResolvedTabId = resolvedTabId,
                 FilePath = filePath,
                 BringToFront = bringToFront
             };
@@ -65,9 +70,9 @@ namespace Illustra.Mcp.Tools
 
         [McpServerTool(Name = "close_viewer", Idempotent = true)]
         [Description("Closes the Illustra image viewer window if it is open.")]
-        public async Task<CloseViewerResult> CloseViewer()
+        public async Task<CloseViewerResult> CloseViewer([Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
-            var args = new McpCloseViewerEventArgs();
+            var args = new McpCloseViewerEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpCloseViewerEvent>());
 
             if (result is not true)
@@ -78,12 +83,12 @@ namespace Illustra.Mcp.Tools
             return new CloseViewerResult(args.Closed, args.WasOpen);
         }
 
-        private async Task SelectSpecifiedFileAsync(string filePath)
+        private async Task<Guid?> SelectSpecifiedFileAsync(string filePath, string targetTab)
         {
             var targetFolder = Path.GetDirectoryName(filePath)
                 ?? throw new ArgumentException($"Could not determine the parent folder: {filePath}", nameof(filePath));
 
-            var statusArgs = new McpGetAppStatusEventArgs();
+            var statusArgs = new McpGetAppStatusEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
             await _bridge.PublishAndWaitAsync(statusArgs, ea => ea.GetEvent<McpGetAppStatusEvent>());
 
             if (!string.Equals(
@@ -93,6 +98,8 @@ namespace Illustra.Mcp.Tools
             {
                 var openFolderArgs = new McpOpenFolderEventArgs
                 {
+                    TargetTab = targetTab,
+                    ResolvedTabId = statusArgs.ResolvedTabId,
                     FolderPath = targetFolder,
                     SelectedFilePath = filePath
                 };
@@ -102,15 +109,16 @@ namespace Illustra.Mcp.Tools
                     throw new InvalidOperationException($"Illustra failed to open the folder: {targetFolder}");
                 }
 
-                return;
+                return statusArgs.ResolvedTabId;
             }
 
-            var selectArgs = new McpSelectFilesEventArgs { Paths = [filePath] };
+            var selectArgs = new McpSelectFilesEventArgs { Paths = [filePath], TargetTab = targetTab, ResolvedTabId = statusArgs.ResolvedTabId };
             var selectResult = await _bridge.PublishAndWaitAsync(selectArgs, ea => ea.GetEvent<McpSelectFilesEvent>());
             if (selectResult is not int selectedCount || selectedCount != 1)
             {
                 throw new InvalidOperationException($"Failed to select the file: {filePath}");
             }
+            return statusArgs.ResolvedTabId;
         }
 
     }

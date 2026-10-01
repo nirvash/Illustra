@@ -2371,8 +2371,11 @@ namespace Illustra.Views
         }
 
 
+        private TabState? _viewerTabState;
+
         private void ShowImageViewer(string filePath)
         {
+            _viewerTabState = _mainWindowViewModel.SelectedTab?.State;
             try
             {
                 if (_imageViewerWindow == null)
@@ -3516,18 +3519,40 @@ namespace Illustra.Views
         /// SelectedTabChangedEvent を受信したときの処理 (Control側)
         /// OnMcpFolderSelected と同様のロジックでフォルダを読み込む。
         /// </summary>
+        private Task _tabLoadTask = Task.CompletedTask;
+
         private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
+        {
+            _tabLoadTask = ApplySelectedTabAsync(args);
+            await _tabLoadTask;
+        }
+
+        private async Task ApplySelectedTabAsync(SelectedTabChangedEventArgs args)
         {
             var newState = args?.NewTabState;
             if (newState == null || string.IsNullOrEmpty(newState.FolderPath))
             {
-                // 選択されたタブがない、またはフォルダパスがない場合
+                // 空の MCP タブにも前タブの読み込み・フィルタを持ち越さない。
+                ++_folderLoadGeneration;
+                _thumbnailLoadCts?.Cancel();
+                _isLoadingFileNodes = false;
+                _viewModel.SelectedItems.Clear();
+                ThumbnailItemsControl.SelectedItems.Clear();
+                _viewModel.CurrentFolderPath = string.Empty;
+                _viewModel.ClearAllFilters();
+                _currentTagFilters.Clear();
+                _isTagFilterEnabled = false;
+                _isPromptFilterEnabled = false;
+                _currentExtensionFilters.Clear();
+                _isExtensionFilterEnabled = false;
                 _viewModel.ClearItems(); // ViewModelのアイテムをクリア
                 _currentFolderPath = null;
                 if (_fileSystemMonitor.IsMonitoring)
                 {
                     _fileSystemMonitor.StopMonitoring();
                 }
+                _eventAggregator.GetEvent<FilterChangedEvent>().Publish(
+                    new FilterChangedEventArgsBuilder(CONTROL_ID).SetFullUpdate(new FilterSettings()).Build());
                 Debug.WriteLine("[タブ変更] 新しいタブの状態が無効です。クリアします。");
                 return;
             }

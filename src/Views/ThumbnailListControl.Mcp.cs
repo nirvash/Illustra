@@ -21,6 +21,7 @@ namespace Illustra.Views
         /// </summary>
         private void SubscribeMcpEvents()
         {
+            _eventAggregator.GetEvent<McpPrepareTabEvent>().Subscribe(OnMcpPrepareTab, ThreadOption.PublisherThread);
             _eventAggregator.GetEvent<McpSelectFilesEvent>().Subscribe(OnMcpSelectFiles, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpGetFileListEvent>().Subscribe(OnMcpGetFileList, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpGetSelectedFilesEvent>().Subscribe(OnMcpGetSelectedFiles, ThreadOption.UIThread);
@@ -28,6 +29,39 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<McpSetViewFilterEvent>().Subscribe(OnMcpSetViewFilter, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpShowViewerEvent>().Subscribe(OnMcpShowViewer, ThreadOption.UIThread);
             _eventAggregator.GetEvent<McpCloseViewerEvent>().Subscribe(OnMcpCloseViewer, ThreadOption.UIThread);
+        }
+
+        private void EnsureMcpTarget(McpBaseEventArgs args)
+        {
+            if (args.ResolvedTabId != _mainWindowViewModel.SelectedTab?.Id)
+                throw new InvalidOperationException("The target tab changed. Retry the operation.");
+        }
+
+        private async void OnMcpPrepareTab(McpPrepareTabEventArgs args)
+        {
+            try
+            {
+                if (args.ValidateOnly)
+                {
+                    EnsureMcpTarget(args);
+                    args.ResultCompletionSource?.TrySetResult(true);
+                    return;
+                }
+                if (args.WaitOnly) EnsureMcpTarget(args);
+                var tab = args.WaitOnly ? _mainWindowViewModel.SelectedTab : _mainWindowViewModel.ResolveMcpTab(args);
+                // SelectedTabChanged の UIThread 購読が読み込み Task を設定するまで待つ。
+                await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                EnsureMcpTarget(args);
+                var loadTask = _tabLoadTask;
+                await loadTask;
+                if (!ReferenceEquals(tab, _mainWindowViewModel.SelectedTab) || !ReferenceEquals(loadTask, _tabLoadTask))
+                    throw new InvalidOperationException("The target tab changed while loading. Retry the operation.");
+                args.ResultCompletionSource?.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                args.ResultCompletionSource?.TrySetException(ex);
+            }
         }
 
         /// <summary>
@@ -38,6 +72,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 var builder = new FilterChangedEventArgsBuilder("mcp-v2");
                 FilterChangedEventArgs filterArgs;
 
@@ -133,6 +168,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 var pathSet = new HashSet<string>(args.Paths ?? [], StringComparer.OrdinalIgnoreCase);
 
                 // 現在フィルタリングされて表示中のアイテムのみを選択対象にする。
@@ -173,6 +209,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 args.FolderPath = _mainWindowViewModel.SelectedTab?.State?.FolderPath;
                 args.Files = _viewModel.Items.Cast<FileNodeModel>()
                     .Select(n => new FileListItemModel
@@ -201,6 +238,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 args.Files = _viewModel.SelectedItems
                     .Select(n => new SelectedFileInfoModel
                     {
@@ -208,7 +246,7 @@ namespace Illustra.Views
                         FileName = n.FileName
                     })
                     .ToList();
-                args.ResultCompletionSource?.TrySetResult(true);
+                args.ResultCompletionSource?.TrySetResult(args.Files);
             }
             catch (Exception ex)
             {
@@ -225,6 +263,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 args.CurrentFolder = _mainWindowViewModel.SelectedTab?.State?.FolderPath;
                 args.LoadedFileCount = _viewModel.Items.Count;
                 args.SelectedFiles = _viewModel.SelectedItems
@@ -256,6 +295,7 @@ namespace Illustra.Views
         {
             try
             {
+                EnsureMcpTarget(args);
                 var path = args.FilePath;
                 if (string.IsNullOrWhiteSpace(path))
                 {
@@ -328,8 +368,9 @@ namespace Illustra.Views
         {
             try
             {
-                args.WasOpen = _imageViewerWindow != null;
-                _imageViewerWindow?.Close();
+                EnsureMcpTarget(args);
+                args.WasOpen = _imageViewerWindow != null && ReferenceEquals(_viewerTabState, _mainWindowViewModel.SelectedTab?.State);
+                if (args.WasOpen) _imageViewerWindow?.Close();
                 args.Closed = true;
                 args.ResultCompletionSource?.TrySetResult(true);
             }

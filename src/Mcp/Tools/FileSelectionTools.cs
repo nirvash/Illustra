@@ -46,10 +46,13 @@ namespace Illustra.Mcp.Tools
         }
 
         [McpServerTool(Name = "select_file", Destructive = false)]
-        [Description("Selects files in the active Illustra folder view. When exactly one requested file is in another folder, navigates to that folder and selects the file.")]
+        [Description("Selects files in the target Illustra folder view. When exactly one requested file is in another folder, navigates to that folder and selects the file.")]
         public async Task<SelectFilesResult> SelectFile(
-            [Description("Absolute paths of the image/video files to select.")] IReadOnlyList<string> paths)
+            [Description("Absolute paths of the image/video files to select.")] IReadOnlyList<string> paths,
+            [Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
+            targetTab = McpTabTarget.Normalize(targetTab);
+            Guid? resolvedTabId = null;
             ValidatePaths(paths);
 
             if (paths.Count == 1)
@@ -58,8 +61,10 @@ namespace Illustra.Mcp.Tools
                 var targetFolder = Path.GetDirectoryName(targetPath)
                     ?? throw new ArgumentException($"Could not determine the parent folder: {paths[0]}", nameof(paths));
 
-                var statusArgs = new McpGetAppStatusEventArgs();
+                var statusArgs = new McpGetAppStatusEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
                 await _bridge.PublishAndWaitAsync(statusArgs, ea => ea.GetEvent<McpGetAppStatusEvent>());
+
+                resolvedTabId = statusArgs.ResolvedTabId;
 
                 if (!string.Equals(
                         Path.TrimEndingDirectorySeparator(statusArgs.CurrentFolder ?? string.Empty),
@@ -68,6 +73,8 @@ namespace Illustra.Mcp.Tools
                 {
                     var openFolderArgs = new McpOpenFolderEventArgs
                     {
+                        TargetTab = targetTab,
+                        ResolvedTabId = resolvedTabId,
                         FolderPath = targetFolder,
                         SelectedFilePath = targetPath
                     };
@@ -81,17 +88,17 @@ namespace Illustra.Mcp.Tools
                 }
             }
 
-            var args = new McpSelectFilesEventArgs { Paths = paths };
+            var args = new McpSelectFilesEventArgs { Paths = paths, TargetTab = McpTabTarget.Normalize(targetTab), ResolvedTabId = resolvedTabId };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpSelectFilesEvent>());
             var selectedCount = result is int count ? count : 0;
             return new SelectFilesResult(selectedCount, paths.Count);
         }
 
-        [McpServerTool(Name = "get_selected_files", ReadOnly = true, Idempotent = true)]
-        [Description("Returns the list of files currently selected in the active Illustra folder view.")]
-        public async Task<SelectedFilesResult> GetSelectedFiles()
+        [McpServerTool(Name = "get_selected_files", ReadOnly = false, Idempotent = true)]
+        [Description("Returns the list of files currently selected in the target Illustra folder view.")]
+        public async Task<SelectedFilesResult> GetSelectedFiles([Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
-            var args = new McpGetSelectedFilesEventArgs();
+            var args = new McpGetSelectedFilesEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpGetSelectedFilesEvent>());
 
             if (result is not List<SelectedFileInfoModel> models)
@@ -104,19 +111,20 @@ namespace Illustra.Mcp.Tools
                 .ToList());
         }
 
-        [McpServerTool(Name = "list_files", ReadOnly = true, Idempotent = true)]
-        [Description("Returns the file list loaded in the active Illustra folder view, including per-file rating.")]
+        [McpServerTool(Name = "list_files", ReadOnly = false, Idempotent = true)]
+        [Description("Returns the file list loaded in the target Illustra folder view, including per-file rating.")]
         public async Task<FileListResult> ListFiles(
             [Description("Number of items to skip (pagination). Default 0.")] int offset = 0,
             [Description("Maximum number of items to return. Default 1000.")] int limit = 1000,
             [Description("Minimum rating filter (0-5). -1 means no filter.")] int ratingMin = -1,
             [Description("Maximum rating filter (0-5). -1 means no filter.")] int ratingMax = -1,
-            [Description("Extension filter without dot (e.g. \"png\", \"jpg\", \"mp4\"). Case-insensitive.")] string fileType = "")
+            [Description("Extension filter without dot (e.g. \"png\", \"jpg\", \"mp4\"). Case-insensitive.")] string fileType = "",
+            [Description("Target tab: mcp (default) reuses a dedicated MCP tab; active operates on the currently active tab.")] string targetTab = "mcp")
         {
             if (offset < 0) throw new ArgumentException("offset must be >= 0.", nameof(offset));
             if (limit <= 0 || limit > 5000) throw new ArgumentException("limit must be between 1 and 5000.", nameof(limit));
 
-            var args = new McpGetFileListEventArgs();
+            var args = new McpGetFileListEventArgs { TargetTab = McpTabTarget.Normalize(targetTab) };
             await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpGetFileListEvent>());
 
             if (args.Files == null)
