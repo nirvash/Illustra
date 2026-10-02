@@ -16,6 +16,8 @@ using System.Reflection;
 using Prism.Events;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows.Threading;
 
 namespace Illustra.Views
 {
@@ -27,6 +29,16 @@ namespace Illustra.Views
         private string CONTROL_ID = "PropertyPanel";
         private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
         private ViewerSettings _viewerSettings;
+        // MainWindow は行の高さでパネルを隠すため、IsVisible だけでは判定できない。
+        private bool _isPresentationEnabled = true;
+        private bool _hasDeferredProperties;
+
+        public void SetPresentationEnabled(bool enabled)
+        {
+            if (_isPresentationEnabled == enabled) return;
+            _isPresentationEnabled = enabled;
+            ApplyDeferredPropertiesIfVisible();
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -97,14 +109,43 @@ namespace Illustra.Views
         {
             if (e.PropertyName == nameof(IllustraAppContext.CurrentProperties))
             {
-                // CurrentPropertiesが変更されたらDependencyPropertyも更新
-                ImageProperties = _appContext.CurrentProperties;
+                if (!_isPresentationEnabled || !IsVisible)
+                {
+                    _hasDeferredProperties = true;
+                    if (ViewerPerformanceLog.IsEnabled)
+                        ViewerPerformanceLog.Append($"panel-deferred panel={RuntimeHelpers.GetHashCode(this)} window={Window.GetWindow(this)?.GetType().Name} path=\"{_appContext.CurrentProperties?.FilePath}\" visible={IsVisible} enabled={_isPresentationEnabled}");
+                    return;
+                }
 
-                // DataContextも更新（これが重要）
-                DataContext = ImageProperties;
-                OnPropertyChanged(nameof(ImageProperties));
-                OnPropertyChanged(nameof(ImageProperties.HasStableDiffusionData));
-                UpdateGenerationDependentSectionsVisibility();
+                ApplyCurrentProperties();
+            }
+        }
+
+        private void ApplyDeferredPropertiesIfVisible()
+        {
+            if (_hasDeferredProperties && _isPresentationEnabled && IsVisible)
+                ApplyCurrentProperties();
+        }
+
+        private void ApplyCurrentProperties()
+        {
+            _hasDeferredProperties = false;
+            var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+            ImageProperties = _appContext.CurrentProperties;
+            DataContext = ImageProperties;
+            OnPropertyChanged(nameof(ImageProperties));
+            OnPropertyChanged(nameof(ImageProperties.HasStableDiffusionData));
+            UpdateGenerationDependentSectionsVisibility();
+            if (timing != null)
+            {
+                var model = ImageProperties;
+                var panelId = RuntimeHelpers.GetHashCode(this);
+                ViewerPerformanceLog.Append($"panel-applied panel={panelId} window={Window.GetWindow(this)?.GetType().Name} path=\"{model?.FilePath}\" visible={IsVisible} applyMs={timing.Elapsed.TotalMilliseconds:F3}");
+                // 優先度到達の待ち時間。レイアウトを強制せず、実際の画面描画完了とは区別する。
+                Dispatcher.BeginInvoke(DispatcherPriority.DataBind, new Action(() =>
+                    ViewerPerformanceLog.Append($"panel-databind panel={panelId} path=\"{model?.FilePath}\" elapsedMs={timing.Elapsed.TotalMilliseconds:F3} stale={!ReferenceEquals(model, ImageProperties)}")));
+                Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+                    ViewerPerformanceLog.Append($"panel-render-priority panel={panelId} path=\"{model?.FilePath}\" elapsedMs={timing.Elapsed.TotalMilliseconds:F3} stale={!ReferenceEquals(model, ImageProperties)}")));
             }
         }
 
@@ -136,6 +177,7 @@ namespace Illustra.Views
 
             Loaded += PropertyPanelControl_Loaded;
             Unloaded += PropertyPanelControl_Unloaded;
+            IsVisibleChanged += (_, _) => ApplyDeferredPropertiesIfVisible();
             PreviewMouseDoubleClick += PropertyPanelControl_PreviewMouseDoubleClick;
         }
 

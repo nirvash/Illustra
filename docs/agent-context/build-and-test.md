@@ -43,6 +43,12 @@ dotnet test tests/Illustra.Tests.csproj --filter "FullyQualifiedName~<テスト�
 - **毎回の full test は不要**。ローカル修正の基本検証はビルド。テストは対象ドメイン変更時のみ。
 - XAML エラーはビルドで検出されるが挙動不具合は実行時まで分からない。UI 変更はアプリ起動して目視確認が確実。
 
+## ビューア切替の性能ログ
+
+`ILLUSTRA_PERF_LOG` に出力ファイルの絶対パスを指定してアプリを起動すると、開発者モードを変更せずに詳細ログを記録できる。未指定時は従来どおり開発者モードで `%APPDATA%\Illustra\viewer_performance.log` に記録する。ログは非同期で書き込むため、正常終了前に数秒待って末尾を確認する。
+
+同じ `request` 値の `switch-start`、`cache-get`、`format-check`、`image-assign`、`static-switch`、`switch-end` を照合する。`preload-*` は先読み、`properties-*` と `panel-*` は選択後のプロパティ処理を示す。`renderQueueMs` および `panel-render-priority` は Dispatcher の Render 優先度までの待ち時間であり、物理画面への描画完了時間ではない。
+
 ## リリース（通常タスクでは触らない）
 
 - タグ `v*.*.*` を push → GitHub Actions（`.github/workflows/release.yml`）が Release ビルド + 単一 exe publish + Inno Setup インストーラ + ZIP 作成まで自動実行。

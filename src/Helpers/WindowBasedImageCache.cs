@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,8 +55,23 @@ namespace Illustra.Helpers
         /// <inheritdoc/>
         public async Task<BitmapSource> GetImageAsync(string path, CancellationToken cancellationToken = default)
         {
-            if (_cache.TryGetValue(path, out var image)) return image;
-            var decodedImage = await Task.Run(() => LoadImageFromFile(path), cancellationToken);
+            var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+            if (_cache.TryGetValue(path, out var image))
+            {
+                if (timing != null) ViewerPerformanceLog.Append($"cache-get path=\"{path}\" hit=True count={_cache.Count}");
+                return image;
+            }
+            if (timing != null) ViewerPerformanceLog.Append($"cache-get path=\"{path}\" hit=False count={_cache.Count}");
+            double decodeEndMs = 0;
+            var decodedImage = await Task.Run(() =>
+            {
+                var queueMs = timing?.Elapsed.TotalMilliseconds ?? 0;
+                var decoded = LoadImageFromFile(path);
+                decodeEndMs = timing?.Elapsed.TotalMilliseconds ?? 0;
+                if (timing != null) ViewerPerformanceLog.Append($"cache-decode path=\"{path}\" queueMs={queueMs:F3} decodeMs={decodeEndMs - queueMs:F3}");
+                return decoded;
+            }, cancellationToken);
+            if (timing != null) ViewerPerformanceLog.Append($"cache-resume path=\"{path}\" continuationMs={timing.Elapsed.TotalMilliseconds - decodeEndMs:F3} cancelled={cancellationToken.IsCancellationRequested}");
             cancellationToken.ThrowIfCancellationRequested();
             if (_cache.TryGetValue(path, out var cachedImage)) return cachedImage;
             _cache[path] = decodedImage;
@@ -138,6 +154,8 @@ namespace Illustra.Helpers
         /// <inheritdoc/>
         public async Task UpdateCacheAsync(List<FileNodeModel> files, int currentIndex, CancellationToken cancellationToken = default)
         {
+            var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+            var originPath = currentIndex >= 0 && currentIndex < files.Count ? files[currentIndex].FullPath : "";
             try
             {
                 if (currentIndex < 0 || currentIndex >= files.Count) return;
@@ -147,6 +165,7 @@ namespace Illustra.Helpers
                 var currentImageIndex = imageFiles.IndexOf(currentImageFile);
                 var startIndex = Math.Max(0, currentImageIndex - _backwardSize);
                 var endIndex = Math.Min(imageFiles.Count - 1, currentImageIndex + _forwardSize);
+                if (timing != null) ViewerPerformanceLog.Append($"preload-start path=\"{originPath}\" current={currentImageIndex} start={startIndex} end={endIndex} count={_cache.Count}");
                 CleanUpCache(new HashSet<string>(imageFiles.Skip(startIndex).Take(endIndex - startIndex + 1).Select(f => f.FullPath)));
 
                 for (var i = startIndex; i <= endIndex; i++)
@@ -172,6 +191,10 @@ namespace Illustra.Helpers
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 // 最新のキャッシュウィンドウへ切り替わったため、古いプリロードを終了する。
+            }
+            finally
+            {
+                if (timing != null) ViewerPerformanceLog.Append($"preload-end path=\"{originPath}\" elapsedMs={timing.Elapsed.TotalMilliseconds:F3} cancelled={cancellationToken.IsCancellationRequested} count={_cache.Count}");
             }
         }
 

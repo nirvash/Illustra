@@ -109,6 +109,7 @@ namespace Illustra.Views
             RestoreSplitterPositions();
 
             // プロパティパネルの表示状態を共有コンテキストへ通知（非表示ならメタデータ解析をスキップする）
+            PropertyPanel.SetPresentationEnabled(_appSettings.MainPropertyPanelVisible);
             _appContext.SetMainPropertyPanelVisible(_appSettings.MainPropertyPanelVisible);
 
             // バージョン情報をタイトルに追加
@@ -176,6 +177,7 @@ namespace Illustra.Views
             SettingsHelper.SaveSettings(_appSettings);
 
             // 表示状態の変更を共有コンテキストへ通知（表示時は現在選択中ファイルのプロパティを再読み込み）
+            PropertyPanel.SetPresentationEnabled(!isVisible);
             _appContext.SetMainPropertyPanelVisible(!isVisible);
         }
 

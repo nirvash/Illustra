@@ -80,6 +80,21 @@
                                 Value="#E4B5B9"/>
                 </Style>
 
+                <!-- タグごとに同じメニューのビジュアルツリーを生成しない -->
+                <ContextMenu x:Key="FilterableTagContextMenu">
+                        <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                  Click="CopyTag_Click"/>
+                        <Separator/>
+                        <MenuItem Header="{DynamicResource String_Menu_AddTagToFilter}"
+                                  Click="AddTagToFilter_Click"/>
+                        <MenuItem Header="{DynamicResource String_Menu_RemoveTagFromFilter}"
+                                  Click="RemoveTagFromFilter_Click"/>
+                </ContextMenu>
+                <ContextMenu x:Key="CopyTagContextMenu">
+                        <MenuItem Header="{DynamicResource String_Menu_CopyText}"
+                                  Click="CopyTag_Click"/>
+                </ContextMenu>
+
                 <!-- 読み取り専用のテキストボックススタイル -->
                 <Style x:Key="ReadOnlyTextBoxStyle"
                        TargetType="TextBox"
@@ -421,25 +436,9 @@
                                                                                  IsReadOnlyCaretVisible="True"
                                                                                  VerticalAlignment="Center"
                                                                                  MinWidth="20"
-                                                                                 Tag="{Binding Path=.}"
-
                                                                                  PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
-                                                                                 Loaded="Tag_Loaded">
-                                                                                <TextBox.ContextMenu>
-                                                                                        <ContextMenu>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
-                                                                                                        Click="CopyTag_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                                <Separator/>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_AddTagToFilter}"
-                                                                                                        Click="AddTagToFilter_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_RemoveTagFromFilter}"
-                                                                                                        Click="RemoveTagFromFilter_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                        </ContextMenu>
-                                                                                </TextBox.ContextMenu>
-                                                                        </TextBox>
+                                                                                 Loaded="Tag_Loaded"
+                                                                                 ContextMenu="{StaticResource FilterableTagContextMenu}"/>
                                                                 </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -469,24 +468,9 @@
                                                                                 IsReadOnlyCaretVisible="True"
                                                                                 VerticalAlignment="Center"
                                                                                 MinWidth="20"
-                                                                                Tag="{Binding Path=.}"
                                                                                 PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
-                                                                                Loaded="Tag_Loaded">
-                                                                                <TextBox.ContextMenu>
-                                                                                        <ContextMenu>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_CopyText}"
-                                                                                                        Click="CopyTag_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                                <Separator/>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_AddTagToFilter}"
-                                                                                                        Click="AddTagToFilter_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                                <MenuItem Header="{DynamicResource String_Menu_RemoveTagFromFilter}"
-                                                                                                        Click="RemoveTagFromFilter_Click"
-                                                                                                        Tag="{Binding}"/>
-                                                                                        </ContextMenu>
-                                                                                </TextBox.ContextMenu>
-                                                                        </TextBox>
+                                                                                Loaded="Tag_Loaded"
+                                                                                ContextMenu="{StaticResource FilterableTagContextMenu}"/>
                                                                 </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -513,14 +497,8 @@
                                                                                  IsReadOnlyCaretVisible="True"
                                                                                  VerticalAlignment="Center"
                                                                                  MinWidth="20"
-                                                                                 PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown">
-                                                                          <TextBox.ContextMenu>
-                                                                              <ContextMenu>
-                                                                                  <MenuItem Header="{DynamicResource String_Menu_CopyText}"
-                                                                                          Click="CopyTag_Click"/>
-                                                                              </ContextMenu>
-                                                                          </TextBox.ContextMenu>
-                                                                      </TextBox>
+                                                                                 PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown"
+                                                                                 ContextMenu="{StaticResource CopyTagContextMenu}"/>
                                                                 </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

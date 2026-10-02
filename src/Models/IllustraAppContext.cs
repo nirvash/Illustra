@@ -7,6 +7,7 @@ using System; // 追加
 using Illustra.Services; // DatabaseManager を使うために追加
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 
 namespace Illustra.Models
 {
@@ -85,6 +86,15 @@ namespace Illustra.Models
         {
             RaisePropertyChanged(nameof(IsPropertyPanelVisible));
 
+            if (!IsPropertyPanelVisible)
+            {
+                // 進行中の解析結果が、パネルを閉じた後に適用されるのを防ぐ。
+                ++_propertiesRequestId;
+                if (!string.IsNullOrEmpty(CurrentProperties?.FilePath))
+                    SetLightweightProperties(CurrentProperties.FilePath);
+                return;
+            }
+
             // パネルが表示された場合は、現在選択中のファイルのプロパティを再読み込みする
             if (IsPropertyPanelVisible && !string.IsNullOrEmpty(CurrentProperties?.FilePath))
             {
@@ -116,11 +126,15 @@ namespace Illustra.Models
             // プロパティパネル非表示時はメタデータ解析（重い処理）をスキップする
             if (!IsPropertyPanelVisible && !forceMetadata)
             {
+                ++_propertiesRequestId;
                 SetLightweightProperties(filePath);
                 return;
             }
 
             var requestId = ++_propertiesRequestId;
+            var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+            if (timing != null)
+                ViewerPerformanceLog.Append($"properties-start propertyRequest={requestId} path=\"{filePath}\" mainPanel={_isMainPanelVisible} viewerPanel={_isViewerPanelVisible}");
 
             try
             {
@@ -128,9 +142,14 @@ namespace Illustra.Models
                 // ImagePropertiesHelper.LoadPropertiesAsync は静的メソッドと仮定
                 // ImagePropertiesServiceと同様の静的メソッドを使用
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
+                var loadMs = timing?.Elapsed.TotalMilliseconds ?? 0;
 
                 // 読み込み中に別のファイルが選択された場合は古い結果を破棄する
-                if (requestId != _propertiesRequestId) return;
+                if (requestId != _propertiesRequestId)
+                {
+                    if (timing != null) ViewerPerformanceLog.Append($"properties-stale propertyRequest={requestId} path=\"{filePath}\" loadMs={loadMs:F3}");
+                    return;
+                }
 
                 if (properties == null)
                 {
@@ -141,6 +160,8 @@ namespace Illustra.Models
                 ApplyRatingFromItems(properties, filePath);
 
                 CurrentProperties = properties; // 更新されたプロパティをセット
+                if (timing != null)
+                    ViewerPerformanceLog.Append($"properties-applied propertyRequest={requestId} path=\"{filePath}\" loadMs={loadMs:F3} applyMs={timing.Elapsed.TotalMilliseconds - loadMs:F3}");
                 LogHelper.LogWithTimestamp($"プロパティ読み込み完了: {filePath}", LogHelper.Categories.UI);
             }
             catch (Exception ex)

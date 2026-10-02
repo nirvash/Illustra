@@ -622,8 +622,11 @@ namespace Illustra.Models
                 else if (FileHelper.IsImageFile(filePath)) // 画像ファイルの場合
                 {
                     properties.IsVideo = false; // Use setter
+                    var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+                    double workerStartMs = 0, workerEndMs = 0;
                     await Task.Run(() => // Image processing in background thread
                     {
+                        workerStartMs = timing?.Elapsed.TotalMilliseconds ?? 0;
                         try
                         {
                             // SkiaSharp を使用して画像の基本情報を読み取る
@@ -665,7 +668,13 @@ namespace Illustra.Models
                         {
                             System.Diagnostics.Debug.WriteLine($"画像プロパティ読み取りエラー ({filePath}): {ex.Message}");
                         }
+                        finally
+                        {
+                            workerEndMs = timing?.Elapsed.TotalMilliseconds ?? 0;
+                        }
                     });
+                    if (timing != null)
+                        ViewerPerformanceLog.Append($"properties-worker path=\"{filePath}\" queueMs={workerStartMs:F3} workMs={workerEndMs - workerStartMs:F3} resumeMs={timing.Elapsed.TotalMilliseconds - workerEndMs:F3}");
                 }
                 // else: Handle unsupported file types if necessary
             }

@@ -4,6 +4,7 @@ using Illustra.Events;
 using Illustra.Helpers;
 using Illustra.Models;
 using Prism.Events;
+using System.Diagnostics;
 
 namespace Illustra.Services
 {
@@ -131,7 +132,10 @@ namespace Illustra.Services
                 // パネル表示中の連続選択（矢印キー連打等）では、選択が落ち着いてから重い解析を開始する
                 if (_appContext.IsPropertyPanelVisible)
                 {
+                    var timing = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
                     await Task.Delay(PropertyLoadDebounceMilliseconds);
+                    if (timing != null)
+                        ViewerPerformanceLog.Append($"properties-debounce selection={sequence} path=\"{model.FullPath}\" elapsedMs={timing.Elapsed.TotalMilliseconds:F3} superseded={sequence != _selectionSequence}");
                     if (sequence != _selectionSequence) return; // 選択が変わったため古い要求は破棄
                 }
 

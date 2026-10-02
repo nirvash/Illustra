@@ -660,7 +660,12 @@ namespace Illustra.Views
                 // Hide video player
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
 
-                if (await WebPHelper.IsAnimatedWebPAsync(filePath))
+                var isWebP = string.Equals(Path.GetExtension(filePath), ".webp", StringComparison.OrdinalIgnoreCase);
+                var formatCheckTiming = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
+                var isAnimatedWebP = isWebP && await WebPHelper.IsAnimatedWebPAsync(filePath);
+                if (formatCheckTiming != null)
+                    ViewerPerformanceLog.Append($"format-check path=\"{filePath}\" elapsedMs={formatCheckTiming.Elapsed.TotalMilliseconds:F3} animated={isAnimatedWebP} skipped={(isWebP ? "none" : "non-webp")}");
+                if (isAnimatedWebP)
                 {
                     WebpPlayer.Visibility = Visibility.Visible;
                     LogHelper.LogWithTimestamp("LoadAndDisplayContent - Before LoadWebpAsync", LogHelper.Categories.Performance);
@@ -685,7 +690,8 @@ namespace Illustra.Views
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
             }
 
-            if (await WebPHelper.IsAnimatedWebPAsync(filePath))
+            if (string.Equals(Path.GetExtension(filePath), ".webp", StringComparison.OrdinalIgnoreCase)
+                && await WebPHelper.IsAnimatedWebPAsync(filePath))
             {
                 WebpPlayer.Visibility = Visibility.Visible;
                 await WebpPlayer.LoadWebpAsync(filePath);
@@ -743,12 +749,15 @@ namespace Illustra.Views
                         LogHelper.Categories.ImageCache);
                 }
                 */
+                var imageTiming = ViewerPerformanceLog.IsEnabled ? Stopwatch.StartNew() : null;
                 var image = await _imageCache.GetImageAsync(filePath, cancellationToken);
+                var cacheMs = imageTiming?.Elapsed.TotalMilliseconds ?? 0;
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
                 {
                     ImageSource = image;
+                    if (imageTiming != null) ViewerPerformanceLog.Append($"image-assign path=\"{filePath}\" cacheMs={cacheMs:F3} assignMs={imageTiming.Elapsed.TotalMilliseconds - cacheMs:F3}");
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -768,6 +777,10 @@ namespace Illustra.Views
             LogHelper.LogWithTimestamp("SwitchToContent - Start", LogHelper.Categories.Performance);
             var measurePerformance = ViewerPerformanceLog.IsEnabled;
             var stopwatch = measurePerformance ? Stopwatch.StartNew() : null;
+            using var performanceRequest = measurePerformance ? ViewerPerformanceLog.BeginRequest(filePath) : null;
+            double loadEndMs = 0;
+            double renderEndMs = 0;
+            double notifyMs = 0;
             try
             {
                 if (_currentFilePath?.Equals(filePath, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -800,7 +813,10 @@ namespace Illustra.Views
 
                 // 2. コンテンツを表示
                 LogHelper.LogWithTimestamp("SwitchToContent - Before LoadAndDisplayContent", LogHelper.Categories.Performance);
+                var loadStartMs = stopwatch?.Elapsed.TotalMilliseconds ?? 0;
                 await LoadAndDisplayContent(filePath, imageLoadCancellationToken); // Call LoadAndDisplayContent
+                loadEndMs = stopwatch?.Elapsed.TotalMilliseconds ?? 0;
+                if (measurePerformance) ViewerPerformanceLog.Append($"switch-load path=\"{filePath}\" prepareMs={loadStartMs:F3} loadMs={loadEndMs - loadStartMs:F3} cancelled={imageLoadCancellationToken.IsCancellationRequested}");
 
                 if (imageLoadCancellationToken.IsCancellationRequested ||
                     !string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
@@ -812,7 +828,8 @@ namespace Illustra.Views
                 if (measurePerformance && ImageZoomControl.Visibility == Visibility.Visible)
                 {
                     await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-                    ViewerPerformanceLog.Append($"static-switch path=\"{filePath}\" renderMs={stopwatch!.ElapsedMilliseconds} cacheHit={cacheHitBeforeLoad}");
+                    renderEndMs = stopwatch!.Elapsed.TotalMilliseconds;
+                    ViewerPerformanceLog.Append($"static-switch path=\"{filePath}\" renderMs={stopwatch.ElapsedMilliseconds} cacheHit={cacheHitBeforeLoad} renderQueueMs={renderEndMs - loadEndMs:F3}");
                 }
                 // 3. 画像の場合のみズームをリセット
                 if (ImageZoomControl.Visibility == Visibility.Visible)
@@ -842,9 +859,11 @@ namespace Illustra.Views
                 // 親ウィンドウのサムネイル選択を更新
                 if (notifyFileSelection)
                 {
+                    var notifyStartMs = stopwatch?.Elapsed.TotalMilliseconds ?? 0;
                     var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                     eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(
                         new SelectedFileModel(CONTROL_ID, filePath));
+                    notifyMs = (stopwatch?.Elapsed.TotalMilliseconds ?? 0) - notifyStartMs;
                 }
             }
             catch (OperationCanceledException)
@@ -855,6 +874,10 @@ namespace Illustra.Views
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading content: {ex.Message}");
                 MessageBox.Show($"コンテンツの読み込みに失敗しました：{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (measurePerformance) ViewerPerformanceLog.Append($"switch-end path=\"{filePath}\" totalMs={stopwatch!.Elapsed.TotalMilliseconds:F3} postMs={stopwatch.Elapsed.TotalMilliseconds - Math.Max(loadEndMs, renderEndMs):F3} notifyMs={notifyMs:F3}");
             }
         }
 
