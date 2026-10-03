@@ -617,6 +617,17 @@
                                         </ItemsControl>
 
                                         <!-- プロンプト本文 (タグ分解せず長文のまま表示) -->
+                                        <TextBlock Text="{DynamicResource String_Property_Prompt}" Margin="0,5,0,5"/>
+                                        <ItemsControl x:Name="GenerationTagsItemsControl" ItemsSource="{Binding GenerationMetadata.Tags}">
+                                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <Border Background="#D1E3FF" BorderThickness="1" BorderBrush="Transparent" Padding="5,2" Margin="0,0,5,5" CornerRadius="3">
+                                                                        <TextBox Text="{Binding Path=., Mode=OneWay}" Foreground="Black" Style="{StaticResource NormalTagTextBoxStyle}" IsReadOnlyCaretVisible="True" VerticalAlignment="Center" MinWidth="20" PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown" Loaded="Tag_Loaded" ContextMenu="{StaticResource FilterableTagContextMenu}"/>
+                                                                </Border>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                         <TextBlock Text="{DynamicResource String_Property_Prompt}"
                                                    Margin="0,10,0,5"
                                                    Visibility="{Binding GenerationMetadata.Prompt, Converter={StaticResource StringToVisibilityConverter}}"/>
@@ -636,6 +647,16 @@
                                         </TextBox>
 
                                         <!-- ネガティブプロンプト -->
+                                        <ItemsControl x:Name="GenerationNegativeTagsItemsControl" ItemsSource="{Binding GenerationMetadata.NegativeTags}">
+                                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <Border Background="#F8D7DA" BorderThickness="1" BorderBrush="Transparent" Padding="5,2" Margin="0,0,5,5" CornerRadius="3">
+                                                                        <TextBox Text="{Binding Path=., Mode=OneWay}" Foreground="Black" Style="{StaticResource NegativeTagTextBoxStyle}" IsReadOnlyCaretVisible="True" VerticalAlignment="Center" MinWidth="20" PreviewMouseRightButtonDown="Tag_PreviewMouseRightButtonDown" Loaded="Tag_Loaded" ContextMenu="{StaticResource FilterableTagContextMenu}"/>
+                                                                </Border>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                         <TextBlock Text="{DynamicResource String_Property_NegativePrompt}"
                                                    Margin="0,10,0,5"
                                                    Visibility="{Binding GenerationMetadata.NegativePrompt, Converter={StaticResource StringToVisibilityConverter}}"/>

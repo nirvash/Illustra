@@ -735,7 +735,7 @@ namespace Illustra.Views
         {
             // TagsItemsControlはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
-            if (TagsItemsControl == null && LoraTagsItemsControl == null) return;
+            if (TagsItemsControl == null && LoraTagsItemsControl == null && GenerationTagsItemsControl == null && GenerationNegativeTagsItemsControl == null) return;
 
             // ItemsControlの子要素を再帰的に検索
             var textBoxes = new List<TextBox>();
@@ -746,11 +746,17 @@ namespace Illustra.Views
                 FindVisualChildren<TextBox>(TagsItemsControl, textBoxes);
             }
 
-            // Loraタグを検索
+            // Loraタグ
             if (LoraTagsItemsControl != null)
             {
                 FindVisualChildren<TextBox>(LoraTagsItemsControl, textBoxes);
             }
+
+            if (GenerationTagsItemsControl != null)
+                FindVisualChildren<TextBox>(GenerationTagsItemsControl, textBoxes);
+
+            if (GenerationNegativeTagsItemsControl != null)
+                FindVisualChildren<TextBox>(GenerationNegativeTagsItemsControl, textBoxes);
 
             // 各TextBoxのハイライト状態を更新
             foreach (var textBox in textBoxes)

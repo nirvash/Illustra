@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using StableDiffusionTools;
 
 namespace Illustra.Models
 {
@@ -10,6 +11,10 @@ namespace Illustra.Models
     /// </summary>
     public class GenerationMetadata
     {
+        private static readonly WebUIMetadataParser TagParser = new WebUIMetadataParser();
+        public List<string> Tags => TagParser.ExtractTags(Prompt);
+        public List<string> NegativeTags => TagParser.ExtractTags(NegativePrompt);
+
         /// <summary>
         /// 生成ツールの種類（"ComfyUI" など）
         /// </summary>
