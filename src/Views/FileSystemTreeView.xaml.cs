@@ -438,6 +438,17 @@ namespace Illustra.Views
         {
             if (sender is TreeViewItem item)
             {
+                if (item.ContextMenu != null)
+                {
+                    foreach (var menuItem in FindMenuItems(item.ContextMenu))
+                    {
+                        if (Equals(menuItem.Tag, "CopyTreeItemFullPath"))
+                        {
+                            menuItem.Click -= CopyTreeItemFullPath_Click;
+                            menuItem.Click += CopyTreeItemFullPath_Click;
+                        }
+                    }
+                }
                 if (item == _currentHighlightedItem)
                 {
                     // ハイライト中のアイテムで右クリックされた場合、
@@ -453,6 +464,47 @@ namespace Illustra.Views
                     _currentHighlightedItem = null; // ハイライト対象なし
                     // _isContextMenuOpen = false; // 削除済み
                 }
+        }
+
+        private static System.Collections.Generic.IEnumerable<MenuItem> FindMenuItems(ItemsControl parent)
+        {
+            foreach (var child in parent.Items)
+            {
+                if (child is MenuItem menuItem)
+                {
+                    yield return menuItem;
+                    foreach (var descendant in FindMenuItems(menuItem))
+                        yield return descendant;
+                }
+            }
+        }
+
+        public static bool CopyTreeItemFullPath(FileSystemItemModel? item, Action<string> copyText)
+        {
+            if (item == null || string.IsNullOrEmpty(item.FullPath))
+                return false;
+
+            copyText(item.FullPath);
+            return true;
+        }
+
+        private void CopyTreeItemFullPath_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is not MenuItem menuItem ||
+                    menuItem.Parent is not ContextMenu contextMenu ||
+                    contextMenu.PlacementTarget is not TreeViewItem target ||
+                    target.Tag is not FileSystemItemModel targetModel)
+                    return;
+
+                if (CopyTreeItemFullPath(targetModel, Clipboard.SetText))
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ツリー項目のパスコピーに失敗しました: {ex.Message}");
+            }
         }
 
         // XAML から呼び出す必要があるイベントハンドラ

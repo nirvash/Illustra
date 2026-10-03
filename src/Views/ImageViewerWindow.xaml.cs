@@ -32,8 +32,10 @@ namespace Illustra.Views
         /// </summary>
         public async Task ShowWebpAnimation(string filePath)
         {
+            _displayedFilePath = null;
             WebpPlayer.Visibility = Visibility.Visible;
             await WebpPlayer.LoadWebpAsync(filePath);
+            _displayedFilePath = filePath;
         }
 
         private const string CONTROL_ID = "ImageViewer";
@@ -59,6 +61,7 @@ namespace Illustra.Views
 
         // 画像切り替え用
         private string _currentFilePath;
+        private string? _displayedFilePath;
         private CancellationTokenSource? _imageLoadCancellationTokenSource;
         private CancellationTokenSource? _preloadCancellationTokenSource;
         private bool _isSlideshowActive = false;
@@ -136,18 +139,9 @@ namespace Illustra.Views
             this.StateChanged += MainWindow_StateChanged;
 
             // 右クリックイベントを設定
-            ImageZoomControl.MouseRightButtonDown += async (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(_currentFilePath))
-                {
-                    e.Handled = true;
-                    await _appContext.UpdateCurrentPropertiesAsync(
-                        _currentFilePath,
-                        forceReload: true,
-                        forceMetadata: true);
-                    ShowPromptMenu();
-                }
-            };
+            ImageZoomControl.PreviewMouseRightButtonDown += Media_MouseRightButtonDown;
+            WebpPlayer.PreviewMouseRightButtonDown += Media_MouseRightButtonDown;
+            VideoPlayerControl.PreviewMouseRightButtonDown += Media_MouseRightButtonDown;
 
             // マウスカーソル非表示用のタイマー
             hideCursorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -257,56 +251,115 @@ namespace Illustra.Views
             };
         }
 
-        private void ShowPromptMenu()
+        private void Media_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+            var targetPath = _displayedFilePath;
+            if (string.IsNullOrEmpty(targetPath) || sender is not FrameworkElement placementTarget)
+                return;
 
+            e.Handled = true;
+            ShowPromptMenu(targetPath, placementTarget);
+        }
+
+        private void ShowPromptMenu(string targetPath, FrameworkElement placementTarget)
+        {
             // コンテキストメニューを作成
             var menu = new ContextMenu();
+            var targetProperties = _appContext?.CurrentProperties;
+            if (!string.Equals(targetProperties?.FilePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                targetProperties = null;
 
-            // プロンプトをコピー
-            var copyPromptItem = new MenuItem
+            if (targetProperties?.StableDiffusionResult != null)
             {
-                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
-            };
-            copyPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Positive);
-            menu.Items.Add(copyPromptItem);
-
-            // ネガティブプロンプトをコピー (存在する場合のみ)
-            if (!string.IsNullOrEmpty(_appContext?.CurrentProperties?.StableDiffusionResult?.NegativePrompt))
-            {
-                var copyNegativePromptItem = new MenuItem
+                var copyPromptItem = new MenuItem
                 {
-                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyNegativePrompt")
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyPrompt")
                 };
-                copyNegativePromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Negative);
-                menu.Items.Add(copyNegativePromptItem);
+                copyPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Positive, targetProperties);
+                menu.Items.Add(copyPromptItem);
+
+                if (!string.IsNullOrEmpty(targetProperties.StableDiffusionResult.NegativePrompt))
+                {
+                    var copyNegativePromptItem = new MenuItem
+                    {
+                        Header = (string)Application.Current.FindResource("String_Thumbnail_CopyNegativePrompt")
+                    };
+                    copyNegativePromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.Negative, targetProperties);
+                    menu.Items.Add(copyNegativePromptItem);
+                }
+
+                var copyAllPromptItem = new MenuItem
+                {
+                    Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+                };
+                copyAllPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.All, targetProperties);
+                menu.Items.Add(copyAllPromptItem);
+                menu.Items.Add(new Separator());
             }
 
-            // プロンプト全体をコピー
-            var copyAllPromptItem = new MenuItem
+            var copyPathItem = new MenuItem
             {
-                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyAllPrompt")
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyFilePath")
             };
-            copyAllPromptItem.Click += (s, e) => CopyPrompt(PromptCopyType.All);
-            menu.Items.Add(copyAllPromptItem);
+            copyPathItem.Click += (s, e) =>
+            {
+                try
+                {
+                    Clipboard.SetText(targetPath);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
+                }
+                catch (Exception ex) { Debug.WriteLine($"パスのコピーに失敗しました: {ex.Message}"); }
+            };
+            menu.Items.Add(copyPathItem);
+
+            var copyImageItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyImage"),
+                IsEnabled = FileHelper.IsImageFile(targetPath)
+            };
+            copyImageItem.Click += (s, e) =>
+            {
+                try
+                {
+                    ImageClipboardHelper.CopyImageToClipboard(targetPath);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_ImageCopied"));
+                }
+                catch (Exception ex) { Debug.WriteLine($"画像のコピーに失敗しました: {ex.Message}"); }
+            };
+            menu.Items.Add(copyImageItem);
+
+            var copyFileItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyFile")
+            };
+            copyFileItem.Click += (s, e) =>
+            {
+                try
+                {
+                    var data = new DataObject();
+                    data.SetData(DataFormats.FileDrop, new[] { targetPath });
+                    Clipboard.SetDataObject(data, true);
+                }
+                catch (Exception ex) { Debug.WriteLine($"ファイルのコピーに失敗しました: {ex.Message}"); }
+            };
+            menu.Items.Add(copyFileItem);
 
             // メニューを表示
-            menu.PlacementTarget = ImageZoomControl;
-            ImageZoomControl.ContextMenu = menu; // ContextMenu プロパティに設定
+            menu.PlacementTarget = placementTarget;
+            placementTarget.ContextMenu = menu;
             menu.IsOpen = true;
         }
 
         private enum PromptCopyType { Positive, Negative, All }
 
-        private void CopyPrompt(PromptCopyType type)
+        private void CopyPrompt(PromptCopyType type, ImagePropertiesModel properties)
         {
-            if (_appContext?.CurrentProperties?.StableDiffusionResult == null) return;
+            if (properties.StableDiffusionResult == null) return;
 
             try
             {
                 string textToCopy = "";
-                var result = _appContext.CurrentProperties.StableDiffusionResult;
+                var result = properties.StableDiffusionResult;
 
                 switch (type)
                 {
@@ -317,7 +370,7 @@ namespace Illustra.Views
                         textToCopy = result.NegativePrompt;
                         break;
                     case PromptCopyType.All:
-                        textToCopy = _appContext.CurrentProperties.UserComment; // UserComment全体をコピー
+                        textToCopy = properties.UserComment; // UserComment全体をコピー
                         break;
                 }
 
@@ -667,10 +720,16 @@ namespace Illustra.Views
                     ViewerPerformanceLog.Append($"format-check path=\"{filePath}\" elapsedMs={formatCheckTiming.Elapsed.TotalMilliseconds:F3} animated={isAnimatedWebP} skipped={(isWebP ? "none" : "non-webp")}");
                 if (isAnimatedWebP)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _displayedFilePath = null;
                     WebpPlayer.Visibility = Visibility.Visible;
                     LogHelper.LogWithTimestamp("LoadAndDisplayContent - Before LoadWebpAsync", LogHelper.Categories.Performance);
                     await WebpPlayer.LoadWebpAsync(filePath);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
+                        return;
                     ImageZoomControl.Visibility = Visibility.Collapsed;
+                    _displayedFilePath = filePath;
                     LogHelper.LogWithTimestamp("LoadAndDisplayContent - After LoadWebpAsync", LogHelper.Categories.Performance);
                 }
                 else
@@ -694,8 +753,10 @@ namespace Illustra.Views
                 && await WebPHelper.IsAnimatedWebPAsync(filePath))
             {
                 WebpPlayer.Visibility = Visibility.Visible;
+                _displayedFilePath = null;
                 await WebpPlayer.LoadWebpAsync(filePath);
                 ImageZoomControl.Visibility = Visibility.Collapsed;
+                _displayedFilePath = filePath;
             }
             else
             {
@@ -705,6 +766,7 @@ namespace Illustra.Views
 
         private void ShowVideo(string filePath)
         {
+            _displayedFilePath = null;
             // Hide other controls
             ImageZoomControl.Visibility = Visibility.Collapsed;
             WebpPlayer.Visibility = Visibility.Collapsed;
@@ -712,10 +774,13 @@ namespace Illustra.Views
             // Show video player and set source
             VideoPlayerControl.Visibility = Visibility.Visible;
             VideoPlayerControl.FilePath = filePath; // Set FilePath to trigger loading in the control
+            _displayedFilePath = filePath;
         }
 
         private async Task ShowStaticImageAsync(string filePath, CancellationToken cancellationToken)
         {
+            if (ImageZoomControl.Visibility != Visibility.Visible)
+                _displayedFilePath = null;
             // Hide video player if visible
             if (VideoPlayerControl.Visibility == Visibility.Visible)
             {
@@ -757,6 +822,7 @@ namespace Illustra.Views
                 if (string.Equals(filePath, _currentFilePath, StringComparison.OrdinalIgnoreCase))
                 {
                     ImageSource = image;
+                    _displayedFilePath = filePath;
                     if (imageTiming != null) ViewerPerformanceLog.Append($"image-assign path=\"{filePath}\" cacheMs={cacheMs:F3} assignMs={imageTiming.Elapsed.TotalMilliseconds - cacheMs:F3}");
                 }
             }
@@ -1064,6 +1130,7 @@ namespace Illustra.Views
 
                 // 画像リソースの解放
                 ImageSource = null;
+                _displayedFilePath = null;
 
                 // キャッシュをクリア
                 _imageCache.Clear();

@@ -45,6 +45,8 @@
                             Header="{DynamicResource String_FileSystemTreeView_AddToFavorites}"
                             Command="{Binding Path=PlacementTarget.Tag.AddToFavoritesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                             IsEnabled="{Binding Path=PlacementTarget.Tag.IsFavorite, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BooleanInverseConverter}}"/>
+                        <MenuItem Header="{DynamicResource String_Thumbnail_CopyFilePath}"
+                                  Tag="CopyTreeItemFullPath"/>
                         <Separator/>
                         <!-- ソート設定 -->
                         <MenuItem Header="{DynamicResource String_Menu_View_SortOrder}">

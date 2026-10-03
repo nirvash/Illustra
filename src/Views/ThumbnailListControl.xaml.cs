@@ -461,13 +461,36 @@ namespace Illustra.Views
             };
             copyPathItem.Click += (s, e) =>
             {
-                if (clickedItem != null)
+                try
                 {
                     Clipboard.SetText(clickedItem.FullPath);
                     ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
                 }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"ファイルパスのコピーに失敗しました: {ex.Message}");
+                }
             };
             menu.Items.Add(copyPathItem);
+
+            var copyImageItem = new MenuItem
+            {
+                Header = (string)Application.Current.FindResource("String_Thumbnail_CopyImage"),
+                IsEnabled = FileHelper.IsImageFile(clickedItem.FullPath)
+            };
+            copyImageItem.Click += (s, e) =>
+            {
+                try
+                {
+                    ImageClipboardHelper.CopyImageToClipboard(clickedItem.FullPath);
+                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_ImageCopied"));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"画像のクリップボードコピーに失敗しました: {ex.Message}");
+                }
+            };
+            menu.Items.Add(copyImageItem);
 
             // セパレータを追加
             menu.Items.Add(new Separator());
@@ -597,11 +620,18 @@ namespace Illustra.Views
 
                     try
                     {
-                        // AppContextのプロパティを非同期で更新し、完了を待つ
-                        await _appContext.UpdateCurrentPropertiesAsync(
-                            clickedItem.FullPath,
-                            forceReload: true,
-                            forceMetadata: true);
+                        // メタデータがない画像でも基本メニューを表示できるようにする。
+                        try
+                        {
+                            await _appContext.UpdateCurrentPropertiesAsync(
+                                clickedItem.FullPath,
+                                forceReload: true,
+                                forceMetadata: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogHelper.LogError($"コンテキストメニュー表示前のプロパティ更新中にエラー: {clickedItem.FullPath}", ex);
+                        }
 
                         // プロパティ更新後にコンテキストメニューを表示
                         ShowContextMenu(clickedItem, listViewItem);
@@ -609,8 +639,7 @@ namespace Illustra.Views
                     catch (Exception ex)
                     {
                         LogHelper.LogError($"コンテキストメニュー表示前のプロパティ更新中にエラー: {clickedItem.FullPath}", ex);
-                        // エラーが発生した場合でも、基本的なメニューは表示試行する（オプション）
-                        // ShowContextMenu(clickedItem, listViewItem);
+                        ShowContextMenu(clickedItem, listViewItem);
                     }
                 }
                 else
@@ -1710,12 +1739,7 @@ namespace Illustra.Views
                 {
                     try
                     {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.UriSource = new Uri(imagePaths[0]);
-                        bitmap.EndInit();
-                        dataObject.SetImage(bitmap);
+                        dataObject.SetImage(ImageClipboardHelper.LoadBitmapSource(imagePaths[0]));
                     }
                     catch (Exception ex)
                     {

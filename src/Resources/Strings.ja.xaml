@@ -356,6 +356,7 @@
     <system:String x:Key="String_Thumbnail_ImageCopied">画像をコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_FilesCopied">ファイルをコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_CopyFilePath">ファイルパスをコピー</system:String>
+    <system:String x:Key="String_Thumbnail_CopyImage">画像をコピー</system:String>
     <system:String x:Key="String_Thumbnail_FilePathCopied">ファイルパスをクリップボードにコピーしました</system:String>
     <system:String x:Key="String_Thumbnail_CopyFile">ファイルをコピー</system:String>
     <system:String x:Key="String_Thumbnail_FilesMoved">ファイルを移動しました</system:String>
