@@ -41,6 +41,7 @@ namespace Illustra.Views
         private const string CONTROL_ID = "ImageViewer";
         // フルスクリーン切り替え前のウィンドウ状態を保存
         private bool _isFullScreen = false;
+        private bool _returnToInlineAfterFullscreenExit;
 
         public event EventHandler? IsFullscreenChanged;
 
@@ -54,6 +55,12 @@ namespace Illustra.Views
                     _isFullScreen = value;
                     OnPropertyChanged(nameof(IsFullScreen));
                     IsFullscreenChanged?.Invoke(this, EventArgs.Empty);
+                    if (!value && _returnToInlineAfterFullscreenExit)
+                    {
+                        _returnToInlineAfterFullscreenExit = false;
+                        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                            Parent?.ReturnInlineAfterFullscreen(this, RequestedFilePath)));
+                    }
                 }
             }
         }
@@ -62,6 +69,126 @@ namespace Illustra.Views
         // 画像切り替え用
         private string _currentFilePath;
         private string? _displayedFilePath;
+        public string? DisplayedFilePath => _displayedFilePath;
+        public string? RequestedFilePath => ViewerHostLogic.ResolveCurrentPath(_currentFilePath, _displayedFilePath);
+        public void FocusInlineSurface()
+        {
+            if (_isInlineHosted) ViewerHostLogic.FocusDetachedSurface(ViewerSurface);
+            else Focus();
+        }
+
+        public void ToggleFullScreenFromHost()
+        {
+            _returnToInlineAfterFullscreenExit = true;
+            ToggleFullScreen();
+        }
+
+        public void BeginMediaHostTransfer()
+        {
+            WebpPlayer.BeginHostTransfer();
+            VideoPlayerControl.BeginHostTransfer();
+        }
+
+        public void CancelReturnToInlineAfterFullscreen() => _returnToInlineAfterFullscreenExit = false;
+
+        private void DockInline_Click(object sender, RoutedEventArgs e)
+        {
+            if (Parent != null) Parent.DockSeparateViewerToInline(this);
+        }
+
+        public FrameworkElement DetachSurfaceForInlineHost()
+        {
+            if (Content is not FrameworkElement surface)
+                throw new InvalidOperationException("Viewer surface is unavailable.");
+            _inlinePropertyPanelVisibility = PropertyPanel.Visibility;
+            _inlinePropertySplitterVisibility = PropertySplitter.Visibility;
+            _inlineSplitterWidth = MainGrid.ColumnDefinitions[1].Width;
+            _inlinePropertyWidth = MainGrid.ColumnDefinitions[2].Width;
+            ViewerHostLogic.PrepareDetachedSurface(surface, this);
+            surface.PreviewKeyDown += Window_PreviewKeyDown;
+            surface.KeyDown += Window_KeyDown;
+            surface.PreviewMouseDown += Window_PreviewMouseDown;
+            ImageZoomControl.MouseLeftButtonDown += InlineMedia_MouseLeftButtonDown;
+            WebpPlayer.MouseLeftButtonDown += InlineMedia_MouseLeftButtonDown;
+            VideoPlayerControl.MouseLeftButtonDown += InlineMedia_MouseLeftButtonDown;
+            PropertyPanel.Visibility = Visibility.Collapsed;
+            PropertySplitter.Visibility = Visibility.Collapsed;
+            MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+            MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
+            _appContext?.SetViewerPropertyPanelVisible(false);
+            _isInlineHosted = true;
+            WebpPlayer.BeginHostTransfer();
+            VideoPlayerControl.BeginHostTransfer();
+            Content = null;
+            return surface;
+        }
+
+        public void AttachSurfaceToWindowHost()
+        {
+            if (Content is not FrameworkElement surface)
+                throw new InvalidOperationException("Viewer surface is unavailable.");
+            surface.PreviewKeyDown -= Window_PreviewKeyDown;
+            surface.KeyDown -= Window_KeyDown;
+            surface.PreviewMouseDown -= Window_PreviewMouseDown;
+            ImageZoomControl.MouseLeftButtonDown -= InlineMedia_MouseLeftButtonDown;
+            WebpPlayer.MouseLeftButtonDown -= InlineMedia_MouseLeftButtonDown;
+            VideoPlayerControl.MouseLeftButtonDown -= InlineMedia_MouseLeftButtonDown;
+            RestoreInlinePropertyPanel();
+            _isInlineHosted = false;
+        }
+
+        public void PrepareTemporaryFullscreenHost(Window owner)
+        {
+            _returnToInlineAfterFullscreenExit = true;
+            IsTemporaryFullscreenHost = true;
+            SaveWindowPosition = ViewerHostLogic.ShouldPersistWindowPlacement(IsTemporaryFullscreenHost);
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            var ownerBounds = owner.WindowState == WindowState.Normal
+                            ? new Rect(owner.Left, owner.Top, owner.Width, owner.Height)
+                            : owner.RestoreBounds;
+            Left = ownerBounds.Left;
+            Top = ownerBounds.Top;
+            base.ShowTitleBar = false;
+            WindowStyle = WindowStyle.None;
+            WindowState = WindowState.Maximized;
+            IsFullScreen = true;
+            UpdateControlsVisibility();
+        }
+
+        private void RestoreInlinePropertyPanel()
+        {
+            if (!_inlinePropertyPanelVisibility.HasValue) return;
+            PropertyPanel.Visibility = _inlinePropertyPanelVisibility.Value;
+            PropertySplitter.Visibility = _inlinePropertySplitterVisibility ?? Visibility.Collapsed;
+            MainGrid.ColumnDefinitions[1].Width = _inlineSplitterWidth ?? new GridLength(0);
+            MainGrid.ColumnDefinitions[2].Width = _inlinePropertyWidth ?? new GridLength(0);
+            _inlinePropertyPanelVisibility = null;
+            _inlinePropertySplitterVisibility = null;
+            _inlineSplitterWidth = null;
+            _inlinePropertyWidth = null;
+            _appContext?.SetViewerPropertyPanelVisible(PropertyPanel.Visibility == Visibility.Visible);
+        }
+
+        public void DisposeInlineSurface()
+        {
+            if (_isClosing) return;
+            CleanupSafely(() => CancelAndDispose(ref _imageLoadCancellationTokenSource));
+            CleanupSafely(() => CancelAndDispose(ref _preloadCancellationTokenSource));
+            CleanupSafely(() => _slideshowTimer.Stop());
+            CleanupSafely(() => hideCursorTimer.Stop());
+            CleanupSafely(() => WebpPlayer.Stop());
+            CleanupSafely(() => VideoPlayerControl.StopVideo());
+            CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
+                ?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected));
+            CleanupSafely(Close);
+        }
+        private bool _isInlineHosted;
+        private Visibility? _inlinePropertyPanelVisibility;
+        private Visibility? _inlinePropertySplitterVisibility;
+        private GridLength? _inlineSplitterWidth;
+        private GridLength? _inlinePropertyWidth;
+        public bool IsTemporaryFullscreenHost { get; set; }
+        private bool _isClosing;
         private CancellationTokenSource? _imageLoadCancellationTokenSource;
         private CancellationTokenSource? _preloadCancellationTokenSource;
         private bool _isSlideshowActive = false;
@@ -70,6 +197,7 @@ namespace Illustra.Views
         private DatabaseManager? _dbManager;
 
         private IllustraAppContext? _appContext;
+        private PropertyChangedEventHandler? _appContextPropertyChangedHandler;
         public ImagePropertiesModel Properties { get; set; } = new ImagePropertiesModel();
 
         // MainViewModelへの参照を追加
@@ -106,13 +234,16 @@ namespace Illustra.Views
                 SettingsIdentifier = "ImageViewerWindow"
             };
             DataContext = this;
+            KeyDown += Window_KeyDown;
+            PreviewKeyDown += Window_PreviewKeyDown;
+            MouseDoubleClick += Window_MouseDoubleClick;
 
             // キャッシュの初期化
             _imageCache = new WindowBasedImageCache();
             _dbManager = ContainerLocator.Container.Resolve<DatabaseManager>();
             _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
 
-            _appContext.PropertyChanged += (_, e) =>
+            _appContextPropertyChangedHandler = (_, e) =>
             {
                 if (e.PropertyName == nameof(_appContext.CurrentProperties))
                 {
@@ -120,6 +251,7 @@ namespace Illustra.Views
                     OnPropertyChanged(nameof(Properties));
                 }
             };
+            _appContext.PropertyChanged += _appContextPropertyChangedHandler;
             Properties = _appContext?.CurrentProperties ?? new ImagePropertiesModel();
 
             // スライドショータイマーの初期化
@@ -217,7 +349,7 @@ namespace Illustra.Views
 
             // ウィンドウが表示された後に実行する処理
             Loaded += (s, e) => OnWindowLoaded();
-            Unloaded += OnWindowUnloaded();
+            // A viewer surface can move between hosts; unloading is not disposal.
         }
 
         private async void OnWindowLoaded()
@@ -242,6 +374,7 @@ namespace Illustra.Views
         {
             return (s, e) =>
             {
+                if (!_isClosing) return;
                 CancelAndDispose(ref _imageLoadCancellationTokenSource);
                 CancelAndDispose(ref _preloadCancellationTokenSource);
 
@@ -306,7 +439,7 @@ namespace Illustra.Views
                 try
                 {
                     Clipboard.SetText(targetPath);
-                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
+                    ToastNotificationHelper.ShowRelativeTo(GetToastOwner(), (string)Application.Current.FindResource("String_Thumbnail_FilePathCopied"));
                 }
                 catch (Exception ex) { Debug.WriteLine($"パスのコピーに失敗しました: {ex.Message}"); }
             };
@@ -322,7 +455,7 @@ namespace Illustra.Views
                 try
                 {
                     ImageClipboardHelper.CopyImageToClipboard(targetPath);
-                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_ImageCopied"));
+                    ToastNotificationHelper.ShowRelativeTo(GetToastOwner(), (string)Application.Current.FindResource("String_Thumbnail_ImageCopied"));
                 }
                 catch (Exception ex) { Debug.WriteLine($"画像のコピーに失敗しました: {ex.Message}"); }
             };
@@ -352,6 +485,10 @@ namespace Illustra.Views
 
         private enum PromptCopyType { Positive, Negative, All }
 
+        private FrameworkElement GetToastOwner() => _isInlineHosted && Parent != null
+            ? Parent
+            : this;
+
         private void CopyPrompt(PromptCopyType type, ImagePropertiesModel properties)
         {
             if (properties.StableDiffusionResult == null) return;
@@ -377,7 +514,7 @@ namespace Illustra.Views
                 if (!string.IsNullOrEmpty(textToCopy))
                 {
                     Clipboard.SetText(textToCopy.Trim());
-                    ToastNotificationHelper.ShowRelativeTo(this, (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
+                    ToastNotificationHelper.ShowRelativeTo(GetToastOwner(), (string)Application.Current.FindResource("String_Thumbnail_PromptCopied"));
                 }
             }
             catch (Exception ex)
@@ -397,7 +534,7 @@ namespace Illustra.Views
                     // フォーカスを解除
                     FocusManager.SetFocusedElement(this, null);
                     Keyboard.ClearFocus();
-                    this.Focus(); // フォーカスをウィンドウに戻す
+                    if (_isInlineHosted) ViewerHostLogic.FocusDetachedSurface(ViewerSurface); else this.Focus();
                 }
             }
         }
@@ -417,6 +554,7 @@ namespace Illustra.Views
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             var shortcutHandler = KeyboardShortcutHandler.Instance;
 
             if (e.Key == Key.Tab)
@@ -428,7 +566,7 @@ namespace Illustra.Views
             // 各機能のショートカットをチェック
             if (shortcutHandler.IsShortcutMatch(FuncId.CloseViewer, e.Key))
             {
-                Close();
+                RequestCloseViewer();
                 e.Handled = true;
             }
             else if (shortcutHandler.IsShortcutMatch(FuncId.ToggleFullScreen, e.Key))
@@ -569,6 +707,7 @@ namespace Illustra.Views
 
         private void ToggleSlideshow()
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             if (_isSlideshowActive)
             {
                 _slideshowTimer.Stop();
@@ -586,6 +725,12 @@ namespace Illustra.Views
 
         private void TogglePropertyPanel()
         {
+            if (_isInlineHosted)
+            {
+                Parent?.ToggleMainPropertyPanel();
+                return;
+            }
+
             if (PropertyPanel.Visibility == System.Windows.Visibility.Visible)
             {
                 // プロパティパネル・スプリッターを非表示にする前に現在の幅を保存
@@ -658,6 +803,7 @@ namespace Illustra.Views
         // 前の画像に移動
         private void NavigateToPreviousImage()
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             if (Parent == null) return;
 
             // 親ウィンドウに前の画像への移動をリクエスト
@@ -671,6 +817,7 @@ namespace Illustra.Views
         // 次の画像に移動
         private void NavigateToNextImage()
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             if (Parent == null) return;
 
             // 親ウィンドウに次の画像への移動をリクエスト
@@ -840,6 +987,7 @@ namespace Illustra.Views
         // 新しいコンテンツを読み込む (Renamed from SwitchToImage)
         private async Task SwitchToContent(string filePath, bool notifyFileSelection)
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             LogHelper.LogWithTimestamp("SwitchToContent - Start", LogHelper.Categories.Performance);
             var measurePerformance = ViewerPerformanceLog.IsEnabled;
             var stopwatch = measurePerformance ? Stopwatch.StartNew() : null;
@@ -965,9 +1113,13 @@ namespace Illustra.Views
 
         private static void CancelAndDispose(ref CancellationTokenSource? cancellationTokenSource)
         {
-            cancellationTokenSource?.Cancel();
-            cancellationTokenSource?.Dispose();
+            var source = cancellationTokenSource;
             cancellationTokenSource = null;
+            if (source == null) return;
+            try { source.Cancel(); }
+            catch (ObjectDisposedException) { }
+            catch (AggregateException ex) { Debug.WriteLine($"Cancellation callback failed: {ex.Message}"); }
+            finally { source.Dispose(); }
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -990,7 +1142,7 @@ namespace Illustra.Views
             }
 
             // VideoPlayerが表示されていない場合（画像表示など）はここで処理
-            Close();
+            RequestCloseViewer();
         }
 
 
@@ -1046,6 +1198,13 @@ namespace Illustra.Views
         // キーショートカットからのフルスクリーン切り替え
         private void ToggleFullScreen()
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
+            if (_isInlineHosted)
+            {
+                Parent?.OpenSeparateViewerForInlineFullscreen(RequestedFilePath);
+                return;
+            }
+
             if (!_isFullScreen)
             {
                 // フルスクリーンに切り替え
@@ -1087,6 +1246,7 @@ namespace Illustra.Views
         // 現在のウィンドウ設定を保存する共通メソッド
         private void SaveCurrentSettings(bool savePropertyWidth = true)
         {
+            if (!ViewerHostLogic.ShouldPersistWindowSettings(_isInlineHosted, IsTemporaryFullscreenHost)) return;
             var settings = ViewerSettingsHelper.LoadSettings();
             settings.IsFullScreen = _isFullScreen;
             settings.VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible;
@@ -1111,6 +1271,13 @@ namespace Illustra.Views
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            if (_isClosing)
+            {
+                base.OnClosing(e);
+                return;
+            }
+            _isClosing = true;
+            _returnToInlineAfterFullscreenExit = false;
             try
             {
                 // スライドショーが実行中なら停止
@@ -1123,10 +1290,18 @@ namespace Illustra.Views
                 // 閉じる過程での最初の段階でフルスクリーン状態を保存
                 // 共通メソッドを使用して設定を保存
                 SaveCurrentSettings();
+                if (IsTemporaryFullscreenHost)
+                    SaveWindowPosition = ViewerHostLogic.ShouldPersistWindowPlacement(IsTemporaryFullscreenHost);
 
                 // タイマーをキャンセルしてマウスカーソルを表示状態に戻す
                 Mouse.OverrideCursor = Cursors.Arrow;
                 hideCursorTimer.Stop();
+                CancelAndDispose(ref _imageLoadCancellationTokenSource);
+                CancelAndDispose(ref _preloadCancellationTokenSource);
+                WebpPlayer.Stop();
+                VideoPlayerControl.StopVideo();
+                WebpPlayer.DisposeForFinalClose();
+                VideoPlayerControl.DisposeForFinalClose();
 
                 // 画像リソースの解放
                 ImageSource = null;
@@ -1142,8 +1317,26 @@ namespace Illustra.Views
             {
                 System.Diagnostics.Debug.WriteLine($"Closing error: {ex.Message}");
             }
+            finally
+            {
+                CleanupSafely(() => CancelAndDispose(ref _imageLoadCancellationTokenSource));
+                CleanupSafely(() => CancelAndDispose(ref _preloadCancellationTokenSource));
+                CleanupSafely(() => _slideshowTimer.Stop());
+                CleanupSafely(() => hideCursorTimer.Stop());
+                CleanupSafely(() => WebpPlayer.DisposeForFinalClose());
+                CleanupSafely(() => VideoPlayerControl.DisposeForFinalClose());
+                CleanupSafely(() => _imageCache.Clear());
+                CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
+                    ?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected));
+            }
 
             base.OnClosing(e);
+        }
+
+        private static void CleanupSafely(Action cleanup)
+        {
+            try { cleanup(); }
+            catch (Exception ex) { Debug.WriteLine($"Viewer cleanup failed: {ex.Message}"); }
         }
 
         protected override void OnClosed(EventArgs e)
@@ -1151,10 +1344,14 @@ namespace Illustra.Views
             base.OnClosed(e);
             // OnClosingで既に保存したので、ここでは何もしない
 
-            // ビューアのパネルが閉じたことを共有コンテキストへ通知
-            _appContext.SetViewerPropertyPanelVisible(false);
+            // Inline surface must not hide the main window's property panel.
+            if (!_isInlineHosted)
+                _appContext?.SetViewerPropertyPanelVisible(false);
+            if (_appContext != null && _appContextPropertyChangedHandler != null)
+                _appContext.PropertyChanged -= _appContextPropertyChangedHandler;
 
             // サムネイルリストにフォーカスを設定
+            if (_isInlineHosted) Parent?.OnInlineViewerClosed(this);
             Parent?.FocusSelectedThumbnail();
         }
 
@@ -1200,7 +1397,7 @@ namespace Illustra.Views
             // フォーカスを解除
             FocusManager.SetFocusedElement(this, null);
             Keyboard.ClearFocus();
-            this.Focus();
+            if (_isInlineHosted) ViewerHostLogic.FocusDetachedSurface(ViewerSurface); else this.Focus();
         }
 
         private bool IsDescendantOf(DependencyObject target, DependencyObject parent)
@@ -1288,6 +1485,7 @@ namespace Illustra.Views
 
         private async void DeleteCurrentImage()
         {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
             try
             {
                 if (string.IsNullOrEmpty(_currentFilePath) || !System.IO.File.Exists(_currentFilePath))
@@ -1312,7 +1510,7 @@ namespace Illustra.Views
                 var message = moveToRecycleBin
                     ? (string)FindResource("String_Status_FileMovedToRecycleBin")
                     : (string)FindResource("String_Status_FileDeleted");
-                ToastNotificationHelper.ShowRelativeTo(this, message);
+                ToastNotificationHelper.ShowRelativeTo(GetToastOwner(), message);
 
                 // ViewModelから削除
                 var viewModel = MainViewModel;
@@ -1332,7 +1530,7 @@ namespace Illustra.Views
                 }
                 else
                 {
-                    Close();
+                    RequestCloseViewer();
                 }
             }
             catch (Exception ex)
@@ -1400,14 +1598,22 @@ namespace Illustra.Views
         private void VideoPlayerControl_BackgroundDoubleClick(object sender, RoutedEventArgs e)
         {
             // VideoPlayerControlの背景がダブルクリックされたらウィンドウを閉じる
-            Close();
+            RequestCloseViewer();
 
         } // End of VideoPlayerControl_BackgroundDoubleClick
 
         private void WebpPlayer_BackgroundDoubleClick(object sender, RoutedEventArgs e)
         {
             // WebpPlayerControlの背景がダブルクリックされたらウィンドウを閉じる
-            Close();
+            RequestCloseViewer();
+        }
+
+        private void RequestCloseViewer()
+        {
+            if (_isInlineHosted)
+                Parent?.CloseInlineViewer();
+            else
+                Close();
         }
 
 
@@ -1434,7 +1640,19 @@ namespace Illustra.Views
 
         private void OnFileSelected(SelectedFileModel args)
         {
+            if (Parent == null || !Parent.IsCurrentViewerOwner())
+                return;
             LoadContentFromPath(args.FullPath, notifyFileSelection: false);
+        }
+
+        private void InlineMedia_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isInlineHosted || e.Handled ||
+                !ViewerHostLogic.IsDoubleClick(e.ClickCount, e.ChangedButton, sender is Control))
+                return;
+
+            RequestCloseViewer();
+            e.Handled = true;
         }
     }
 }

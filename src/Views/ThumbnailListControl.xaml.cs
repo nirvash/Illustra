@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Automation;
 using System.Windows.Media;
 using Illustra.Helpers;
 using System.IO;
@@ -43,6 +44,7 @@ namespace Illustra.Views
         private MainWindowViewModel _mainWindowViewModel = null!; // MainWindowViewModel のフィールドを追加
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
+        private bool _isInlineViewerActive;
         private string? _currentFolderPath;
 
         private AppSettingsModel _appSettings;
@@ -78,7 +80,7 @@ namespace Illustra.Views
         private bool _isToolbarVisible = true;
         public bool IsToolbarVisible
         {
-            get => _isToolbarVisible;
+            get => _isToolbarVisible || _isInlineViewerActive;
             set => SetProperty(ref _isToolbarVisible, value);
         }
 
@@ -249,7 +251,9 @@ namespace Illustra.Views
         public ThumbnailListControl()
         {
             InitializeComponent();
+            UpdateViewerModeButton();
             Loaded += ThumbnailListControl_Loaded;
+            Unloaded += (_, _) => { if (_isInlineViewerActive) CloseInlineViewer(); };
 
             // サムネイルサイズ変更用のタイマーを初期化
             _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
@@ -2397,9 +2401,21 @@ namespace Illustra.Views
 
         private TabState? _viewerTabState;
 
-        private void ShowImageViewer(string filePath)
+        internal bool IsCurrentViewerOwner() =>
+            ViewerHostLogic.IsCurrentOwner(_viewerTabState, _mainWindowViewModel.SelectedTab?.State);
+
+        private void ShowImageViewer(string filePath, bool forceSeparateWindow = false)
         {
-            _viewerTabState = _mainWindowViewModel.SelectedTab?.State;
+            var activeTabState = _mainWindowViewModel.SelectedTab?.State;
+            if ((_imageViewerWindow != null || _isInlineViewerActive) &&
+                !ViewerHostLogic.IsCurrentOwner(_viewerTabState, activeTabState))
+                return;
+            if (_imageViewerWindow == null) _viewerTabState = activeTabState;
+            if (!forceSeparateWindow && ViewerSettingsHelper.LoadSettings().DisplayMode == ViewerDisplayMode.Inline)
+            {
+                ShowInlineViewer(filePath);
+                return;
+            }
             try
             {
                 if (_imageViewerWindow == null)
@@ -2407,13 +2423,15 @@ namespace Illustra.Views
                     // 新規作成処理
                     _imageViewerWindow = new ImageViewerWindow()
                     {
-                        Parent = this
+                        Parent = this,
+                        IsTemporaryFullscreenHost = forceSeparateWindow
                     };
 
                     // イベントハンドラを設定 (async追加)
-                    _imageViewerWindow.IsFullscreenChanged += async (s, e) => // async追加
+                    var createdViewer = _imageViewerWindow;
+                    EventHandler fullscreenChangedHandler = async (s, e) =>
                     {
-                        bool isFullScreen = _imageViewerWindow?.IsFullScreen ?? false; // _imageViewerWindow のプロパティを参照
+                        bool isFullScreen = createdViewer.IsFullScreen;
                         _thumbnailLoader?.SetFullscreenMode(isFullScreen);
 
                         // 全画面モードが解除された場合にサムネイルを再生成
@@ -2432,16 +2450,18 @@ namespace Illustra.Views
                             }, DispatcherPriority.Background); // Background優先度で実行
                         }
                     };
+                    createdViewer.IsFullscreenChanged += fullscreenChangedHandler;
 
-                    _imageViewerWindow.Closed += async (s, e) => // async を追加
+                    createdViewer.Closed += async (s, e) =>
                     {
+                        createdViewer.IsFullscreenChanged -= fullscreenChangedHandler;
                         _thumbnailLoader?.SetFullscreenMode(false);
-
-                        // Closed イベントハンドラ内でフルスクリーン状態を確認
-                        bool wasFullScreen = _imageViewerWindow?.IsFullScreen ?? false; // Closed時点のIsFullScreenを参照
-
-                        // インスタンスをクリア
-                        _imageViewerWindow = null; // 先にクリアしておく
+                        bool wasFullScreen = createdViewer.IsFullScreen;
+                        if (ReferenceEquals(_imageViewerWindow, createdViewer))
+                        {
+                            _imageViewerWindow = null;
+                            _viewerTabState = null;
+                        }
 
                         // フルスクリーンで閉じた場合にサムネイルを再生成
                         if (wasFullScreen)
@@ -2494,6 +2514,253 @@ namespace Illustra.Views
                 // エラー時はインスタンスをクリア
                 _imageViewerWindow = null;
             }
+        }
+
+        private void ShowInlineViewer(string filePath)
+        {
+            try
+            {
+                if (!ViewerHostLogic.IsCurrentOwner(_viewerTabState, _mainWindowViewModel.SelectedTab?.State) &&
+                    (_imageViewerWindow != null || _isInlineViewerActive)) return;
+                if (_isInlineViewerActive && _imageViewerWindow != null)
+                {
+                    if (!IsCurrentViewerOwner()) return;
+                    _imageViewerWindow.LoadContentFromPath(filePath, true);
+                    return;
+                }
+
+                if (_imageViewerWindow != null)
+                {
+                    var previousViewer = _imageViewerWindow;
+                    _imageViewerWindow = null;
+                    _viewerTabState = null;
+                    previousViewer.Close();
+                }
+                _viewerTabState = _mainWindowViewModel.SelectedTab?.State;
+                var viewer = new ImageViewerWindow { Parent = this };
+                _imageViewerWindow = viewer;
+                viewer.IsFullscreenChanged += (_, _) => _thumbnailLoader?.SetFullscreenMode(viewer.IsFullScreen);
+                viewer.Closed += (_, _) =>
+                {
+                    _thumbnailLoader?.SetFullscreenMode(false);
+                    if (!ReferenceEquals(_imageViewerWindow, viewer)) return;
+                    if (_isInlineViewerActive) return;
+                    _imageViewerWindow = null;
+                    _viewerTabState = null;
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    BackToThumbnailsButton.Visibility = Visibility.Collapsed;
+                    InlineFullscreenButton.Visibility = Visibility.Collapsed;
+                };
+                InlineViewerHost.Content = viewer.DetachSurfaceForInlineHost();
+                InlineViewerHost.Visibility = Visibility.Visible;
+                _isInlineViewerActive = true;
+                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                BackToThumbnailsButton.Visibility = Visibility.Visible;
+                InlineFullscreenButton.Visibility = Visibility.Visible;
+                viewer.LoadContentFromPath(filePath, true);
+                Dispatcher.BeginInvoke(new Action(() => viewer.FocusInlineSurface()), DispatcherPriority.Input);
+            }
+            catch (Exception ex)
+            {
+                if (_isInlineViewerActive)
+                {
+                    CloseInlineViewer();
+                }
+                else
+                {
+                    var failedViewer = _imageViewerWindow;
+                    _imageViewerWindow = null;
+                    InlineViewerHost.Content = null;
+                    InlineViewerHost.Visibility = Visibility.Collapsed;
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    BackToThumbnailsButton.Visibility = Visibility.Collapsed;
+                    InlineFullscreenButton.Visibility = Visibility.Collapsed;
+                    failedViewer?.DisposeInlineSurface();
+                }
+                LogHelper.LogError($"[インライン画像表示] エラー: {ex.Message}");
+            }
+        }
+
+        private void ToggleViewerModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = ViewerSettingsHelper.LoadSettings();
+            var requestedMode = settings.DisplayMode == ViewerDisplayMode.Inline
+                ? ViewerDisplayMode.SeparateWindow : ViewerDisplayMode.Inline;
+            SwitchViewerMode(requestedMode);
+        }
+
+        private void SwitchViewerMode(ViewerDisplayMode requestedMode)
+        {
+            var settings = ViewerSettingsHelper.LoadSettings();
+            if (!ViewerHostLogic.ShouldPersistModeChange(_viewerTabState,
+                    _mainWindowViewModel.SelectedTab?.State, _imageViewerWindow != null || _isInlineViewerActive))
+                return;
+            settings.DisplayMode = requestedMode;
+            ViewerSettingsHelper.SaveSettings(settings);
+            UpdateViewerModeButton();
+            if (_isInlineViewerActive)
+            {
+                var path = _imageViewerWindow?.RequestedFilePath;
+                CloseInlineViewer();
+                if (settings.DisplayMode == ViewerDisplayMode.SeparateWindow && !string.IsNullOrEmpty(path))
+                    ShowImageViewer(path);
+            }
+            else if (settings.DisplayMode == ViewerDisplayMode.Inline && _imageViewerWindow != null)
+            {
+                var path = _imageViewerWindow.RequestedFilePath;
+                var oldViewer = _imageViewerWindow;
+                if (!IsCurrentViewerOwner()) return;
+                oldViewer.Close();
+                if (!string.IsNullOrEmpty(path)) ShowInlineViewer(path);
+            }
+        }
+
+        private void UpdateViewerModeButton()
+        {
+            if (ToggleViewerModeButton == null) return;
+            var mode = ViewerSettingsHelper.LoadSettings().DisplayMode;
+            var nextModeKey = mode == ViewerDisplayMode.Inline
+                ? "String_Viewer_ModeSeparate"
+                : "String_Viewer_ModeInline";
+            var nextMode = (string)Application.Current.FindResource(nextModeKey);
+            ViewerModeIcon.Data = Geometry.Parse(mode == ViewerDisplayMode.Inline
+                ? "M2,2 L16,2 L16,16 L2,16 Z M12,2 L12,16"
+                : "M4,2 L16,2 L16,14 L4,14 Z M1,5 L1,17 L13,17");
+            ToggleViewerModeButton.ToolTip = string.Format(
+                (string)Application.Current.FindResource("String_Viewer_ModeToggleTooltip"), nextMode);
+            AutomationProperties.SetName(ToggleViewerModeButton, ToggleViewerModeButton.ToolTip.ToString());
+        }
+
+        private void InlineFullscreenButton_Click(object sender, RoutedEventArgs e) =>
+            OpenSeparateViewerForInlineFullscreen(_imageViewerWindow?.RequestedFilePath);
+
+        internal void DockSeparateViewerToInline(ImageViewerWindow viewer)
+        {
+            if (!ReferenceEquals(_imageViewerWindow, viewer) || !IsCurrentViewerOwner()) return;
+            var path = viewer.RequestedFilePath;
+            viewer.CancelReturnToInlineAfterFullscreen();
+            SwitchViewerMode(ViewerDisplayMode.Inline);
+            if (!_isInlineViewerActive || string.IsNullOrWhiteSpace(path)) return;
+            if (Window.GetWindow(this) is Window mainWindow)
+            {
+                if (mainWindow.WindowState == WindowState.Minimized) mainWindow.WindowState = WindowState.Normal;
+                mainWindow.Activate();
+            }
+            _imageViewerWindow?.FocusInlineSurface();
+        }
+
+        internal void ToggleMainPropertyPanel()
+        {
+            if (Window.GetWindow(this) is MainWindow mainWindow)
+                mainWindow.TogglePropertyPanel();
+        }
+
+        internal void OpenSeparateViewerForInlineFullscreen(string? filePath)
+        {
+            var viewer = _imageViewerWindow;
+            if (string.IsNullOrWhiteSpace(filePath) || !_isInlineViewerActive || viewer == null || !IsCurrentViewerOwner()) return;
+
+            try
+            {
+                // Rehost the live viewer surface; keep the same media, cache, subscriptions, and owner.
+                viewer.BeginMediaHostTransfer();
+                ViewerHostLogic.MoveSurface(InlineViewerHost, viewer);
+                viewer.AttachSurfaceToWindowHost();
+                viewer.PrepareTemporaryFullscreenHost(Window.GetWindow(this)
+                    ?? throw new InvalidOperationException("Main window is unavailable for fullscreen placement."));
+                InlineViewerHost.Visibility = Visibility.Collapsed;
+                _isInlineViewerActive = false;
+                BackToThumbnailsButton.Visibility = Visibility.Collapsed;
+                InlineFullscreenButton.Visibility = Visibility.Collapsed;
+                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                viewer.Show();
+                viewer.Activate();
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    if (viewer.Content is UIElement)
+                    {
+                        var surface = viewer.DetachSurfaceForInlineHost();
+                        InlineViewerHost.Content = surface;
+                    }
+                    if (viewer.IsVisible) viewer.Hide();
+                    _isInlineViewerActive = true;
+                    CloseInlineViewer();
+                }
+                catch (Exception restoreException)
+                {
+                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    LogHelper.LogError($"[フルスクリーン切替] ビューア復元に失敗: {restoreException.Message}");
+                }
+                LogHelper.LogError($"[フルスクリーン切替] ビューアの移動に失敗: {ex.Message}");
+            }
+        }
+
+        internal void ReturnInlineAfterFullscreen(ImageViewerWindow viewer, string? filePath)
+        {
+            if (!ReferenceEquals(_imageViewerWindow, viewer) || string.IsNullOrWhiteSpace(filePath) ||
+                ViewerSettingsHelper.LoadSettings().DisplayMode != ViewerDisplayMode.Inline ||
+                !ViewerHostLogic.IsCurrentOwner(_viewerTabState, _mainWindowViewModel.SelectedTab?.State))
+                return;
+
+            try
+            {
+                var surface = viewer.DetachSurfaceForInlineHost();
+                viewer.IsTemporaryFullscreenHost = false;
+                viewer.Hide();
+                InlineViewerHost.Content = surface;
+                InlineViewerHost.Visibility = Visibility.Visible;
+                _isInlineViewerActive = true;
+                BackToThumbnailsButton.Visibility = Visibility.Visible;
+                InlineFullscreenButton.Visibility = Visibility.Visible;
+                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                Dispatcher.BeginInvoke(new Action(() => viewer.FocusInlineSurface()), DispatcherPriority.Input);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogError($"[インライン復帰] ビューアの移動に失敗: {ex.Message}");
+                ThumbnailItemsControl.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void BackToThumbnailsButton_Click(object sender, RoutedEventArgs e) => CloseInlineViewer();
+
+        private void InlineViewerHost_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (ViewerHostLogic.TryHandleInlineEscape(e.Key, _isInlineViewerActive, () => CloseInlineViewer()))
+            {
+                e.Handled = true;
+            }
+        }
+
+        internal void CloseInlineViewer(bool restoreThumbnails = true)
+        {
+            if (!_isInlineViewerActive) return;
+            var viewer = _imageViewerWindow;
+            InlineViewerHost.Content = null;
+            InlineViewerHost.Visibility = Visibility.Collapsed;
+            _isInlineViewerActive = false;
+            if (restoreThumbnails) ThumbnailItemsControl.Visibility = Visibility.Visible;
+            BackToThumbnailsButton.Visibility = Visibility.Collapsed;
+            InlineFullscreenButton.Visibility = Visibility.Collapsed;
+            _imageViewerWindow = null;
+            _viewerTabState = null;
+            viewer?.DisposeInlineSurface();
+        }
+
+        internal void OnInlineViewerClosed(ImageViewerWindow viewer)
+        {
+            if (!ReferenceEquals(_imageViewerWindow, viewer)) return;
+            InlineViewerHost.Content = null;
+            InlineViewerHost.Visibility = Visibility.Collapsed;
+            _isInlineViewerActive = false;
+            ThumbnailItemsControl.Visibility = Visibility.Visible;
+            BackToThumbnailsButton.Visibility = Visibility.Collapsed;
+            InlineFullscreenButton.Visibility = Visibility.Collapsed;
+            _imageViewerWindow = null;
+            _viewerTabState = null;
         }
 
         public ThumbnailListViewModel GetViewModel()
@@ -2651,6 +2918,8 @@ namespace Illustra.Views
                 // 新しいサムネイル読み込み用トークンを作成
                 _thumbnailLoadCts = new CancellationTokenSource();
 
+                if (_isInlineViewerActive && !string.Equals(_currentFolderPath, path, StringComparison.OrdinalIgnoreCase))
+                    CloseInlineViewer();
                 _currentFolderPath = path;
                 _viewModel.CurrentFolderPath = path; // ViewModelにフォルダパスを設定
 
@@ -3547,6 +3816,16 @@ namespace Illustra.Views
 
         private async void OnSelectedTabChanged(SelectedTabChangedEventArgs args)
         {
+            if (_isInlineViewerActive &&
+                ViewerHostLogic.ShouldCloseViewerForTabChange(_viewerTabState, _mainWindowViewModel.SelectedTab?.State))
+            {
+                CloseInlineViewer();
+            }
+            if (_imageViewerWindow?.IsTemporaryFullscreenHost == true &&
+                ViewerHostLogic.ShouldCloseViewerForTabChange(_viewerTabState, _mainWindowViewModel.SelectedTab?.State))
+            {
+                _imageViewerWindow.Close();
+            }
             _tabLoadTask = ApplySelectedTabAsync(args);
             await _tabLoadTask;
         }

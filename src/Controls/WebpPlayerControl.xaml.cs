@@ -27,6 +27,7 @@ namespace Illustra.Controls
         }
 
         private readonly WebpPlayerViewModel _viewModel;
+        private readonly ViewerSurfaceLifetime _surfaceLifetime = new();
         private bool _isStretchMode = false;
 
         // Read-only dependency property to indicate if the mouse is over the controls
@@ -51,6 +52,7 @@ namespace Illustra.Controls
                 _viewModel.PropertyChanged += ViewModel_PropertyChanged;
                 DataContext = _viewModel;
                 Unloaded += WebpPlayerControl_Unloaded;
+                Loaded += WebpPlayerControl_Loaded;
                 UpdatePlayPauseButtonVisibility(_viewModel.CurrentState); // 初期状態を設定
                 UpdateRepeatButtonVisualState(_viewModel.IsRepeatEnabled); // リピートボタンの初期状態を設定
                 LogHelper.LogWithTimestamp("WebPプレイヤーコントロールを初期化しました。", LogHelper.Categories.Performance);
@@ -248,14 +250,27 @@ namespace Illustra.Controls
 
         private void WebpPlayerControl_Unloaded(object? sender, RoutedEventArgs e)
         {
+            _surfaceLifetime.OnUnloaded(DisposeResources);
+        }
+
+        private void WebpPlayerControl_Loaded(object? sender, RoutedEventArgs e)
+        {
+            _surfaceLifetime.OnLoaded(() => { });
+        }
+
+        public void BeginHostTransfer() => _surfaceLifetime.BeginHostTransfer();
+
+        public void CompleteHostTransfer() => _surfaceLifetime.OnLoaded(() => { });
+
+        public void DisposeForFinalClose() => _surfaceLifetime.Dispose(DisposeResources);
+
+        private void DisposeResources()
+        {
             try
             {
-                if (_viewModel != null)
-                {
-                    _viewModel.PropertyChanged -= ViewModel_PropertyChanged; // イベントハンドラ解除
-                    _viewModel.Dispose();
-                    LogHelper.LogWithTimestamp("ViewModelのリソースを解放しました。", LogHelper.Categories.Performance);
-                }
+                _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+                _viewModel.Dispose();
+                LogHelper.LogWithTimestamp("ViewModelのリソースを解放しました。", LogHelper.Categories.Performance);
             }
             catch (Exception ex)
             {
@@ -264,6 +279,7 @@ namespace Illustra.Controls
             finally
             {
                 Unloaded -= WebpPlayerControl_Unloaded;
+                Loaded -= WebpPlayerControl_Loaded;
             }
         }
 

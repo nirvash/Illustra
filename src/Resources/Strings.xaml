@@ -274,6 +274,10 @@
     <system:String x:Key="String_Thumbnail_SortByName">Name</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">Toggle Ascending/Descending</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">Toggle Sort by Date/Name</system:String>
+    <system:String x:Key="String_Viewer_ModeToggleTooltip">Switch to {0} viewer mode</system:String>
+    <system:String x:Key="String_Viewer_ModeInline">Inline viewer</system:String>
+    <system:String x:Key="String_Viewer_ModeSeparate">Separate window</system:String>
+    <system:String x:Key="String_Viewer_BackToThumbnails">Back to thumbnails (Esc)</system:String>
     <system:String x:Key="String_Thumbnail_ReloadTooltip">Reload Thumbnails</system:String>
 
     <!-- Keyboard Shortcuts -->

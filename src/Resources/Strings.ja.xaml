@@ -273,6 +273,10 @@
     <system:String x:Key="String_Thumbnail_SortByDate">日付</system:String>
     <system:String x:Key="String_Thumbnail_SortByName">名前</system:String>
     <system:String x:Key="String_Thumbnail_SortToggleTooltip">昇順/降順の切り替え</system:String>
+    <system:String x:Key="String_Viewer_ModeToggleTooltip">{0}表示に切り替え</system:String>
+    <system:String x:Key="String_Viewer_ModeInline">一覧内ビューアー</system:String>
+    <system:String x:Key="String_Viewer_ModeSeparate">別ウィンドウ</system:String>
+    <system:String x:Key="String_Viewer_BackToThumbnails">サムネイル一覧に戻る（Esc）</system:String>
     <system:String x:Key="String_Thumbnail_ReloadTooltip">サムネイルを再読み込み</system:String>
     <system:String x:Key="String_Thumbnail_SortTypeToggleTooltip">日付/名前でソート</system:String>
 

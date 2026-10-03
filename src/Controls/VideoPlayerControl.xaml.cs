@@ -22,6 +22,10 @@ namespace Illustra.Controls
         private int _videoLoadGeneration;
         private bool _isMediaReady;
         private bool _hasAutomaticallyRetried;
+        private readonly ViewerSurfaceLifetime _surfaceLifetime = new();
+        private TimeSpan _transferPosition;
+        private bool _transferWasPlaying;
+        private bool _resumeAfterHostTransfer;
         private RoutedEventHandler? _mediaOpenedHandler;
         private EventHandler<ExceptionRoutedEventArgs>? _mediaFailedHandler;
 
@@ -105,6 +109,7 @@ namespace Illustra.Controls
 
             _seekBarUpdateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             _seekBarUpdateTimer.Tick += SeekBarUpdateTimer_Tick;
+            Loaded += VideoPlayerControl_Loaded;
 
             // ViewerSettings からリピート状態を読み込み初期化
             var viewerSettings = ViewerSettingsHelper.LoadSettings();
@@ -263,7 +268,17 @@ namespace Illustra.Controls
                 UpdateVolumeIcon(); // Update icon based on loaded volume and mute state
 
                 ApplyInitialStretchMode(); // Apply stretch mode now that dimensions are known
-                Play(); // MediaOpened後に再生開始
+                if (_resumeAfterHostTransfer)
+                {
+                    VideoPlayer.Position = _transferPosition;
+                    if (_transferWasPlaying) Play(); else Pause();
+                    _resumeAfterHostTransfer = false;
+                    _transferWasPlaying = false;
+                }
+                else
+                {
+                    Play(); // MediaOpened後に再生開始
+                }
             }
         }
 
@@ -646,16 +661,53 @@ namespace Illustra.Controls
             StopVideo();
         }
 
-        // UserControlがUnloadedされたときにリソースを解放
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _surfaceLifetime.OnUnloaded(DisposeResources);
+        }
+
+        private void VideoPlayerControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            _surfaceLifetime.OnLoaded(() =>
+            {
+                // MediaElement may recreate its native player when its presentation source changes.
+                if (VideoPlayer.Source != null)
+                {
+                    if (VideoPlayer.NaturalDuration.HasTimeSpan)
+                    {
+                        try { VideoPlayer.Position = _transferPosition; }
+                        catch (InvalidOperationException) { }
+                        if (_transferWasPlaying) Play(); else Pause();
+                        _transferWasPlaying = false;
+                    }
+                    else
+                    {
+                        _resumeAfterHostTransfer = true;
+                    }
+                }
+            });
+        }
+
+        public void BeginHostTransfer()
+        {
+            _transferPosition = VideoPlayer.Position;
+            _transferWasPlaying = PauseButton.Visibility == Visibility.Visible;
+            _surfaceLifetime.BeginHostTransfer();
+        }
+
+        public void CompleteHostTransfer() => VideoPlayerControl_Loaded(this, new RoutedEventArgs());
+
+        public void DisposeForFinalClose() => _surfaceLifetime.Dispose(DisposeResources);
+
+        private void DisposeResources()
         {
             _videoLoadGeneration++;
             _isMediaReady = false;
-            // StopVideo() ではなく、直接 Stop() と Source=null を呼び出してリソースを解放
             VideoPlayer.Pause();
             VideoPlayer.Source = null;
             _seekBarUpdateTimer.Stop(); // タイマーも停止
             _seekBarUpdateTimer.Tick -= SeekBarUpdateTimer_Tick; // イベントハンドラ解除
+            Loaded -= VideoPlayerControl_Loaded;
         }
 
         private Size GetAvailableVideoSize()

@@ -9,7 +9,7 @@
 | サムネイル表示・選択・フィルタ・ソート | `ViewModels/ThumbnailListViewModel.cs`, `Views/ThumbnailListControl*` |
 | サムネイル生成・キャッシュ性能 | `Helpers/ThumbnailLoaderHelper.cs`, `ThumbnailRequestQueue.cs`, `WindowBasedImageCache.cs` |
 | フォルダツリー・お気に入り | `ViewModels/FileSystemTreeViewModel.cs`, `Views/FileSystemTreeView*`, `FolderTreeControl*` |
-| 画像ビューア（ズーム/パン/スライドショー） | `Views/ImageViewerWindow.*`, `docs/ZoomDesign.md` |
+| 画像ビューア（ズーム/パン/スライドショー、一覧内/別ウィンドウ切替） | `Views/ImageViewerWindow.*` は共有表示面と再生操作、`Views/ThumbnailListControl.*` はホスト切替・フォーカス・所有タブ/クローズを担当。`docs/ZoomDesign.md` |
 | メタデータ（Exif/StableDiffusion/ComfyUI/MP4/PNG チャンク） | `Helpers/*Metadata*.cs`, `Helpers/PngTextChunk*.cs`, `Helpers/ComfyUI*.cs` |
 | WebP アニメーション / MP4 再生 | `Services/WebpAnimationService.cs`, `ViewModels/WebpPlayerViewModel.cs`, `Helpers/LibWebP.cs` |
 | ファイル操作（コピー/移動/削除/D&D） | `Helpers/FileOperationHelper.cs`, `DragDropHelper.cs`, `FileNodeDragHandler.cs` |

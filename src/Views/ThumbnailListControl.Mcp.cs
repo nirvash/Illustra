@@ -337,6 +337,14 @@ namespace Illustra.Views
             if (viewer == null)
                 return;
 
+            if (_isInlineViewerActive)
+            {
+                var hostWindow = System.Windows.Window.GetWindow(this);
+                hostWindow?.Activate();
+                viewer.FocusInlineSurface();
+                return;
+            }
+
             if (viewer.WindowState == System.Windows.WindowState.Minimized)
             {
                 viewer.WindowState = System.Windows.WindowState.Normal;
@@ -369,8 +377,12 @@ namespace Illustra.Views
             try
             {
                 EnsureMcpTarget(args);
-                args.WasOpen = _imageViewerWindow != null && ReferenceEquals(_viewerTabState, _mainWindowViewModel.SelectedTab?.State);
-                if (args.WasOpen) _imageViewerWindow?.Close();
+                args.WasOpen = (_imageViewerWindow != null || _isInlineViewerActive) && ReferenceEquals(_viewerTabState, _mainWindowViewModel.SelectedTab?.State);
+                if (args.WasOpen)
+                {
+                    if (_isInlineViewerActive) CloseInlineViewer();
+                    else _imageViewerWindow?.Close();
+                }
                 args.Closed = true;
                 args.ResultCompletionSource?.TrySetResult(true);
             }

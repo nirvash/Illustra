@@ -19,10 +19,7 @@
                          IgnoreTaskbarOnMaximize="True"
                          WindowTransitionsEnabled="False"
                          WindowStartupLocation="CenterScreen"
-                         KeyDown="Window_KeyDown"
-                         PreviewKeyDown="Window_PreviewKeyDown"
                          PreviewMouseDown="Window_PreviewMouseDown"
-                         MouseDoubleClick="Window_MouseDoubleClick"
                          SizeChanged="Window_SizeChanged">
 
     <mahcontrols:MetroWindow.Resources>
@@ -63,6 +60,9 @@
 
     <mahcontrols:MetroWindow.RightWindowCommands>
         <mahcontrols:WindowCommands x:Name="WindowCommands" ShowSeparators="False">
+            <Button Click="DockInline_Click" ToolTip="{DynamicResource String_Viewer_ModeInline}" AutomationProperties.Name="{DynamicResource String_Viewer_ModeInline}" Width="34" Height="30" Margin="5,0,5,0" Padding="6,4">
+                <Path Width="18" Height="18" Stretch="Uniform" Stroke="{DynamicResource MahApps.Brushes.ThemeForeground}" StrokeThickness="1.6" StrokeLineJoin="Round" Data="M4,2 L16,2 L16,14 L4,14 Z M1,5 L1,17 L13,17"/>
+            </Button>
             <Button Content="⛶"
                     ToolTip="{DynamicResource String_Function_FullScreen}"
                     Click="ToggleFullScreen_Click"
@@ -78,7 +78,7 @@
                     Margin="5, 0, 10, 0"/>
         </mahcontrols:WindowCommands>
     </mahcontrols:MetroWindow.RightWindowCommands>
-    <Grid>
+    <Grid x:Name="ViewerSurface" Focusable="True" KeyboardNavigation.TabNavigation="None">
         <!-- フルスクリーン時のコントロール -->
         <Border x:Name="FullScreenControls"
                 HorizontalAlignment="Right"
@@ -178,7 +178,7 @@
                                              PreviewMouseWheel="MainImage_PreviewMouseWheel"
                                              Grid.Column="0"
                                              Visibility="Collapsed"
-                                             IsFullScreen="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType=mahcontrols:MetroWindow}}"
+                                             IsFullScreen="{Binding IsFullScreen}"
                                              BackgroundDoubleClick="VideoPlayerControl_BackgroundDoubleClick"/>
 
           <!-- レーティング表示（全体の左上に配置） -->

@@ -79,6 +79,21 @@
 
             <StackPanel Orientation="Horizontal"
                         Grid.Column="0">
+                <Button x:Name="ToggleViewerModeButton" Click="ToggleViewerModeButton_Click"
+                        ToolTip="{DynamicResource String_Viewer_ModeToggleTooltip}" Margin="0,0,5,0" Padding="6,4" Width="32" Height="30" Focusable="False">
+                    <Path x:Name="ViewerModeIcon" Width="18" Height="18" Stretch="Uniform" Stroke="{DynamicResource MahApps.Brushes.ThemeForeground}" StrokeThickness="1.6" StrokeLineJoin="Round" Data="M4,2 L16,2 L16,14 L4,14 Z M1,5 L1,17 L13,17"/>
+                </Button>
+                <Button x:Name="BackToThumbnailsButton"
+                        Click="BackToThumbnailsButton_Click" ToolTip="{DynamicResource String_Viewer_BackToThumbnails}"
+                        AutomationProperties.Name="{DynamicResource String_Viewer_BackToThumbnails}"
+                        Margin="0,0,5,0" Padding="6,4" Width="32" Height="30" Visibility="Collapsed" Focusable="False">
+                    <Path Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource MahApps.Brushes.ThemeForeground}" StrokeThickness="2" Data="M3,3 L13,13 M13,3 L3,13"/>
+                </Button>
+                <Button x:Name="InlineFullscreenButton" Click="InlineFullscreenButton_Click"
+                        ToolTip="{DynamicResource String_Function_FullScreen}" AutomationProperties.Name="{DynamicResource String_Function_FullScreen}"
+                        Margin="0,0,5,0" Padding="6,4" Width="32" Height="30" Visibility="Collapsed" Focusable="False">
+                    <Path Width="16" Height="16" Stretch="Uniform" Fill="{DynamicResource MahApps.Brushes.IdealForeground}" Data="M2,2 L7,2 L7,4 L4,4 L4,7 L2,7 Z M11,2 L16,2 L16,7 L14,7 L14,4 L11,4 Z M2,11 L4,11 L4,14 L7,14 L7,16 L2,16 Z M14,11 L16,11 L16,16 L11,16 L11,14 L14,14 Z"/>
+                </Button>
                 <Button x:Name="ReloadThumbnailsButton"
                         Click="ReloadThumbnailsButton_Click"
                         ToolTip="{DynamicResource String_Thumbnail_ReloadTooltip}"
@@ -527,6 +542,9 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <ContentControl x:Name="InlineViewerHost" Grid.Row="1" Visibility="Collapsed"
+                        Focusable="True" PreviewKeyDown="InlineViewerHost_PreviewKeyDown" Panel.ZIndex="5"/>
 
         <!-- フィルタ結果/アイテム0件メッセージ -->
         <TextBlock Text="{Binding EmptyResultMessage}"

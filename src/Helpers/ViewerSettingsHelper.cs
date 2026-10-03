@@ -3,6 +3,12 @@ using Newtonsoft.Json;
 
 namespace Illustra.Helpers
 {
+    public enum ViewerDisplayMode
+    {
+        SeparateWindow,
+        Inline
+    }
+
     public enum FileDeleteMode
     {
         Permanent, // 完全削除
@@ -59,6 +65,7 @@ namespace Illustra.Helpers
 
     public class ViewerSettings
     {
+        public ViewerDisplayMode DisplayMode { get; set; } = ViewerDisplayMode.SeparateWindow;
         public double Left { get; set; } = double.NaN;
         public double Top { get; set; } = double.NaN;
         public double Width { get; set; } = 800;
