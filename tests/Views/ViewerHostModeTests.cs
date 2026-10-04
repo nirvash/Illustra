@@ -152,6 +152,31 @@ public class ViewerHostModeTests
     }
 
     [Test]
+    [Apartment(ApartmentState.STA)]
+    public void PropertyPanelLayout_HiddenPanelKeepsColumnsCollapsedAcrossFullscreenResize()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
+
+        // Stale positive saved/captured widths must not expose columns while the panel is hidden.
+        ViewerHostLogic.ApplyPropertyPanelLayout(grid, isVisible: false, panelWidth: 420);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.ColumnDefinitions[1].Width.Value, Is.Zero);
+            Assert.That(grid.ColumnDefinitions[2].Width.Value, Is.Zero);
+        });
+
+        ViewerHostLogic.ApplyPropertyPanelLayout(grid, isVisible: true, panelWidth: 315);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.ColumnDefinitions[1].Width.Value, Is.EqualTo(3));
+            Assert.That(grid.ColumnDefinitions[2].Width.Value, Is.EqualTo(315));
+        });
+    }
+
+    [Test]
     public void InlineCloseAndFailedFullscreenHandoff_RestoreThumbnailVisibility()
     {
         var source = File.ReadAllText(Path.Combine(ProjectRoot(), "src", "Views", "ThumbnailListControl.xaml.cs"));

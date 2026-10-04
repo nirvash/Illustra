@@ -35,7 +35,7 @@ namespace Illustra.Views
         private bool _sortAscending = true;
         private double _mainSplitterPosition;
         private double _favoritesFoldersSplitterPosition;
-        private double _lastPropertyPanelHeight = 200;  // プロパティパネルのデフォルト高さ
+        private double _lastPropertyPanelWidth = 300;  // プロパティパネルのデフォルト幅
         private FavoriteFoldersControl? _favoriteFoldersControl;
         private FolderTreeControl? _folderTreeControl;
         private string _currentFolderPath = string.Empty;
@@ -85,6 +85,12 @@ namespace Illustra.Views
 
             // ウィンドウがロードされた後に前回のフォルダを選択
             Loaded += MainWindow_Loaded;
+            PropertySplitter.DragCompleted += (s, e) =>
+            {
+                _lastPropertyPanelWidth = RightPanelGrid.ColumnDefinitions[2].ActualWidth;
+                _appSettings.MainPropertyPanelWidth = _lastPropertyPanelWidth;
+                SettingsHelper.SaveSettings(_appSettings);
+            };
             // ウィンドウが閉じられるときに設定を保存
             Closing += MainWindow_Closing;
 
@@ -152,31 +158,22 @@ namespace Illustra.Views
 
         internal void TogglePropertyPanel()
         {
-            // プロパティパネルとスプリッターの現在の状態を取得
-            var isVisible = RightPanelGrid.RowDefinitions[2].Height.Value > 0;
-
+            var isVisible = RightPanelGrid.ColumnDefinitions[2].Width.Value > 0;
             if (isVisible)
             {
-                // 非表示にする前に現在の高さを保存
-                _lastPropertyPanelHeight = RightPanelGrid.RowDefinitions[2].ActualHeight;
-
-                // パネルとスプリッターを非表示に
-                RightPanelGrid.RowDefinitions[1].Height = new GridLength(0);
-                RightPanelGrid.RowDefinitions[2].Height = new GridLength(0);
+                _lastPropertyPanelWidth = RightPanelGrid.ColumnDefinitions[2].ActualWidth;
+                RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(0);
+                RightPanelGrid.ColumnDefinitions[2].Width = new GridLength(0);
             }
             else
             {
-                // パネルとスプリッターを表示
-                RightPanelGrid.RowDefinitions[1].Height = new GridLength(3);
-                RightPanelGrid.RowDefinitions[2].Height = new GridLength(_lastPropertyPanelHeight);
+                RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(3);
+                RightPanelGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
             }
 
-            // 設定を保存
             _appSettings.MainPropertyPanelVisible = !isVisible;
-            _appSettings.PropertySplitterPosition = _lastPropertyPanelHeight;
+            _appSettings.MainPropertyPanelWidth = _lastPropertyPanelWidth;
             SettingsHelper.SaveSettings(_appSettings);
-
-            // 表示状態の変更を共有コンテキストへ通知（表示時は現在選択中ファイルのプロパティを再読み込み）
             PropertyPanel.SetPresentationEnabled(!isVisible);
             _appContext.SetMainPropertyPanelVisible(!isVisible);
         }
@@ -444,14 +441,14 @@ namespace Illustra.Views
                 _appSettings.MainSplitterPosition = MainContentGrid.ColumnDefinitions[0].ActualWidth;
                 _appSettings.FavoriteFoldersHeight = LeftPanelGrid.RowDefinitions[0].ActualHeight;
                 // プロパティパネルの状態を保存
-                _appSettings.MainPropertyPanelVisible = RightPanelGrid.RowDefinitions[2].Height.Value > 0;
+                _appSettings.MainPropertyPanelVisible = RightPanelGrid.ColumnDefinitions[2].Width.Value > 0;
                 if (_appSettings.MainPropertyPanelVisible)
                 {
-                    _appSettings.PropertySplitterPosition = RightPanelGrid.RowDefinitions[2].ActualHeight;
+                    _appSettings.MainPropertyPanelWidth = RightPanelGrid.ColumnDefinitions[2].ActualWidth;
                 }
                 else
                 {
-                    _appSettings.PropertySplitterPosition = _lastPropertyPanelHeight;
+                    _appSettings.MainPropertyPanelWidth = _lastPropertyPanelWidth;
                 }
             }
             catch (Exception ex)
@@ -778,19 +775,17 @@ namespace Illustra.Views
                     LeftPanelGrid.RowDefinitions[0].Height = new GridLength(_favoritesFoldersSplitterPosition, GridUnitType.Pixel);
                 }
 
-                // 現在の高さを保存
-                _lastPropertyPanelHeight = _appSettings.PropertySplitterPosition;
+                // 現在の幅を保存。旧高さ設定 PropertySplitterPosition は互換性のため保持。
+                _lastPropertyPanelWidth = _appSettings.MainPropertyPanelWidth > 0 ? _appSettings.MainPropertyPanelWidth : 300;
                 if (!_appSettings.MainPropertyPanelVisible)
                 {
-                    // パネルとスプリッターを非表示に
-                    RightPanelGrid.RowDefinitions[1].Height = new GridLength(0);
-                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(0);
+                    RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(0);
+                    RightPanelGrid.ColumnDefinitions[2].Width = new GridLength(0);
                 }
                 else
                 {
-                    // パネルとスプリッターを表示
-                    RightPanelGrid.RowDefinitions[1].Height = new GridLength(3);
-                    RightPanelGrid.RowDefinitions[2].Height = new GridLength(_lastPropertyPanelHeight, GridUnitType.Pixel);
+                    RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(3);
+                    RightPanelGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth, GridUnitType.Pixel);
                 }
             }
             catch (Exception ex)

@@ -45,6 +45,19 @@ public static class ViewerHostLogic
 
     public static bool ShouldPersistWindowPlacement(bool isTemporaryFullscreenHost) => !isTemporaryFullscreenHost;
 
+    public static void ApplyPropertyPanelLayout(Grid grid, bool isVisible, double panelWidth)
+    {
+        if (!isVisible || panelWidth <= 0)
+        {
+            grid.ColumnDefinitions[1].Width = new GridLength(0);
+            grid.ColumnDefinitions[2].Width = new GridLength(0);
+            return;
+        }
+
+        grid.ColumnDefinitions[1].Width = new GridLength(3);
+        grid.ColumnDefinitions[2].Width = new GridLength(panelWidth);
+    }
+
     public static bool ShouldAcceptSelection(object? viewerOwner, object? activeOwner) =>
         ReferenceEquals(viewerOwner, activeOwner);
 

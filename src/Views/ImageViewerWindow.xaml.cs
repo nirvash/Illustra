@@ -160,8 +160,7 @@ namespace Illustra.Views
             if (!_inlinePropertyPanelVisibility.HasValue) return;
             PropertyPanel.Visibility = _inlinePropertyPanelVisibility.Value;
             PropertySplitter.Visibility = _inlinePropertySplitterVisibility ?? Visibility.Collapsed;
-            MainGrid.ColumnDefinitions[1].Width = _inlineSplitterWidth ?? new GridLength(0);
-            MainGrid.ColumnDefinitions[2].Width = _inlinePropertyWidth ?? new GridLength(0);
+            ViewerHostLogic.ApplyPropertyPanelLayout(MainGrid, PropertyPanel.Visibility == Visibility.Visible, _inlinePropertyWidth?.Value ?? 0);
             _inlinePropertyPanelVisibility = null;
             _inlinePropertySplitterVisibility = null;
             _inlineSplitterWidth = null;
@@ -332,17 +331,8 @@ namespace Illustra.Views
                 ? settings.FullScreenPropertyColumnWidth
                 : settings.NormalPropertyColumnWidth;
 
-            // プロパティパネル列の幅を設定
-            if (!settings.VisiblePropertyPanel)
-            {
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
-            }
-            else if (_lastPropertyPanelWidth > 0)
-            {
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
-            }
+            // Actual panel visibility is authoritative; saved visibility can belong to another host.
+            ViewerHostLogic.ApplyPropertyPanelLayout(MainGrid, PropertyPanel.Visibility == Visibility.Visible, _lastPropertyPanelWidth);
             Activated += ImageViewerWindow_Activated;
             Deactivated += ImageViewerWindow_Deactivated;
 
@@ -771,6 +761,14 @@ namespace Illustra.Views
 
             // 設定を保存. この時点では ActualWidth に反映されていない
             SaveCurrentSettings(false);
+            // 一覧内からの全画面ではウィンドウ設定を保存せず、明示的なパネル切替だけ記憶する。
+            if (IsTemporaryFullscreenHost && !_isInlineHosted)
+            {
+                var settings = ViewerSettingsHelper.LoadSettings();
+                settings.VisiblePropertyPanel = PropertyPanel.Visibility == Visibility.Visible;
+                ViewerSettingsHelper.SaveSettings(settings);
+            }
+
 
             // 表示状態の変更を共有コンテキストへ通知（表示時は現在表示中ファイルのプロパティを再読み込み）
             _appContext.SetViewerPropertyPanelVisible(PropertyPanel.Visibility == System.Windows.Visibility.Visible);
@@ -1176,17 +1174,8 @@ namespace Illustra.Views
                 ? settings.FullScreenPropertyColumnWidth
                 : settings.NormalPropertyColumnWidth;
 
-            // プロパティパネル列の幅を設定
-            if (!settings.VisiblePropertyPanel)
-            {
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(0);
-            }
-            else if (_lastPropertyPanelWidth > 0)
-            {
-                MainGrid.ColumnDefinitions[1].Width = new GridLength(3);  // スプリッター
-                MainGrid.ColumnDefinitions[2].Width = new GridLength(_lastPropertyPanelWidth);
-            }
+            // Actual panel visibility is authoritative; saved visibility can belong to another host.
+            ViewerHostLogic.ApplyPropertyPanelLayout(MainGrid, PropertyPanel.Visibility == Visibility.Visible, _lastPropertyPanelWidth);
         }
 
         // フルスクリーン切り替えボタンのクリックイベント

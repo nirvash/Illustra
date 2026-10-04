@@ -320,28 +320,28 @@
             <Grid Grid.Column="2"
                   x:Name="RightPanelGrid"
                   DataContext="{Binding ThumbnailListViewModel}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="200"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="300"/>
+                </Grid.ColumnDefinitions>
 
                 <!-- サムネイル表示エリア -->
-                <local:ThumbnailListControl Grid.Row="0"
+                <local:ThumbnailListControl Grid.Column="0"
                                             TabIndex="3"
                                             x:Name="ThumbnailList"/>
 
                 <!-- プロパティパネルとのグリッドスプリッター -->
-                <GridSplitter Grid.Row="1"
+                <GridSplitter Grid.Column="1"
                               x:Name="PropertySplitter"
-                              Height="3"
-                              HorizontalAlignment="Stretch"
+                              Width="3"
+                              VerticalAlignment="Stretch"
                               Focusable="False"
-                              Cursor="SizeNS"
+                              Cursor="SizeWE"
                               KeyboardNavigation.TabNavigation="None"/>
 
                 <!-- プロパティペイン -->
-                <Grid Grid.Row="2"
+                <Grid Grid.Column="2"
                       Margin="5"
                       KeyboardNavigation.TabNavigation="None">
                     <Grid.RowDefinitions>

@@ -41,6 +41,7 @@ namespace Illustra.Models
         public double FavoriteFoldersHeight { get; set; } = 0;
         public double MainSplitterPosition { get; set; } = 0;
         public double PropertySplitterPosition { get; set; } = 200;
+        public double MainPropertyPanelWidth { get; set; } = 300;
 
         // メインウィンドウのプロパティパネル設定
         public bool MainPropertyPanelVisible { get; set; } = true;
