@@ -45,7 +45,20 @@ namespace Illustra.Views
         // 画像閲覧用
         private ImageViewerWindow? _imageViewerWindow;
         private bool _isInlineViewerActive;
+        private bool _isFolderLoadVisibilityHidden;
         private string? _currentFolderPath;
+
+        private void SetThumbnailListVisibility(Visibility requestedVisibility)
+        {
+            if (requestedVisibility == Visibility.Hidden)
+                _isFolderLoadVisibilityHidden = true;
+            else if (requestedVisibility == Visibility.Visible)
+                _isFolderLoadVisibilityHidden = false;
+
+            bool temporaryFullscreen = _imageViewerWindow?.IsTemporaryFullscreenHost == true;
+            ThumbnailItemsControl.Visibility = ThumbnailListVisibilityLogic.Resolve(
+                _isFolderLoadVisibilityHidden, _isInlineViewerActive, temporaryFullscreen);
+        }
 
         private AppSettingsModel _appSettings;
         private ThumbnailLoaderHelper _thumbnailLoader;
@@ -2547,14 +2560,14 @@ namespace Illustra.Views
                     if (_isInlineViewerActive) return;
                     _imageViewerWindow = null;
                     _viewerTabState = null;
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    SetThumbnailListVisibility(Visibility.Visible);
                     BackToThumbnailsButton.Visibility = Visibility.Collapsed;
                     InlineFullscreenButton.Visibility = Visibility.Collapsed;
                 };
                 InlineViewerHost.Content = viewer.DetachSurfaceForInlineHost();
                 InlineViewerHost.Visibility = Visibility.Visible;
                 _isInlineViewerActive = true;
-                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                SetThumbnailListVisibility(Visibility.Collapsed);
                 BackToThumbnailsButton.Visibility = Visibility.Visible;
                 InlineFullscreenButton.Visibility = Visibility.Visible;
                 viewer.LoadContentFromPath(filePath, true);
@@ -2572,7 +2585,7 @@ namespace Illustra.Views
                     _imageViewerWindow = null;
                     InlineViewerHost.Content = null;
                     InlineViewerHost.Visibility = Visibility.Collapsed;
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    SetThumbnailListVisibility(Visibility.Visible);
                     BackToThumbnailsButton.Visibility = Visibility.Collapsed;
                     InlineFullscreenButton.Visibility = Visibility.Collapsed;
                     failedViewer?.DisposeInlineSurface();
@@ -2672,7 +2685,7 @@ namespace Illustra.Views
                 _isInlineViewerActive = false;
                 BackToThumbnailsButton.Visibility = Visibility.Collapsed;
                 InlineFullscreenButton.Visibility = Visibility.Collapsed;
-                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                SetThumbnailListVisibility(Visibility.Collapsed);
                 viewer.Show();
                 viewer.Activate();
             }
@@ -2691,7 +2704,7 @@ namespace Illustra.Views
                 }
                 catch (Exception restoreException)
                 {
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    SetThumbnailListVisibility(Visibility.Visible);
                     LogHelper.LogError($"[フルスクリーン切替] ビューア復元に失敗: {restoreException.Message}");
                 }
                 LogHelper.LogError($"[フルスクリーン切替] ビューアの移動に失敗: {ex.Message}");
@@ -2715,13 +2728,13 @@ namespace Illustra.Views
                 _isInlineViewerActive = true;
                 BackToThumbnailsButton.Visibility = Visibility.Visible;
                 InlineFullscreenButton.Visibility = Visibility.Visible;
-                ThumbnailItemsControl.Visibility = Visibility.Collapsed;
+                SetThumbnailListVisibility(Visibility.Collapsed);
                 Dispatcher.BeginInvoke(new Action(() => viewer.FocusInlineSurface()), DispatcherPriority.Input);
             }
             catch (Exception ex)
             {
                 LogHelper.LogError($"[インライン復帰] ビューアの移動に失敗: {ex.Message}");
-                ThumbnailItemsControl.Visibility = Visibility.Visible;
+                SetThumbnailListVisibility(Visibility.Visible);
             }
         }
 
@@ -2742,7 +2755,7 @@ namespace Illustra.Views
             InlineViewerHost.Content = null;
             InlineViewerHost.Visibility = Visibility.Collapsed;
             _isInlineViewerActive = false;
-            if (restoreThumbnails) ThumbnailItemsControl.Visibility = Visibility.Visible;
+            if (restoreThumbnails) SetThumbnailListVisibility(Visibility.Visible);
             BackToThumbnailsButton.Visibility = Visibility.Collapsed;
             InlineFullscreenButton.Visibility = Visibility.Collapsed;
             _imageViewerWindow = null;
@@ -2756,7 +2769,7 @@ namespace Illustra.Views
             InlineViewerHost.Content = null;
             InlineViewerHost.Visibility = Visibility.Collapsed;
             _isInlineViewerActive = false;
-            ThumbnailItemsControl.Visibility = Visibility.Visible;
+            SetThumbnailListVisibility(Visibility.Visible);
             BackToThumbnailsButton.Visibility = Visibility.Collapsed;
             InlineFullscreenButton.Visibility = Visibility.Collapsed;
             _imageViewerWindow = null;
@@ -3011,7 +3024,7 @@ namespace Illustra.Views
                             UpdateUISelection(); // UIにも反映
                         }
                     }
-                    ThumbnailItemsControl.Visibility = Visibility.Visible;
+                    SetThumbnailListVisibility(Visibility.Visible);
 
                     // フォーカス要求がある場合はフォーカスを設定
                     if (requestFocus)
@@ -3045,7 +3058,7 @@ namespace Illustra.Views
                     // 破棄された古い実行は共有状態に触れない（最新の実行が管理しているため）
                     if (generation == _folderLoadGeneration)
                     {
-                        ThumbnailItemsControl.Visibility = Visibility.Visible;
+                        SetThumbnailListVisibility(Visibility.Visible);
                         // スクロールイベントを元の状態に戻す
                         _isScrolling = originalScrollingState;
                         _isFirstLoad = false; // 初回読み込みフラグをリセット
@@ -3850,6 +3863,7 @@ namespace Illustra.Views
                 _isExtensionFilterEnabled = false;
                 _viewModel.ClearItems(); // ViewModelのアイテムをクリア
                 _currentFolderPath = null;
+                SetThumbnailListVisibility(Visibility.Visible);
                 if (_fileSystemMonitor.IsMonitoring)
                 {
                     _fileSystemMonitor.StopMonitoring();
@@ -3873,7 +3887,7 @@ namespace Illustra.Views
             // タブごとに設定が異なるため同じパスでもスキップしない
 
             // --- フォルダ変更処理 ---
-            ThumbnailItemsControl.Visibility = Visibility.Hidden; // ちらつき防止
+            SetThumbnailListVisibility(Visibility.Hidden); // ちらつき防止
 
             // 1. ViewModelの状態をクリア（フィルタ、アイテム、選択）
             _viewModel.ClearAllFilters();

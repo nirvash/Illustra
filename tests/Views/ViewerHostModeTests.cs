@@ -38,6 +38,38 @@ public class ViewerHostModeTests
         return directory!.FullName;
     }
 
+    [TestCase(true, false, false, Visibility.Hidden)]
+    [TestCase(false, true, false, Visibility.Collapsed)]
+    [TestCase(false, false, true, Visibility.Collapsed)]
+    [TestCase(false, false, false, Visibility.Visible)]
+    public void ThumbnailVisibility_ResolvesLoadingAndPresentationState(bool loading, bool inline, bool temporaryFullscreen, Visibility expected)
+    {
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(loading, inline, temporaryFullscreen), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public async System.Threading.Tasks.Task DelayedFolderLoadCompletion_DoesNotRevealListUnderViewer_AndOrdinaryLoadRestoresItAsync()
+    {
+        var completion = new System.Threading.Tasks.TaskCompletionSource<bool>(System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+        bool inlineActive = true;
+        var delayedFolderLoad = completion.Task;
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(isFolderLoading: true, isInlineViewerActive: inlineActive, isTemporaryFullscreenHost: false), Is.EqualTo(Visibility.Collapsed));
+
+        completion.SetResult(true);
+        await delayedFolderLoad;
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(isFolderLoading: false, isInlineViewerActive: inlineActive, isTemporaryFullscreenHost: false), Is.EqualTo(Visibility.Collapsed));
+        inlineActive = false;
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(isFolderLoading: false, isInlineViewerActive: inlineActive, isTemporaryFullscreenHost: false), Is.EqualTo(Visibility.Visible));
+
+        var fullscreenCompletion = new System.Threading.Tasks.TaskCompletionSource<bool>(System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+        var fullscreenLoad = fullscreenCompletion.Task;
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(true, false, true), Is.EqualTo(Visibility.Collapsed));
+        fullscreenCompletion.SetResult(true);
+        await fullscreenLoad;
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(false, false, true), Is.EqualTo(Visibility.Collapsed));
+        Assert.That(ThumbnailListVisibilityLogic.Resolve(false, false, false), Is.EqualTo(Visibility.Visible));
+    }
+
     [Test]
     public void InlineFullscreenHandoff_RehostsSameLiveSurfaceWithoutDisposingOrReloading()
     {
@@ -131,7 +163,7 @@ public class ViewerHostModeTests
         var open = source.Substring(openStart, openEnd - openStart);
         Assert.Multiple(() =>
         {
-            Assert.That(close, Does.Contain("if (restoreThumbnails) ThumbnailItemsControl.Visibility = Visibility.Visible;"));
+            Assert.That(close, Does.Contain("if (restoreThumbnails) SetThumbnailListVisibility(Visibility.Visible);"));
             Assert.That(open, Does.Contain("catch (Exception ex)"));
             Assert.That(open, Does.Contain("CloseInlineViewer();"));
             Assert.That(source, Does.Contain("if (!ReferenceEquals(_imageViewerWindow, viewer)) return;"));
