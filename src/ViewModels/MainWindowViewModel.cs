@@ -598,6 +598,12 @@ namespace Illustra.ViewModels
             AddNewTab(path);
         }
 
+        public void HandleOpenInNewTab(string path, string selectedFilePath)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            AddNewTab(path, selectedFilePath);
+        }
+
         /// <summary>MCP の操作対象を解決する。通常タブの状態はコピーしない。</summary>
         public TabViewModel ResolveMcpTab(McpBaseEventArgs args)
         {
@@ -639,7 +645,10 @@ namespace Illustra.ViewModels
                 args.ResultCompletionSource?.TrySetException(new InvalidOperationException("The target tab changed. Retry the operation."));
                 return;
             }
-            HandleFolderSelected(args.FolderPath, args.SelectedFilePath);
+            if (args.OpenInNewTab && !string.IsNullOrEmpty(args.FolderPath))
+                HandleOpenInNewTab(args.FolderPath, args.SelectedFilePath ?? string.Empty);
+            else
+                HandleFolderSelected(args.FolderPath, args.SelectedFilePath);
             if (args.SourceId == Illustra.Mcp.McpAppBridge.SourceId)
                 args.ResultCompletionSource?.TrySetResult(true);
         }

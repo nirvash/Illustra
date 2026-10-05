@@ -1,6 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <system:String x:Key="String_Thumbnail_OpenImageLocation">この画像の場所を開く</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationDescription">親フォルダを開いて画像を選択します。ファイルの移動やコピーはしません。</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationCurrentTab">現在のタブで開く</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationCurrentTabDescription">現在のフォルダを切り替え、フィルターを解除します。</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationNewTab">新しいタブで開く</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationNewTabDescription">現在のタブの状態は変更しません。</system:String>
 
     <!-- Folder Navigation -->
     <system:String x:Key="String_FolderTree_EnterAddress">フォルダのアドレスを入力してください</system:String>

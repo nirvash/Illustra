@@ -37,6 +37,7 @@ namespace Illustra.Events
     {
         public string? FolderPath { get; set; }
         public string? SelectedFilePath { get; set; } // Optional file to select after opening
+        public bool OpenInNewTab { get; set; }
     }
 
     /// <summary>

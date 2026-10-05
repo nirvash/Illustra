@@ -1,6 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <system:String x:Key="String_Thumbnail_OpenImageLocation">Open this image's location</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationDescription">Opens the containing folder and selects the image. Files are not moved or copied.</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationCurrentTab">Open in current tab</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationCurrentTabDescription">Replace the current folder and clear its filters.</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationNewTab">Open in new tab</system:String>
+    <system:String x:Key="String_Thumbnail_OpenImageLocationNewTabDescription">Keep the current tab unchanged.</system:String>
 
     <!-- Folder Navigation -->
     <system:String x:Key="String_FolderTree_EnterAddress">Enter folder address</system:String>

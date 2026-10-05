@@ -68,6 +68,17 @@ namespace Illustra.Views
         private bool _isUpdatingSelection = false;  // 選択状態の更新中フラグ
         private bool _isDragging = false;
         private readonly DispatcherTimer _resizeTimer;
+        private readonly DispatcherTimer _externalDropMonitor;
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int virtualKey);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeCursorPoint
+        {
+            public int X;
+            public int Y;
+        }
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out NativeCursorPoint point);
 
         // クラスレベルの変数を追加
         private bool _isPromptFilterEnabled = false;
@@ -199,6 +210,185 @@ namespace Illustra.Views
             return false;
         }
 
+        private static bool IsExternalLocalFileDrop(DragEventArgs e) =>
+            e.Data.GetDataPresent(DataFormats.FileDrop) &&
+            !e.Data.GetDataPresent(typeof(FileNodeModel).Name);
+
+        private void ThumbnailItemsControl_ExternalFileDragEnter(object sender, DragEventArgs e) =>
+            UpdateLocationDropArea("list.drag-enter", sender, e);
+
+        private void ThumbnailItemsControl_ExternalFileDragOver(object sender, DragEventArgs e) =>
+            UpdateLocationDropArea("list.drag-over", sender, e);
+
+        private void UpdateLocationDropArea(string eventName, object sender, DragEventArgs e)
+        {
+            ExternalImageDropTrace.Write(eventName, sender, e, OpenImageLocationDropArea,
+                rateLimited: eventName == "list.drag-over");
+            try
+            {
+                var paths = IsExternalLocalFileDrop(e)
+                    ? e.Data.GetData(DataFormats.FileDrop) as string[] ?? Array.Empty<string>()
+                    : Array.Empty<string>();
+                bool show = !_isInlineViewerActive && ExternalImageLocationDropPolicy.GetFirstSupportedImagePath(paths) != null;
+                var previousVisibility = OpenImageLocationDropArea.Visibility;
+                var nextVisibility = show ? Visibility.Visible : Visibility.Collapsed;
+                if (previousVisibility != nextVisibility)
+                {
+                    ExternalImageDropTrace.Write("overlay.visibility-before", sender, e, OpenImageLocationDropArea,
+                        reason: eventName, visibleBefore: previousVisibility == Visibility.Visible,
+                        visibleAfter: nextVisibility == Visibility.Visible);
+                    OpenImageLocationDropArea.Visibility = nextVisibility;
+                    ExternalImageDropTrace.Write("overlay.visibility-after", sender, e, OpenImageLocationDropArea,
+                        reason: eventName, visibleBefore: previousVisibility == Visibility.Visible,
+                        visibleAfter: nextVisibility == Visibility.Visible);
+                }
+                else
+                {
+                    OpenImageLocationDropArea.Visibility = nextVisibility;
+                }
+                if (show) _externalDropMonitor.Start();
+                else _externalDropMonitor.Stop();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"外部画像dragの確認に失敗しました: {ex.Message}");
+                HideImageLocationDropArea("list.drag-update-error", sender, e);
+            }
+        }
+
+        private void ThumbnailItemsControl_ExternalFileDragLeave(object sender, DragEventArgs e)
+        {
+            bool cursorPositionAvailable = TryGetCurrentPointerInDropHost(out var pointerInHost);
+            var hostSize = new Size(ExternalImageDropHost.ActualWidth, ExternalImageDropHost.ActualHeight);
+            ExternalImageDropTrace.Write("list.drag-leave", sender, e, OpenImageLocationDropArea,
+                pointerHost: ExternalImageDropHost, pointerInHost: cursorPositionAvailable ? pointerInHost : null,
+                cursorPositionAvailable: cursorPositionAvailable);
+            if (ExternalImageLocationDropPolicy.ShouldDismissAfterHostDragLeave(cursorPositionAvailable, pointerInHost, hostSize))
+                HideImageLocationDropArea("list.drag-leave-outside-host", sender, e);
+        }
+
+        private bool TryGetCurrentPointerInDropHost(out Point pointerInHost)
+        {
+            pointerInHost = default;
+            if (!ExternalImageDropHost.IsLoaded || !GetCursorPos(out var cursorPosition)) return false;
+            try
+            {
+                pointerInHost = ExternalImageDropHost.PointFromScreen(new Point(cursorPosition.X, cursorPosition.Y));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ThumbnailItemsControl_DropCleanup(object sender, DragEventArgs e)
+        {
+            ExternalImageDropTrace.Write("list.drop-cleanup", sender, e, OpenImageLocationDropArea);
+            HideImageLocationDropArea("list.drop-cleanup", sender, e);
+        }
+
+        private void OpenImageLocationDropArea_DragEnter(object sender, DragEventArgs e)
+        {
+            ExternalImageDropTrace.Write("overlay.child-drag-enter", sender, e, OpenImageLocationDropArea);
+            OpenImageLocationDropArea_DragOver(sender, e);
+        }
+
+        private void OpenImageLocationDropArea_ParentDragEnter(object sender, DragEventArgs e) =>
+            ExternalImageDropTrace.Write("overlay.parent-drag-enter", sender, e, OpenImageLocationDropArea);
+
+        private void OpenImageLocationDropArea_ParentDragOver(object sender, DragEventArgs e) =>
+            ExternalImageDropTrace.Write("overlay.parent-drag-over", sender, e, OpenImageLocationDropArea, rateLimited: true);
+
+        private void OpenImageLocationDropArea_ParentDragLeave(object sender, DragEventArgs e) =>
+            ExternalImageDropTrace.Write("overlay.parent-drag-leave", sender, e, OpenImageLocationDropArea);
+
+        private void OpenImageLocationDropArea_ParentDrop(object sender, DragEventArgs e) =>
+            ExternalImageDropTrace.Write("overlay.parent-drop", sender, e, OpenImageLocationDropArea);
+
+        private void OpenImageLocationDropArea_DragOver(object sender, DragEventArgs e)
+        {
+            ExternalImageDropTrace.Write("overlay.child-drag-over", sender, e, OpenImageLocationDropArea,
+                rateLimited: true);
+            try
+            {
+                var paths = IsExternalLocalFileDrop(e)
+                    ? e.Data.GetData(DataFormats.FileDrop) as string[] ?? Array.Empty<string>()
+                    : Array.Empty<string>();
+                e.Effects = ExternalImageLocationDropPolicy.GetDropEffect(
+                    ExternalImageLocationDropPolicy.GetFirstSupportedImagePath(paths) != null, e.AllowedEffects);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"外部画像dropの確認に失敗しました: {ex.Message}");
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void OpenImageLocationDropArea_DragLeave(object sender, DragEventArgs e)
+        {
+            bool cursorPositionAvailable = TryGetCurrentPointerInDropHost(out var pointerInHost);
+            var hostSize = new Size(ExternalImageDropHost.ActualWidth, ExternalImageDropHost.ActualHeight);
+            ExternalImageDropTrace.Write("overlay.child-drag-leave", sender, e, OpenImageLocationDropArea,
+                pointerHost: ExternalImageDropHost, pointerInHost: cursorPositionAvailable ? pointerInHost : null,
+                cursorPositionAvailable: cursorPositionAvailable);
+            if (ExternalImageLocationDropPolicy.ShouldDismissAfterHostDragLeave(cursorPositionAvailable, pointerInHost, hostSize))
+                HideImageLocationDropArea("overlay.child-drag-leave-outside-host", sender, e);
+        }
+
+        private void OpenImageLocationDropArea_Drop(object sender, DragEventArgs e)
+        {
+            // 非破壊の Link を処理前に確定し、通常のコピー/移動へ流さない。
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            ExternalImageDropTrace.Write("overlay.drop-begin", sender, e, OpenImageLocationDropArea);
+            try
+            {
+                var paths = IsExternalLocalFileDrop(e)
+                    ? e.Data.GetData(DataFormats.FileDrop) as string[] ?? Array.Empty<string>()
+                    : Array.Empty<string>();
+                var imagePath = ExternalImageLocationDropPolicy.GetFirstSupportedImagePath(paths);
+                var state = _mainWindowViewModel.SelectedTab?.State;
+                bool openInNewTab = ReferenceEquals(sender, OpenImageLocationNewTabDropArea);
+                if (!ExternalImageLocationDropPolicy.TryCreateDropRequest(imagePath, e.AllowedEffects, state, openInNewTab,
+                    out var request, out var effect)) return;
+                e.Effects = effect;
+                ExternalImageLocationDropPolicy.PublishNavigationRequest(_eventAggregator, request!);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"外部画像の場所を開けませんでした: {ex.Message}");
+                e.Effects = DragDropEffects.None;
+            }
+            finally
+            {
+                e.Handled = true;
+                ExternalImageDropTrace.Write("overlay.drop-result", sender, e, OpenImageLocationDropArea);
+                HideImageLocationDropArea("overlay.drop", sender, e);
+            }
+        }
+
+        private void HideImageLocationDropArea(string reason, object? sender = null, RoutedEventArgs? args = null)
+        {
+            _externalDropMonitor?.Stop();
+            if (OpenImageLocationDropArea != null)
+            {
+                var previousVisibility = OpenImageLocationDropArea.Visibility;
+                if (previousVisibility != Visibility.Collapsed)
+                {
+                    ExternalImageDropTrace.Write("overlay.hide-before", sender, args, OpenImageLocationDropArea,
+                        reason: reason, visibleBefore: previousVisibility == Visibility.Visible, visibleAfter: false);
+                }
+                OpenImageLocationDropArea.Visibility = Visibility.Collapsed;
+                if (previousVisibility != Visibility.Collapsed)
+                {
+                    ExternalImageDropTrace.Write("overlay.hide-after", sender, args, OpenImageLocationDropArea,
+                        reason: reason, visibleBefore: previousVisibility == Visibility.Visible, visibleAfter: false);
+                }
+            }
+        }
+
 
         public class CustomDropHandler : DefaultDropHandler
         {
@@ -266,7 +456,36 @@ namespace Illustra.Views
             InitializeComponent();
             UpdateViewerModeButton();
             Loaded += ThumbnailListControl_Loaded;
-            Unloaded += (_, _) => { if (_isInlineViewerActive) CloseInlineViewer(); };
+            Unloaded += (_, _) =>
+            {
+                HideImageLocationDropArea("control.unloaded");
+                if (_isInlineViewerActive) CloseInlineViewer();
+            };
+            _externalDropMonitor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            _externalDropMonitor.Tick += (_, _) =>
+            {
+                bool escapePressed = (GetAsyncKeyState(0x1B) & 0x8000) != 0;
+                bool leftButtonDown = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+                bool rightButtonDown = (GetAsyncKeyState(0x02) & 0x8000) != 0;
+                bool mouseButtonsReleased = !leftButtonDown && !rightButtonDown;
+                if (ExternalImageDropTrace.IsEnabled)
+                    ExternalImageDropTrace.Write("monitor.sample", this, overlay: OpenImageLocationDropArea,
+                        escapeDown: escapePressed, leftButtonDown: leftButtonDown,
+                        rightButtonDown: rightButtonDown, rateLimited: true);
+                if (ExternalImageLocationDropPolicy.ShouldDismissDropArea(escapePressed, mouseButtonsReleased, !IsLoaded))
+                {
+                    string reason = escapePressed ? "timer.escape" : mouseButtonsReleased ? "timer.buttons-released" : "timer.unloaded";
+                    HideImageLocationDropArea(reason, this);
+                }
+            };
+            ThumbnailItemsControl.AddHandler(DragEnterEvent, new DragEventHandler(ThumbnailItemsControl_ExternalFileDragEnter), true);
+            ThumbnailItemsControl.AddHandler(DragOverEvent, new DragEventHandler(ThumbnailItemsControl_ExternalFileDragOver), true);
+            ThumbnailItemsControl.AddHandler(DragLeaveEvent, new DragEventHandler(ThumbnailItemsControl_ExternalFileDragLeave), true);
+            ThumbnailItemsControl.AddHandler(DropEvent, new DragEventHandler(ThumbnailItemsControl_DropCleanup), true);
+            OpenImageLocationDropArea.AddHandler(DragEnterEvent, new DragEventHandler(OpenImageLocationDropArea_ParentDragEnter), true);
+            OpenImageLocationDropArea.AddHandler(DragOverEvent, new DragEventHandler(OpenImageLocationDropArea_ParentDragOver), true);
+            OpenImageLocationDropArea.AddHandler(DragLeaveEvent, new DragEventHandler(OpenImageLocationDropArea_ParentDragLeave), true);
+            OpenImageLocationDropArea.AddHandler(DropEvent, new DragEventHandler(OpenImageLocationDropArea_ParentDrop), true);
 
             // サムネイルサイズ変更用のタイマーを初期化
             _resizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };

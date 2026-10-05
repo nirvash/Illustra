@@ -236,8 +236,8 @@
             </StackPanel>
         </Grid>
 
+        <Grid x:Name="ExternalImageDropHost" Grid.Row="1">
         <ListView x:Name="ThumbnailItemsControl"
-                            Grid.Row="1"
                             ItemsSource="{Binding FilteredItems}"
                             SelectionMode="Extended"
                             IsSynchronizedWithCurrentItem="True"
@@ -542,6 +542,36 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <Border x:Name="OpenImageLocationDropArea" Visibility="Collapsed" Panel.ZIndex="6"
+                VerticalAlignment="Top" Margin="16" Padding="12" Background="#EE20242C" BorderBrush="#FF8FC7A2"
+                BorderThickness="2" CornerRadius="10">
+            <UniformGrid Columns="2">
+                <Border x:Name="OpenImageLocationCurrentTabDropArea" Margin="4" Padding="12" Background="#FF303741"
+                        BorderBrush="#FF8FC7A2" BorderThickness="1" CornerRadius="7" AllowDrop="True" IsHitTestVisible="True"
+                        DragEnter="OpenImageLocationDropArea_DragEnter" DragOver="OpenImageLocationDropArea_DragOver"
+                        DragLeave="OpenImageLocationDropArea_DragLeave" Drop="OpenImageLocationDropArea_Drop">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource String_Thumbnail_OpenImageLocationCurrentTab}" FontSize="18"
+                                   Foreground="White" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="{DynamicResource String_Thumbnail_OpenImageLocationCurrentTabDescription}"
+                                   Margin="0,8,0,0" Foreground="#FFD5D9E0" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="OpenImageLocationNewTabDropArea" Margin="4" Padding="12" Background="#FF303741"
+                        BorderBrush="#FF8FC7A2" BorderThickness="1" CornerRadius="7" AllowDrop="True" IsHitTestVisible="True"
+                        DragEnter="OpenImageLocationDropArea_DragEnter" DragOver="OpenImageLocationDropArea_DragOver"
+                        DragLeave="OpenImageLocationDropArea_DragLeave" Drop="OpenImageLocationDropArea_Drop">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource String_Thumbnail_OpenImageLocationNewTab}" FontSize="18"
+                                   Foreground="White" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="{DynamicResource String_Thumbnail_OpenImageLocationNewTabDescription}"
+                                   Margin="0,8,0,0" Foreground="#FFD5D9E0" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </Border>
+        </Grid>
 
         <ContentControl x:Name="InlineViewerHost" Grid.Row="1" Visibility="Collapsed"
                         Focusable="True" PreviewKeyDown="InlineViewerHost_PreviewKeyDown" Panel.ZIndex="5"/>
