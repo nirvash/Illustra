@@ -66,6 +66,7 @@ namespace Illustra.Views
 
         private bool _isInitialized = false;
         private bool _isUpdatingSelection = false;  // 選択状態の更新中フラグ
+        private long _fileSelectedPublishVersion;
         private bool _isDragging = false;
         private readonly DispatcherTimer _resizeTimer;
 
@@ -116,8 +117,13 @@ namespace Illustra.Views
         /// </summary>
         private void UpdateUISelection()
         {
+            bool selectionChangedByViewModel = false;
+            FileNodeModel? selectedAfterSync = null;
             try
             {
+                var uiSelectionBeforeSync = ThumbnailItemsControl.SelectedItems.Cast<FileNodeModel>().ToList();
+                selectionChangedByViewModel = uiSelectionBeforeSync.Count != _viewModel.SelectedItems.Count ||
+                    uiSelectionBeforeSync.Any(item => !_viewModel.SelectedItems.Contains(item));
                 _isUpdatingSelection = true;
 
                 ThumbnailItemsControl.SelectedItems.Clear();
@@ -125,6 +131,7 @@ namespace Illustra.Views
                 {
                     ThumbnailItemsControl.SelectedItems.Add(item);
                 }
+                selectedAfterSync = _viewModel.SelectedItems.LastOrDefault();
 
                 // 選択アイテムがある場合はログ出力
                 if (_viewModel.SelectedItems.Any())
@@ -142,6 +149,34 @@ namespace Illustra.Views
             {
                 _isUpdatingSelection = false;
             }
+
+            // ViewModelからの確定選択は SelectionChanged guard 中に反映されるため、同期完了後に一度通知する。
+            if (selectionChangedByViewModel && selectedAfterSync != null)
+                PublishFileSelected(selectedAfterSync);
+        }
+
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ThumbnailListViewModel.SelectedItems))
+                UpdateUISelection();
+        }
+
+        private void PublishFileSelected(FileNodeModel selectedItem)
+        {
+            var eventAggregator = _eventAggregator;
+            if (eventAggregator == null) return;
+
+            _fileSelectedPublishVersion++;
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=true path=\"{selectedItem.FullPath}\" source=finalized-selection");
+            eventAggregator.GetEvent<FileSelectedEvent>().Publish(
+                new SelectedFileModel(CONTROL_ID, selectedItem.FullPath));
+        }
+
+        private void PublishFileSelectedIfSelectionChangedDidNotPublish(FileNodeModel selectedItem, long publishVersionBeforeSelection)
+        {
+            if (_fileSelectedPublishVersion == publishVersionBeforeSelection)
+                PublishFileSelected(selectedItem);
         }
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
@@ -605,6 +640,8 @@ namespace Illustra.Views
 
         private void ThumbnailListControl_Loaded(object sender, RoutedEventArgs e)
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=control-loaded control={CONTROL_ID} visibility={Visibility} enabled={IsEnabled}");
             // AppContextを取得
             _appContext = ContainerLocator.Container.Resolve<IllustraAppContext>();
 
@@ -684,6 +721,8 @@ namespace Illustra.Views
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-subscribed control={CONTROL_ID} selectedPath=\"{_viewModel.SelectedItems.LastOrDefault()?.FullPath}\"");
 
             // ViewModelからのコマンド実行要求イベントを購読
             _eventAggregator.GetEvent<RequestCopyEvent>().Subscribe(OnRequestCopy, ThreadOption.UIThread);
@@ -974,19 +1013,23 @@ namespace Illustra.Views
             }
 
             // プロパティ変更通知の購読
-            ((INotifyPropertyChanged)_viewModel).PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(ThumbnailListViewModel.SelectedItems))
-                {
-                    UpdateUISelection();
-                }
-            };
+            ((INotifyPropertyChanged)_viewModel).PropertyChanged += OnViewModelPropertyChanged;
 
             // ListViewの選択状態が変更されたときのイベントハンドラを追加
-            ThumbnailItemsControl.SelectionChanged += (s, args) =>
-            {
+            ThumbnailItemsControl.SelectionChanged += ThumbnailItemsControl_SelectionChanged;
+        }
+
+        private void ThumbnailItemsControl_SelectionChanged(object? sender, SelectionChangedEventArgs args)
+        {
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=selection-changed control={CONTROL_ID} controlName={ThumbnailItemsControl.Name} visibility={Visibility} enabled={ThumbnailItemsControl.IsEnabled} currentPath=\"{_appContext.CurrentProperties?.FilePath}\" uiSelection=\"{ThumbnailItemsControl.SelectedItems.Cast<FileNodeModel>().LastOrDefault()?.FullPath}\" vmSelection=\"{_viewModel.SelectedItems.LastOrDefault()?.FullPath}\" updating={_isUpdatingSelection}");
                 // UIからの更新ループを防ぐ / ViewModel更新中の処理をスキップ
-                if (_isUpdatingSelection) return;
+                if (_isUpdatingSelection)
+                {
+                    if (ViewerPerformanceLog.IsEnabled)
+                        ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=selection-skip reason=isUpdatingSelection control={CONTROL_ID}");
+                    return;
+                }
 
                 // ViewModelの選択状態をUIの選択状態に同期させる (UI -> ViewModel)
                 try
@@ -1004,9 +1047,12 @@ namespace Illustra.Views
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
                     if (lastSelected != null)
                     {
-                        var selectedFileModel = new SelectedFileModel(CONTROL_ID, lastSelected.FullPath);
-                        _eventAggregator?.GetEvent<FileSelectedEvent>()?.Publish(selectedFileModel);
+                        if (ViewerPerformanceLog.IsEnabled)
+                            ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=true path=\"{lastSelected.FullPath}\"");
+                        PublishFileSelected(lastSelected);
                     }
+                    else if (ViewerPerformanceLog.IsEnabled)
+                        ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=false reason=no-vm-selection uiCount={ThumbnailItemsControl.SelectedItems.Count}");
                     // 選択アイテム数を通知するイベントを発行
                     _eventAggregator?.GetEvent<SelectionCountChangedEvent>()?.Publish(new SelectionCountChangedEventArgs(ThumbnailItemsControl.SelectedItems.Count));
                 }
@@ -1018,7 +1064,6 @@ namespace Illustra.Views
                 {
                     _isUpdatingSelection = false;
                 }
-            };
         }
 
 
@@ -1321,6 +1366,7 @@ namespace Illustra.Views
                 try
                 {
                     DisplayGeneratedItemsInfo(ThumbnailItemsControl);
+                    var publishVersionBeforeSelection = _fileSelectedPublishVersion;
 
                     // 選択するアイテムを検索
                     var filteredItems = GetFilteredItemsList();
@@ -1340,6 +1386,7 @@ namespace Illustra.Views
                         {
                             ThumbnailItemsControl.Focus();
                         }
+                        PublishFileSelectedIfSelectionChangedDidNotPublish(matchingItem, publishVersionBeforeSelection);
 
                         // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                         LogHelper.LogWithTimestamp($"[選択完了] インデックス: {selectedIndex}, ファイル: {filePath}", LogHelper.Categories.ThumbnailQueue);
@@ -1371,6 +1418,7 @@ namespace Illustra.Views
                                 _viewModel.SelectedItems.Clear();
                                 _viewModel.SelectedItems.Add(matchingItem);
                                 ThumbnailItemsControl.ScrollIntoView(matchingItem);
+                                PublishFileSelectedIfSelectionChangedDidNotPublish(matchingItem, publishVersionBeforeSelection);
 
                                 // SelectedItem 更新をトリガーに SelectedFileModel が発行されている
                                 var index = _viewModel.Items.IndexOf(matchingItem);

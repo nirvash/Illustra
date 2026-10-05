@@ -159,6 +159,8 @@ namespace Illustra.Views
         internal void TogglePropertyPanel()
         {
             var isVisible = RightPanelGrid.ColumnDefinitions[2].Width.Value > 0;
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] main-panel-toggle-before open={!isVisible} panelName={PropertyPanel.Name} visibility={PropertyPanel.Visibility} visible={PropertyPanel.IsVisible} currentPath=\"{_appContext.CurrentProperties?.FilePath}\"");
             if (isVisible)
             {
                 _lastPropertyPanelWidth = RightPanelGrid.ColumnDefinitions[2].ActualWidth;
@@ -176,6 +178,8 @@ namespace Illustra.Views
             SettingsHelper.SaveSettings(_appSettings);
             PropertyPanel.SetPresentationEnabled(!isVisible);
             _appContext.SetMainPropertyPanelVisible(!isVisible);
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] main-panel-toggle-after open={!isVisible} panelName={PropertyPanel.Name} visibility={PropertyPanel.Visibility} visible={PropertyPanel.IsVisible} currentPath=\"{_appContext.CurrentProperties?.FilePath}\"");
         }
 
         private void InitializeSortMenuItems()

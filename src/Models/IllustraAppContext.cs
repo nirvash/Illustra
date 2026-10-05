@@ -84,6 +84,8 @@ namespace Illustra.Models
 
         private void OnPanelVisibilityChanged()
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-open mainPanel={_isMainPanelVisible} viewerPanel={_isViewerPanelVisible} effectiveVisible={IsPropertyPanelVisible} currentPath=\"{CurrentProperties?.FilePath}\"");
             RaisePropertyChanged(nameof(IsPropertyPanelVisible));
 
             if (!IsPropertyPanelVisible)
@@ -114,18 +116,29 @@ namespace Illustra.Models
             bool forceReload = false,
             bool forceMetadata = false)
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=properties-update-request requestedPath=\"{filePath}\" currentPath=\"{CurrentProperties?.FilePath}\" mainPanel={_isMainPanelVisible} viewerPanel={_isViewerPanelVisible} forceReload={forceReload} forceMetadata={forceMetadata}");
             if (string.IsNullOrEmpty(filePath))
             {
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append("[DEBUG-nai-startup] role=main boundary=properties-update-skip reason=empty-path");
                 CurrentProperties = new ImagePropertiesModel(); // パスが空なら空のプロパティを設定
                 return;
             }
 
             // 既に同じファイルのプロパティが読み込まれていれば更新しない
-            if (!forceReload && CurrentProperties?.FilePath == filePath) return;
+            if (!forceReload && CurrentProperties?.FilePath == filePath)
+            {
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=properties-update-skip reason=same-path path=\"{filePath}\"");
+                return;
+            }
 
             // プロパティパネル非表示時はメタデータ解析（重い処理）をスキップする
             if (!IsPropertyPanelVisible && !forceMetadata)
             {
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=properties-update-lightweight path=\"{filePath}\" currentPath=\"{CurrentProperties?.FilePath}\" mainPanel={_isMainPanelVisible} viewerPanel={_isViewerPanelVisible}");
                 ++_propertiesRequestId;
                 SetLightweightProperties(filePath);
                 return;

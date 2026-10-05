@@ -391,7 +391,8 @@ namespace Illustra.ViewModels
             try
             {
                 var properties = await ImagePropertiesModel.LoadFromFileAsync(filePath);
-                _promptCache[filePath] = properties.HasStableDiffusionData;
+                _promptCache[filePath] = properties.HasStableDiffusionData ||
+                    properties.GenerationMetadata?.HasPrompt == true;
             }
             catch
             {
@@ -420,6 +421,10 @@ namespace Illustra.ViewModels
                 {
                     allTags.AddRange(properties.StableDiffusionResult.Loras);
                 }
+
+                // ComfyUI / NovelAI 等は共通の生成メタデータから正タグと LoRA を使う。
+                if (properties?.GenerationMetadata != null)
+                    allTags.AddRange(properties.GenerationMetadata.FilterTags);
 
                 _tagCache[filePath] = allTags;
             }

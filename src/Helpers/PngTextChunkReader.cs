@@ -14,6 +14,10 @@ namespace Illustra.Helpers
     public static class PngTextChunkReader
     {
         private static readonly byte[] PngSignature = { 137, 80, 78, 71, 13, 10, 26, 10 };
+        private const long MaxInputBytes = 128L * 1024 * 1024;
+        private const int MaxExpandedTextBytes = 4 * 1024 * 1024;
+        private const int MaxTotalExpandedTextBytes = 8 * 1024 * 1024;
+        private const int MaxChunkCount = 10000;
 
         /// <summary>
         /// PNG ファイルからテキストチャンクをすべて読み出す。
@@ -29,6 +33,8 @@ namespace Illustra.Helpers
             byte[] bytes;
             try
             {
+                if (new FileInfo(filePath).Length > MaxInputBytes)
+                    return false;
                 bytes = File.ReadAllBytes(filePath);
             }
             catch (Exception)
@@ -42,13 +48,17 @@ namespace Illustra.Helpers
 
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
             int pos = PngSignature.Length;
+            int chunkCount = 0;
+            int totalExpandedTextBytes = 0;
 
             // チャンク列を走査: [長さ4B BE][タイプ4B ASCII][データ][CRC 4B]
             while (pos + 8 <= bytes.Length)
             {
+                if (++chunkCount > MaxChunkCount)
+                    return false;
                 uint length = ReadBE32(bytes, pos);
                 int dataStart = pos + 8;
-                if (dataStart + length + 4 > bytes.Length)
+                if ((ulong)dataStart + length + 4 > (ulong)bytes.Length)
                     break; // 破損チャンク
 
                 string type = Encoding.ASCII.GetString(bytes, pos + 4, 4);
@@ -57,9 +67,35 @@ namespace Illustra.Helpers
 
                 if (type == "tEXt" || type == "zTXt" || type == "iTXt")
                 {
+                    if (length > MaxExpandedTextBytes + 1024)
+                    {
+                        return false;
+                    }
+                    int separator = Array.IndexOf(bytes, (byte)0, dataStart, (int)length);
+                    if (IsValidKeyword(bytes, dataStart, separator) &&
+                        result.ContainsKey(Encoding.Latin1.GetString(bytes, dataStart, separator - dataStart)))
+                    {
+                        pos = dataStart + (int)length + 4;
+                        continue;
+                    }
                     try
                     {
-                        ParseTextChunk(type, bytes, dataStart, (int)length, result);
+                        int remainingBudget = MaxTotalExpandedTextBytes - totalExpandedTextBytes;
+                        string text = ParseTextChunk(type, bytes, dataStart, (int)length,
+                            remainingBudget, out int expandedBytes, out bool exceededBudget);
+                        // 破損して破棄するチャンクも、実際に展開した量を予算へ計上する。
+                        totalExpandedTextBytes += expandedBytes;
+                        if (exceededBudget)
+                            return false;
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            int keywordEnd = Array.IndexOf(bytes, (byte)0, dataStart, (int)length);
+                            string keyword = Encoding.Latin1.GetString(bytes, dataStart, keywordEnd - dataStart);
+                            if (!result.ContainsKey(keyword))
+                            {
+                                result[keyword] = text;
+                            }
+                        }
                     }
                     catch (Exception)
                     {
@@ -77,41 +113,48 @@ namespace Illustra.Helpers
             return true;
         }
 
-        private static void ParseTextChunk(string type, byte[] bytes, int start, int length,
-            Dictionary<string, string> result)
+        private static string ParseTextChunk(string type, byte[] bytes, int start, int length,
+            int remainingBudget, out int expandedBytes, out bool exceededBudget)
         {
+            expandedBytes = 0;
+            exceededBudget = false;
             int dataEnd = start + length;
 
             // キーワードは最初の NULL まで
             int keywordEnd = Array.IndexOf(bytes, (byte)0, start, length);
-            if (keywordEnd < 0)
-                return;
-
-            string keyword = Encoding.Latin1.GetString(bytes, start, keywordEnd - start);
-            if (string.IsNullOrEmpty(keyword) || result.ContainsKey(keyword))
-                return;
+            if (!IsValidKeyword(bytes, start, keywordEnd))
+                return null;
 
             string text = null;
 
             if (type == "tEXt")
             {
                 // テキストは UTF-8 を優先し、失敗したら Latin-1
-                text = DecodeUtf8OrLatin1(bytes, keywordEnd + 1, dataEnd - keywordEnd - 1);
+                int textStart = keywordEnd + 1;
+                int textLength = dataEnd - textStart;
+                if (textLength > MaxExpandedTextBytes) { exceededBudget = true; return null; }
+                if (textLength > remainingBudget) { exceededBudget = true; return null; }
+                expandedBytes = textLength;
+                text = DecodeUtf8OrLatin1(bytes, textStart, textLength);
             }
             else if (type == "zTXt")
             {
                 // NULL直後: 圧縮手法1B + zlib データ
                 int compressedStart = keywordEnd + 2;
-                if (compressedStart < dataEnd && bytes[keywordEnd + 1] == 0)
+                if (keywordEnd + 1 < dataEnd && bytes[keywordEnd + 1] == 0)
                 {
-                    text = InflateZlib(bytes, compressedStart, dataEnd - compressedStart);
+                    text = InflateZlib(bytes, compressedStart, dataEnd - compressedStart,
+                        remainingBudget, out expandedBytes, out exceededBudget);
                 }
             }
             else // iTXt
             {
                 // NULL直後: 圧縮フラグ1B 圧縮手法1B 言語タグ\0 翻訳キーワード\0 テキスト(UTF-8)
+                if (keywordEnd + 2 >= dataEnd || bytes[keywordEnd + 1] > 1 || bytes[keywordEnd + 2] != 0)
+                    return null;
+                bool compressed = bytes[keywordEnd + 1] == 1;
                 int p = keywordEnd + 3;
-                bool compressed = p - 3 < dataEnd && bytes[keywordEnd + 1] == 1;
+                if (p > dataEnd) return null;
                 int langEnd = Array.IndexOf(bytes, (byte)0, p, dataEnd - p);
                 if (langEnd >= 0)
                 {
@@ -119,19 +162,50 @@ namespace Illustra.Helpers
                     if (transEnd >= 0)
                     {
                         int textStart = transEnd + 1;
-                        text = compressed
-                            ? InflateZlib(bytes, textStart, dataEnd - textStart)
-                            : DecodeUtf8OrLatin1(bytes, textStart, dataEnd - textStart);
+                        int textLength = dataEnd - textStart;
+                        if (compressed)
+                            text = InflateZlib(bytes, textStart, textLength, remainingBudget,
+                                out expandedBytes, out exceededBudget);
+                        else if (textLength > MaxExpandedTextBytes)
+                        {
+                            exceededBudget = true;
+                            return null;
+                        }
+                        else if (textLength <= remainingBudget)
+                        {
+                            expandedBytes = textLength;
+                            text = DecodeUtf8OrLatin1(bytes, textStart, textLength);
+                        }
+                        else exceededBudget = true;
                     }
                 }
             }
 
-            if (!string.IsNullOrEmpty(text))
-                result[keyword] = text;
+            return text;
         }
 
-        private static string InflateZlib(byte[] bytes, int start, int length)
+        private static bool IsValidKeyword(byte[] bytes, int start, int end)
         {
+            int length = end - start;
+            if (length < 1 || length > 79) return false;
+
+            bool previousWasSpace = true;
+            for (int i = start; i < end; i++)
+            {
+                byte value = bytes[i];
+                bool isSpace = value == 32;
+                if ((!isSpace && (value < 33 || value > 126) && (value < 161 || value > 255)) ||
+                    (isSpace && previousWasSpace)) return false;
+                previousWasSpace = isSpace;
+            }
+            return !previousWasSpace;
+        }
+
+        private static string InflateZlib(byte[] bytes, int start, int length, int maxOutputBytes,
+            out int expandedBytes, out bool exceededBudget)
+        {
+            expandedBytes = 0;
+            exceededBudget = false;
             if (length <= 2) // zlibヘッダ2B + 最低1B
                 return null;
 
@@ -144,7 +218,20 @@ namespace Illustra.Helpers
                 using var deflate = new System.IO.Compression.DeflateStream(raw,
                     System.IO.Compression.CompressionMode.Decompress);
                 using var output = new MemoryStream();
-                deflate.CopyTo(output);
+                var buffer = new byte[8192];
+                int read;
+                while ((read = deflate.Read(buffer, 0, buffer.Length)) != 0)
+                {
+                    expandedBytes += read;
+                    if (output.Length + read > MaxExpandedTextBytes || output.Length + read > maxOutputBytes)
+                    {
+                        // 単チャンク超過でも処理全体を停止し、巨大チャンクの繰返し展開を防ぐ。
+                        exceededBudget = true;
+                        return null;
+                    }
+                    output.Write(buffer, 0, read);
+                }
+                expandedBytes = (int)output.Length;
                 return Encoding.UTF8.GetString(output.ToArray());
             }
             catch (Exception)

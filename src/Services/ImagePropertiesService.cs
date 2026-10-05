@@ -117,6 +117,8 @@ namespace Illustra.Services
 
         private async void OnFileSelected(SelectedFileModel model)
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=service boundary=file-selected-received source={model?.SourceId} path=\"{model?.FullPath}\" valid={model != null && !string.IsNullOrEmpty(model.FullPath)}");
             if (model == null || string.IsNullOrEmpty(model.FullPath))
             {
                 LogHelper.LogWithTimestamp("無効なファイル選択イベント", LogHelper.Categories.UI);
