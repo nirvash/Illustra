@@ -70,6 +70,155 @@ namespace Illustra.Tests.Helpers
             return BuildPngWithTextChunks();
         }
 
+        public static byte[] BuildPngWithManyAncillaryChunks(int count)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Signature, 0, Signature.Length);
+            WriteChunk(ms, "IHDR", BuildIhdr(1, 1, 0));
+            for (int i = 0; i < count; i++) WriteChunk(ms, "vpAg", Array.Empty<byte>());
+            WriteChunk(ms, "tEXt", EncodeTextChunk("prompt", "a cat"));
+            WriteChunk(ms, "IDAT", CompressZlib(new byte[] { 0, 255 }));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        public static byte[] BuildTwoFrameApng(string firstFrameText)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Signature, 0, Signature.Length);
+            WriteChunk(ms, "IHDR", BuildIhdr(1, 1, 6));
+            WriteChunk(ms, "tEXt", EncodeTextChunk("Description", firstFrameText));
+            WriteChunk(ms, "tEXt", EncodeTextChunk("Software", "NovelAI"));
+            WriteChunk(ms, "acTL", new byte[] { 0, 0, 0, 2, 0, 0, 0, 0 });
+            WriteChunk(ms, "fcTL", BuildFrameControl(0));
+            WriteChunk(ms, "IDAT", CompressZlib(new byte[] { 0, 255, 0, 0, 255 }));
+            byte[] frameData = CompressZlib(new byte[] { 0, 0, 255, 0, 255 });
+            var fdat = new byte[frameData.Length + 4];
+            fdat[3] = 2;
+            Array.Copy(frameData, 0, fdat, 4, frameData.Length);
+            WriteChunk(ms, "fcTL", BuildFrameControl(1));
+            WriteChunk(ms, "fdAT", fdat);
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        private static byte[] BuildFrameControl(uint sequence) => new byte[]
+        {
+            (byte)(sequence >> 24), (byte)(sequence >> 16), (byte)(sequence >> 8), (byte)sequence,
+            0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 0, 10, 0, 0
+        };
+
+        public static byte[] BuildPngWithTextChunk(string type, string key, string value,
+            (string Key, string Value)? additional = null)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Signature, 0, Signature.Length);
+            WriteChunk(ms, "IHDR", BuildIhdr(1, 1, 0));
+            WriteChunk(ms, type, EncodeTypedTextChunk(type, key, value));
+            if (additional.HasValue)
+                WriteChunk(ms, "tEXt", EncodeTextChunk(additional.Value.Key, additional.Value.Value));
+            WriteChunk(ms, "IDAT", CompressZlib(new byte[] { 0, 255 }));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        public static byte[] BuildPngWithTypedTextChunks(params (string Type, string Key, string Value)[] chunks)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Signature, 0, Signature.Length);
+            WriteChunk(ms, "IHDR", BuildIhdr(1, 1, 0));
+            foreach (var (type, key, value) in chunks)
+                WriteChunk(ms, type, EncodeTypedTextChunk(type, key, value));
+            WriteChunk(ms, "IDAT", CompressZlib(new byte[] { 0, 255 }));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        /// <summary>公式 nai_meta.py と同じ alpha 順・bit 順で SFW 合成 stealth_pngcomp PNG を作る。</summary>
+        public static byte[] BuildStealthPng(string json, string description = null, bool withTextMetadata = false,
+            bool invalidMagic = false, bool invalidLength = false, bool corruptGzip = false)
+        {
+            byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
+            byte[] compressed;
+            using (var output = new MemoryStream())
+            {
+                using (var gzip = new System.IO.Compression.GZipStream(output,
+                    System.IO.Compression.CompressionLevel.Optimal, true))
+                    gzip.Write(jsonBytes, 0, jsonBytes.Length);
+                compressed = output.ToArray();
+            }
+            if (corruptGzip) compressed[compressed.Length - 1] ^= 0xFF;
+            byte[] magic = Encoding.UTF8.GetBytes("stealth_pngcomp");
+            if (invalidMagic) magic[0] = (byte)'X';
+            byte[] payload = new byte[magic.Length + 4 + compressed.Length];
+            Array.Copy(magic, payload, magic.Length);
+            int bitLength = invalidLength ? int.MaxValue & ~7 : compressed.Length * 8;
+            payload[magic.Length] = (byte)(bitLength >> 24);
+            payload[magic.Length + 1] = (byte)(bitLength >> 16);
+            payload[magic.Length + 2] = (byte)(bitLength >> 8);
+            payload[magic.Length + 3] = (byte)bitLength;
+            Array.Copy(compressed, 0, payload, magic.Length + 4, compressed.Length);
+
+            const int width = 128, height = 128;
+            var rgba = new byte[width * height * 4];
+            for (int i = 0; i < width * height; i++) rgba[i * 4 + 3] = 254;
+            for (int bitIndex = 0; bitIndex < payload.Length * 8; bitIndex++)
+            {
+                int x = bitIndex / height, y = bitIndex % height;
+                int alphaIndex = (y * width + x) * 4 + 3;
+                int bit = (payload[bitIndex / 8] >> (7 - bitIndex % 8)) & 1;
+                rgba[alphaIndex] = (byte)(254 | bit);
+            }
+
+            using var ms = new MemoryStream();
+            ms.Write(Signature, 0, Signature.Length);
+            WriteChunk(ms, "IHDR", BuildIhdr(width, height, 6));
+            if (withTextMetadata)
+            {
+                WriteChunk(ms, "tEXt", EncodeTextChunk("Description", description ?? "text wins"));
+                WriteChunk(ms, "tEXt", EncodeTextChunk("Software", "NovelAI"));
+            }
+            byte[] scanlines = new byte[height * (width * 4 + 1)];
+            for (int y = 0; y < height; y++)
+                Array.Copy(rgba, y * width * 4, scanlines, y * (width * 4 + 1) + 1, width * 4);
+            WriteChunk(ms, "IDAT", CompressZlib(scanlines));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        private static byte[] BuildIhdr(int width, int height, byte colorType) => new byte[]
+        {
+            (byte)(width >> 24), (byte)(width >> 16), (byte)(width >> 8), (byte)width,
+            (byte)(height >> 24), (byte)(height >> 16), (byte)(height >> 8), (byte)height,
+            8, colorType, 0, 0, 0
+        };
+
+        private static byte[] EncodeTypedTextChunk(string type, string key, string value)
+        {
+            byte[] keyword = Encoding.Latin1.GetBytes(key);
+            byte[] text = Encoding.UTF8.GetBytes(value);
+            byte[] body = text;
+            if (type == "zTXt")
+            {
+                var compressed = CompressZlib(text);
+                body = new byte[compressed.Length + 1];
+                Array.Copy(compressed, 0, body, 1, compressed.Length);
+            }
+            if (type == "iTXt")
+            {
+                using var ms = new MemoryStream();
+                ms.WriteByte(0); ms.WriteByte(0); // no compression
+                ms.WriteByte(0); ms.WriteByte(0); // empty language, empty translated keyword
+                ms.Write(text, 0, text.Length);
+                body = ms.ToArray();
+            }
+            var result = new byte[keyword.Length + 1 + body.Length];
+            Array.Copy(keyword, result, keyword.Length);
+            Array.Copy(body, 0, result, keyword.Length + 1, body.Length);
+            return result;
+        }
+
         private static byte[] EncodeTextChunk(string key, string value)
         {
             var keyword = Encoding.Latin1.GetBytes(key);

@@ -230,8 +230,12 @@ namespace Illustra.Views
 
         private void PropertyPanelControl_Loaded(object sender, RoutedEventArgs e)
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-loaded control=PropertyPanel visibility={Visibility} enabled={IsEnabled} currentPath=\"{_appContext.CurrentProperties?.FilePath}\"");
             _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
             _eventAggregator.GetEvent<FileSelectedEvent>().Subscribe(OnFileSelected, ThreadOption.UIThread);
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-file-selected-subscribed control=PropertyPanel visibility={Visibility} enabled={IsEnabled} currentPath=\"{_appContext.CurrentProperties?.FilePath}\"");
             _eventAggregator.GetEvent<McpOpenFolderEvent>().Subscribe(OnMcpFolderChanged, ThreadOption.UIThread); // Renamed
             _eventAggregator.GetEvent<FilterChangedEvent>().Subscribe(OnFilterChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視);
@@ -271,25 +275,29 @@ namespace Illustra.Views
 
         public void OnFileSelected(SelectedFileModel selectedFile)
         {
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-file-selected-received control=PropertyPanel visibility={Visibility} enabled={IsEnabled} currentPath=\"{_appContext.CurrentProperties?.FilePath}\" uiSelectionPath=\"{selectedFile?.FullPath}\"");
             if (selectedFile == null
                 || string.IsNullOrEmpty(selectedFile.FullPath)
                 || !File.Exists(selectedFile.FullPath))
+            {
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-file-selected-skip reason={ (selectedFile == null ? "null-event" : string.IsNullOrEmpty(selectedFile.FullPath) ? "empty-path" : "file-not-found") } control=PropertyPanel");
                 return;
+            }
 
-            // 選択されたファイルが現在の共有コンテキストと異なる場合、または選択がnullの場合
+            // 同じパスの初期選択でも、フォルダ変更で隠れたパネルを再表示する
+            Visibility = Visibility.Visible;
+            if (ViewerPerformanceLog.IsEnabled)
+                ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=main boundary=panel-open control=PropertyPanel visibility={Visibility} enabled={IsEnabled} currentPath=\"{_appContext.CurrentProperties?.FilePath}\" uiSelectionPath=\"{selectedFile.FullPath}\"");
+
+            // 選択されたファイルが現在の共有コンテキストと異なる場合のみ表示内容を更新
             if (string.IsNullOrEmpty(_appContext.CurrentProperties?.FilePath) ||
                 !_appContext.CurrentProperties.FilePath.Equals(selectedFile.FullPath))
             {
                 // 共有コンテキストを更新するサービスが行うため、自分で読み込む必要はない
-                Visibility = Visibility.Visible;
-
                 // Stable Diffusionのセクションを表示/非表示
                 UpdateGenerationDependentSectionsVisibility();
-            }
-            else if (selectedFile == null || string.IsNullOrEmpty(selectedFile.FullPath))
-            {
-                // ファイルが選択されていない場合はプロパティパネルを非表示にする
-                Visibility = Visibility.Collapsed;
             }
         }
 

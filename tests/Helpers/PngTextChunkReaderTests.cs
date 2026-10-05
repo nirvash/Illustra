@@ -51,6 +51,51 @@ namespace Illustra.Tests.Helpers
         }
 
         [Test]
+        public void TryReadTags_WithTotalExpandedTextOverLimit_ReturnsFalse()
+        {
+            string text = new string('x', 3 * 1024 * 1024);
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPngWithTypedTextChunks(
+                ("zTXt", "one", text), ("zTXt", "two", text), ("zTXt", "three", text)));
+
+            bool result = PngTextChunkReader.TryReadTags(_tempFilePath, out _);
+
+            Assert.That(result, Is.False, "aggregate expanded text must stay within the file-level budget");
+        }
+
+        [Test]
+        public void TryReadTags_WithTooManyChunks_ReturnsFalse()
+        {
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPngWithManyAncillaryChunks(10001));
+
+            bool result = PngTextChunkReader.TryReadTags(_tempFilePath, out _);
+
+            Assert.That(result, Is.False, "PNG chunk scanning must stop at its count limit");
+        }
+
+        [Test]
+        public void TryReadTags_WithOversizedCompressedChunk_StopsInsteadOfRetryingOtherChunks()
+        {
+            string text = new string('x', 5 * 1024 * 1024);
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPngWithTypedTextChunks(
+                ("tEXt", "Software", "NovelAI"),
+                ("zTXt", "one", text), ("zTXt", "two", text)));
+            Assert.That(PngTextChunkReader.TryReadTags(_tempFilePath, out _), Is.False);
+        }
+
+        [TestCase("tEXt", 1)]
+        [TestCase("iTXt", 1)]
+        [TestCase("tEXt", 1024 * 1024)]
+        [TestCase("iTXt", 1024 * 1024)]
+        public void TryReadTags_WithOversizedUncompressedChunk_StopsEntireRead(string type, int excess)
+        {
+            string text = new string('x', 4 * 1024 * 1024 + excess);
+            File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildPngWithTypedTextChunks(
+                ("tEXt", "Software", "NovelAI"), (type, "Description", text)));
+            Assert.That(PngTextChunkReader.TryReadTags(_tempFilePath, out var tags), Is.False);
+            Assert.That(tags, Is.Null);
+        }
+
+        [Test]
         public void TryReadTags_WithJapaneseText_ReadsUtf8Correctly()
         {
             // Arrange: UTF-8 のマルチバイト文字を含む tEXt チャンク

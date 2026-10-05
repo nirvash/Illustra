@@ -36,8 +36,14 @@ namespace Illustra.Helpers
         /// </summary>
         public static GenerationMetadata ParseFromPng(string filePath)
         {
-            if (!PngTextChunkReader.TryReadTags(filePath, out var tags))
-                return null;
+            bool hasTags = PngTextChunkReader.TryReadTags(filePath, out var tags);
+            if (hasTags)
+            {
+                // 通常の PNG テキストメタデータを優先し、NAI 判定に失敗した場合のみ alpha を読む。
+                var novelAi = NovelAIMetadataParser.ParseTextTags(tags);
+                if (novelAi != null) return novelAi;
+            }
+            if (!hasTags) return NovelAIMetadataParser.ParseStealthPng(filePath);
 
             // prompt / workflow タグの少なくとも一方が JSON である場合のみ ComfyUI 埋め込みとみなす
             bool isComfyUi =
@@ -45,7 +51,7 @@ namespace Illustra.Helpers
                 (tags.TryGetValue("workflow", out string workflowValue) && PngTextChunkReader.IsJsonLike(workflowValue));
 
             if (!isComfyUi)
-                return null;
+                return NovelAIMetadataParser.ParseStealthPng(filePath);
 
             return BuildFromTags(tags);
         }
