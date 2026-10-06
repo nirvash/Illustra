@@ -40,6 +40,7 @@ namespace Illustra.Views
         private FolderTreeControl? _folderTreeControl;
         private string _currentFolderPath = string.Empty;
         private int _selectedItemCount = 0;
+        private readonly StatusSelectionState _statusSelectionState = new();
         private const string CONTROL_ID = "MainWindow";
         public bool EnableCyclicNavigation => App.Instance.EnableCyclicNavigation;
 
@@ -77,7 +78,8 @@ namespace Illustra.Views
             _eventAggregator.GetEvent<SortOrderChangedEvent>().Subscribe(OnSortOrderChanged, ThreadOption.UIThread, false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
             _eventAggregator.GetEvent<ShortcutSettingsChangedEvent>().Subscribe(UpdateEditMenuShortcuts); // ショートカット変更イベントを購読
-            _eventAggregator.GetEvent<SelectionCountChangedEvent>().Subscribe(OnSelectionCountChanged, ThreadOption.UIThread);
+            _eventAggregator.GetEvent<SelectionCountChangedEvent>().Subscribe(OnSelectionCountChanged, ThreadOption.UIThread,
+                false, args => args.SourceId == SelectionStatusEventPublisher.MainWindowSourceId);
             // FavoriteFoldersとFolderTreeはXAMLで定義されたコンポーネントで、
             // リンターエラーが表示されることがありますが、ビルド時には問題ありません
             _favoriteFoldersControl = FavoriteFolders;
@@ -891,6 +893,7 @@ namespace Illustra.Views
 
             // ステータスバーを更新
             _selectedItemCount = 0; // フォルダが変わったら選択数をリセット
+            _statusSelectionState.Clear();
             UpdateStatusBar();
         }
 
@@ -989,6 +992,7 @@ namespace Illustra.Views
         private void OnSelectionCountChanged(SelectionCountChangedEventArgs args)
         {
             _selectedItemCount = args.SelectedCount;
+            _statusSelectionState.OnSelectionCountChanged(args.SelectedCount, args.SelectedFilePath);
             UpdateStatusBar();
         }
 
@@ -1013,6 +1017,11 @@ namespace Illustra.Views
                 {
                     // リソース文字列 String_Status_SelectedItemsFormat を使用
                     statusParts.Add(string.Format((string)FindResource("String_Status_SelectedItemsFormat") ?? "{0} items selected", _selectedItemCount));
+                }
+
+                if (_statusSelectionState.SelectedFileName is string selectedFileName)
+                {
+                    statusParts.Add(selectedFileName);
                 }
 
 

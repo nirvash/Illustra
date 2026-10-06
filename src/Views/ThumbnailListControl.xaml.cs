@@ -162,8 +162,8 @@ namespace Illustra.Views
             }
 
             // ViewModelからの確定選択は SelectionChanged guard 中に反映されるため、同期完了後に一度通知する。
-            if (selectionChangedByViewModel && selectedAfterSync != null)
-                PublishFileSelected(selectedAfterSync);
+            if (selectionChangedByViewModel)
+                PublishFinalizedSelection(selectedAfterSync, _viewModel.SelectedItems.Count);
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -184,10 +184,26 @@ namespace Illustra.Views
                 new SelectedFileModel(CONTROL_ID, selectedItem.FullPath));
         }
 
+        private void PublishFinalizedSelection(FileNodeModel? selectedItem, int selectedCount)
+        {
+            if (selectedItem != null)
+            {
+                _fileSelectedPublishVersion++;
+                if (ViewerPerformanceLog.IsEnabled)
+                    ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=true path=\"{selectedItem.FullPath}\" source=finalized-selection");
+            }
+
+            SelectionStatusEventPublisher.PublishFinalizedSelection(
+                _eventAggregator,
+                selectedItem?.FullPath,
+                selectedCount,
+                Window.GetWindow(this) is MainWindow);
+        }
+
         private void PublishFileSelectedIfSelectionChangedDidNotPublish(FileNodeModel selectedItem, long publishVersionBeforeSelection)
         {
             if (_fileSelectedPublishVersion == publishVersionBeforeSelection)
-                PublishFileSelected(selectedItem);
+                PublishFinalizedSelection(selectedItem, _viewModel.SelectedItems.Count);
         }
         private readonly Queue<Func<Task>> _thumbnailLoadQueue = new Queue<Func<Task>>();
         private readonly DispatcherTimer _thumbnailLoadTimer;
@@ -1264,16 +1280,11 @@ namespace Illustra.Views
 
                     // イベントの発行（最後に選択されたアイテムがある場合のみ）
                     var lastSelected = _viewModel.SelectedItems.LastOrDefault();
-                    if (lastSelected != null)
-                    {
-                        if (ViewerPerformanceLog.IsEnabled)
-                            ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=true path=\"{lastSelected.FullPath}\"");
-                        PublishFileSelected(lastSelected);
-                    }
-                    else if (ViewerPerformanceLog.IsEnabled)
+                    if (lastSelected == null && ViewerPerformanceLog.IsEnabled)
                         ViewerPerformanceLog.Append($"[DEBUG-nai-startup] role=viewer boundary=file-selected-publish control={CONTROL_ID} publish=false reason=no-vm-selection uiCount={ThumbnailItemsControl.SelectedItems.Count}");
-                    // 選択アイテム数を通知するイベントを発行
-                    _eventAggregator?.GetEvent<SelectionCountChangedEvent>()?.Publish(new SelectionCountChangedEventArgs(ThumbnailItemsControl.SelectedItems.Count));
+                    // ファイル名と件数を確定後に通知し、MainWindow所属の一覧だけをステータス対象にする。
+                    if (_eventAggregator != null)
+                        PublishFinalizedSelection(lastSelected, ThumbnailItemsControl.SelectedItems.Count);
                 }
                 catch (Exception ex)
                 {

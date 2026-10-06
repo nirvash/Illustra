@@ -12,13 +12,24 @@ namespace Illustra.Events
         /// </summary>
         public int SelectedCount { get; }
 
+        /// <summary>通知元。主ウィンドウのサムネイル選択だけをステータスバーへ反映するために使用。</summary>
+        public string SourceId { get; }
+
+        /// <summary>通知元で単一選択されているファイルのパス。ステータス表示用。</summary>
+        public string? SelectedFilePath { get; }
+
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="selectedCount">選択されているアイテムの数。</param>
-        public SelectionCountChangedEventArgs(int selectedCount)
+        public SelectionCountChangedEventArgs(
+            int selectedCount,
+            string sourceId = "ThumbnailList",
+            string? selectedFilePath = null)
         {
             SelectedCount = selectedCount;
+            SourceId = sourceId;
+            SelectedFilePath = selectedFilePath;
         }
     }
 
