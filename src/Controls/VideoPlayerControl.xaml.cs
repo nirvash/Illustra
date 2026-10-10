@@ -30,6 +30,20 @@ namespace Illustra.Controls
         private EventHandler<ExceptionRoutedEventArgs>? _mediaFailedHandler;
 
         private bool _isStretchMode = false; // ストレッチモードフラグ
+        public static readonly DependencyProperty IsAudioProperty = DependencyProperty.Register(
+            nameof(IsAudio), typeof(bool), typeof(VideoPlayerControl), new PropertyMetadata(false, OnIsAudioChanged));
+
+        public bool IsAudio { get => (bool)GetValue(IsAudioProperty); set => SetValue(IsAudioProperty, value); }
+
+        private static void OnIsAudioChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var control = (VideoPlayerControl)d;
+            var isAudio = (bool)e.NewValue;
+            control.AudioArtwork.Visibility = isAudio ? Visibility.Visible : Visibility.Collapsed;
+            // 音声でもMediaElementはVisibleのまま保持する。前面の音符表示が音声の表示を担う。
+            control.VideoPlayer.Visibility = Visibility.Visible;
+            control.AudioFileName.Text = isAudio ? System.IO.Path.GetFileName(control.FilePath) : string.Empty;
+        }
 
         private bool _wasPlayingBeforeSeek = false; // シーク操作開始前の再生状態
 
@@ -135,6 +149,8 @@ namespace Illustra.Controls
 
         public void LoadVideo(string filePath)
         {
+            IsAudio = FileHelper.IsAudioFile(filePath);
+            AudioFileName.Text = IsAudio ? System.IO.Path.GetFileName(filePath) : string.Empty;
             _currentFilePath = filePath;
             _hasAutomaticallyRetried = false;
             QueueVideoLoad(filePath);
@@ -199,6 +215,7 @@ namespace Illustra.Controls
         private async void QueueVideoLoad(string filePath)
         {
             int loadGeneration = ++_videoLoadGeneration;
+
             _isMediaReady = false;
             ApplyInitialStretchMode();
             StopVideo();
@@ -211,6 +228,7 @@ namespace Illustra.Controls
             {
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
 
+
                 if (!IsLoaded || loadGeneration != _videoLoadGeneration || filePath != _currentFilePath)
                 {
                     return;
@@ -221,6 +239,7 @@ namespace Illustra.Controls
             }
             catch (Exception ex)
             {
+
                 LogHelper.LogError(string.Format((string)Application.Current.FindResource("String_Video_LoadError"), ex.Message), ex);
                 StopVideo();
             }
@@ -243,6 +262,8 @@ namespace Illustra.Controls
             VideoPlayer.MediaOpened += _mediaOpenedHandler;
             VideoPlayer.MediaFailed += _mediaFailedHandler;
             VideoPlayer.Source = source;
+            // 音声は映像フレームの描画を待たず、ネイティブプレーヤーの初期化を開始する。
+            if (IsAudio) VideoPlayer.Play();
         }
 
         private bool IsCurrentVideoLoad(int loadGeneration, Uri source)
@@ -668,6 +689,13 @@ namespace Illustra.Controls
 
         private void VideoPlayerControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // 表示前に指定された音声はQueueVideoLoadのIsLoaded判定で保留される。
+            // 初回のLoadedで開始し、ホスト移動中の既存Sourceは作り直さない。
+            if (IsAudio && VideoPlayer.Source == null && !string.IsNullOrEmpty(_currentFilePath)
+                && !_surfaceLifetime.IsDisposed)
+            {
+                QueueVideoLoad(_currentFilePath);
+            }
             _surfaceLifetime.OnLoaded(() =>
             {
                 // MediaElement may recreate its native player when its presentation source changes.

@@ -45,8 +45,10 @@ namespace Illustra.Models
         private string _folderPathShort = string.Empty;
         private StableDiffusionParser.ParseResult? _stableDiffusionResult;
         private bool _isVideo;
+        private bool _isAudio;
         private TimeSpan _duration;
         private bool _stableDiffusionExpanded = false;
+        public bool HasDuration => IsVideo || IsAudio;
         public string DurationFormatted => _duration.ToString(@"hh\:mm\:ss");
 
         public string FilePath
@@ -98,6 +100,7 @@ namespace Illustra.Models
         {
             get
             {
+                if (IsAudio) return string.Empty;
                 // 多言語対応: "ピクセル" 部分をリソースから取得（Properties.Resources.PixelUnitLabel → Application.Current.TryFindResource）
                 var pixelLabel = System.Windows.Application.Current.TryFindResource("String_Unit_Pixel") as string ?? "pixels";
                 return $"{_width} x {_height} {pixelLabel}";
@@ -523,6 +526,7 @@ namespace Illustra.Models
             Width = 0;
             Height = 0;
             IsVideo = false; // Clear video flag
+            IsAudio = false;
             Duration = TimeSpan.Zero; // Clear duration
             ImageFormat = string.Empty;
             ColorDepth = string.Empty;
@@ -561,7 +565,23 @@ namespace Illustra.Models
                 properties.FileType = Path.GetExtension(filePath).ToLowerInvariant(); // Use setter
 
                 // FileHelper を使用してファイルタイプに基づいて処理を分岐
-                if (FileHelper.IsVideoFile(filePath))
+                if (FileHelper.IsAudioFile(filePath))
+                {
+                    properties.IsAudio = true;
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
+                            using var tagFile = TagLib.File.Create(filePath);
+                            properties.Duration = tagFile.Properties.Duration;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"音声情報読み取りエラー ({filePath}): {ex.Message}");
+                        }
+                    });
+                }
+                else if (FileHelper.IsVideoFile(filePath))
                 {
                     properties.IsVideo = true; // Use setter
                     await Task.Run(() => // TagLib processing in background thread
@@ -888,7 +908,24 @@ namespace Illustra.Models
                 {
                     _isVideo = value;
                     OnPropertyChanged(nameof(IsVideo));
+                    OnPropertyChanged(nameof(HasDuration));
                     OnPropertyChanged(nameof(Dimensions)); // Dimensions depends on IsVideo
+                }
+            }
+        }
+
+        public bool IsAudio
+        {
+            get => _isAudio;
+            private set
+            {
+                if (_isAudio != value)
+                {
+                    _isAudio = value;
+                    OnPropertyChanged(nameof(IsAudio));
+                    OnPropertyChanged(nameof(HasDuration));
+                    OnPropertyChanged(nameof(Dimensions));
+                    OnPropertyChanged(nameof(Resolution));
                 }
             }
         }

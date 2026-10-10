@@ -17,9 +17,15 @@ namespace Illustra.Helpers
             return SupportedVideoExtensions.Contains(extension);
         }
 
+        public static bool IsAudioFile(string filePath)
+        {
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return SupportedAudioExtensions.Contains(extension);
+        }
+
         public static bool IsMediaFile(string filePath)
         {
-            return IsImageFile(filePath) || IsVideoFile(filePath);
+            return IsImageFile(filePath) || IsVideoFile(filePath) || IsAudioFile(filePath);
         }
 
         public static string[] SupportedImageExtensions => new[]
@@ -32,7 +38,9 @@ namespace Illustra.Helpers
             ".mp4"
         };
 
-        public static string[] SupportedExtensions => SupportedImageExtensions.Concat(SupportedVideoExtensions).ToArray();
+        public static string[] SupportedAudioExtensions => new[] { ".wav", ".mp3" };
+
+        public static string[] SupportedExtensions => SupportedImageExtensions.Concat(SupportedVideoExtensions).Concat(SupportedAudioExtensions).ToArray();
 
         public static bool IsValidFileName(string fileName)
         {

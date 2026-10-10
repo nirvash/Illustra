@@ -849,7 +849,7 @@ namespace Illustra.Views
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
             }
 
-            if (FileHelper.IsVideoFile(filePath))
+            if (FileHelper.IsVideoFile(filePath) || FileHelper.IsAudioFile(filePath))
             {
                 ShowVideo(filePath);
             }
@@ -911,6 +911,7 @@ namespace Illustra.Views
 
         private void ShowVideo(string filePath)
         {
+            VideoPlayerControl.IsAudio = FileHelper.IsAudioFile(filePath);
             _displayedFilePath = null;
             // Hide other controls
             ImageZoomControl.Visibility = Visibility.Collapsed;

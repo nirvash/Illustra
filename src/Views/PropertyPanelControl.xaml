@@ -307,12 +307,12 @@
                                                    Grid.Column="0"
                                                    Text="{DynamicResource String_Property_Duration}"
                                                    Margin="0,0,10,5"
-                                                   Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                   Visibility="{Binding HasDuration, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         <TextBox Grid.Row="5"
                                                  Grid.Column="1"
                                                  Text="{Binding DurationFormatted, Mode=OneWay}"
                                                  Style="{StaticResource ReadOnlyTextBoxStyle}"
-                                                 Visibility="{Binding IsVideo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                 Visibility="{Binding HasDuration, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                                         <!-- 画像形式 -->
                                         <TextBlock Grid.Row="6"

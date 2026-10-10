@@ -82,6 +82,9 @@ namespace Illustra.Helpers
                 // キャンセルされたかチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
+                if (FileHelper.IsAudioFile(filePath))
+                    return GenerateAudioThumbnail(width, height);
+
                 // mp4ファイルの場合は専用の処理を使用
                 if (Path.GetExtension(filePath).ToLower() == ".mp4")
                 {
@@ -160,6 +163,23 @@ namespace Illustra.Helpers
             }
         }
 
+        public static BitmapSource GenerateAudioThumbnail(int width, int height)
+        {
+            var visual = new DrawingVisual();
+            using (var context = visual.RenderOpen())
+            {
+                context.DrawRectangle(new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 55, 70)), null, new Rect(0, 0, width, height));
+                var text = new FormattedText("♫", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                    new Typeface("Segoe UI Symbol"), Math.Max(18, Math.Min(width, height) * 0.55),
+                    System.Windows.Media.Brushes.White, VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+                context.DrawText(text, new System.Windows.Point((width - text.Width) / 2, (height - text.Height) / 2));
+            }
+            var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            bitmap.Freeze();
+            return bitmap;
+        }
+
         /// <summary>
         /// 画像ファイルからサムネイルを作成します。縮小デコードを使用して効率的に処理します。
         /// </summary>
@@ -175,6 +195,9 @@ namespace Illustra.Helpers
             {
                 // キャンセルチェック
                 cancellationToken.ThrowIfCancellationRequested();
+
+                if (FileHelper.IsAudioFile(imagePath))
+                    return GenerateAudioThumbnail(width, height);
 
                 // ファイルストリーム準備
                 using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);

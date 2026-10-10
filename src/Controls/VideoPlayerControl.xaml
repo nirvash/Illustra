@@ -21,6 +21,7 @@
         <Border x:Name="VideoPlayerContainer" Grid.Row="0"
             Background="Transparent"
             SizeChanged="VideoPlayerContainer_SizeChanged">
+            <Grid>
             <MediaElement x:Name="VideoPlayer"
                         Grid.Row="0"
                         HorizontalAlignment="Center"
@@ -29,6 +30,11 @@
                         UnloadedBehavior="Stop"
                         MediaEnded="VideoPlayer_MediaEnded"
                         ScrubbingEnabled="True"/>
+            <StackPanel x:Name="AudioArtwork" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                <iconPacks:PackIconMaterialDesign Kind="MusicNote" Width="96" Height="96" Foreground="White" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="AudioFileName" Foreground="White" FontSize="18" TextTrimming="CharacterEllipsis" MaxWidth="600" HorizontalAlignment="Center"/>
+            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- 動画再生コントロール -->
