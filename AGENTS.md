@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Windows 用画像ビューア（WPF + .NET 9、`net9.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
+Windows 用画像ビューア（WPF + .NET 10、`net10.0-windows`）。MVVM（Prism 9 + DryIoc、イベントアグリゲーター）。
 
 - ソリューション: `src/Illustra.csproj`（メインアプリ）+ `tests/Illustra.Tests.csproj`（NUnit + Moq）
 - ロジックの大半は `src/Helpers/`。UI は `Views/`（Partial 分割）+ `ViewModels/`。画面間通信はイベントアグリゲーター（UI 共通 = `src/Events/UIEvents.cs`、MCP 関連 = `src/Events/McpEvents.cs`）

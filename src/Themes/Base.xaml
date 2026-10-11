@@ -104,8 +104,8 @@
 
     <SolidColorBrush x:Key="MahApps.Brushes.Window.FlyoutOverlay" Opacity="0.5" Color="{DynamicResource MahApps.Colors.ThemeForeground}" options:Freeze="True" />
     <SolidColorBrush x:Key="MahApps.Brushes.Window.Background" Color="{DynamicResource MahApps.Colors.ThemeBackground}" options:Freeze="True" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Window.Background.Backdrop.Acrylic" Color="{DynamicResource MahApps.Brushes.Window.Background.Backdrop.Acrylic}" options:Freeze="True" />
-    <SolidColorBrush x:Key="MahApps.Brushes.Window.Background.Backdrop.Auto" Color="{DynamicResource MahApps.Brushes.Window.Background.Backdrop.Auto}" options:Freeze="True" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Window.Background.Backdrop.Acrylic" Color="{DynamicResource MahApps.Colors.Window.Background.Backdrop.Acrylic}" options:Freeze="True" />
+    <SolidColorBrush x:Key="MahApps.Brushes.Window.Background.Backdrop.Auto" Color="{DynamicResource MahApps.Colors.Window.Background.Backdrop.Auto}" options:Freeze="True" />
     <SolidColorBrush x:Key="MahApps.Brushes.Separator" Color="#FFC4C4C5" options:Freeze="True" />
 
     <SolidColorBrush x:Key="MahApps.Brushes.Button.Flat.Background" Color="#D5D5D5" options:Freeze="True" />

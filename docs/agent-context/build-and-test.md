@@ -2,7 +2,7 @@
 
 ## 前提環境
 
-- .NET 9 SDK、Windows 専用。
+- .NET 10 SDK、Windows 専用。
 - **NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要**（packages:read 権限の GitHub トークン）。`src/nuget.config` の非公開フィードから `SixLabors.ImageSharp 3.1.7-custom1` を取得するため。未設定だと復元失敗。
 - 実シェルは PowerShell 5.1（既定 CP932）。**出力を見るコマンドには毎回先頭に付ける**:
 

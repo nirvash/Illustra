@@ -21,7 +21,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Set up authentication for GitHub Packages
         shell: bash
@@ -168,7 +168,7 @@ jobs:
 
             #### 💻 動作環境
             - Windows 10/11
-            - .NET 9.0 以降（実行ファイルに同梱）
+            - .NET 10 ランタイム同梱（別途インストール不要）
 
             #### 📝 変更点
             ${{ steps.read_release_notes.outputs.summary }}
@@ -187,7 +187,7 @@ jobs:
 
             #### 💻 System Requirements
             - Windows 10/11
-            - .NET 9.0 or later (included in executable)
+            - .NET 10 runtime included (no separate installation required)
 
             #### 📝 Changes
             ${{ steps.read_release_notes.outputs.summary }}
