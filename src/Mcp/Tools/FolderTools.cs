@@ -68,8 +68,8 @@ namespace Illustra.Mcp.Tools
             var args = new McpOpenFolderEventArgs
             {
                 TargetTab = McpTabTarget.Normalize(targetTab),
-                FolderPath = folderPath,
-                SelectedFilePath = selectedFilePath
+                FolderPath = Path.GetFullPath(folderPath),
+                SelectedFilePath = string.IsNullOrEmpty(selectedFilePath) ? selectedFilePath : Path.GetFullPath(selectedFilePath)
             };
             var result = await _bridge.PublishAndWaitAsync(args, ea => ea.GetEvent<McpOpenFolderEvent>());
 
