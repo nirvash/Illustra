@@ -392,9 +392,6 @@ namespace Illustra
         {
             try
             {
-                // System.Data.SQLite を使う場合はプロバイダー名を指定
-                SQLiteTools.ResolveSQLite("System.Data.SQLite");
-
                 // データベースのパスを取得（Applicationデータフォルダを使用）
                 string dbPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -408,11 +405,10 @@ namespace Illustra
                     System.IO.Directory.CreateDirectory(dbDirectory);
                 }
 
-                // System.Data.SQLite の接続文字列形式を正しく使用
-                string connectionString = $"Data Source={dbPath};Version=3;";
+                string connectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
 
                 // linq2dbのSQLiteプロバイダを取得して接続
-                var dataProvider = SQLiteTools.GetDataProvider("SQLite");
+                var dataProvider = SQLiteTools.GetDataProvider(ProviderName.SQLiteMS);
 
                 using (var db = new DataConnection(dataProvider, connectionString))
                 {

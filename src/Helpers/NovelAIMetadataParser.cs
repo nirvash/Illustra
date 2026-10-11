@@ -5,9 +5,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using Illustra.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace Illustra.Helpers
 {
@@ -66,6 +64,7 @@ namespace Illustra.Helpers
                 if (width == 0 || height == 0 || (ulong)width * height > MaxImagePixels) return null;
 
                 using var image = LoadFirstFrame(filePath);
+                if (image.Width != width || image.Height != height) return null;
                 ulong availableBits = (ulong)width * height;
                 ulong magicBits = (ulong)Encoding.UTF8.GetByteCount(Magic) * 8;
                 if (availableBits < magicBits + 32) return null;
@@ -119,14 +118,14 @@ namespace Illustra.Helpers
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException ||
                                       ex is InvalidDataException || ex is JsonException ||
                                       ex is ArgumentException || ex is NotSupportedException ||
-                                      ex is SixLabors.ImageSharp.ImageFormatException || ex is OverflowException)
+                                      ex is OverflowException)
             {
                 return null;
             }
         }
 
-        private static Image<Rgba32> LoadFirstFrame(string filePath) =>
-            Image.Load<Rgba32>(new DecoderOptions { MaxFrames = 1 }, filePath);
+        private static SKBitmap LoadFirstFrame(string filePath) =>
+            SkiaImageDecoder.DecodeFirstFrame(filePath);
 
         private static GenerationMetadata BuildMetadata(string description, string software, string source,
             string commentText, JsonElement? comment, string raw = null)
@@ -195,11 +194,11 @@ namespace Illustra.Helpers
 
         private sealed class AlphaBitReader
         {
-            private readonly Image<Rgba32> _image;
+            private readonly SKBitmap _image;
             private readonly uint _width, _height;
             private ulong _position;
             public ulong RemainingBits => (ulong)_width * _height - _position;
-            public AlphaBitReader(Image<Rgba32> image, uint width, uint height)
+            public AlphaBitReader(SKBitmap image, uint width, uint height)
             { _image = image; _width = width; _height = height; }
             public byte[] ReadBytes(int count)
             {
@@ -210,7 +209,7 @@ namespace Illustra.Helpers
                     {
                         ulong index = _position++;
                         int x = (int)(index / _height), y = (int)(index % _height);
-                        result[i] |= (byte)((_image[x, y].A & 1) << bit);
+                        result[i] |= (byte)((_image.GetPixel(x, y).Alpha & 1) << bit);
                     }
                 return result;
             }

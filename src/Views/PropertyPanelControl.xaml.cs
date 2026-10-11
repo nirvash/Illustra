@@ -10,7 +10,6 @@ using Illustra.Controls;
 using System.Windows.Input;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System.Text;
 using System.Reflection;
 using Prism.Events;
@@ -27,7 +26,7 @@ namespace Illustra.Views
         private IllustraAppContext _appContext;
         private List<string> _currentTagFilters = new List<string>();
         private string CONTROL_ID = "PropertyPanel";
-        private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".webp" };
+        private readonly string[] EXIF_SUPPORTED_FORMATS = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         private ViewerSettings _viewerSettings;
         // MainWindow は行の高さでパネルを隠すため、IsVisible だけでは判定できない。
         private bool _isPresentationEnabled = true;
@@ -500,24 +499,7 @@ namespace Illustra.Views
 
             try
             {
-                using var image = await SixLabors.ImageSharp.Image.LoadAsync(filePath);
-
-                // ExifProfile が存在しない場合は新規作成
-                if (image.Metadata.ExifProfile == null)
-                {
-                    image.Metadata.ExifProfile = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
-                }
-
-                //  UTF-16BEエンコーディングでユーザーコメントを設定
-                ExifProfileExtensions.SetUtf16BEUserComment(image.Metadata.ExifProfile, comment);
-                //ExifProfileExtensions.SetUserComment(image.Metadata.ExifProfile, comment, EncodedString.CharacterCode.Unicode);
-
-                // ファイル拡張子に基づいて適切なエンコーダーを取得
-                var extension = Path.GetExtension(filePath).ToLowerInvariant();
-
-                // 同じファイルに上書き保存
-                using var fileStream = File.Create(filePath);
-                await image.SaveAsync(fileStream, GetEncoder(extension));
+                await ExifUserCommentWriter.SaveAsync(filePath, comment);
 
                 // 保存成功メッセージを表示
                 MessageBox.Show("プロンプトが保存されました。", "保存完了",
@@ -528,23 +510,6 @@ namespace Illustra.Views
                 MessageBox.Show($"プロンプトの保存中にエラーが発生しました：{ex.Message}", "エラー",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
-            }
-        }
-
-        // ファイル拡張子に基づいて適切なエンコーダーを返すヘルパーメソッド
-        private SixLabors.ImageSharp.Formats.IImageEncoder GetEncoder(string extension)
-        {
-            switch (extension)
-            {
-                case ".jpg":
-                case ".jpeg":
-                    return new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder();
-                case ".png":
-                    return new SixLabors.ImageSharp.Formats.Png.PngEncoder();
-                case ".webp":
-                    return new SixLabors.ImageSharp.Formats.Webp.WebpEncoder();
-                default:
-                    return new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder(); // デフォルトはJPEG
             }
         }
 

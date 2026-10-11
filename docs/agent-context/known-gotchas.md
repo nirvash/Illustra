@@ -2,7 +2,7 @@
 
 ## ビルド/環境
 
-- **NuGet 復元に `NUGET_AUTH_TOKEN` が必要**: `src/nuget.config` が GitHub Packages 非公開フィード（`nuget.pkg.github.com/nirvash`）を参照。`SixLabors.ImageSharp 3.1.7-custom1` はここからしか取得できない。
+- **非公開NuGetフィードは不要**: 独自ImageSharpを削除し、`src/nuget.config` は公開nuget.orgのみになった。`NUGET_AUTH_TOKEN` 不在の通常restoreも確認済み。SQLiteは参照版だけでなく、実接続の `sqlite_version()` が修正境界3.50.2以上であることを検証する。
 - **PowerShell 5.1 + CP932**: `dotnet` の日本語出力が文字化けする。出力を見るコマンドには毎回 UTF-8 設定プレフィックスを付ける（build-and-test.md 参照）。
 - **`*_wpftmp.csproj`**（src/ 配下の複数バリアント）: XAML コンパイラ生成の一時ファイル。編集・削除しない。ビルド警告がこれらのファイル名で出ることがあるが実体は Illustra 本体。
 - **XAML タグ内コメントはビルドエラー**。XAML の不備はビルド時に検出されるが、動作不具合は実行時まで潜む。

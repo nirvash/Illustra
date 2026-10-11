@@ -10,7 +10,7 @@ Windows 用画像ビューア（WPF + .NET 10、`net10.0-windows`）。MVVM（Pr
 - `src/Mcp/`: アプリ内 Kestrel で動く MCP サーバー。既定ポートは 5149（設定 `McpPort` で変更可、Debug ビルドは +10 のため 5159）
 - 作業言語・ドキュメント・コミットメッセージは日本語。コミットは Conventional Commits（`feat:`/`fix:` プレフィックスがリリースノート生成に使われる）
 
-環境の罠（毎回影響）: NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要。PowerShell 出力を見るコマンドには UTF-8 設定プレフィックスが必要。詳細は `docs/agent-context/build-and-test.md`。
+環境の罠（毎回影響）: NuGet 復元は公開 nuget.org のみで、非公開ImageSharpフィードや `NUGET_AUTH_TOKEN` は不要。PowerShell 出力を見るコマンドには UTF-8 設定プレフィックスが必要。詳細は `docs/agent-context/build-and-test.md`。
 
 ## コンテキストポリシー
 

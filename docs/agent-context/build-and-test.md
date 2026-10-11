@@ -3,7 +3,7 @@
 ## 前提環境
 
 - .NET 10 SDK、Windows 専用。
-- **NuGet 復元には `NUGET_AUTH_TOKEN` 環境変数が必要**（packages:read 権限の GitHub トークン）。`src/nuget.config` の非公開フィードから `SixLabors.ImageSharp 3.1.7-custom1` を取得するため。未設定だと復元失敗。
+- NuGet 復元は公開 nuget.org のみ。独自ImageSharpを削除したため、非公開フィードと `NUGET_AUTH_TOKEN` は不要。SQLiteは `Microsoft.Data.Sqlite` + 修正済みnative bundleを使用する。
 - 実シェルは PowerShell 5.1（既定 CP932）。**出力を見るコマンドには毎回先頭に付ける**:
 
   ```powershell
@@ -13,7 +13,7 @@
 ## コマンド
 
 ```bash
-# 復元（トークン設定済みであること）
+# 復元（非公開フィード用トークン不要）
 dotnet restore Illustra.sln
 
 # ビルド

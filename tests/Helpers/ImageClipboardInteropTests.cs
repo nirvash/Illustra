@@ -4,8 +4,6 @@ using System.Threading;
 using System.Windows;
 using Illustra.Helpers;
 using NUnit.Framework;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Illustra.Tests.Helpers;
 
@@ -13,6 +11,7 @@ namespace Illustra.Tests.Helpers;
 public class ImageClipboardInteropTests
 {
     [Test]
+    [Explicit("実クリップボードを操作するため、明示した手動検証でのみ実行する。")]
     [Apartment(ApartmentState.STA)]
     [NonParallelizable]
     public void CopyImage_StoresBitmap_AndPathCopyStoresText()
@@ -30,8 +29,7 @@ public class ImageClipboardInteropTests
         var path = Path.Combine(Path.GetTempPath(), $"illustra-clipboard-{Guid.NewGuid():N}.png");
         try
         {
-            using (var image = new Image<Rgba32>(2, 2, new Rgba32(20, 120, 220, 255)))
-                image.Save(path);
+            TestImageFixture.WriteSolidImage(path);
             ImageClipboardHelper.CopyImageToClipboard(path);
             var copied = Clipboard.GetImage();
             Assert.That(copied, Is.Not.Null);

@@ -29,6 +29,8 @@ namespace Illustra.Helpers
     /// </summary>
     public class DatabaseAccess : IDisposable
     {
+        internal static bool IsBusyError(int errorCode) => errorCode == 5;
+
         // 書き込み優先のReaderWriterLockSlimを使用
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly IDataProvider _dataProvider;
@@ -635,7 +637,7 @@ namespace Illustra.Helpers
                 {
                     return await operation();
                 }
-                catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: 'database is locked'
+                catch (SqliteException ex) when (IsBusyError(ex.SqliteErrorCode)) // SQLITE_BUSY: 'database is locked'
                 {
                     retryCount++;
                     if (retryCount > DefaultRetryCount)
@@ -675,7 +677,7 @@ namespace Illustra.Helpers
                     await operation();
                     break;
                 }
-                catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: 'database is locked'
+                catch (SqliteException ex) when (IsBusyError(ex.SqliteErrorCode)) // SQLITE_BUSY: 'database is locked'
                 {
                     retryCount++;
                     if (retryCount > DefaultRetryCount)

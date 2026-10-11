@@ -11,7 +11,6 @@ using Microsoft.VisualStudio.Threading;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using ImageMagick;
 using Illustra.Services;
 
 namespace Illustra.ViewModels

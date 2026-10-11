@@ -70,6 +70,30 @@ namespace Illustra.Tests.Helpers
             return BuildPngWithTextChunks();
         }
 
+        public static byte[] BuildRgbaPng(int width, int height, byte[] rgba)
+        {
+            if (rgba.Length != checked(width * height * 4)) throw new ArgumentException(nameof(rgba));
+            using var ms = new MemoryStream();
+            ms.Write(Signature);
+            WriteChunk(ms, "IHDR", BuildIhdr(width, height, 6));
+            var scanlines = new byte[checked(height * (width * 4 + 1))];
+            for (int y = 0; y < height; y++)
+                Array.Copy(rgba, y * width * 4, scanlines, y * (width * 4 + 1) + 1, width * 4);
+            WriteChunk(ms, "IDAT", CompressZlib(scanlines));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
+        public static byte[] BuildPngWithDeclaredSize(int width, int height)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Signature);
+            WriteChunk(ms, "IHDR", BuildIhdr(width, height, 6));
+            WriteChunk(ms, "IDAT", CompressZlib(new byte[] { 0, 0, 0, 0, 255 }));
+            WriteChunk(ms, "IEND", Array.Empty<byte>());
+            return ms.ToArray();
+        }
+
         public static byte[] BuildPngWithManyAncillaryChunks(int count)
         {
             using var ms = new MemoryStream();
@@ -137,7 +161,8 @@ namespace Illustra.Tests.Helpers
 
         /// <summary>公式 nai_meta.py と同じ alpha 順・bit 順で SFW 合成 stealth_pngcomp PNG を作る。</summary>
         public static byte[] BuildStealthPng(string json, string description = null, bool withTextMetadata = false,
-            bool invalidMagic = false, bool invalidLength = false, bool corruptGzip = false)
+            bool invalidMagic = false, bool invalidLength = false, bool corruptGzip = false,
+            byte alphaBase = 254)
         {
             byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
             byte[] compressed;
@@ -162,13 +187,13 @@ namespace Illustra.Tests.Helpers
 
             const int width = 128, height = 128;
             var rgba = new byte[width * height * 4];
-            for (int i = 0; i < width * height; i++) rgba[i * 4 + 3] = 254;
+            for (int i = 0; i < width * height; i++) rgba[i * 4 + 3] = alphaBase;
             for (int bitIndex = 0; bitIndex < payload.Length * 8; bitIndex++)
             {
                 int x = bitIndex / height, y = bitIndex % height;
                 int alphaIndex = (y * width + x) * 4 + 3;
                 int bit = (payload[bitIndex / 8] >> (7 - bitIndex % 8)) & 1;
-                rgba[alphaIndex] = (byte)(254 | bit);
+                rgba[alphaIndex] = (byte)((alphaBase & 254) | bit);
             }
 
             using var ms = new MemoryStream();

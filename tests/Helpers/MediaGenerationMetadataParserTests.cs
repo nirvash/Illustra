@@ -4,8 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Reflection;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using Illustra.Helpers;
 using Illustra.Tests.Helpers;
 using NUnit.Framework;
@@ -253,10 +252,10 @@ namespace Illustra.Tests.Helpers
             File.WriteAllBytes(_tempFilePath, TestPngBuilder.BuildTwoFrameApng("first frame only"));
             MethodInfo decoder = typeof(NovelAIMetadataParser).GetMethod("LoadFirstFrame",
                 BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.That(decoder, Is.Not.Null, "the stealth decoder must use a frame-limited ImageSharp path");
+            Assert.That(decoder, Is.Not.Null, "stealth decoder must load the first frame only");
 
-            using var image = (Image<Rgba32>)decoder!.Invoke(null, new object[] { _tempFilePath })!;
-            Assert.That(image.Frames.Count, Is.EqualTo(1));
+            using var image = (SKBitmap)decoder!.Invoke(null, new object[] { _tempFilePath })!;
+            Assert.That(image.GetPixel(0, 0), Is.EqualTo(new SKColor(255, 0, 0, 255)));
         }
 
         [Test]

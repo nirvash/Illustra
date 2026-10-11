@@ -1,5 +1,4 @@
 using System.IO;
-using Microsoft.Data.Sqlite;
 using Illustra.Models;
 using System.Diagnostics;
 using LinqToDB;
@@ -33,8 +32,8 @@ namespace Illustra.Helpers
             }
 
             _dbPath = Path.Combine(appDataPath, "illustra.db");
-            _connectionString = $"Data Source={_dbPath};Version=3;";
-            _dataProvider = SQLiteTools.GetDataProvider("SQLite");
+            _connectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = _dbPath }.ToString();
+            _dataProvider = SQLiteTools.GetDataProvider(ProviderName.SQLiteMS);
             _dbAccess = new DatabaseAccess(_dataProvider, _connectionString);
 
             // LinqToDBの設定を追加
@@ -481,13 +480,13 @@ namespace Illustra.Helpers
             public IEnumerable<IDataProviderSettings> DataProviders => Enumerable.Empty<IDataProviderSettings>();
 
             public string DefaultConfiguration => "SQLite";
-            public string DefaultDataProvider => "SQLite";
+            public string DefaultDataProvider => ProviderName.SQLiteMS;
 
             public IEnumerable<IConnectionStringSettings> ConnectionStrings
             {
                 get
                 {
-                    yield return new ConnectionStringSettings("SQLite", "SQLite", _connectionString);
+                    yield return new ConnectionStringSettings("SQLite", ProviderName.SQLiteMS, _connectionString);
                 }
             }
         }

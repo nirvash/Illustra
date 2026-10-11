@@ -12,7 +12,7 @@
     <MSBuildWarningsAsMessages></MSBuildWarningsAsMessages>    <!-- インメモリビルドログを有効化 -->
     <GenerateInMemoryBuildLog>true</GenerateInMemoryBuildLog>    <!-- ビルド時のログ出力を詳細に -->
     <BuildLogVerbosity>detailed</BuildLogVerbosity>    <!-- Null参照警告を無効化 -->
-    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1903;NU1701;NETSDK1138;VSTHRD001;VSTHRD002;VSTHRD103;VSTHRD100;VSTHRD105;VSTHRD110;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;IDE0059;NU1701;NETSDK1138;VSTHRD001;VSTHRD002;VSTHRD103;VSTHRD100;VSTHRD105;VSTHRD110;VSTHRD200;VSTHRD103;VSTHRD101</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>    <!-- リソースファイルの設定 -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>  <!-- デバッグビルド設定 -->
@@ -64,26 +64,24 @@
     <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
     <PackageReference Include="Hjg.Pngcs" Version="1.1.4" />
     <PackageReference Include="linq2db" Version="5.4.1" />
-    <PackageReference Include="linq2db.SQLite" Version="5.4.1" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.5.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
     <PackageReference Include="MahApps.Metro.IconPacks.MaterialDesign" Version="5.1.0" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0-preview.1.24081.2" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
     <PackageReference Include="Microsoft.WindowsAPICodePack-Shell" Version="1.1.0" />
     <PackageReference Include="Prism.Wpf" Version="9.0.537" />
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
     <PackageReference Include="Prism.Core" Version="9.0.537" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7-custom1" />
+
     <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.7" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <PackageReference Include="VirtualizingWrapPanel" Version="1.5.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.2.8" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.2" />
+
     <Resource Include="assets/illustra2.ico" />
   </ItemGroup>
   <ItemGroup>

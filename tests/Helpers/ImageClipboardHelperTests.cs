@@ -2,8 +2,6 @@ using System.IO;
 using System;
 using System.Windows.Media.Imaging;
 using NUnit.Framework;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Illustra.Helpers;
 
 namespace Illustra.Tests.Helpers
@@ -18,10 +16,7 @@ namespace Illustra.Tests.Helpers
             var path = Path.Combine(Path.GetTempPath(), $"illustra-clipboard-{Guid.NewGuid():N}{extension}");
             try
             {
-                using (var image = new Image<Rgba32>(2, 2, new Rgba32(20, 120, 220, 255)))
-                {
-                    image.Save(path);
-                }
+                TestImageFixture.WriteSolidImage(path);
 
                 var bitmap = ImageClipboardHelper.LoadBitmapSource(path);
 
