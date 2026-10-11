@@ -15,9 +15,9 @@
 証拠: `E:/Worktrees/Illustra/net10-migration-test/migration-results/integrated/` のsummary.json・TRX・ログ。
 配布成果物: `E:/Worktrees/Illustra/net10-migration-test/migration-publish/integrated/Illustra.exe`。
 
-その後、.NET 10移行をコミット `887b87a` にまとめ、インストール済み通常版にもローカルデプロイした。先行.NET 10検証worktreeのDebug版は保持している。本件の追加依存修正では既存アプリを停止・置換せず、原本から第3のアプリも起動していない。GitHub CI実行、push、配布リリース、installer更新は未実施。追加依存修正のcommit・デプロイ状態は次段落のとおり。
+その後、.NET 10移行をコミット `887b87a` にまとめ、インストール済み通常版にもローカルデプロイした。追加依存修正の検証段階では既存アプリを停止・置換せず、原本から第3のアプリも起動しなかった。その後ユーザー承認を受け、通常版を依存修正済み版へ更新した。既存設定やユーザー画像、別worktreeのexeは手動変更していない。GitHub CI実行、push、配布リリース、installer更新は未実施。追加依存修正のcommit・デプロイ状態は次段落のとおり。
 
-依存セキュリティは追加対応で原本へ反映済み。未使用Magick.NETと独自ImageSharpを削除し、SQLiteMSと修正済みnative SQLiteへ一本化した。高深刻度警告NU1903の抑制もアプリ・テストから解除し、非公開NuGetフィードを不要にした。原本の分離200テスト、Release publish、公開NuGet監査（既知脆弱性報告0）を再確認。詳細と制約は `docs/DependencySecurityRemediation.md` を参照。この依存修正はまだcommit・ローカルデプロイしていない。
+依存セキュリティは追加対応で原本へ反映済み。未使用Magick.NETと独自ImageSharpを削除し、SQLiteMSと修正済みnative SQLiteへ一本化した。高深刻度警告NU1903の抑制もアプリ・テストから解除し、非公開NuGetフィードを不要にした。原本の分離200テスト、Release publish、公開NuGet監査（既知脆弱性報告0）を再確認。詳細と制約は `docs/DependencySecurityRemediation.md` を参照。この依存修正はコミット `898942f` として通常版へローカルデプロイ済み。配置元／先SHA256一致、実画面表示とMCP HTTP状態読取りを確認した。実績は `docs/DependencySecurityRemediation.md` の「コミット・ローカルデプロイ実績」を参照。push・installer更新は未実施。
 
 ASP.NET Coreの未使用9系テスト参照3件と、WPF/.NET 10が提供するSystem.Drawing.Commonの不要な明示参照を削除済み。System.Drawingを使う動画サムネイルのコードは維持し、Bitmap→PNG→WPF変換を通常実行と自己完結単一exe-onlyで確認。参照整理後も原本200テスト・Release publish・公開NuGet監査が成功。詳細は `docs/DependencySecurityRemediation.md` の「残る参照の整理」を参照。
 

@@ -51,7 +51,7 @@
 
 原本の証拠は `E:/Worktrees/Illustra/dependency-security/security-results/original/`（summary.json、ログ、TRX）。publish出力は `E:/Worktrees/Illustra/dependency-security/security-publish/original/Illustra.exe`。元の追跡ファイルは `C:/Users/nirva/AppData/Local/hermes/profiles/agent-harness/cache/scratch/illustra-security-original-backup/` に反映前バックアップし、反映manifestを同scratchに保存した。
 
-稼働アプリの入替・本件のcommit/push・ローカルデプロイは未実施。既存通常版と先行.NET 10検証Debug版は停止・上書きしていない。別process/Windows sessionのMutex実動作とcleanupエラー診断の改善は再レビューの非阻害提案として残る。
+本件のソース変更はコミット `898942f` にまとめ、通常版をローカルデプロイ済み（下記「コミット・ローカルデプロイ実績」参照）。push・installer更新は未実施。別process/Windows sessionのMutex実動作とcleanupエラー診断の改善は再レビューの非阻害提案として残る。
 
 レビューの追加提案を受け、実際の旧System.Data.SQLiteエンジンで生成した12,288 bytesの合成DBを `tests/Fixtures/legacy-system-sqlite.db` に追加した。fixtureの生成根拠は同名mdに記録。既存DDL・列情報・格納型まで新providerの更新前後で比較する回帰テストも成功。
 
@@ -69,7 +69,19 @@
 - 原本Debug build 3.05秒、分離200テスト成功（通常198件17.03秒、独立WPF各1件1.39/1.41秒）、Release自己完結単一exe publish 4.31秒。公開NuGet推移依存込み監査はアプリ・テストとも既知脆弱性報告0。
 - 合成2×2 System.Drawing.BitmapをPNGに保存してWPF BitmapImageへ変換するprobeが成功。実ロードは `System.Drawing.Common, Version=10.0.0.0`。自己完結単一exeを作り、exeだけを別フォルダーに移した実行も成功。Windows Shellが実動画からBitmapを取得する全経路はこのprobeの対象外。
 - 検証ログ/TRX/summary: `E:/Worktrees/Illustra/dependency-security/reference-cleanup/results/`。配布用exe: 同 `reference-cleanup/publish/Illustra.exe`。probeソース・ログ・単一exe: 同 `reference-cleanup/probe/`。
-- 先行の未コミット依存修正と `.omm/` は保持。アプリ停止・起動・commit/push・ローカルデプロイは行っていない。
+- 先行の未コミット依存修正と `.omm/` を保持した状態で検証した。この段階ではアプリ停止・起動・commit/push・ローカルデプロイを行わず、その後の実績は次節に記録。
+
+## コミット・ローカルデプロイ実績
+
+- ソースコミット: `898942f6e1d1b47a20360e5db1887111d0290b99`（`fix: 不要依存を削除しSQLiteと画像処理を安全化`）、対象28ファイル。`.omm/` は含めず、pushしていない。
+- コミット後にRelease/win-x64/自己完結/単一exeを発行（6.02秒成功）。配置元は `E:/Worktrees/Illustra/dependency-security/local-deploy/publish/Illustra.exe`。
+- 配置先: `C:/Users/nirva/AppData/Local/Illustra/Illustra.exe`。配置・起動は3.83秒。配置元と配置先のSHA256は `2B3A07B3C65C6AD1C4E66D050484D9602710F98BDF2E167DEC58F71CAEFB8B0E` で一致。
+- 旧exeバックアップ: `C:/Users/nirva/AppData/Local/Illustra/backups/Illustra-pre-dependency-security-20261011-220206.exe`。
+- 全Illustraプロセスの終了を確認した状態で、既存 `illustra.db` もcold copyしてhash一致確認。バックアップ先は `C:/Users/nirva/AppData/Local/Illustra/backups/data-pre-dependency-security-20261011-220206/`。設定・ユーザー画像は手動変更していない。強制終了していない。
+- 新通常版はPID14644、ウィンドウ5767356、応答あり。実画面で一覧・プロパティ・タブの表示を確認。MCPは同PIDのlocalhost:5149で待受し、HTTP initialize→tools/list→get_app_status(targetTab=active) が成功。バージョン1.5.28、タブ4件・読込169ファイル・選択1件を読み戻した。起動後にユーザーの選択や評価を変更していない。
+- デプロイ前の既存Hermes MCP接続は利用できず、IllustraのツールもHermes側の一覧から外れていたため、新通常版の実サーバーへ標準MCP HTTPを直接呼び出して検証した。Hermes設定・認証・アクセス制限は変更していない。Hermes側の再接続そのものは未確認。
+- 実績JSONとMCP検証: `E:/Worktrees/Illustra/dependency-security/local-deploy/deployment.json` / `mcp-status-verification.json`。発行ログは同 `publish.log`。
+- 実画像のEXIF更新・評価変更による保存を伴う全経路、外部アプリとの同時編集、installer、GitHub CIは引き続き未検証。既存データを変更しない起動・表示・MCP状態読取りを今回のデプロイ受入とした。
 
 ## 根拠
 
