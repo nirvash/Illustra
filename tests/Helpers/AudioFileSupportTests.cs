@@ -116,6 +116,18 @@ public class AudioFileSupportTests
             System.Windows.Threading.Dispatcher.PushFrame(frame);
             Assert.That(opened, Is.True, "実WAVのMediaOpenedイベントが再生UIを有効にする");
             Assert.That(media.NaturalDuration.HasTimeSpan, Is.True);
+            Assert.That(media.Source, Is.Not.Null);
+            control.StopVideo();
+            Assert.That(media.Source, Is.Not.Null, "停止ボタンでは同じ動画を再開できる");
+            control.ReleaseVideo();
+            Assert.Multiple(() =>
+            {
+                Assert.That(media.Source, Is.Null, "別の画像を表示するときは動画デコーダを解放する");
+                Assert.That(control.FilePath, Is.Empty);
+            });
+            control.FilePath = path;
+            control.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Loaded);
+            Assert.That(media.Source, Is.Not.Null, "同じ動画に戻っても再読み込みできる");
         }
         finally
         {

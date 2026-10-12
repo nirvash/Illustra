@@ -25,6 +25,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 - 🏷️ プロンプトのタグによるフィルタリング機能
 - 🌓 ライト/ダークテーマの切り替え機能
 - 🎬 MP4 動画ファイルの再生
+  - 別の画像へ切り替えると動画の読み込み元を解放します。再生画面内の停止ボタンは先頭で一時停止します。
 - 🎞️ アニメーション WebP ファイルの再生
 - 📑 複数フォルダのタブ表示
 
@@ -223,6 +224,7 @@ Illustra is a fast and user-friendly image viewer for Windows. It implements vir
 - 🏷️ Filtering by prompt tags
 - 🌓 Light/Dark theme switching
 - 🎬 MP4 video file playback
+  - Switching to an image releases the video source; the in-player Stop button pauses at the beginning.
 - 🎞️ Animated WebP file playback
 - 📑 Multi-folder tab view
 

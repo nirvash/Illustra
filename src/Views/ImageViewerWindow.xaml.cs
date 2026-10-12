@@ -855,7 +855,8 @@ namespace Illustra.Views
             }
             else // Image or Animated WebP
             {
-                // Hide video player
+                // A hidden MediaElement still retains its source and native decoder.
+                VideoPlayerControl.ReleaseVideo();
                 VideoPlayerControl.Visibility = Visibility.Collapsed;
 
                 var isWebP = string.Equals(Path.GetExtension(filePath), ".webp", StringComparison.OrdinalIgnoreCase);
@@ -887,12 +888,8 @@ namespace Illustra.Views
         // Keep LoadAndDisplayImage for now, maybe make private or remove later if not needed elsewhere
         private async Task LoadAndDisplayImage(string filePath)
         {
-            // Hide video player if visible
-            if (VideoPlayerControl.Visibility == Visibility.Visible)
-            {
-                VideoPlayerControl.StopVideo();
-                VideoPlayerControl.Visibility = Visibility.Collapsed;
-            }
+            VideoPlayerControl.ReleaseVideo();
+            VideoPlayerControl.Visibility = Visibility.Collapsed;
 
             if (string.Equals(Path.GetExtension(filePath), ".webp", StringComparison.OrdinalIgnoreCase)
                 && await WebPHelper.IsAnimatedWebPAsync(filePath))
@@ -927,12 +924,8 @@ namespace Illustra.Views
         {
             if (ImageZoomControl.Visibility != Visibility.Visible)
                 _displayedFilePath = null;
-            // Hide video player if visible
-            if (VideoPlayerControl.Visibility == Visibility.Visible)
-            {
-                VideoPlayerControl.StopVideo();
-                VideoPlayerControl.Visibility = Visibility.Collapsed;
-            }
+            VideoPlayerControl.ReleaseVideo();
+            VideoPlayerControl.Visibility = Visibility.Collapsed;
             WebpPlayer.Visibility = Visibility.Collapsed;
             ImageZoomControl.Visibility = Visibility.Visible;
 

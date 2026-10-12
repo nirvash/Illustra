@@ -212,6 +212,22 @@ namespace Illustra.Controls
             // _currentFilePath = string.Empty; // パスはクリアしない
         }
 
+        // Leaving video/audio playback is different from the Stop button: the
+        // hidden MediaElement must not keep its native decoder and source alive.
+        public void ReleaseVideo()
+        {
+            if (VideoPlayer.Source == null && string.IsNullOrEmpty(_currentFilePath)) return;
+
+            _videoLoadGeneration++; // invalidate a QueueVideoLoad awaiting Dispatcher.Loaded
+            StopVideo();
+            FilePath = string.Empty;
+            _currentFilePath = string.Empty;
+            _isMediaReady = false;
+            _resumeAfterHostTransfer = false;
+            _transferWasPlaying = false;
+            VideoPlayer.Source = null;
+        }
+
         private async void QueueVideoLoad(string filePath)
         {
             int loadGeneration = ++_videoLoadGeneration;
