@@ -13,7 +13,7 @@
         xmlns:converters="clr-namespace:Illustra.Converters"
         dialogs:DialogParticipation.Register="{Binding}"
         WindowTransitionsEnabled="False"
-        KeyDown="MainWindow_OnKeyDown"
+        PreviewMouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
         mc:Ignorable="d"
         Height="600"
         Width="900"

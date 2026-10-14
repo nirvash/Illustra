@@ -20,6 +20,7 @@
                          WindowTransitionsEnabled="False"
                          WindowStartupLocation="CenterScreen"
                          PreviewMouseDown="Window_PreviewMouseDown"
+                         PreviewMouseLeftButtonDown="TitleBar_PreviewMouseLeftButtonDown"
                          SizeChanged="Window_SizeChanged">
 
     <mahcontrols:MetroWindow.Resources>

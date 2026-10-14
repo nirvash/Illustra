@@ -1366,6 +1366,25 @@ namespace Illustra.Views
             e.Handled = true;
         }
 
+        private void TitleBar_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_isInlineHosted || !base.ShowTitleBar || e.ClickCount != 1 || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            var position = e.GetPosition(this);
+            if (position.Y < 6 || position.Y >= TitleBarHeight)
+                return;
+
+            for (DependencyObject? current = e.OriginalSource as DependencyObject; current != null; current = VisualTreeHelper.GetParent(current))
+            {
+                if (current is ButtonBase or Thumb)
+                    return;
+            }
+
+            e.Handled = true;
+            DragMove();
+        }
+
         private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             // クリックされた要素を取得

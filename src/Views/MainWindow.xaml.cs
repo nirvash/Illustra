@@ -55,6 +55,27 @@ namespace Illustra.Views
         private readonly MainWindowViewModel _viewModel;
         private readonly IllustraAppContext _appContext;
 
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 1 || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            var position = e.GetPosition(this);
+            if (position.Y < 6 || position.Y >= TitleBarHeight)
+                return;
+
+            // The title bar also contains movable tabs and caption buttons.
+            // Leave their mouse gestures intact and move only from the remaining caption.
+            for (DependencyObject? current = e.OriginalSource as DependencyObject; current != null; current = VisualTreeHelper.GetParent(current))
+            {
+                if (current is TabablzControl or DragablzItem or ButtonBase or Thumb)
+                    return;
+            }
+
+            e.Handled = true;
+            DragMove();
+        }
+
         public MainWindow(IEventAggregator eventAggregator, MainWindowViewModel viewModel, IllustraAppContext appContext)
         {
             // InitializeComponentはXAMLから自動生成されるメソッドで、
