@@ -16,11 +16,17 @@ using Prism.Ioc;
 
 namespace Illustra.Tests.Views;
 
+[NonParallelizable]
 public class PropertyPanelInitialSelectionTests
 {
     [Test]
     [Apartment(ApartmentState.STA)]
     public void SamePathInitialSelection_RestoresCollapsedPanelVisibility()
+    {
+        WpfTestDispatcher.Run(RunOnApplicationDispatcher);
+    }
+
+    private static void RunOnApplicationDispatcher()
     {
         var app = Application.Current ?? new Application();
         var previousShutdownMode = app.ShutdownMode;

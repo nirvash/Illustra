@@ -1,11 +1,13 @@
 using System.IO;
 using Illustra.Helpers;
 using Illustra.Models;
+using Illustra.Tests.Views;
 using NUnit.Framework;
 
 namespace Illustra.Tests.Helpers;
 
 [TestFixture]
+[NonParallelizable]
 public class AudioFileSupportTests
 {
     [Test]
@@ -71,6 +73,11 @@ public class AudioFileSupportTests
     [TestCase("mp3")]
     [Apartment(System.Threading.ApartmentState.STA)]
     public void RealAudioMediaOpensWithoutWaitingForPlayButton(string extension)
+    {
+        WpfTestDispatcher.Run(() => RunRealAudioMediaOnApplicationDispatcher(extension));
+    }
+
+    private static void RunRealAudioMediaOnApplicationDispatcher(string extension)
     {
         var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"playback-{System.Guid.NewGuid():N}.{extension}");
         using (var stream = File.Create(path))

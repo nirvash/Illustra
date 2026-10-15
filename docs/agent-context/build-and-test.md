@@ -22,7 +22,7 @@ dotnet build Illustra.sln
 # 実行（WPF アプリが起動する）
 dotnet run --project src/Illustra.csproj
 
-# テスト全部（41 テスト程度・数十秒）
+# テスト全部（200 テスト程度・数十秒）
 dotnet test Illustra.sln
 
 # 特定テストのみ
@@ -42,6 +42,7 @@ dotnet test tests/Illustra.Tests.csproj --filter "FullyQualifiedName~<テスト�
 
 - **毎回の full test は不要**。ローカル修正の基本検証はビルド。テストは対象ドメイン変更時のみ。
 - XAML エラーはビルドで検出されるが挙動不具合は実行時まで分からない。UI 変更はアプリ起動して目視確認が確実。
+- `Application.Current` を使う WPF テストは `tests/Views/WpfTestDispatcher.cs` の STA Dispatcher 上で実行する。NUnit のテストごとの STA スレッド上で `Application` を生成すると、後続テストが別スレッドから参照して失敗する。
 
 ## ビューア切替の性能ログ
 

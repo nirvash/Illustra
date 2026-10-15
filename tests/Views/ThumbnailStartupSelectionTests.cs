@@ -18,21 +18,13 @@ using Prism.Ioc;
 
 namespace Illustra.Tests.Views;
 
-[NonParallelizable]
 public class ThumbnailStartupSelectionTests
 {
     [Test]
     [Apartment(ApartmentState.STA)]
     public void ProgrammaticStartupSelection_PublishesOnceAndPanelShowsSelectedPath()
     {
-        // Run this regression in its own test process. An Application left behind by another
-        // NUnit STA worker may own a dispatcher that is no longer pumping; synchronously
-        // invoking that dispatcher would hang the test process.
-        var dispatcher = Dispatcher.CurrentDispatcher;
-        if (Application.Current is { } existingApp && !ReferenceEquals(existingApp.Dispatcher, dispatcher))
-            throw new InvalidOperationException("Run this WPF regression in an isolated test process.");
-
-        RunOnApplicationDispatcher(dispatcher);
+        WpfTestDispatcher.Run(() => RunOnApplicationDispatcher(Dispatcher.CurrentDispatcher));
     }
 
     private static void RunOnApplicationDispatcher(Dispatcher ownerDispatcher)

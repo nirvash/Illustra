@@ -14,6 +14,7 @@ using NUnit.Framework;
 namespace Illustra.Tests.Views;
 
 [TestFixture]
+[NonParallelizable]
 public class ViewerHostModeTests
 {
     private sealed class SyntheticViewerContext : INotifyPropertyChanged
@@ -243,6 +244,11 @@ public class ViewerHostModeTests
     [Test]
     [Apartment(ApartmentState.STA)]
     public void RealMediaControls_ReparentUnloadPreservesLifetimeAndFinalCloseDisposes()
+    {
+        WpfTestDispatcher.Run(RunMediaTransferOnApplicationDispatcher);
+    }
+
+    private static void RunMediaTransferOnApplicationDispatcher()
     {
         var app = Application.Current ?? new Application();
         app.Resources["BooleanToVisibilityConverter"] = new System.Windows.Controls.BooleanToVisibilityConverter();
