@@ -172,6 +172,7 @@ Illustra は Model Context Protocol (MCP) をサポートし、外部クライ�
 ### TIPS
 
 - ComfyUI の画像のメタデータを確認したい場合は Save Image w/Metadata のカスタムノードで保存することをおすすめします
+- ComfyUI の PNG に埋め込まれた prompt グラフからモデルとプロンプトを表示します。MOSSImageHFLoader のモデルディレクトリ名にも対応し、空の negative は表示しません。
 
 ### 注意事項
 

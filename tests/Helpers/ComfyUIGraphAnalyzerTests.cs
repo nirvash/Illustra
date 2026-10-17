@@ -129,6 +129,25 @@ namespace Illustra.Tests.Helpers
         }
 
         [Test]
+        public void Analyze_MossDiffusersLoader_UsesModelDirectoryAndEmptyNegative()
+        {
+            const string json = @"{
+  ""1"": { ""class_type"": ""MOSSImageHFLoader"", ""inputs"": { ""model_path"": ""E:/Work/ComfyUi/models/diffusers/MOSS-Image-Base"" } },
+  ""4"": { ""class_type"": ""CLIPTextEncode"", ""inputs"": { ""clip"": [""1"", 1], ""text"": ""four friends in a classroom"" } },
+  ""5"": { ""class_type"": ""CLIPTextEncode"", ""inputs"": { ""clip"": [""1"", 1], ""text"": """" } },
+  ""13"": { ""class_type"": ""SkipLayerGuidanceDiTSimple"", ""inputs"": { ""model"": [""15"", 0] } },
+  ""15"": { ""class_type"": ""ModelSamplingSD3"", ""inputs"": { ""model"": [""1"", 0] } },
+  ""16"": { ""class_type"": ""KSampler"", ""inputs"": { ""model"": [""13"", 0], ""positive"": [""4"", 0], ""negative"": [""5"", 0] } }
+}";
+
+            var result = ComfyUIGraphAnalyzer.Analyze(json);
+
+            Assert.That(result.Prompt, Is.EqualTo("four friends in a classroom"));
+            Assert.That(result.NegativePrompt, Is.Null.Or.Empty);
+            Assert.That(result.ModelName, Is.EqualTo("MOSS-Image-Base"));
+        }
+
+        [Test]
         public void Analyze_StandardSdWorkflow_ExtractsSamplerParameters()
         {
             // Act
