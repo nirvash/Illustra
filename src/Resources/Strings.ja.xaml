@@ -8,6 +8,8 @@
     <system:String x:Key="String_Thumbnail_OpenImageLocationNewTab">新しいタブで開く</system:String>
     <system:String x:Key="String_Thumbnail_OpenImageLocationNewTabDescription">現在のタブの状態は変更しません。</system:String>
 
+    <system:String x:Key="String_Tab_BackFolder">このタブで前のフォルダに戻る</system:String>
+    <system:String x:Key="String_Tab_ForwardFolder">このタブで次のフォルダに進む</system:String>
     <!-- Folder Navigation -->
     <system:String x:Key="String_FolderTree_EnterAddress">フォルダのアドレスを入力してください</system:String>
     <system:String x:Key="String_FolderTree_InvalidPath">無効なフォルダパスです</system:String>
