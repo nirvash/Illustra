@@ -65,6 +65,7 @@ Illustra は、高速で使いやすい Windows 用画像ビューアです。
 11. フォルダツリーでフォルダを右クリックし、「新しいタブで開く」を選択する
 12. タブヘッダーをクリックしてタブを切り替える（ドラッグで順序変更も可能）
 13. メインウィンドウや分離したビューアは、タイトルバーのタブ・ボタン以外の領域をドラッグして移動する（タブはドラッグで並べ替え）
+14. フォルダツリー内のフォルダを別のフォルダへドラッグ＆ドロップすると、その中へ移動する（Ctrl を押しても移動）。自分自身・配下・現在の親フォルダへのドロップ、ドライブルートの移動、移動先の同名ファイル／フォルダの上書きは不可。
 
 ### タグフィルタの使い方
 
@@ -168,6 +169,10 @@ Illustra は Model Context Protocol (MCP) をサポートし、外部クライ�
 
 - 画像フォルダを開き、サムネイル一覧と選択状態を取得する
 - ファイルのメタデータやサムネイル画像を取得する
+- `move_folders` で複数フォルダを1つの移動先へまとめて移動する。例: `{"folderPaths":["E:\\Images\\A","E:\\Images\\B"],"targetFolderPath":"E:\\Archive"}`。単一フォルダの場合も配列で指定する。
+  - 移動先は既存フォルダ。名前と配下の内容を保持し、画像のDBパスを更新する。フォルダごとに `moved`、`oldPath`、`newPath`、`databaseUpdated` を返す。
+  - 全件を事前確認し、自己・配下・現在の親への移動、ルート、同名衝突、重複・親子関係のある移動元を拒否する。
+  - 実際の移動は順次実行。途中でI/Oエラーが発生した場合、完了済みの移動は取り消さない。
 
 ### TIPS
 
@@ -257,6 +262,9 @@ Client configuration example (VS Code / Cursor, etc.):
 
 - Open an image folder and retrieve the thumbnail list and selection state
 - Retrieve file metadata and thumbnail images
+- Move multiple folders into one existing destination with `move_folders`, e.g. `{"folderPaths":["E:\\Images\\A","E:\\Images\\B"],"targetFolderPath":"E:\\Archive"}`. Use an array for a single folder too. Names, nested contents and database paths follow each move; results contain `moved`, `oldPath`, `newPath` and `databaseUpdated`.
+  - Preflight rejects self/descendant/current-parent moves, drive roots, collisions, duplicate sources and overlapping source folders. Execution is sequential, not transactional: an I/O failure does not roll back completed moves.
+  - In the folder tree, drag a folder onto another folder to move it inside, even with Ctrl held. The same self/descendant/current-parent and collision restrictions apply.
 
 ### System Requirements
 
