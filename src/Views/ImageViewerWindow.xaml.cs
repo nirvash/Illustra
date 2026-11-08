@@ -179,6 +179,8 @@ namespace Illustra.Views
             CleanupSafely(() => VideoPlayerControl.StopVideo());
             CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
                 ?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected));
+            CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
+                ?.GetEvent<FilterChangedEvent>()?.Unsubscribe(OnFilterChanged));
             CleanupSafely(Close);
         }
         private bool _isInlineHosted;
@@ -266,6 +268,8 @@ namespace Illustra.Views
                 ThreadOption.UIThread,
                 false,
                 filter => filter.SourceId != CONTROL_ID); // 自分が発信したイベントは無視
+            eventAggregator?.GetEvent<FilterChangedEvent>()?.Subscribe(OnFilterChanged,
+                ThreadOption.UIThread);
 
             this.StateChanged += MainWindow_StateChanged;
 
@@ -371,6 +375,7 @@ namespace Illustra.Views
                 // イベントの購読解除
                 var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
                 eventAggregator?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected);
+                eventAggregator?.GetEvent<FilterChangedEvent>()?.Unsubscribe(OnFilterChanged);
             };
         }
 
@@ -610,6 +615,26 @@ namespace Illustra.Views
                 e.Handled = true;
             }
 
+            // フィルター解除
+            if (shortcutHandler.IsShortcutMatch(FuncId.FilterRating0, e.Key))
+            {
+                ApplyRatingFilter(0);
+                e.Handled = true;
+                return;
+            }
+
+            // レーティングフィルター
+            for (int i = 1; i <= 5; i++)
+            {
+                var filterId = new FuncId($"filter_rating_{i}");
+                if (shortcutHandler.IsShortcutMatch(filterId, e.Key))
+                {
+                    ApplyRatingFilter(i);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             // レーティング設定
             for (int i = 0; i <= 5; i++)
             {
@@ -619,6 +644,85 @@ namespace Illustra.Views
                     e.Handled = true;
                     break;
                 }
+            }
+        }
+
+        private async void ApplyRatingFilter(int rating)
+        {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
+
+            if (Parent != null)
+            {
+                await Parent.ApplyRatingFilterAsync(rating);
+            }
+            else
+            {
+                var eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
+                eventAggregator?.GetEvent<FilterChangedEvent>()?.Publish(
+                    new FilterChangedEventArgsBuilder(CONTROL_ID)
+                        .WithRatingFilter(rating)
+                        .Build());
+            }
+        }
+
+        private void OnFilterChanged(FilterChangedEventArgs args)
+        {
+            if (Parent != null && !Parent.IsCurrentViewerOwner()) return;
+
+            Dispatcher.InvokeAsync(UpdateViewerImageAfterFilter, DispatcherPriority.Background);
+        }
+
+        private void UpdateViewerImageAfterFilter()
+        {
+            if (string.IsNullOrEmpty(_currentFilePath)) return;
+
+            var viewModel = MainViewModel;
+            if (viewModel == null) return;
+
+            var filteredItems = viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
+            if (filteredItems.Count == 0)
+            {
+                return;
+            }
+
+            if (filteredItems.Any(f => f.FullPath == _currentFilePath))
+            {
+                return;
+            }
+
+            var allItems = viewModel.Items.ToList();
+            var currentAllIndex = allItems.FindIndex(i => i.FullPath == _currentFilePath);
+            string? targetPath = null;
+
+            if (currentAllIndex >= 0)
+            {
+                for (int i = currentAllIndex + 1; i < allItems.Count; i++)
+                {
+                    if (filteredItems.Any(f => f.FullPath == allItems[i].FullPath))
+                    {
+                        targetPath = allItems[i].FullPath;
+                        break;
+                    }
+                }
+
+                if (targetPath == null)
+                {
+                    for (int i = currentAllIndex - 1; i >= 0; i--)
+                    {
+                        if (filteredItems.Any(f => f.FullPath == allItems[i].FullPath))
+                        {
+                            targetPath = allItems[i].FullPath;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            targetPath ??= filteredItems.FirstOrDefault()?.FullPath;
+
+            if (!string.IsNullOrEmpty(targetPath) && targetPath != _currentFilePath)
+            {
+                _ = SwitchToContent(targetPath, true);
             }
         }
 
@@ -1311,6 +1415,8 @@ namespace Illustra.Views
                 CleanupSafely(() => _imageCache.Clear());
                 CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
                     ?.GetEvent<FileSelectedEvent>()?.Unsubscribe(OnFileSelected));
+                CleanupSafely(() => ContainerLocator.Container.Resolve<IEventAggregator>()
+                    ?.GetEvent<FilterChangedEvent>()?.Unsubscribe(OnFilterChanged));
             }
 
             base.OnClosing(e);

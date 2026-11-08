@@ -1309,13 +1309,27 @@ namespace Illustra.Views
 
             // フィルタリングされたアイテムのリストを取得
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-            if (filteredItems.Count <= 1)
+            if (filteredItems.Count == 0)
+                return null;
+            if (filteredItems.Count == 1 && filteredItems[0].FullPath == currentFilePath)
                 return null;
 
             // 現在の画像のインデックスを検索
             var currentIndex = filteredItems.FindIndex(i => i.FullPath == currentFilePath);
             if (currentIndex < 0)
-                return null;
+            {
+                var allItems = _viewModel.Items.ToList();
+                var currentAllIndex = allItems.FindIndex(i => i.FullPath == currentFilePath);
+                if (currentAllIndex >= 0)
+                {
+                    for (int i = currentAllIndex - 1; i >= 0; i--)
+                    {
+                        if (filteredItems.Any(f => f.FullPath == allItems[i].FullPath))
+                            return allItems[i].FullPath;
+                    }
+                }
+                return enableCyclicNavigation ? filteredItems.Last().FullPath : filteredItems.FirstOrDefault()?.FullPath;
+            }
 
             // 前のインデックスを計算
             if (currentIndex > 0)
@@ -1342,13 +1356,27 @@ namespace Illustra.Views
 
             // フィルタリングされたアイテムのリストを取得
             var filteredItems = _viewModel.FilteredItems.Cast<FileNodeModel>().ToList();
-            if (filteredItems.Count <= 1)
+            if (filteredItems.Count == 0)
+                return null;
+            if (filteredItems.Count == 1 && filteredItems[0].FullPath == currentFilePath)
                 return null;
 
             // 現在の画像のインデックスを検索
             var currentIndex = filteredItems.FindIndex(i => i.FullPath == currentFilePath);
             if (currentIndex < 0)
-                return null;
+            {
+                var allItems = _viewModel.Items.ToList();
+                var currentAllIndex = allItems.FindIndex(i => i.FullPath == currentFilePath);
+                if (currentAllIndex >= 0)
+                {
+                    for (int i = currentAllIndex + 1; i < allItems.Count; i++)
+                    {
+                        if (filteredItems.Any(f => f.FullPath == allItems[i].FullPath))
+                            return allItems[i].FullPath;
+                    }
+                }
+                return enableCyclicNavigation ? filteredItems.First().FullPath : filteredItems.LastOrDefault()?.FullPath;
+            }
 
             // 次のインデックスを計算
             if (currentIndex < filteredItems.Count - 1)
@@ -3415,6 +3443,11 @@ namespace Illustra.Views
         private async void ClearFilter_Click(object sender, RoutedEventArgs e)
         {
             await ApplyFilterling(0);
+        }
+
+        public async Task ApplyRatingFilterAsync(int rating)
+        {
+            await ApplyFilterling(rating);
         }
 
         private async Task ApplyFilterling(int rating)
