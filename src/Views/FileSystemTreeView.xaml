@@ -132,7 +132,7 @@
                   TabIndex="2"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                  dd:DragDrop.IsDragSource="False"
+                  dd:DragDrop.IsDragSource="True"
                   dd:DragDrop.IsDropTarget="True">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">

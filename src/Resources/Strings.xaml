@@ -8,6 +8,8 @@
     <system:String x:Key="String_Thumbnail_OpenImageLocationNewTab">Open in new tab</system:String>
     <system:String x:Key="String_Thumbnail_OpenImageLocationNewTabDescription">Keep the current tab unchanged.</system:String>
 
+    <system:String x:Key="String_Tab_BackFolder">Previous folder in this tab</system:String>
+    <system:String x:Key="String_Tab_ForwardFolder">Next folder in this tab</system:String>
     <!-- Folder Navigation -->
     <system:String x:Key="String_FolderTree_EnterAddress">Enter folder address</system:String>
     <system:String x:Key="String_FolderTree_InvalidPath">Invalid folder path</system:String>

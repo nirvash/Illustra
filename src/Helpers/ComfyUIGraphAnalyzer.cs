@@ -396,7 +396,7 @@ namespace Illustra.Helpers
                         {
                             (isNegative ? negatives : positives).Add(text);
                         }
-                        else
+                        else if (input.Value is JsonArray)
                         {
                             // さらにリンクを逆方向に辿る（ネガティブ判定は上書きしない）
                             TraverseForText(input.Value, isNegative, positives, negatives, visited,
@@ -529,6 +529,13 @@ namespace Illustra.Helpers
 
                 WalkModelChain(inputs.ContainsKey("model") ? inputs["model"] : null,
                                nodeClassTypes, nodeInputs, loras, ref modelName, depth + 1);
+            }
+            else if (classType == "MOSSImageHFLoader")
+            {
+                // Diffusers loader の model_path はモデルディレクトリ。
+                string path = inputs["model_path"]?.ToString()?.TrimEnd('/', '\\');
+                if (!string.IsNullOrWhiteSpace(path))
+                    modelName = path.Substring(Math.Max(path.LastIndexOf('/'), path.LastIndexOf('\\')) + 1);
             }
             else if (classType.Contains("Checkpoint"))
             {

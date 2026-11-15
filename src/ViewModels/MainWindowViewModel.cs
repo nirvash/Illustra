@@ -88,6 +88,8 @@ namespace Illustra.ViewModels
             {
                 if (SetProperty(ref _selectedTab, value))
                 {
+                    BackFolderCommand?.RaiseCanExecuteChanged();
+                    ForwardFolderCommand?.RaiseCanExecuteChanged();
                     // タブ切り替え時の処理 (ステップ7)
                     // EventAggregator を使用してイベントを発行
                     _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
@@ -125,6 +127,8 @@ namespace Illustra.ViewModels
         public DelegateCommand<TabViewModel> DuplicateTabCommand { get; private set; }
 
         public DelegateCommand AddNewTabCommand { get; private set; }
+        public DelegateCommand BackFolderCommand { get; private set; }
+        public DelegateCommand ForwardFolderCommand { get; private set; }
 
         // MainViewModel からコマンドを公開
         public ICommand CopyCommand => _thumbnailListViewModel.CopyCommand;
@@ -177,6 +181,8 @@ namespace Illustra.ViewModels
             CloseOtherTabsCommand = new DelegateCommand<TabViewModel>(ExecuteCloseOtherTabs, CanExecuteCloseOtherTabs);
             DuplicateTabCommand = new DelegateCommand<TabViewModel>(ExecuteDuplicateTab, CanExecuteDuplicateTab);
             AddNewTabCommand = new DelegateCommand(ExecuteAddNewTab);
+            BackFolderCommand = new DelegateCommand(() => NavigateFolderHistory(-1), () => SelectedTab?.State?.CanGoBack == true);
+            ForwardFolderCommand = new DelegateCommand(() => NavigateFolderHistory(1), () => SelectedTab?.State?.CanGoForward == true);
 
 
             // 現在のテーマを反映
@@ -237,6 +243,8 @@ namespace Illustra.ViewModels
             CloseOtherTabsCommand = new DelegateCommand<TabViewModel>(ExecuteCloseOtherTabs, CanExecuteCloseOtherTabs);
             DuplicateTabCommand = new DelegateCommand<TabViewModel>(ExecuteDuplicateTab, CanExecuteDuplicateTab);
             AddNewTabCommand = new DelegateCommand(ExecuteAddNewTab);
+            BackFolderCommand = new DelegateCommand(() => NavigateFolderHistory(-1), () => SelectedTab?.State?.CanGoBack == true);
+            ForwardFolderCommand = new DelegateCommand(() => NavigateFolderHistory(1), () => SelectedTab?.State?.CanGoForward == true);
 
 
             // 現在のテーマを反映
@@ -533,6 +541,7 @@ namespace Illustra.ViewModels
                 Tabs.Clear(); // 既存のタブ（もしあれば）をクリア
                 foreach (var state in settings.TabStates)
                 {
+                    state.TrimFolderHistory();
                     // SelectLastFileOnStartup が false の場合は、最後に選択したファイルのパスをクリアする
                     if (!settings.SelectLastFileOnStartup)
                     {
@@ -577,13 +586,45 @@ namespace Illustra.ViewModels
             if (SelectedTab == null || SelectedTab.State == null) return; // アクティブなタブまたはその状態がない場合は何もしない
 
             // アクティブなタブの状態を更新
+            SelectedTab.State.RecordFolder(path);
             SelectedTab.State.FolderPath = path;
             SelectedTab.State.SelectedItemPath = filePath;
+            BackFolderCommand?.RaiseCanExecuteChanged();
+            ForwardFolderCommand?.RaiseCanExecuteChanged();
 
             // サムネイルリストに更新を通知
             // EventAggregator を使用してイベントを発行
             _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(
                 new SelectedTabChangedEventArgs(SelectedTab.State));
+        }
+
+        private void NavigateFolderHistory(int direction)
+        {
+            var state = SelectedTab?.State;
+            if (state == null) return;
+            int previousIndex = state.FolderHistoryIndex;
+            string path;
+            do
+            {
+                path = state.MoveFolderHistory(direction);
+            } while (path != null && !Directory.Exists(path));
+            if (path != null)
+            {
+                state.FolderPath = path;
+                state.SelectedItemPath = null;
+                _eventAggregator?.GetEvent<SelectedTabChangedEvent>().Publish(new SelectedTabChangedEventArgs(state));
+                _eventAggregator?.GetEvent<McpOpenFolderEvent>().Publish(new McpOpenFolderEventArgs
+                {
+                    FolderPath = path,
+                    SourceId = CONTROL_ID
+                });
+            }
+            else
+            {
+                state.FolderHistoryIndex = previousIndex;
+            }
+            BackFolderCommand.RaiseCanExecuteChanged();
+            ForwardFolderCommand.RaiseCanExecuteChanged();
         }
 
         /// <summary>

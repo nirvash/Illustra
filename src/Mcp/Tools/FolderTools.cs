@@ -30,6 +30,12 @@ namespace Illustra.Mcp.Tools
         [property: JsonPropertyName("newPath")] string NewPath,
         [property: JsonPropertyName("databaseUpdated")] bool DatabaseUpdated);
 
+    public record MoveFolderResult(
+        [property: JsonPropertyName("moved")] bool Moved,
+        [property: JsonPropertyName("oldPath")] string OldPath,
+        [property: JsonPropertyName("newPath")] string NewPath,
+        [property: JsonPropertyName("databaseUpdated")] bool DatabaseUpdated);
+
     public record ServerInfoResult(
         [property: JsonPropertyName("serverName")] string ServerName,
         [property: JsonPropertyName("version")] string Version,
@@ -163,6 +169,50 @@ namespace Illustra.Mcp.Tools
             }
 
             return new RenameFolderResult(true, fullPath, newPath, dbUpdated);
+        }
+
+        [McpServerTool(Name = "move_folders", Destructive = true)]
+        [Description("Moves multiple folders and their contents into one existing destination parent, preserving names. All paths are checked before moving; rejects self, descendants, current parent, roots, overlapping sources and name collisions. Moves are sequential, not transactional. Database paths follow each move.")]
+        public async Task<IReadOnlyList<MoveFolderResult>> MoveFolders(
+            [Description("Absolute paths of the folders to move. Use a one-element array for a single folder.")] string[] folderPaths,
+            [Description("Absolute path of the existing destination parent folder.")] string targetFolderPath)
+        {
+            if (folderPaths == null || folderPaths.Length == 0)
+                throw new ArgumentException("At least one source folder is required.", nameof(folderPaths));
+            ValidatePath(targetFolderPath, nameof(targetFolderPath), requireDirectory: true);
+            var targetPath = Path.GetFullPath(targetFolderPath);
+            var sources = new List<string>(folderPaths.Length);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var folderPath in folderPaths)
+            {
+                ValidatePath(folderPath, nameof(folderPaths), requireDirectory: true);
+                var source = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+                if (!FolderMoveHelper.CanMove(source, targetPath) || !names.Add(Path.GetFileName(source)))
+                    throw new IOException($"Cannot move folder into destination: {source}");
+                if (sources.Any(other =>
+                    source.StartsWith(other + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                    other.StartsWith(source + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+                    throw new IOException("Source folders must not contain one another.");
+                sources.Add(source);
+            }
+
+            var results = new List<MoveFolderResult>(sources.Count);
+            foreach (var oldPath in sources)
+            {
+                var newPath = await Task.Run(() => FolderMoveHelper.Move(oldPath, targetPath));
+                var databaseUpdated = false;
+                try
+                {
+                    await _db.UpdateFolderPathsAsync(oldPath, newPath);
+                    databaseUpdated = true;
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"MCP move_folders: DB パス更新に失敗しました ({oldPath} -> {newPath}): {ex.Message}");
+                }
+                results.Add(new MoveFolderResult(true, oldPath, newPath, databaseUpdated));
+            }
+            return results;
         }
 
         [McpServerTool(Name = "get_server_info", ReadOnly = true, Idempotent = true)]

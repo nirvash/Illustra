@@ -93,7 +93,7 @@ namespace Illustra.Mcp
                         "Illustra is a Windows image viewer with ComfyUI/StableDiffusion generation metadata support. " +
                         "UI tools use a dedicated MCP tab by default. Set targetTab=active to operate on the currently active tab. Use list_files to browse the target folder, get_thumbnail to visually inspect an image, " +
                         "get_file_metadata to read generation prompts and rating, select_file to select files in the UI, " +
-                        "and move_files/copy_files/create_folder for file organization.";
+                        "and move_files/copy_files/create_folder/move_folders for file and folder organization.";
                 })
                 .WithHttpTransport()
                 .WithToolsFromAssembly(typeof(McpHostService).Assembly);

@@ -4150,6 +4150,9 @@ namespace Illustra.Views
             {
                 _imageViewerWindow.Close();
             }
+            // 別ウィンドウはタブをまたいで使うため、選択イベントの受信先を切り替える。
+            if (_imageViewerWindow != null && !_isInlineViewerActive)
+                _viewerTabState = _mainWindowViewModel.SelectedTab?.State;
             _tabLoadTask = ApplySelectedTabAsync(args);
             await _tabLoadTask;
         }

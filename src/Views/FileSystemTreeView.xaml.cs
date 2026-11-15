@@ -33,6 +33,20 @@ namespace Illustra.Views
         private FileOperationHelper _fileOperationHelper;
         private const string FAVORITES_CONTROL_ID = "FavoriteFolders";
 
+        private sealed class FolderDragHandler : DefaultDragHandler
+        {
+            public override void StartDrag(IDragInfo dragInfo)
+            {
+                dragInfo.Effects = DragDropEffects.None;
+                if (dragInfo.SourceItem is FileSystemItemModel { IsFolder: true, IsDummy: false, Parent: not null } folder &&
+                    Directory.Exists(folder.FullPath))
+                {
+                    dragInfo.Data = folder;
+                    dragInfo.Effects = DragDropEffects.Move;
+                }
+            }
+        }
+
 
         public class CustomDropHandler : IDropTarget
         {
@@ -96,6 +110,7 @@ namespace Illustra.Views
             FolderTreeView.ItemsSource = _viewModel.RootItems; // バインド順を DataContext → ItemsSource にする必要あり
 
             GongSolutions.Wpf.DragDrop.DragDrop.SetDropHandler(FolderTreeView, new CustomDropHandler(this));
+            GongSolutions.Wpf.DragDrop.DragDrop.SetDragHandler(FolderTreeView, new FolderDragHandler());
 
 
             // FileOperationHelperの初期化
@@ -619,7 +634,14 @@ namespace Illustra.Views
             var files = DragDropHelper.GetDroppedFiles(dropInfo);
             bool canDrop = false;
 
-            if (files.Count > 0 && targetModel != null && targetModel.IsFolder && !DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
+            if (dropInfo.Data is FileSystemItemModel source)
+            {
+                canDrop = source.IsFolder && !source.IsDummy && source.Parent != null &&
+                    targetModel is { IsFolder: true, IsDummy: false } &&
+                    FolderMoveHelper.CanMove(source.FullPath, targetModel.FullPath);
+                dropInfo.Effects = canDrop ? DragDropEffects.Move : DragDropEffects.None;
+            }
+            else if (files.Count > 0 && targetModel != null && targetModel.IsFolder && !DragDropHelper.IsSameDirectory(files, targetModel.FullPath))
             {
                 dropInfo.Effects = (dropInfo.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey
                     ? DragDropEffects.Copy
@@ -654,6 +676,25 @@ namespace Illustra.Views
         {
             try
             {
+                if (dropInfo.Data is FileSystemItemModel source)
+                {
+                    if (source is not { IsFolder: true, IsDummy: false, Parent: not null } ||
+                        dropInfo.TargetItem is not FileSystemItemModel { IsFolder: true, IsDummy: false } target ||
+                        !FolderMoveHelper.CanMove(source.FullPath, target.FullPath))
+                    {
+                        dropInfo.Effects = DragDropEffects.None;
+                        return;
+                    }
+
+                    string oldPath = source.FullPath;
+                    string targetPath = target.FullPath;
+                    string newPath = await Task.Run(() => FolderMoveHelper.Move(oldPath, targetPath));
+                    var db = ContainerLocator.Container.Resolve<DatabaseManager>();
+                    await db.UpdateFolderPathsAsync(oldPath, newPath);
+                    dropInfo.Effects = DragDropEffects.Move;
+                    return;
+                }
+
                 var files = DragDropHelper.GetDroppedFiles(dropInfo);
                 if (files.Count == 0)
                 {
